@@ -1,0 +1,25 @@
+# Environment
+.env
+.env.*
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Java
+target/
+*.class
+
+# Node.js
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# Operating system
+.DS_Store
+Thumbs.db
