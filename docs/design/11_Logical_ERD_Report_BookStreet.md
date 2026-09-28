@@ -1,0 +1,505 @@
+# **BÁO CÁO MÔ TẢ LOGICAL ERD**
+
+## *BOOK STREET EVENT MANAGEMENT SYSTEM*
+
+**SWP391  |  Logical Data Model Baseline**
+
+Mục đích: giúp toàn bộ team hiểu 32 entity, trách nhiệm dữ liệu và cách các entity phối hợp trong các luồng Event, Booth, Payment, Activity, Participant, Attendance, Reward và Feedback.
+
+# **Kết luận chính**
+
+Logical ERD hiện tại đã chuyển các khái niệm nghiệp vụ trong Conceptual ERD thành cấu trúc dữ liệu đủ rõ để bước sang Physical ERD. Mô hình giữ riêng Request, Hold, Payment và Assignment; dùng EventBoothConfig để cấu hình Booth theo từng Event; tách đăng ký khỏi tham dự thực tế; và giữ lịch sử giao dịch thay vì ghi đè dữ liệu cũ.
+
+Tài liệu tập trung vào ý nghĩa của từng entity và các ràng buộc cần được team hiểu thống nhất. PK, FK, datatype, index và câu lệnh database sẽ được chốt ở Physical ERD.
+
+# **1\. Phạm vi của Logical ERD**
+
+| Nhóm nghiệp vụ | Số entity | Nội dung chính |
+| :---- | :---- | :---- |
+| Tài khoản và phân quyền | 3 | User, Role và UserRole. |
+| Partner và Event | 3 | PartnerOrganization, PartnerEventApplication và Event. |
+| Booth và thanh toán | 10 | Location, Booth, EventBoothConfig, Request, Hold, Payment, Assignment và các request thay đổi hoặc hủy. |
+| Activity | 4 | Proposal, Activity, Change Request và Cancellation Request. |
+| Participant và attendance | 4 | EventRegistration, ActivityRegistration, Attendance và BoothVisit. |
+| Reward | 4 | PointTransaction, Badge, UserBadge và Certificate. |
+| Giao tiếp và nội dung | 4 | ActivityRating, Notification, GeneralFeedback và HeritageContent. |
+
+# **2\. Sơ đồ Logical ERD**
+
+Hình dưới đây là bản Logical ERD tổng quan. Các entity có nhiều quan hệ được đặt gần trung tâm; mọi quan hệ dùng Crow’s Foot để thể hiện cardinality.
+
+![Logical ERD tổng quan](assets/BookStreet_Logical_ERD_v7.png)
+
+*Hình 1\. Logical ERD tổng quan của hệ thống Book Street*
+
+Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình chi tiết để sơ đồ tổng quan không bị rối. Đây vẫn là cùng một data model, không phải entity bị tách thành module độc lập.
+
+![Chi tiết quan hệ BoothVisit](assets/BookStreet_Logical_ERD_v7_BoothVisit_Detail.png)
+
+*Hình 2\. Chi tiết quan hệ ghi nhận lượt ghé Booth*
+
+# **3\. Cách đọc và các nguyên tắc thiết kế**
+
+| Ký hiệu | Cách hiểu |
+| :---- | :---- |
+| 1 | Mỗi record bắt buộc liên kết với đúng một record ở phía còn lại. |
+| 0..1 | Liên kết có thể chưa tồn tại, nhưng tối đa chỉ có một. |
+| 0..N | Có thể chưa có record nào hoặc có nhiều record. |
+| PK | Khóa chính định danh duy nhất record. |
+| FK | Khóa ngoại nối sang entity khác. |
+| UK | Ràng buộc duy nhất, ngăn dữ liệu trùng theo nghiệp vụ. |
+| XOR | Chỉ một trong các nguồn hoặc target được phép tồn tại tại cùng thời điểm. |
+
+* Entity nghiệp vụ được giữ riêng khi có vòng đời, trạng thái hoặc lịch sử cần audit.  
+* Không hard-delete dữ liệu đã phát sinh nghiệp vụ; kết thúc vòng đời bằng status và timestamp.  
+* Giá Booth được cấu hình theo Event và được snapshot khi bắt đầu Hold để thay đổi giá sau đó không làm đổi giao dịch đang chạy.  
+* Một payment attempt thất bại không đồng nghĩa toàn bộ payment process thất bại; Partner được retry khi Hold còn hiệu lực.  
+* Payment window hết hạn mới release Hold và cho Organizer chọn candidate khác.  
+* Activity QR thuộc Activity; Booth QR thuộc BoothAssignment. QR không được tạo thành entity riêng trong Logical ERD.
+
+# **4\. Tài khoản và phân quyền**
+
+### **User**
+
+**Vai trò: Lưu tài khoản đăng nhập và thông tin nhận diện cơ bản. User đăng ký bằng username, full name và password; confirm password chỉ dùng để kiểm tra ở giao diện và không được lưu. Email là tùy chọn đối với Participant.**
+
+**Khi nào phát sinh:** Khi cá nhân đăng ký hoặc được tạo tài khoản.
+
+**Ý nghĩa và vòng đời: Username là duy nhất không phân biệt hoa thường. User có status để khóa hoặc kích hoạt; email phải được xác minh trước khi cấp PARTNER, ORGANIZER hoặc ADMIN. Dữ liệu Participant, đại diện Partner, Organizer và Admin đều quy về User; quyền cụ thể đi qua UserRole.**
+
+**Quan hệ chính:** Liên kết UserRole, PartnerOrganization, Event, EventRegistration, UserBadge, Notification và GeneralFeedback.
+
+**Ví dụ:** Tài khoản của một khách tham dự đồng thời là người đại diện cho một nhà xuất bản.
+
+### **Role**
+
+**Vai trò: Danh mục vai trò nghiệp vụ gồm PARTICIPANT, PARTNER, ORGANIZER và ADMIN.**
+
+**Khi nào phát sinh:** Khi hệ thống cấu hình bộ vai trò được hỗ trợ.
+
+**Ý nghĩa và vòng đời:** Role là dữ liệu chuẩn và không chứa thông tin người dùng. Thay đổi tên hoặc quyền cần được kiểm soát để không làm sai phân quyền.
+
+**Quan hệ chính:** Quan hệ nhiều nhiều với User thông qua UserRole.
+
+**Ví dụ:** Role ORGANIZER cho phép vận hành Event và xét các request.
+
+### **UserRole**
+
+**Vai trò:** Entity liên kết giúp một User có nhiều Role và một Role được gán cho nhiều User.
+
+**Khi nào phát sinh:** Khi hệ thống cấp thêm một vai trò cho User.
+
+**Ý nghĩa và vòng đời:** Mỗi cặp User và Role chỉ được tồn tại một lần. assignedAt giúp truy vết thời điểm cấp vai trò.
+
+**Quan hệ chính:** Thuộc đúng một User và đúng một Role.
+
+**Ví dụ:** Một User có cả PARTICIPANT và PARTNER.
+
+# **5\. Partner và Event**
+
+### **PartnerOrganization**
+
+**Vai trò:** Đại diện cho tổ chức tham gia Đường Sách, tách biệt với tài khoản cá nhân đăng nhập.
+
+**Khi nào phát sinh:** Khi Partner tạo hoặc hoàn tất hồ sơ tổ chức.
+
+**Ý nghĩa và vòng đời:** Trong MVP, một User đại diện chính cho tối đa một PartnerOrganization. Tổ chức có category để hỗ trợ recommend hoặc cảnh báo Booth, không dùng để hard-lock.
+
+**Quan hệ chính:** Có representative User và nhiều PartnerEventApplication.
+
+**Ví dụ:** NXB Kim Đồng hoặc một thương hiệu sách độc lập.
+
+### **PartnerEventApplication**
+
+**Vai trò:** Đơn của Partner xin tham gia một Event cụ thể; đây là cửa vào trước khi request Booth hoặc gửi Activity Proposal.
+
+**Khi nào phát sinh:** Khi Partner submit hồ sơ tham gia Event.
+
+**Ý nghĩa và vòng đời:** Đơn đi qua các trạng thái xét duyệt và có thể được rút. Chỉ application hợp lệ và đã được duyệt mới được tạo các nghiệp vụ Booth hoặc Activity.
+
+**Quan hệ chính:** Nối PartnerOrganization với Event; là cha của BoothRequest, ActivityProposal và PartnerWithdrawalRequest.
+
+**Ví dụ:** Kim Đồng apply tham gia Lễ hội Đường Sách Mùa Thu.
+
+### **Event**
+
+**Vai trò:** Sự kiện lớn chứa lịch, deadline, các hoạt động, cấu hình Booth và lượt tham gia.
+
+**Khi nào phát sinh:** Khi Organizer tạo kế hoạch Event.
+
+**Ý nghĩa và vòng đời:** Event đi qua DRAFT, PUBLISHED, ONGOING, COMPLETED hoặc CANCELLED. Các cutoff và payment window thuộc Event để rule có thể khác nhau giữa các sự kiện.
+
+**Quan hệ chính:** Có Organizer User, PartnerEventApplication, EventBoothConfig, Activity, EventRegistration và GeneralFeedback.
+
+**Ví dụ:** Lễ hội Đường Sách Mùa Thu 2026\.
+
+# **6\. Không gian Booth và thanh toán**
+
+### **Location**
+
+**Vai trò:** Khái niệm chung cho mọi vị trí vật lý trong Đường Sách.
+
+**Khi nào phát sinh:** Khi Ban quản lý khai báo Booth, sân khấu, khu workshop hoặc khu vực chức năng.
+
+**Ý nghĩa và vòng đời:** Location giữ capacity và trạng thái vận hành. Booth là subtype của Location; vì vậy Activity chỉ cần nối Location, không nối Booth trực tiếp.
+
+**Quan hệ chính:** Có thể có một Booth subtype và được nhiều Activity hoặc ActivityProposal sử dụng ở các thời điểm khác nhau.
+
+**Ví dụ:** Main Stage, Workshop Area hoặc vị trí A05.
+
+### **Booth**
+
+**Vai trò:** Phần mở rộng của Location dành riêng cho vị trí gian hàng.
+
+**Khi nào phát sinh:** Khi một Location được xác định là Booth.
+
+**Ý nghĩa và vòng đời:** Booth không có giá thuê cố định và không có trạng thái ASSIGNED toàn cục. categoryCode chỉ hỗ trợ gợi ý hoặc cảnh báo.
+
+**Quan hệ chính:** Dùng trong EventBoothConfig, BoothRequest và BoothChangeRequest.
+
+**Ví dụ:** Booth A05 có thể được dùng ở nhiều Event không trùng thời gian.
+
+### **EventBoothConfig**
+
+**Vai trò:** Cấu hình một Booth trong phạm vi một Event, gồm giá thuê và việc Booth có được mở hay không.
+
+**Khi nào phát sinh:** Khi Organizer đưa Booth vào sơ đồ hoặc danh sách Booth của Event.
+
+**Ý nghĩa và vòng đời:** Mỗi cặp Event và Booth là duy nhất. rentalPrice thuộc config này, không nằm trên Booth. isEnabled chỉ cho biết Booth có mở trong Event; AVAILABLE, ON\_HOLD và ASSIGNED là trạng thái runtime suy ra từ Hold và Assignment. Không được disable config khi còn Active Hold hoặc Assignment.
+
+**Quan hệ chính:** Thuộc một Event và một Booth; được BoothHold tham chiếu.
+
+**Ví dụ:** A05 giá 2.000.000 đồng trong Event E1 nhưng 2.500.000 đồng trong Event E2.
+
+### **BoothRequest**
+
+**Vai trò:** Yêu cầu của một Partner đã được duyệt để xin một Booth cụ thể.
+
+**Khi nào phát sinh:** Khi Partner chọn Booth và submit request.
+
+**Ý nghĩa và vòng đời:** Submit không tạo Hold và không khóa Booth. Nhiều Partner có thể PENDING cùng Booth. Organizer chọn một candidate thì request chuyển SELECTED; payment success chuyển COMPLETED; hết payment window chuyển PAYMENT\_EXPIRED; candidate khác chỉ thành NOT\_SELECTED sau khi có người hoàn tất.
+
+**Quan hệ chính:** Thuộc PartnerEventApplication, nhắm tới Booth và có thể tạo tối đa một Hold đang xử lý tại một thời điểm.
+
+**Ví dụ:** Bốn Partner cùng request A05, nhưng chưa ai khóa A05 ở bước submit.
+
+### **BoothHold**
+
+**Vai trò:** Giữ Booth tạm thời sau khi Organizer chọn candidate hoặc duyệt bước đổi Booth.
+
+**Khi nào phát sinh:** Khi request được SELECTED và bắt đầu payment window.
+
+**Ý nghĩa và vòng đời:** Hold tạo exclusivity theo Event và Booth. lockedRentalPrice snapshot giá tại lúc chọn. Hold có ACTIVE, CONSUMED hoặc RELEASED/EXPIRED; attempt thất bại không release Hold nếu window còn hạn. Nguồn Hold là BoothRequest hoặc BoothChangeRequest theo XOR.
+
+**Quan hệ chính:** Nối EventBoothConfig với đúng một nguồn request; là cha của BoothPayment và có thể sinh BoothAssignment.
+
+**Ví dụ:** H01 giữ A05 trong 15 phút cho Partner B thanh toán.
+
+### **BoothPayment**
+
+**Vai trò:** Sổ giao dịch tiền liên quan Booth, bao gồm PAYMENT và REFUND.
+
+**Khi nào phát sinh:** Mỗi lần Partner tạo payment attempt hoặc hệ thống khởi tạo refund.
+
+**Ý nghĩa và vòng đời:** Mỗi retry là một record riêng, không ghi đè attempt cũ. amount là snapshot. Assignment chỉ dựa trên transaction PAYMENT SUCCESS đã được backend verify. Refund là giao dịch bất đồng bộ; nghiệp vụ có thể tiếp tục khi REFUND PENDING theo policy đã chốt, sau đó cập nhật SUCCESS hoặc FAILED từ gateway. Không có entity Refund riêng.
+
+**Quan hệ chính:** Thuộc BoothHold; refund có thể tham chiếu originalPayment. purpose phân biệt tiền thuê, chênh lệch đổi Booth và hoàn tiền.
+
+**Ví dụ:** Payment \#1 FAILED, Payment \#2 SUCCESS; hoặc Refund chênh lệch đang PENDING.
+
+### **BoothAssignment**
+
+**Vai trò:** Ghi nhận Booth đã được cấp chính thức cho Partner trong Event.
+
+**Khi nào phát sinh:** Chỉ sau khi settlement cần thiết hoàn tất theo rule: PAYMENT SUCCESS, hoặc REFUND PENDING đối với đổi sang Booth rẻ hơn, hoặc không phát sinh chênh lệch.
+
+**Ý nghĩa và vòng đời:** Assignment liên kết duy nhất với BoothHold để không lặp lại boothRequestId hoặc boothChangeRequestId. Assignment cũ vẫn ACTIVE trong lúc đổi Booth và chỉ release khi atomic swap thành công. qrToken thuộc Assignment để ghi nhận BoothVisit.
+
+**Quan hệ chính:** Thuộc một BoothHold; có BoothChangeRequest, BoothCancellationRequest và BoothVisit.
+
+**Ví dụ:** A05 chính thức được cấp cho Partner B sau payment success.
+
+### **BoothChangeRequest**
+
+**Vai trò:** Yêu cầu đổi từ Booth đang được cấp sang một Booth khác.
+
+**Khi nào phát sinh:** Khi Partner có Assignment ACTIVE và muốn đổi vị trí.
+
+**Ý nghĩa và vòng đời:** Submit chưa Hold Booth mới. Khi Organizer chọn, tạo replacement Hold; Booth cũ vẫn ACTIVE. Giá chênh lệch lấy từ EventBoothConfig: cao hơn cần PAYMENT SUCCESS, thấp hơn tạo REFUND PENDING, bằng nhau không cần giao dịch. Hết window thì release Hold mới và giữ Booth cũ.
+
+**Quan hệ chính:** Nối current BoothAssignment, requested Booth và có thể là nguồn của BoothHold.
+
+**Ví dụ:** Đổi A05 giá 2 triệu sang A10 giá 2,5 triệu và trả thêm 500 nghìn.
+
+### **BoothCancellationRequest**
+
+**Vai trò:** Yêu cầu hủy Booth đang được cấp.
+
+**Khi nào phát sinh:** Khi Partner muốn trả Booth trước Event hoặc trong thời gian được phép.
+
+**Ý nghĩa và vòng đời:** Request giữ lý do, late flag, kết quả và thời điểm xử lý. Refund áp dụng boothCancellationCutoffAt của Event. Khi hủy hợp lệ, hệ thống ghi REFUND PENDING nếu có tiền hoàn rồi release Assignment theo quy trình.
+
+**Quan hệ chính:** Thuộc BoothAssignment; tác động đến Payment, Assignment và các Activity phụ thuộc vị trí.
+
+**Ví dụ:** Partner hủy trước cutoff và được hoàn 100 phần trăm.
+
+### **PartnerWithdrawalRequest**
+
+**Vai trò:** Yêu cầu Partner rút khỏi toàn bộ Event.
+
+**Khi nào phát sinh:** Khi Partner không còn tham gia Event.
+
+**Ý nghĩa và vòng đời:** Organizer xác nhận và hệ thống xử lý tất cả Booth và Activity liên quan. Refund Booth dùng boothCancellationCutoffAt. Record không lưu handledByUserId theo baseline hiện tại.
+
+**Quan hệ chính:** Thuộc PartnerEventApplication và kéo theo xử lý các Assignment, Proposal hoặc Activity của application.
+
+**Ví dụ:** Partner rút Event, Booth được release và các Activity được move hoặc cancel.
+
+# **7\. Activity**
+
+### **ActivityProposal**
+
+**Vai trò:** Đề xuất Activity do Partner gửi với thời gian, Location và capacity cụ thể.
+
+**Khi nào phát sinh:** Sau khi PartnerEventApplication đã được duyệt.
+
+**Ý nghĩa và vòng đời:** Proposal PENDING không khóa Location. Trước khi approve phải kiểm tra lại xung đột và capacity. Một proposal tạo tối đa một Activity vì proposal đã mô tả một phiên cụ thể; multi-session nằm ngoài MVP.
+
+**Quan hệ chính:** Thuộc PartnerEventApplication và Location; có thể sinh 0..1 Activity.
+
+**Ví dụ:** Đề xuất workshop ký sách tại Workshop Area lúc 09:00.
+
+### **Activity**
+
+**Vai trò:** Hoạt động chính thức được công bố trong Event.
+
+**Khi nào phát sinh:** Khi Organizer tạo trực tiếp hoặc approve một ActivityProposal.
+
+**Ý nghĩa và vòng đời:** Activity thuộc một Event và một Location. Activity QR nằm trên Activity để mọi Participant self-scan cùng QR; Attendance vẫn được định danh theo registration. Activity có trạng thái riêng, deadline đăng ký và cờ cho phép Certificate.
+
+**Quan hệ chính:** Liên kết Event, Location, optional source Proposal, registrations, change/cancellation requests.
+
+**Ví dụ:** Talkshow, workshop, mini game hoặc lễ khai mạc.
+
+### **ActivityChangeRequest**
+
+**Vai trò:** Yêu cầu thay đổi Location, thời gian hoặc capacity của Activity.
+
+**Khi nào phát sinh:** Khi Partner muốn sửa Activity đã được duyệt hoặc publish.
+
+**Ý nghĩa và vòng đời:** Hệ thống kiểm tra conflict và capacity trước khi chấp nhận. Khi thay đổi ảnh hưởng lịch, Participant đã đăng ký được thông báo và có thể cancel.
+
+**Quan hệ chính:** Thuộc Activity; requestedLocationId là tùy chọn nếu yêu cầu đổi địa điểm.
+
+**Ví dụ:** Dời workshop từ 09:00 sang 14:00 tại Workshop Area 2\.
+
+### **ActivityCancellationRequest**
+
+**Vai trò:** Yêu cầu hủy Activity chính thức.
+
+**Khi nào phát sinh:** Khi Partner không thể tiếp tục tổ chức Activity.
+
+**Ý nghĩa và vòng đời:** Yêu cầu sau cutoff vẫn được ghi nhận nhưng đánh dấu late để Organizer xử lý. Activity và registration liên quan không bị xóa; dùng status và notification để giữ lịch sử.
+
+**Quan hệ chính:** Thuộc Activity và tác động đến ActivityRegistration, Attendance, Certificate.
+
+**Ví dụ:** Partner xin hủy workshop sau activity cancellation cutoff.
+
+# **8\. Participant Attendance và Reward**
+
+### **EventRegistration**
+
+**Vai trò:** Bản ghi User Join một Event để lưu My Events và nhận thông báo chung.
+
+**Khi nào phát sinh:** Khi Participant bấm Join Event hoặc được tự động tạo lúc đăng ký Activity lần đầu.
+
+**Ý nghĩa và vòng đời:** EventRegistration không giữ chỗ Activity và không có Event QR. Một User chỉ có một registration cho mỗi Event.
+
+**Quan hệ chính:** Nối User với Event; là cha của ActivityRegistration và BoothVisit.
+
+**Ví dụ:** Nguyễn Văn A Join Event Mùa Thu.
+
+### **ActivityRegistration**
+
+**Vai trò:** Bản ghi giữ chỗ của Participant cho một Activity cụ thể.
+
+**Khi nào phát sinh:** Khi Participant đăng ký khi còn hạn và còn capacity.
+
+**Ý nghĩa và vòng đời:** Capacity phải kiểm tra atomically. Registration có thể cancel hoặc no-show. QR không nằm ở record này; Participant dùng QR chung của Activity để self-scan, còn hệ thống xác định registration từ User đã đăng nhập.
+
+**Quan hệ chính:** Thuộc EventRegistration và Activity; có tối đa một Attendance.
+
+**Ví dụ:** A đăng ký Workshop viết truyện và chiếm một chỗ.
+
+### **Attendance**
+
+**Vai trò:** Bằng chứng Participant thực sự tham dự Activity.
+
+**Khi nào phát sinh:** Khi Participant đăng nhập và self-scan QR của Activity hợp lệ.
+
+**Ý nghĩa và vòng đời:** Một ActivityRegistration có tối đa một Attendance; scan lặp không tạo thêm record. Không dùng Attendance Operator, check-in/check-out hoặc duration trong baseline hiện tại. Attendance là điều kiện để rating và certificate.
+
+**Quan hệ chính:** Thuộc duy nhất một ActivityRegistration; có thể sinh Certificate và ActivityRating.
+
+**Ví dụ:** A self-scan tại Workshop và hệ thống ghi attendedAt.
+
+### **BoothVisit**
+
+**Vai trò:** Bằng chứng Participant đã ghé một Booth Assignment trong Event.
+
+**Khi nào phát sinh:** Khi Participant self-scan QR của BoothAssignment.
+
+**Ý nghĩa và vòng đời:** Mỗi cặp EventRegistration và BoothAssignment chỉ ghi nhận một lượt để tránh scan lặp lấy thêm điểm. Visit chỉ hợp lệ khi Assignment còn hiệu lực.
+
+**Quan hệ chính:** Nối EventRegistration với BoothAssignment; có thể sinh một PointTransaction.
+
+**Ví dụ:** A quét QR tại Booth A05 trong Event đang tham gia.
+
+### **PointTransaction**
+
+**Vai trò:** Bản ghi cộng điểm phát sinh từ BoothVisit hợp lệ.
+
+**Khi nào phát sinh:** Sau khi BoothVisit thỏa điều kiện reward.
+
+**Ý nghĩa và vòng đời:** Dùng mô hình ledger để không ghi đè tổng điểm. Mỗi BoothVisit tối đa tạo một transaction; tổng điểm của User được tính từ lịch sử giao dịch.
+
+**Quan hệ chính:** Gắn duy nhất với BoothVisit và được dùng để đánh giá Badge.
+
+**Ví dụ:** BoothVisit V01 tạo giao dịch cộng 10 điểm.
+
+### **Badge**
+
+**Vai trò:** Định nghĩa huy hiệu và ngưỡng điểm cần đạt.
+
+**Khi nào phát sinh:** Khi Admin cấu hình loại Badge.
+
+**Ý nghĩa và vòng đời:** Badge có thể bật hoặc tắt. Một Badge được nhiều User nhận và một User có nhiều Badge. requiredPoints là rule cấp tự động.
+
+**Quan hệ chính:** Quan hệ nhiều nhiều với User thông qua UserBadge.
+
+**Ví dụ:** Book Explorer yêu cầu tổng 100 điểm.
+
+### **UserBadge**
+
+**Vai trò:** Entity liên kết ghi nhận Badge mà User đã đạt.
+
+**Khi nào phát sinh:** Khi tổng điểm của User đạt ngưỡng Badge và chưa nhận Badge đó.
+
+**Ý nghĩa và vòng đời:** Mỗi cặp User và Badge chỉ tồn tại một lần; earnedAt giữ thời điểm cấp.
+
+**Quan hệ chính:** Thuộc User và Badge.
+
+**Ví dụ:** A nhận Badge Book Explorer.
+
+### **Certificate**
+
+**Vai trò:** Chứng nhận tham dự Activity.
+
+**Khi nào phát sinh:** Chỉ khi Activity COMPLETED, Attendance hợp lệ và Activity bật certificate.
+
+**Ý nghĩa và vòng đời:** Mỗi Attendance tối đa có một Certificate. certificateCode là duy nhất; có thể revoke nhưng không xóa lịch sử.
+
+**Quan hệ chính:** Thuộc Attendance.
+
+**Ví dụ:** Chứng nhận tham dự Workshop viết truyện.
+
+# **9\. Giao tiếp Feedback và nội dung**
+
+### **ActivityRating**
+
+**Vai trò:** Đánh giá sao và nhận xét cho một Activity từ người đã tham dự.
+
+**Khi nào phát sinh:** Sau khi User có Attendance hợp lệ.
+
+**Ý nghĩa và vòng đời:** Mỗi Attendance tối đa có một rating, ngăn người chưa tham dự hoặc rating nhiều lần. ActivityRating tách khỏi GeneralFeedback vì target và điều kiện nghiệp vụ khác nhau.
+
+**Quan hệ chính:** Thuộc Attendance, từ đó truy ngược được Activity và User.
+
+**Ví dụ:** A chấm Workshop 5 sao sau khi tham dự.
+
+### **Notification**
+
+**Vai trò:** Thông báo trong hệ thống gửi đến một User.
+
+**Khi nào phát sinh:** Khi có duyệt, từ chối, chọn candidate, payment, thay đổi lịch, hủy hoặc sự kiện quan trọng.
+
+**Ý nghĩa và vòng đời:** Notification lưu type, title, message, createdAt và readAt. Đây là in-app notification; không đồng nghĩa bắt buộc có email hoặc SMS.
+
+**Quan hệ chính:** Thuộc recipient User.
+
+**Ví dụ:** Thông báo Activity đổi giờ và cho phép Participant cancel.
+
+### **GeneralFeedback**
+
+**Vai trò:** Góp ý chung của Guest hoặc User về đúng một target tại một thời điểm.
+
+**Khi nào phát sinh:** Khi người dùng gửi góp ý về toàn Đường Sách, một Event hoặc một HeritageContent.
+
+**Ý nghĩa và vòng đời:** XOR target bảo đảm feedback chỉ thuộc một trong ba loại BOOK\_STREET, EVENT hoặc HERITAGE. Guest không cần đăng nhập và có thể cung cấp tên hoặc email liên hệ tùy chọn.
+
+**Quan hệ chính:** Có optional submittedByUserId; optional eventId hoặc heritageContentId theo targetType.
+
+**Ví dụ:** Một góp ý về vệ sinh toàn Đường Sách, không đồng thời gắn Event và di sản.
+
+### **HeritageContent**
+
+**Vai trò:** Nội dung công khai giới thiệu di sản, lịch sử hoặc giá trị văn hóa của Đường Sách.
+
+**Khi nào phát sinh:** Khi Organizer hoặc Admin tạo và publish nội dung.
+
+**Ý nghĩa và vòng đời:** HeritageContent có publicCode và trạng thái publish. Đây là nội dung hỗ trợ public experience, không phải workflow quản lý di sản phức tạp.
+
+**Quan hệ chính:** Có thể nhận GeneralFeedback khi targetType là HERITAGE.
+
+**Ví dụ:** Bài viết về lịch sử hình thành Đường Sách.
+
+# **10\. Các luồng dữ liệu chính**
+
+## **10.1 Partner đăng ký Booth**
+
+* PartnerOrganization tạo PartnerEventApplication và được Organizer duyệt.  
+* Partner tạo BoothRequest cho một Booth; ở bước này chưa tạo Hold.  
+* Organizer chọn candidate; hệ thống tạo BoothHold trên EventBoothConfig và snapshot lockedRentalPrice.  
+* Partner có thể tạo nhiều BoothPayment attempt trong payment window.  
+* PAYMENT SUCCESS đã được backend verify mới tạo BoothAssignment; các candidate còn lại chuyển NOT\_SELECTED.  
+* Nếu window hết hạn, Hold được release, request được chọn chuyển PAYMENT\_EXPIRED và các candidate khác vẫn PENDING.
+
+## **10.2 Đổi hoặc hủy Booth**
+
+* BoothChangeRequest giữ Assignment cũ ACTIVE trong suốt thời gian xét duyệt và settlement.  
+* Booth mới đắt hơn cần PAYMENT SUCCESS; rẻ hơn tạo REFUND PENDING; bằng giá không cần transaction.  
+* Atomic swap chỉ xảy ra khi điều kiện settlement đạt; lỗi hoặc hết hạn giữ nguyên Booth cũ.  
+* BoothCancellationRequest và PartnerWithdrawalRequest dùng boothCancellationCutoffAt để tính refund.
+
+## **10.3 Activity và Participant**
+
+* ActivityProposal được duyệt tạo tối đa một Activity; Organizer cũng có thể tạo Activity trực tiếp.  
+* Participant Join Event tạo EventRegistration; đăng ký Activity tạo ActivityRegistration.  
+* Participant self-scan QR chung của Activity để tạo Attendance.  
+* Attendance hợp lệ cho phép ActivityRating và Certificate khi đủ điều kiện.
+
+## **10.4 Booth Visit và Reward**
+
+* BoothAssignment mang QR của Booth trong Event.  
+* Participant đã có EventRegistration self-scan QR tạo BoothVisit duy nhất.  
+* BoothVisit hợp lệ tạo PointTransaction; tổng điểm được dùng để cấp UserBadge theo Badge rule.
+
+# **11\. Những quyết định thiết kế cần nhớ**
+
+| Quyết định | Lý do |
+| :---- | :---- |
+| BoothHold nối EventBoothConfig, không lặp boothId | Config đã xác định đồng thời Event, Booth và giá; lặp boothId tạo nguy cơ không nhất quán. |
+| BoothAssignment chỉ nối BoothHold | Hold đã truy được request source và Booth; Assignment không cần lặp boothRequestId hoặc boothChangeRequestId. |
+| BoothPayment có transactionType và purpose | Cùng một sổ giao dịch phải phân biệt PAYMENT, REFUND, tiền thuê ban đầu và chênh lệch đổi Booth. |
+| Activity chỉ nối Location | Booth là subtype của Location; nối thêm Activity-Booth sẽ lặp quan hệ và không dùng được cho Main Stage hoặc Workshop Area. |
+| Activity QR nằm trên Activity | Một QR chung tại địa điểm giúp Participant self-scan; Attendance vẫn gắn đúng ActivityRegistration của User. |
+| Refund không có entity riêng | Refund là một BoothPayment transaction loại REFUND và vẫn cần PENDING, SUCCESS hoặc FAILED. |
+| User-Badge dùng UserBadge | Quan hệ nhiều nhiều cần record earnedAt và uniqueness cho từng cặp User-Badge. |
+| GeneralFeedback dùng XOR target | Mỗi feedback chỉ phản ánh một target: toàn Đường Sách, một Event hoặc một HeritageContent. |
+
+# **12\. Kiểm tra nhất quán và kết luận**
+
+Trước khi chuyển sang Physical ERD, team cần chốt enum status và transition; datatype tiền tệ, timestamp và timezone; unique constraint, index, transaction locking; cùng các ràng buộc XOR của BoothHold và GeneralFeedback. Không đưa lại QR, Refund hoặc PaymentGatewayConfig thành entity nếu không có requirement mới.
+
+Logical ERD này bao quát baseline hiện tại và là nguồn tham chiếu khi chia module backend, thiết kế API, viết migration và kiểm thử state transition. Physical ERD bổ sung datatype, constraint, index, transaction rule và bảng kỹ thuật user\_tokens; không có entity SystemSetting chung và không thay đổi business direction đã chốt.
+

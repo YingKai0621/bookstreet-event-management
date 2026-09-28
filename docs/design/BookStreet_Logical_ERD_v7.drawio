@@ -1,0 +1,420 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-09-24T00:00:00.000Z" agent="Codex" version="24.7.17" type="device" compressed="false">
+  <diagram id="logical-erd-v6" name="01 - Logical ERD Overview">
+    <mxGraphModel dx="5000" dy="4160" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3420" pageHeight="2520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="entity-1" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;USER&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK userId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK username (case-insensitive)&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;email?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;emailVerifiedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;passwordHash&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;fullName&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;phoneNumber?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;avatarUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="700" width="280" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-2" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ROLE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK roleId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK code&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;name&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;code: PARTICIPANT/PARTNER/ORGANIZER/ADMIN&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-3" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;USER_ROLE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK userRoleId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK userId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK roleId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;assignedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (userId, roleId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="340" y="300" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-4" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;PARTNER_ORGANIZATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK partnerOrganizationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK representativeUserId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;name&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;categoryCode&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;logoUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;contactEmail?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;contactPhone?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;address?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="720" y="420" width="280" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-5" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;PARTNER_EVENT_APPLICATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK applicationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK partnerOrganizationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;applicationNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="860" y="760" width="280" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-6" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;EVENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK organizerUserId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;name&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;startAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;endAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;partnerApplicationDeadlineAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;boothRequestDeadlineAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;activityProposalDeadlineAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;participantRegistrationDeadlineAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;partnerWithdrawalCutoffAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;boothCancellationCutoffAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;activityCancellationCutoffAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;boothPaymentWindowMinutes&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;maxBoothsPerPartner&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;maxActivitiesPerPartner&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;bannerUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="520" width="280" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-7" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;LOCATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK locationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK code&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;name&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;locationType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;maxCapacity&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;mapX?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;mapY?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isActive&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="560" width="280" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-8" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK,FK boothId → Location&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;categoryCode?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;note?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="560" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-9" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;EVENT_BOOTH_CONFIG&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK eventBoothConfigId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;rentalPrice&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isEnabled&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (eventId, boothId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="560" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-10" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK applicationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;requestNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;selectedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;completedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;paymentExpiredAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="850" y="1080" width="280" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-11" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_HOLD&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothHoldId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventBoothConfigId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothChangeRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;lockedRentalPrice&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;expiresAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;consumedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;releasedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;XOR request source&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="920" width="280" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-12" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_PAYMENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothPaymentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothHoldId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK originalPaymentId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothCancellationRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK partnerWithdrawalRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;transactionType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;purpose&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;amount&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK idempotencyKey&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;gatewayProvider&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;gatewayTransactionRef?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;failureCode?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;failureMessage?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;completedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;CHECK max 1 refund request source&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2650" y="820" width="280" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-13" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_ASSIGNMENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothHoldId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK qrToken&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;coverImageUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;assignedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;releasedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;releaseReason?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="1080" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-14" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_CHANGE_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothChangeRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK currentAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK requestedBoothId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;selectedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;completedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;paymentExpiredAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="1450" width="280" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-15" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_CANCELLATION_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothCancellationRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isLate&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2650" y="1190" width="280" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-16" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;PARTNER_WITHDRAWAL_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK partnerWithdrawalRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK applicationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="1040" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-17" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY_PROPOSAL&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityProposalId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK applicationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK locationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;title&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;activityType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;proposedStartAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;proposedEndAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;capacity&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="1450" width="280" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-18" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK locationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK sourceProposalId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;title&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;activityType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;startAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;endAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;registrationDeadlineAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;capacity&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;imageUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK attendanceQrToken?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isCertificateEnabled&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;publishedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;completedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;cancelledAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="1160" width="280" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-19" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY_CHANGE_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityChangeRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK activityId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK requestedLocationId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;requestedStartAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;requestedEndAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;requestedCapacity?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1720" y="1540" width="280" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-20" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY_CANCELLATION_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityCancellationRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK activityId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isLate&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="1740" width="280" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-21" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;EVENT_REGISTRATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK eventRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK userId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;registeredAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;leftAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (userId, eventId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="570" y="1440" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-22" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY_REGISTRATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK activityId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;registeredAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;cancelledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (eventRegistrationId, activityId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="1810" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-23" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ATTENDANCE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK attendanceId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK activityRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;attendedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="2110" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-24" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_VISIT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothVisitId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;visitedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (eventRegistrationId, boothAssignmentId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2650" y="1570" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-25" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;POINT_TRANSACTION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK pointTransactionId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothVisitId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;points&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2960" y="1570" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-26" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BADGE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK badgeId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK name&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;description?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;requiredPoints&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;iconUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isActive&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2980" y="2050" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-27" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;USER_BADGE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK userBadgeId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK userId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK badgeId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;earnedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (userId, badgeId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="2650" y="2110" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-28" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;CERTIFICATE&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK certificateId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK attendanceId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK certificateCode&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;fileUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;issuedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;revokedAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1570" y="2130" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-29" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;ACTIVITY_RATING&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK activityRatingId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK attendanceId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;ratingScore&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;comment?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="2130" width="280" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-30" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;NOTIFICATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK notificationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK recipientUserId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;notificationType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;title&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;message&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;readAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="720" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-31" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;GENERAL_FEEDBACK&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK generalFeedbackId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK submittedByUserId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;targetType: BOOK_STREET/EVENT/HERITAGE&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK heritageContentId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;guestName?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;contactEmail?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;subject?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;message&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;resolvedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;exactly one target&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="60" width="280" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="entity-32" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;HERITAGE_CONTENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK heritageContentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK publicCode&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;title&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;summary?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;content&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;imageUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;locationText?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;publishedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="40" width="280" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-1" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.330;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.670;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-12" target="entity-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3010" y="946" />
+              <mxPoint x="3010" y="1073" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-2" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-24" target="entity-25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-3" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.333;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-8" target="entity-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-4" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.333;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-5" target="entity-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-5" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-26" target="entity-27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-6" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-2" target="entity-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-7" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-23" target="entity-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-8" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-32" target="entity-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-9" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.250;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-13" target="entity-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-10" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-11" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.333;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-7" target="entity-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-12" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-11" target="entity-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-13" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-4" target="entity-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-14" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-18" target="entity-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-15" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-6" target="entity-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-16" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-13" target="entity-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-17" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-18" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.200;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-19" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-6" target="entity-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-20" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-22" target="entity-23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-21" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.333;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-17" target="entity-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-22" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-18" target="entity-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-23" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-9" target="entity-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-24" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-5" target="entity-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-25" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-21" target="entity-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-26" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.667;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-23" target="entity-29">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1520" y="2200" />
+              <mxPoint x="1500" y="2200" />
+              <mxPoint x="1500" y="2120" />
+              <mxPoint x="1880" y="2120" />
+              <mxPoint x="1880" y="2200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-27" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.667;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-11" target="entity-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2240" y="1100" />
+              <mxPoint x="2240" y="1000" />
+              <mxPoint x="2640" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-28" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.333;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.333;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-6" target="entity-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-29" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.333;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-21">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="980" />
+              <mxPoint x="420" y="980" />
+              <mxPoint x="420" y="1420" />
+              <mxPoint x="660" y="1420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-30" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-14" target="entity-11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2400" y="1440" />
+              <mxPoint x="2400" y="1460" />
+              <mxPoint x="2080" y="1460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-31" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.667;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-13" target="entity-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-32" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.667;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.333;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-5" target="entity-17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1040" y="1000" />
+              <mxPoint x="1140" y="1000" />
+              <mxPoint x="1140" y="1440" />
+              <mxPoint x="1100" y="1440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-33" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.250;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.667;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-7" target="entity-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-34" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.400;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.667;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="800" />
+              <mxPoint x="700" y="800" />
+              <mxPoint x="700" y="400" />
+              <mxPoint x="1240" y="400" />
+              <mxPoint x="1240" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-35" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.667;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.667;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-18" target="entity-22">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="1440" />
+              <mxPoint x="1360" y="1920" />
+              <mxPoint x="1200" y="1920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-36" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.667;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-6" target="entity-9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1520" y="720" />
+              <mxPoint x="1520" y="540" />
+              <mxPoint x="2260" y="540" />
+              <mxPoint x="2260" y="700" />
+              <mxPoint x="2240" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-37" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.500;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-7" target="entity-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-38" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1.000;exitY=0.333;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-10" target="entity-11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1160" y="1180" />
+              <mxPoint x="980" y="1180" />
+              <mxPoint x="980" y="1780" />
+              <mxPoint x="1340" y="1780" />
+              <mxPoint x="1340" y="1720" />
+              <mxPoint x="1700" y="1720" />
+              <mxPoint x="1700" y="1840" />
+              <mxPoint x="2020" y="1840" />
+              <mxPoint x="2020" y="1040" />
+              <mxPoint x="1920" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-39" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.750;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-8" target="entity-14">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2080" y="700" />
+              <mxPoint x="1920" y="700" />
+              <mxPoint x="1920" y="1480" />
+              <mxPoint x="2460" y="1480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-40" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.600;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-31">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="860" />
+              <mxPoint x="680" y="860" />
+              <mxPoint x="680" y="200" />
+              <mxPoint x="1160" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-41" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.667;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.667;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-6" target="entity-21">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1420" y="960" />
+              <mxPoint x="1420" y="940" />
+              <mxPoint x="1160" y="940" />
+              <mxPoint x="1160" y="1420" />
+              <mxPoint x="760" y="1420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-42" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.750;exitY=1.000;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.667;entryY=0.000;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-7" target="entity-17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1800" y="840" />
+              <mxPoint x="1800" y="1220" />
+              <mxPoint x="2040" y="1220" />
+              <mxPoint x="2040" y="1860" />
+              <mxPoint x="1680" y="1860" />
+              <mxPoint x="1680" y="1620" />
+              <mxPoint x="1180" y="1620" />
+              <mxPoint x="1180" y="1440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-43" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.000;exitY=0.667;exitDx=0;exitDy=0;exitPerimeter=1;entryX=1.000;entryY=0.667;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-8" target="entity-10">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1920" y="640" />
+              <mxPoint x="1920" y="700" />
+              <mxPoint x="1900" y="700" />
+              <mxPoint x="1900" y="1520" />
+              <mxPoint x="2060" y="1520" />
+              <mxPoint x="2060" y="1980" />
+              <mxPoint x="1200" y="1980" />
+              <mxPoint x="1200" y="1800" />
+              <mxPoint x="960" y="1800" />
+              <mxPoint x="960" y="1260" />
+              <mxPoint x="1160" y="1260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-44" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1.000;exitY=0.800;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.000;entryY=0.500;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="1" source="entity-1" target="entity-27">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="900" />
+              <mxPoint x="400" y="900" />
+              <mxPoint x="400" y="2320" />
+              <mxPoint x="2640" y="2320" />
+              <mxPoint x="2640" y="2180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="booth-visit-detail" name="02 - Booth Visit Relationship">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="d0" />
+        <mxCell id="d1" parent="d0" />
+        <mxCell id="detail-entity-1" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;EVENT_REGISTRATION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK eventRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK userId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;registeredAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;leftAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (userId, eventId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="d1">
+          <mxGeometry x="80" y="300" width="280" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-entity-2" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_VISIT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothVisitId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK eventRegistrationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;visitedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK (eventRegistrationId, boothAssignmentId)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="d1">
+          <mxGeometry x="500" y="300" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-entity-3" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_ASSIGNMENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothHoldId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK qrToken&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;coverImageUrl?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;assignedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;releasedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;releaseReason?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="d1">
+          <mxGeometry x="500" y="40" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-entity-4" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;POINT_TRANSACTION&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK pointTransactionId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK,UK boothVisitId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;points&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="d1">
+          <mxGeometry x="920" y="300" width="280" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-edge-1" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="d1" source="detail-entity-1" target="detail-entity-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-edge-2" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="d1" source="detail-entity-3" target="detail-entity-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-edge-3" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="d1" source="detail-entity-2" target="detail-entity-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="refund-provenance-detail" name="03 - Refund Provenance">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="refund-entity-1" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_CANCELLATION_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothCancellationRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothAssignmentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;isLate&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="r1">
+          <mxGeometry x="80" y="100" width="280" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="refund-entity-2" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;PARTNER_WITHDRAWAL_REQUEST&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK partnerWithdrawalRequestId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK applicationId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reason&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;reviewNote?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;submittedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;handledAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;withdrawnAt?&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="r1">
+          <mxGeometry x="80" y="560" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="refund-entity-3" value="&lt;div style=&quot;margin:-8px -8px 6px -10px;padding:5px 7px;background-color:#e6e6e6;text-align:left;font-size:13px&quot;&gt;&lt;u&gt;&lt;b&gt;BOOTH_PAYMENT&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;PK boothPaymentId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothHoldId&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK originalPaymentId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK boothCancellationRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;FK partnerWithdrawalRequestId?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;transactionType&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;purpose&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;amount&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;status&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;UK idempotencyKey&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;gatewayProvider&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;gatewayTransactionRef?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;failureCode?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;failureMessage?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;createdAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;updatedAt&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;completedAt?&lt;/div&gt;&lt;div style=&quot;line-height:18px&quot;&gt;CHECK max 1 refund request source&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacingTop=8;spacingLeft=10;spacingRight=8;spacingBottom=8;fontSize=12;fontFamily=Arial;shadow=0;" vertex="1" parent="r1">
+          <mxGeometry x="620" y="280" width="280" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="refund-edge-1" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0;entryY=0.3;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="r1" source="refund-entity-1" target="refund-entity-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="refund-edge-2" value="" style="edgeStyle=none;rounded=0;html=1;curved=0;strokeColor=#000000;strokeWidth=1.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=1;entryX=0;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=1;" edge="1" parent="r1" source="refund-entity-2" target="refund-entity-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
