@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.swp391</groupId>
-    <artifactId>bookstreet_backend</artifactId>
+    <artifactId>bookstreet-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>bookstreet_backend</name>
-    <description>bookstreet_backend</description>
+    <name>bookstreet-backend</name>
+    <description>Book Street Event Management System Backend</description>
     <url/>
     <licenses>
         <license/>
