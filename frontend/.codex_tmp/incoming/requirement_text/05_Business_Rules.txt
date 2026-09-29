@@ -1,0 +1,237 @@
+BUSINESS RULES
+Short, plain-language rules for the MVP
+1. Cách đọc
+Business Rule là quy tắc mà hệ thống và người dùng phải tuân theo. Bản này ưu tiên câu ngắn, một ý mỗi rule. “Static” là rule cố định; “Dynamic” là rule phụ thuộc cấu hình, thời gian, trạng thái hoặc từng Event/Activity.
+2. Business Rules Catalog
+ID
+Rule Definition
+Type of Rules
+Static / Dynamic
+BR-01
+Guest được xem Event, Activity, Booth, Map và nội dung public mà không cần đăng nhập.
+Access
+Static
+BR-02
+Dữ liệu cá nhân như Registration, Attendance, BoothVisit, Points, Badge và Certificate chỉ chủ sở hữu hoặc người có quyền quản lý được xem.
+Access
+Static
+BR-03
+Organizer hợp lệ có thể quản lý các Event của cùng Đường Sách; Event không thuộc riêng người tạo.
+Access
+Static
+BR-04
+Partner chỉ thao tác dữ liệu thuộc tổ chức của mình.
+Access
+Static
+BR-05
+Participant chỉ thao tác dữ liệu cá nhân của mình.
+Access
+Static
+BR-06
+Event dùng lifecycle DRAFT → PUBLISHED → ONGOING → COMPLETED; có thể chuyển sang CANCELLED.
+Event
+Static
+BR-07
+Organizer cấu hình các deadline theo từng Event/Activity, gồm hạn Apply Event, Booth Request, Activity Proposal, Participant Registration và các cancellation deadline cần thiết.
+Event
+Dynamic
+BR-08
+Sau registration deadline, hệ thống không nhận request đăng ký mới. Đối với Booth/Activity đã được duyệt, Partner gửi Cancellation Request và Organizer phải xác nhận trước khi việc hủy có hiệu lực. Yêu cầu gửi sau cancellation cutoff được đánh dấu LATE_CANCELLATION; Organizer xử lý hậu quả phù hợp và hệ thống lưu lý do, người xử lý và thời điểm xử lý
+Event
+Dynamic
+BR-09
+Nếu Event bị hủy, Activity bị hủy, Booth được release; hệ thống không ghi nhận BoothVisit/Attendance mới cho Event đó và người bị ảnh hưởng được thông báo.
+Event
+Static
+BR-10
+Participant có thể Join Event để lưu vào My Events và nhận thông báo chung.
+Event Registration
+Static
+BR-11
+Event Registration không giữ chỗ cho Activity và không tạo Event-level QR trong MVP.
+Event Registration
+Static
+BR-12
+Nếu Participant đăng ký Activity nhưng chưa Join Event, hệ thống tự tạo Event Registration.
+Event Registration
+Static
+BR-13
+Participant chỉ Leave Event khi không còn Activity Registration đang active trong Event đó.
+Event Registration
+Static
+BR-14
+Partner phải được Organizer duyệt tham gia Event trước khi Request Booth hoặc Submit Activity Proposal.
+Partner
+Static
+BR-15
+Partner không bắt buộc phải có Booth mới được đề xuất Activity.
+Partner
+Static
+BR-16
+Partner rút khỏi Event bằng Withdrawal Request; Organizer xác nhận và xử lý Booth/Activity liên quan.
+Partner
+Static
+BR-17
+Booth là vị trí vật lý; release Booth Assignment không xóa Booth.
+Booth
+Static
+BR-18
+Partner chỉ được chọn Booth đang AVAILABLE. Việc tạo Booth Request và Active Booth Hold cho Booth đã chọn phải thực hiện trong cùng một transaction; nếu Booth không còn AVAILABLE tại thời điểm submit thì request không được tạo thành công.
+Booth
+Static
+BR-19
+Booth vật lý không có trạng thái ASSIGNED toàn cục. Trên map, AVAILABLE / ON_HOLD / ASSIGNED được xác định theo Event và khoảng thời gian; UNAVAILABLE là trạng thái vận hành của Booth. Trong cùng khoảng thời gian áp dụng, một Booth chỉ được có tối đa một Active Hold hoặc một Active Assignment.
+Booth
+Dynamic
+BR-20
+Booth Hold có thời hạn. Nếu Hold hết hạn trước khi được duyệt, Booth Request chuyển EXPIRED, Hold được release và Booth trở lại AVAILABLE. Organizer không được Approve request đã EXPIRED hoặc có Hold không còn hợp lệ.
+Booth
+Dynamic
+BR-21
+Số Booth tối đa của mỗi Partner được cấu hình theo Event. Với New Booth Request, số Booth Assignment hiện tại cộng Active Hold của các New Booth Request không được vượt quá maxBoothsPerPartner. Replacement Hold của Booth Change không được tính là Booth sở hữu theo quota.
+Booth
+Dynamic
+BR-22
+Booth Request PENDING có thể Withdraw. Booth đã ASSIGNED muốn hủy phải gửi Cancellation Request và chỉ có hiệu lực sau khi Organizer xác nhận. Yêu cầu gửi sau Booth cancellation cutoff được đánh dấu LATE_CANCELLATION; Organizer quyết định reassign hay để trống và hệ thống lưu lịch sử xử lý.
+Booth
+Dynamic
+BR-23
+Khi Partner yêu cầu đổi Booth, Booth hiện tại vẫn giữ Assignment còn Booth mới được tạo Replacement Hold tạm thời. Mỗi Partner chỉ được có tối đa một Active Booth Change Request, tương ứng tối đa một Replacement Hold, trong cùng một Event tại một thời điểm.
+Booth
+Static
+BR-24
+Approve Booth Change phải được xử lý atomically: kiểm tra Replacement Hold còn hợp lệ, release Assignment của Booth cũ, kết thúc Hold của Booth mới và tạo Assignment mới trong cùng một transaction. Nếu bất kỳ bước nào thất bại, toàn bộ thay đổi phải rollback.
+Booth
+Static
+BR-25
+Nếu Booth Change Request bị Reject, Withdraw hoặc Expired, Replacement Hold phải được release và Booth cũ vẫn giữ nguyên Assignment. Booth cũ chỉ được release khi Change Request được Approve; trước khi Booth cũ được reassign, các Activity đang phụ thuộc vào Booth đó phải được move hoặc cancel.
+Booth
+Static
+BR-26
+Activity có thể ở Booth, Main Stage, Workshop Area hoặc Location hợp lệ khác.
+Activity
+Static
+BR-27
+Partner gửi Activity Proposal; Organizer duyệt thì mới trở thành Activity chính thức.
+Activity
+Static
+BR-28
+Organizer được tạo trực tiếp Activity của Ban tổ chức.
+Activity
+Static
+BR-29
+Activity Proposal phải chọn exact time, Location và capacity.
+Activity
+Static
+BR-30
+Hệ thống chặn hai Activity dùng cùng physical Location trong thời gian overlap, kể cả thuộc Event khác nhau.
+Activity
+Static
+BR-31
+Proposal PENDING không khóa slot; hệ thống check conflict lại ngay trước khi Approve.
+Activity
+Static
+BR-32
+Activity capacity không vượt capacity của Location.
+Activity
+Dynamic
+BR-33
+Số Activity tối đa của mỗi Partner được cấu hình theo Event.
+Activity
+Dynamic
+BR-34
+Activity đã Approved/Published muốn đổi time/location phải qua Change Request nếu do Partner yêu cầu.
+Activity
+Static
+BR-35
+Proposal PENDING có thể Withdraw. Activity Approved/Published muốn hủy phải gửi Cancellation Request; nếu gửi sau Activity cancellation deadline thì vẫn tiếp nhận nhưng được đánh dấu Late Cancellation để Organizer xử lý.
+Activity
+Dynamic
+BR-36
+Khi Activity đổi time/location, hệ thống thông báo Participant đã đăng ký và cho họ cancel dù qua deadline thông thường.
+Activity
+Static
+BR-37
+Activity đã phát sinh nghiệp vụ không bị hard-delete; dùng status để giữ lịch sử.
+Activity
+Static
+BR-38
+Activity Registration chỉ thành công khi còn chỗ và còn thời hạn đăng ký.
+Registration
+Dynamic
+BR-39
+Capacity phải được kiểm tra atomically để không vượt số chỗ khi nhiều người đăng ký cùng lúc.
+Registration
+Static
+BR-40
+Participant được đăng ký Activity trùng giờ; hệ thống cảnh báo nhưng không chặn.
+Registration
+Static
+BR-41
+Hủy Activity Registration hợp lệ sẽ trả lại chỗ. Registration đã CANCELLED không đủ điều kiện tạo Attendance khi Participant quét Activity QR.
+Registration
+Dynamic
+BR-42
+Không đến Activity đã đăng ký có thể được ghi nhận NO_SHOW.
+Registration
+Dynamic
+BR-43
+Mỗi BoothAssignment đang ACTIVE có một QR riêng để Participant tự quét khi ghé Booth. Scan hợp lệ tạo BoothVisit gắn với EventRegistration và BoothAssignment đó. QR hết hiệu lực khi BoothAssignment bị RELEASED/CANCELLED hoặc Event kết thúc, nhưng lịch sử QR/BoothVisit không bị xóa. Scan Booth QR chỉ ghi nhận đã ghé Booth, không đồng nghĩa đã tham gia Activity.
+Booth Visit / QR
+Static
+BR-44
+Mỗi EventRegistration + BoothAssignment chỉ được ghi nhận tối đa một BoothVisit được tính thưởng. Scan lặp cùng QR/BoothAssignment không tạo thêm Point hoặc BoothVisit được tính thưởng.
+Booth Visit / QR
+Static
+BR-45
+Mỗi Activity có QR riêng để Participant tự quét tại Activity. Participant có ActivityRegistration đang active và scan trong time window hợp lệ sẽ tạo Attendance = ATTENDED. QR thuộc Activity, không thuộc Participant/ActivityRegistration; chỉ đăng ký nhưng không scan hợp lệ thì chưa được coi là đã tham dự.
+Attendance / QR
+Dynamic
+BR-46
+Activity QR chỉ tạo Attendance khi Activity và Activity Registration còn hiệu lực. Activity/Registration đã CANCELLED không được ghi nhận Attendance. Organizer có thể manual correction/override khi cần nhưng phải lưu người xử lý và lý do.
+Attendance / QR
+Dynamic
+BR-47
+Mỗi ActivityRegistration có tối đa một Attendance. Scan Activity QR lặp lại không tạo thêm Attendance, Certificate hoặc ActivityRating trùng.
+Attendance / QR
+Static
+BR-48
+Points được cộng từ BoothVisit hợp lệ theo rule cấu hình của hệ thống; cùng một EventRegistration + BoothAssignment chỉ được nhận Point cho lượt ghé đó tối đa một lần.
+Reward
+Dynamic
+BR-49
+Points tích lũy qua nhiều Event và không reset theo Event.
+Reward
+Static
+BR-50
+Badge được cấp tự động theo ngưỡng total Points do Admin cấu hình.
+Reward
+Dynamic
+BR-51
+Certificate chỉ cấp khi Activity đã COMPLETED, Participant có Attendance hợp lệ và Activity được cấu hình có Certificate.
+Reward
+Static
+BR-52
+Mỗi Activity Registration chỉ được cấp Certificate tối đa một lần; scan lặp hoặc thao tác lặp không tạo bản cấp thưởng trùng.
+Reward
+Static
+BR-53
+Approve/reject/cancel/reschedule và thay đổi quan trọng phải tạo in-app notification cho bên bị ảnh hưởng.
+Notification
+Static
+BR-54
+Change/Cancellation Request phải lưu người gửi, lý do, thời điểm, người xử lý và kết quả.
+Data
+Static
+BR-55
+AI, Payment Gateway, paid ticket, Staff Scheduling, Waitlist và Asset Inventory nằm ngoài MVP.
+Scope
+Static
+BR-56
+Guest được gửi General Feedback mà không cần đăng nhập; Activity Rating chỉ dành cho Participant đủ điều kiện tham dự.
+Feedback
+Static
+BR-57
+Approve Activity Proposal và Publish Activity là hai bước khác nhau; Activity chỉ hiển thị public sau khi được Publish.
+Activity
+Static

@@ -1,0 +1,243 @@
+/* ==========================================================================
+   REGISTER PAGE STYLES — FIGMA DESIGN SYSTEM
+   Matches LoginPage with enhanced multi-field grid & feedback indicators
+   ========================================================================== */
+
+.register-container {
+  max-width: 560px;
+}
+
+.register-glow-1 {
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, rgba(233, 188, 99, 0.2) 0%, rgba(233, 188, 99, 0) 70%);
+  top: -160px;
+  left: -120px;
+  animation: authFloatGlow 14s ease-in-out infinite alternate;
+}
+
+.register-glow-2 {
+  width: 680px;
+  height: 680px;
+  background: radial-gradient(circle, rgba(46, 125, 96, 0.35) 0%, rgba(18, 41, 36, 0) 70%);
+  bottom: -220px;
+  right: -140px;
+  animation: authFloatGlow 18s ease-in-out infinite alternate-reverse;
+}
+
+.register-card {
+  padding: 2.75rem 2.5rem;
+}
+
+/* Inline format badge */
+.reg-inline-badge {
+  position: absolute;
+  right: 1.1rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  animation: badgePop 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.reg-inline-badge.valid {
+  background: rgba(64, 168, 129, 0.25);
+  color: #5CD4A6;
+  border: 1px solid rgba(64, 168, 129, 0.5);
+  box-shadow: 0 0 10px rgba(64, 168, 129, 0.3);
+}
+
+.reg-inline-badge.invalid {
+  background: rgba(200, 76, 50, 0.25);
+  color: #FFA592;
+  border: 1px solid rgba(200, 76, 50, 0.5);
+  box-shadow: 0 0 10px rgba(200, 76, 50, 0.3);
+}
+
+/* Password Strength Indicator */
+.password-strength-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-top: 0.55rem;
+  padding: 0 0.25rem;
+}
+
+.password-strength-bars {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.strength-bar {
+  height: 5px;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.strength-bar.filled {
+  box-shadow: 0 0 10px currentColor;
+}
+
+.strength-label {
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Password Match Indicator */
+.password-match-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  animation: authFadeSlideIn 200ms ease;
+  backdrop-filter: blur(8px);
+}
+
+.password-match-hint.match {
+  color: #8DE0BD;
+  background: rgba(64, 168, 129, 0.12);
+  border: 1px solid rgba(64, 168, 129, 0.3);
+}
+
+.password-match-hint.no-match {
+  color: #FFA592;
+  background: rgba(200, 76, 50, 0.12);
+  border: 1px solid rgba(200, 76, 50, 0.3);
+}
+
+/* Terms Row */
+.register-terms-row {
+  align-items: flex-start;
+  margin-top: 0.5rem;
+}
+
+.terms-text {
+  line-height: 1.5;
+  font-size: 0.82rem;
+  color: #B5C9C4;
+}
+
+.terms-text a {
+  color: #E9BC63;
+  text-decoration: underline;
+  transition: color 150ms ease;
+}
+
+.terms-text a:hover {
+  color: #FFF2C6;
+}
+
+/* Register Submit Button */
+.register-submit-btn {
+  margin-top: 0.85rem;
+}
+
+/* Success View State */
+.register-success-view {
+  text-align: center;
+  padding: 1.75rem 0.75rem;
+  animation: authCardFadeIn 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.register-success-badge {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: rgba(64, 168, 129, 0.18);
+  border: 2px solid rgba(64, 168, 129, 0.45);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1.6rem auto;
+  box-shadow: 0 0 32px rgba(64, 168, 129, 0.35);
+  animation: successPulse 2.2s infinite ease-in-out;
+}
+
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 24px rgba(64, 168, 129, 0.25); }
+  50% { transform: scale(1.06); box-shadow: 0 0 40px rgba(64, 168, 129, 0.5); }
+}
+
+.register-success-title {
+  font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+  font-size: 1.95rem;
+  color: #FFFFFF;
+  margin-bottom: 0.95rem;
+}
+
+.register-success-desc {
+  font-size: 0.94rem;
+  color: #C1D5D0;
+  line-height: 1.6;
+  max-width: 440px;
+  margin: 0 auto 2.25rem auto;
+}
+
+.register-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.register-success-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  height: 50px;
+  border-radius: 14px;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: all 220ms ease;
+}
+
+.register-success-btn.primary {
+  background: linear-gradient(135deg, #E9BC63 0%, #D4A359 100%);
+  color: #121F1B;
+  box-shadow: 0 4px 18px rgba(233, 188, 99, 0.35);
+}
+
+.register-success-btn.primary:hover {
+  background: linear-gradient(135deg, #F3C975 0%, #DFB066 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(233, 188, 99, 0.5);
+}
+
+.register-success-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.register-success-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #E9BC63;
+  color: #E9BC63;
+}
+
+@media (max-width: 560px) {
+  .register-card {
+    padding: 2rem 1.35rem;
+  }
+}

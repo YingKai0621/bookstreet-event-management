@@ -1,0 +1,70 @@
+OVERVIEW FOR TEAM - v2
+What every team member must understand
+1. Hệ thống này là gì?
+Đây là hệ thống quản lý nhiều Event diễn ra trong một không gian Đường Sách cố định. Hệ thống vừa có public website cho khách khám phá, vừa có luồng nghiệp vụ cho Partner, Organizer và Participant.
+2. 5 Actor
+Actor
+Nói ngắn gọn
+Guest
+Xem toàn bộ public information và gửi general feedback.
+Participant
+Join Event, đăng ký Activity, tự quét Activity/Booth QR, Attendance, BoothVisit và rewards.
+Partner
+Apply Event, chọn Booth, đề xuất Activity.
+Organizer
+Quản lý Event và duyệt/vận hành nghiệp vụ.
+Admin
+Account, role, Badge và system settings.
+3. Những khái niệm không được nhầm
+Khái niệm
+Hiểu đúng
+Event Registration
+Participant đánh dấu sẽ tham gia/quan tâm Event; tạo My Events và nhận thông báo chung.
+Activity Registration
+Giữ chỗ cho một Activity cụ thể; có capacity. QR thuộc Activity và Participant tự quét khi đến tham dự.
+Booth
+Tài nguyên vật lý dùng chung; availability được tính theo Event/time, không phải ASSIGNED toàn cục.
+Activity
+Chương trình diễn ra tại một Location và một khoảng thời gian.
+Activity Proposal
+Đề xuất của Partner; chưa phải Activity chính thức cho tới khi Organizer duyệt.
+Location
+Khái niệm chung: Booth, Main Stage, Workshop Area...
+Attendance
+Xác nhận Participant thực sự tham dự Activity; tạo khi Participant có registration hợp lệ và tự quét Activity QR trong time window.
+Points / Badge / Certificate
+Points/Badge đến từ BoothVisit hợp lệ; Certificate đến từ Attendance Activity hợp lệ.
+Booth Hold
+Giữ tạm Booth cho một request trong Event/time; có thể hết hạn.
+Booth Assignment
+Booth được cấp cho một Partner trong một Event/khoảng thời gian cụ thể.
+Event Registration vs Activity RegistrationJoin Event không giữ chỗ Activity và không cấp Event QR. Nếu user đăng ký Activity mà chưa Join Event, hệ thống tự tạo Event Registration. User vẫn được xem Event/Activity/Booth/Map khi chưa login.
+4. Core Flows
+Guest → Explore Book Street / Submit General Feedback → Login khi cần chức năng cá nhân.
+Participant → Join Event → My Events / Event notifications.
+Participant → Register Activity → tự quét Activity QR trong time window → Attendance = ATTENDED → xét Certificate. Khi ghé Booth, Participant tự quét QR của BoothAssignment → BoothVisit → Point → Badge.
+Partner → Apply Event → Approved → Select Booth → Booth Request → Organizer Review.
+Partner → Activity Proposal → Conflict Check → Organizer Review → Publish.
+Change/Cancel → impact check → update status → notify affected users.
+5. Rules bắt buộc phải nhớ
+Public information không yêu cầu account hoặc Event Registration.
+Partner phải được duyệt vào Event trước khi request Booth/propose Activity.
+Partner chọn Booth cụ thể; Organizer duyệt chứ không tự phân trong flow thường.
+Availability của Booth được tính theo Event/thời gian; cùng một Booth vật lý có thể dùng cho Event khác nếu lịch không overlap.
+Activity có exact time + Location; same physical Location + overlapping time bị system block.
+Participant được đăng ký Activity trùng giờ; mỗi ActivityRegistration chỉ có tối đa một Attendance và scan QR lặp không tạo Attendance trùng.
+Booth release không đồng nghĩa xóa Booth; Activity bị ảnh hưởng phải move/cancel trước khi reassign.
+Activity đã publish đổi time/location phải notify Participant và cho phép họ cancel.
+Points đến từ BoothVisit hợp lệ; Badge dựa trên total Points. Certificate dựa trên Attendance Activity hợp lệ; Booth QR và Activity QR là hai flow khác nhau.
+General Feedback không yêu cầu đăng nhập; Activity Rating chỉ dành cho Participant đủ điều kiện.
+Dữ liệu nghiệp vụ đã phát sinh không hard-delete; giữ status/history.
+6. MVP không làm
+AI
+Payment Gateway / paid ticket
+Staff scheduling
+Waitlist
+Sponsor module
+Asset inventory
+Voucher store
+Advanced analytics
+Advanced Map Editor (multi-map, click-to-create, drag/drop) — Future/Stretch Scope.

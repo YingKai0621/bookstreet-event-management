@@ -1,0 +1,483 @@
+BÁO CÁO MÔ TẢ MVP ERD
+BOOK STREET EVENT MANAGEMENT SYSTEM
+SWP391 - Entity & Crow's Foot Relationship Baseline
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Trạng thái: ĐÃ CHỐT bước Entity + Relationship cho MVP. Tài liệu này chưa đi vào attribute, PK/FK, datatype hoặc câu lệnh database.
+Phiên bản
+2.0 - MVP ERD Baseline
+Ngày cập nhật
+20/09/2026
+Mục đích
+Giúp toàn team hiểu cùng một mô hình dữ liệu trước khi thêm attribute/PK/FK.
+Phạm vi
+Event - Partner - Booth - Activity - Participant - QR - Reward - Feedback - Authorization - Public/System Support
+1. Mục tiêu và phạm vi của bản ERD
+Bản ERD này là baseline dữ liệu cho MVP của Book Street Event Management System. Mục tiêu hiện tại là trả lời ba câu hỏi: hệ thống cần lưu những đối tượng nào, các đối tượng liên quan với nhau ra sao, và cardinality của từng quan hệ là 1, 0..1 hay 0..N.
+Đã bao quát các luồng nghiệp vụ chính: Event, Partner, Booth, Activity, Participant, QR, Attendance, Reward, Feedback, Notification và Role.
+Chưa thêm attribute, PK/FK, datatype, enum/status hay database constraint chi tiết; đây là bước kế tiếp.
+Không tiếp tục thêm entity chỉ để “cho đủ”. Entity mới chỉ được thêm khi requirement MVP thay đổi hoặc thật sự có vòng đời dữ liệu riêng.
+Điểm cần nhớ: Đây là ERD đã hoàn thiện ở mức Entity + Crow's Foot cho MVP, chưa phải Logical ERD database cuối cùng.
+2. Cách đọc Crow's Foot nhanh
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+1
+Đúng một
+Ví dụ: mỗi Attendance thuộc đúng 1 ActivityRegistration.
+Bắt buộc
+0..1
+Không có hoặc tối đa một
+Ví dụ: Attendance có thể có 0 hoặc 1 Certificate.
+Optional one
+0..N
+Không có hoặc có nhiều
+Ví dụ: một Event có thể có nhiều Activity.
+Optional many
+1..N
+Ít nhất một và có thể nhiều
+Ví dụ: một User hợp lệ phải có ít nhất 1 UserRole.
+Mandatory many
+Mỗi đường quan hệ phải được đọc theo hai chiều. Ví dụ “Event 1 - 0..N Activity” nghĩa là một Event có thể có nhiều Activity, nhưng mỗi Activity chỉ thuộc đúng một Event.
+3. Sơ đồ MVP ERD hiện tại
+Hình dưới là bản ERD đã chốt ở bước Entity + Relationship. Các phần sau sẽ giải thích theo từng nhóm để thành viên mới có thể đọc mà không cần hiểu ngay toàn bộ sơ đồ.
+Hình 1. MVP ERD baseline - Book Street Event Management System
+4. Tổng quan 31 entity theo nhóm nghiệp vụ
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+Identity & Authorization
+User, Role, UserRole, Notification
+Tài khoản, role và thông báo cá nhân.
+4 entity
+Partner Participation
+PartnerOrganization, PartnerEventApplication, PartnerWithdrawalRequest
+Đơn vị đối tác tham gia/rút khỏi Event.
+3 entity
+Event & Physical Space
+Event, Location, Booth
+Sự kiện và tài nguyên vật lý của Đường Sách.
+3 entity
+Booth Lifecycle
+BoothRequest, BoothHold, BoothAssignment, BoothChangeRequest, BoothCancellationRequest
+Xin, giữ, cấp, đổi và hủy Booth.
+5 entity
+Activity Lifecycle
+ActivityProposal, Activity, ActivityChangeRequest, ActivityCancellationRequest
+Đề xuất, phê duyệt, thay đổi và hủy Activity.
+4 entity
+Participant Journey
+EventRegistration, ActivityRegistration, Attendance
+Tham gia Event, đăng ký Activity và xác nhận đã tham dự.
+3 entity
+QR & Reward
+BoothVisit, PointTransaction, Badge, UserBadge, Certificate, ActivityRating
+Ghé Booth, điểm, badge, certificate và rating.
+6 entity
+Public & System Support
+GeneralFeedback, HeritageContent, SystemSetting
+Góp ý public, nội dung Heritage và cấu hình hệ thống.
+3 entity
+5. Giải thích từng nhóm entity và quan hệ
+5.1. Identity & Authorization
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+User
+Tài khoản đăng nhập của Participant, Partner representative, Organizer hoặc Admin.
+User → EventRegistration, Notification, UserRole, UserBadge; có thể đại diện PartnerOrganization.
+Guest không có User.
+Role
+Định nghĩa vai trò như PARTICIPANT, PARTNER, ORGANIZER, ADMIN.
+Role → UserRole.
+MVP chưa tách Permission/RolePermission.
+UserRole
+Entity trung gian cho quan hệ N-N giữa User và Role.
+User 1 → 1..N UserRole; Role 1 → 0..N UserRole.
+Mỗi tài khoản hợp lệ có ít nhất 1 role.
+Notification
+Một thông báo in-app gửi cho một User.
+User 1 → 0..N Notification.
+Không cần nối tới mọi entity nguồn sự kiện.
+5.2. Partner Participation
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+PartnerOrganization
+Tổ chức/nhà xuất bản/đơn vị tham gia, tách khỏi tài khoản User.
+PartnerOrganization → PartnerEventApplication; có User đại diện trong MVP.
+Ví dụ: NXB Kim Đồng.
+PartnerEventApplication
+Đơn Partner apply một Event cụ thể; là cửa vào trước Booth/Activity.
+PartnerOrganization + Event → PartnerEventApplication; application → BoothRequest/ActivityProposal/Withdrawal.
+Phải APPROVED trước Booth/Activity Proposal.
+PartnerWithdrawalRequest
+Yêu cầu Partner rút khỏi toàn bộ Event.
+PartnerEventApplication 1 → 0..N PartnerWithdrawalRequest.
+Organizer xác nhận rồi mới xử lý hậu quả.
+5.3. Event, Location và Booth vật lý
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+Event
+Sự kiện lớn tổ chức tại Đường Sách.
+Event → PartnerEventApplication, Activity, EventRegistration, GeneralFeedback.
+Event có lifecycle riêng.
+Location
+Địa điểm vật lý chung: Main Stage, Workshop Area, Booth position...
+Location → ActivityProposal, Activity, ActivityChangeRequest; Location 1 → 0..1 Booth.
+Activity chỉ cần biết Location.
+Booth
+Một loại Location đặc biệt có quy trình Hold/Assignment.
+Booth → BoothHold, BoothAssignment.
+Booth tồn tại lâu dài; Assignment thay đổi theo Event.
+Map Editor nâng cao (tạo/xóa nhiều map, click để tạo Location/Booth, drag/drop) KHÔNG nằm trong MVP. MVP vẫn có map hiển thị để Guest/Partner xem và chọn Booth; Location/Booth được quản lý bằng CRUD thông thường.
+5.4. Booth Lifecycle - phần quan trọng nhất
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+BoothRequest
+Partner xin một Booth mới sau khi đã được duyệt vào Event.
+PartnerEventApplication → BoothRequest; request → BoothHold; khi duyệt có thể → BoothAssignment.
+Không nối trực tiếp Booth.
+BoothHold
+Giữ tạm Booth để tránh tranh chấp trong lúc chờ Organizer xử lý.
+BoothRequest XOR BoothChangeRequest → BoothHold → Booth.
+Hold có thời hạn.
+BoothAssignment
+Bản ghi cấp Booth chính thức.
+BoothRequest XOR BoothChangeRequest → BoothAssignment → Booth; Assignment → BoothVisit.
+QR Booth được gắn theo Assignment.
+BoothChangeRequest
+Yêu cầu đổi Booth đang có sang Booth khác.
+Current BoothAssignment → ChangeRequest → Replacement BoothHold; approve có thể tạo Result BoothAssignment.
+Booth cũ vẫn giữ cho đến khi approve.
+BoothCancellationRequest
+Yêu cầu hủy/trả Booth đã được cấp.
+BoothAssignment 1 → 0..N CancellationRequest.
+Gửi request chưa đồng nghĩa release Booth.
+Cách nhớ 3 flow Booth:
+Xin mới: BoothRequest → BoothHold → Organizer Approve → BoothAssignment.
+Đổi Booth: Current Assignment → BoothChangeRequest → Replacement Hold → Approve → Result Assignment mới; Assignment cũ được release trong cùng transaction.
+Hủy Booth: BoothAssignment → BoothCancellationRequest → Organizer xác nhận → Assignment được release.
+5.5. Activity Lifecycle
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+ActivityProposal
+Đề xuất Activity của Partner, chưa phải Activity chính thức.
+PartnerEventApplication + Location → ActivityProposal; proposal có thể tạo 0..1 Activity.
+Pending proposal không hard-lock slot.
+Activity
+Activity chính thức thuộc Event và diễn ra tại một Location.
+Event + Location → Activity; Activity → Registration/Change/Cancellation.
+Organizer có thể tạo Activity trực tiếp.
+ActivityChangeRequest
+Partner xin thay đổi Activity đã approved/published.
+Activity 1 → 0..N ChangeRequest; có thể đề xuất 0..1 Location mới.
+Có thể chỉ đổi giờ/nội dung.
+ActivityCancellationRequest
+Partner xin hủy Activity đã approved/published.
+Activity 1 → 0..N CancellationRequest.
+Organizer xác nhận trước khi hủy có hiệu lực.
+5.6. Participant Journey
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+EventRegistration
+Hồ sơ một User tham gia một Event; là gốc của Participant journey trong Event.
+User + Event → EventRegistration; → ActivityRegistration và BoothVisit.
+Có thể auto-create khi đăng ký Activity hoặc scan Booth QR.
+ActivityRegistration
+Đăng ký một chỗ cho Activity cụ thể.
+EventRegistration + Activity → ActivityRegistration; → Attendance.
+REGISTERED chưa đồng nghĩa ATTENDED.
+Attendance
+Xác nhận Participant thực sự tham dự Activity.
+ActivityRegistration 1 → 0..1 Attendance; Attendance → 0..1 Certificate/ActivityRating.
+Participant tự scan Activity QR trong time window.
+5.7. QR, Booth Visit, Reward và Certificate
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+BoothVisit
+Ghi nhận một Participant đã ghé một Booth Assignment trong Event.
+EventRegistration + BoothAssignment → BoothVisit.
+Scan Booth QR tạo BoothVisit.
+PointTransaction
+Một lần cộng điểm có nguồn từ một BoothVisit hợp lệ.
+BoothVisit 1 → 0..1 PointTransaction.
+Không nối trực tiếp User vì suy ra được.
+Badge
+Định nghĩa huy hiệu theo rule/threshold.
+Badge → UserBadge.
+Rule chi tiết để ở attribute/config sau.
+UserBadge
+Ghi nhận User đã đạt một Badge.
+User + Badge → UserBadge.
+Giải quyết quan hệ N-N.
+Certificate
+Chứng nhận cho Activity có hỗ trợ certificate và Attendance hợp lệ.
+Attendance 1 → 0..1 Certificate.
+Không cấp chỉ vì đăng ký.
+ActivityRating
+Đánh giá Activity sau khi đã tham dự hợp lệ.
+Attendance 1 → 0..1 ActivityRating.
+Mỗi attendance tối đa một rating.
+QR không cần entity riêng ở giai đoạn này. QR là cơ chế/thuộc tính: BoothAssignment có QR riêng cho lần cấp Booth; Activity có QR check-in riêng. Khi Event/Assignment kết thúc, QR cũ không bị xóa lịch sử nhưng không còn hợp lệ.
+5.8. Public Content, Feedback và System Support
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+GeneralFeedback
+Góp ý chung, Guest có thể gửi không cần login.
+GeneralFeedback → 0..1 Event; Event → 0..N feedback.
+Có thể là feedback chung không gắn Event.
+HeritageContent
+Nội dung giới thiệu/lịch sử/văn hóa Đường Sách cho public.
+Đứng độc lập ở Crow's Foot hiện tại.
+Organizer CRUD; Guest/Public xem.
+SystemSetting
+Cấu hình hệ thống cần lưu bền vững.
+Đứng độc lập ở Crow's Foot hiện tại.
+Admin quản lý.
+6. Danh sách quan hệ trọng yếu cần team nhớ
+Entity A
+Entity B
+Cardinality
+Cách hiểu
+User
+PartnerOrganization
+1 - 0..1
+Một User có thể đại diện tối đa một PartnerOrganization trong MVP; mỗi PartnerOrganization có một User đại diện.
+User
+EventRegistration
+1 - 0..N
+Một User có thể tham gia nhiều Event.
+Event
+EventRegistration
+1 - 0..N
+Một Event có nhiều Participant registrations.
+User
+UserRole
+1 - 1..N
+Mỗi User hợp lệ phải có ít nhất một Role.
+Role
+UserRole
+1 - 0..N
+Một Role có thể được nhiều User sử dụng.
+User
+Notification
+1 - 0..N
+Một User có thể nhận nhiều thông báo.
+User
+UserBadge
+1 - 0..N
+Một User có thể đạt nhiều Badge.
+Badge
+UserBadge
+1 - 0..N
+Một Badge có thể được nhiều User đạt.
+PartnerOrganization
+PartnerEventApplication
+1 - 0..N
+Một Partner có thể apply nhiều Event theo thời gian.
+Event
+PartnerEventApplication
+1 - 0..N
+Một Event có thể nhận nhiều application.
+PartnerEventApplication
+BoothRequest
+1 - 0..N
+Một lần Partner tham gia Event có thể phát sinh nhiều BoothRequest theo lịch sử/quota.
+PartnerEventApplication
+ActivityProposal
+1 - 0..N
+Partner đã được duyệt có thể gửi nhiều ActivityProposal.
+PartnerEventApplication
+PartnerWithdrawalRequest
+1 - 0..N
+Có thể có nhiều request theo lịch sử, nhưng không nhiều active cùng lúc.
+Location
+Booth
+1 - 0..1
+Một Location có thể là Booth hoặc không; một Booth gắn với đúng một Location.
+Location
+Activity
+1 - 0..N
+Một Activity diễn ra tại đúng một Location; Location có thể chứa nhiều Activity theo thời gian.
+Location
+ActivityProposal
+1 - 0..N
+Proposal chọn exact Location.
+Event
+Activity
+1 - 0..N
+Một Activity thuộc đúng một Event.
+ActivityProposal
+Activity
+0..1 - 0..1
+Proposal có thể chưa thành Activity; Activity do Organizer tạo trực tiếp có thể không có Proposal.
+Activity
+ActivityRegistration
+1 - 0..N
+Một Activity có thể có nhiều registrations.
+EventRegistration
+ActivityRegistration
+1 - 0..N
+Registration Activity luôn nằm trong một EventRegistration.
+ActivityRegistration
+Attendance
+1 - 0..1
+Mỗi registration tối đa một attendance.
+Attendance
+Certificate
+1 - 0..1
+Attendance hợp lệ có thể sinh tối đa một Certificate.
+Attendance
+ActivityRating
+1 - 0..1
+Attendance có thể có tối đa một Rating.
+EventRegistration
+BoothVisit
+1 - 0..N
+Một Participant có thể ghé nhiều Booth trong Event.
+BoothAssignment
+BoothVisit
+1 - 0..N
+Một Booth Assignment có thể có nhiều lượt ghé.
+BoothVisit
+PointTransaction
+1 - 0..1
+Một lượt ghé hợp lệ chỉ tạo tối đa một lần cộng điểm.
+Event
+GeneralFeedback
+0..1 - 0..N
+Feedback có thể thuộc 0 hoặc 1 Event; Event có nhiều feedback.
+Activity
+ActivityChangeRequest
+1 - 0..N
+Một Activity có thể có nhiều request đổi theo lịch sử.
+Activity
+ActivityCancellationRequest
+1 - 0..N
+Một Activity có thể có nhiều request hủy theo lịch sử.
+BoothAssignment
+BoothCancellationRequest
+1 - 0..N
+Một Assignment có thể có nhiều cancellation request theo lịch sử.
+BoothAssignment
+BoothChangeRequest
+1 - 0..N
+Current Assignment có thể bị xin đổi nhiều lần theo lịch sử.
+BoothChangeRequest
+BoothAssignment
+1 - 0..1
+Approve Change Request có thể sinh đúng một Result Assignment.
+7. Các flow end-to-end để team dễ hình dung
+Flow A - Partner tham gia Event: PartnerOrganization → PartnerEventApplication → Organizer approve. Sau đó Partner mới được Request Booth hoặc Submit ActivityProposal.
+Flow B - Xin Booth mới: BoothRequest + BoothHold được tạo atomic. Nếu approve → BoothAssignment; nếu reject/withdraw/expire → Hold được release.
+Flow C - Đổi Booth: Assignment cũ vẫn active → BoothChangeRequest → Replacement Hold Booth mới → approve atomic swap → tạo Result Assignment mới.
+Flow D - Activity: ActivityProposal → Organizer approve → Activity → publish. Change/Cancellation sau approve đi qua request riêng.
+Flow E - Participant đăng ký Activity: User → EventRegistration → ActivityRegistration. Nếu chưa Join Event, hệ thống tự tạo EventRegistration trước.
+Flow F - Attendance & Certificate: Participant tự scan Activity QR trong time window → Attendance = ATTENDED → nếu Activity hỗ trợ certificate và completed → Certificate.
+Flow G - Booth QR & Gamification: Participant scan QR của BoothAssignment đang active → BoothVisit → PointTransaction → tổng điểm → UserBadge/Badge.
+Flow H - Rating & Feedback: Attendance hợp lệ → ActivityRating; Guest/Public có thể gửi GeneralFeedback mà không cần login.
+Flow I - Heritage/Public Content: Guest xem HeritageContent; Organizer CRUD nội dung Heritage để cập nhật thông tin công khai.
+8. Business rules/constraints quan trọng đi kèm ERD
+Booth dùng Hold model: một Booth không được có Active Hold/Active Assignment xung đột trong cùng khoảng thời gian; tạo BoothRequest + Hold phải atomic.
+BoothHold có expiration; request hết Hold không được Organizer approve.
+Mỗi Partner chỉ có tối đa một active Booth Change Request trong cùng Event; replacement hold không được dùng để chiếm hàng loạt Booth.
+Approve Booth Change phải atomic: kiểm tra hold mới → release assignment cũ → kết thúc hold → tạo assignment mới; lỗi ở bất kỳ bước nào thì rollback.
+BoothHold có nguồn là BoothRequest XOR BoothChangeRequest; BoothAssignment cũng có nguồn là BoothRequest XOR BoothChangeRequest.
+ActivityProposal pending không hard-lock Location; trước khi approve phải kiểm tra conflict và capacity.
+Activity Registration và Event Registration là hai khái niệm khác nhau. EventRegistration không giữ chỗ Activity.
+Mỗi ActivityRegistration có tối đa một Attendance; scan QR Activity lặp không tạo attendance/certificate trùng.
+Mỗi EventRegistration + BoothAssignment chỉ được tính một BoothVisit/reward hợp lệ; scan Booth QR lặp không cộng điểm thêm.
+Mỗi User + Badge chỉ có một UserBadge cho cùng Badge.
+GeneralFeedback không yêu cầu login; ActivityRating yêu cầu Attendance hợp lệ.
+Activity/Booth đã phát sinh nghiệp vụ không hard-delete lịch sử; dùng lifecycle/status và request để xử lý thay đổi/hủy.
+9. Các quan hệ cố ý KHÔNG nối trực tiếp
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+Activity - Booth
+Không nối vì Activity → Location; nếu Location đó là Booth thì suy ra qua Location → Booth.
+Tránh duplicate và vẫn hỗ trợ Main Stage/Workshop Area.
+Giữ.
+BoothRequest - Booth
+Booth mục tiêu của request đi qua BoothHold; assignment chính thức đi qua BoothAssignment.
+Giảm inconsistency.
+Giữ.
+User - ActivityRegistration
+Đã có User → EventRegistration → ActivityRegistration.
+Đúng context Event.
+Giữ.
+User - BoothVisit
+Đã có BoothVisit → EventRegistration → User.
+EventRegistration là gốc participant journey trong Event.
+Giữ.
+User - PointTransaction
+Đã suy ra qua PointTransaction → BoothVisit → EventRegistration → User.
+Không lưu trùng chủ sở hữu.
+Giữ.
+User/Activity - Certificate
+Đã suy ra qua Certificate → Attendance → ActivityRegistration.
+Tránh đường dư.
+Giữ.
+User/Activity - ActivityRating
+Đã suy ra qua Attendance.
+Attendance chứng minh eligibility rating.
+Giữ.
+MapLayout / MapLocation
+Map Editor nâng cao không thuộc MVP.
+Sẽ xem lại nếu còn thời gian.
+Future scope.
+10. Quyết định QR hiện tại - cần team dùng thống nhất
+Booth QR: gắn theo BoothAssignment, không phải QR vĩnh viễn của Booth vật lý. Khi Event/Assignment kết thúc, QR cũ mất hiệu lực nhưng dữ liệu lịch sử vẫn giữ.
+Activity QR: gắn với Activity để Participant đã đăng ký tự scan trong time window hợp lệ.
+Scan Booth QR = đã ghé Booth; KHÔNG đồng nghĩa đã tham gia Activity ở Booth đó.
+Scan Activity QR hợp lệ = tạo Attendance = ATTENDED. MVP hiện không yêu cầu check-in + check-out + duration.
+Points trong MVP đến từ BoothVisit; Certificate dựa trên Attendance Activity hợp lệ. Hai cơ chế reward được tách rõ để dễ hiểu và dễ triển khai.
+Lưu ý đồng bộ tài liệu: nếu một tài liệu cũ còn ghi “Participant đưa QR cho Operator quét” hoặc “Booth vật lý có QR vĩnh viễn”, ưu tiên baseline trong báo cáo này và Business Rules mới nhất.
+11. MVP boundary và Future Scope
+Entity
+Vai trò dễ hiểu
+Quan hệ chính
+Ghi chú
+Trong MVP
+Map hiển thị Booth/Location; CRUD Location/Booth; Partner chọn Booth trên map; Booth/Activity QR; Rewards; Heritage CRUD.
+Đủ cho core workflows và demo.
+In scope
+Future/Stretch
+Map Editor nhiều version, click-to-create Location/Booth, drag/drop, advanced map management.
+Chỉ làm nếu core MVP đã ổn định.
+Out of MVP
+Chưa model riêng
+Permission/RolePermission, generic AuditLog, QRCode entity, BadgeRule entity.
+Có thể bổ sung khi implementation thật sự cần.
+Keep simple
+Out of scope
+AI, payment, paid ticket, staff scheduling, waitlist, asset inventory, sponsor management, reward redemption.
+Không đưa vào ERD MVP.
+Scope lock
+12. Bước tiếp theo sau khi chốt Entity + Relationship
+Bổ sung attribute cho từng entity: thông tin nghiệp vụ, status, timestamps, QR token, lý do xử lý, cấu hình cần thiết.
+Chọn PK/FK và xác định nullable/non-nullable theo cardinality.
+Thêm UNIQUE/CHECK/database constraints cho các rule như one registration per user/event, one reward per visit, XOR source, active request limits.
+Chuẩn hóa status/lifecycle của Event, Application, Request, Hold, Assignment, Activity, Registration và Attendance.
+Rà lại ERD với Business Rules và Use Case List để bảo đảm mọi workflow đều có nơi lưu dữ liệu.
+Sau khi pass final validation, chuyển sang physical schema/table design và seed data cho demo.
+13. Kết luận cho team
+MVP ERD hiện tại đã mô tả đầy đủ xương sống dữ liệu của hệ thống BookStreet ở mức Entity + Crow's Foot. Thiết kế tách rõ tài nguyên vật lý (Location/Booth), giao dịch phân Booth (Request/Hold/Assignment), vòng đời Activity, Participant journey, QR attendance/booth visit, reward, feedback, content và authorization. Các quan hệ dư đã được tránh bằng cách truy xuất qua entity trung gian, giúp mô hình dễ mở rộng và giảm nguy cơ dữ liệu mâu thuẫn.
+Team có thể dùng tài liệu này làm “source of truth” cho bước thiết kế attributes + PK/FK. Khi có requirement mới, cần cập nhật Business Rules và ERD cùng lúc thay vì tự thêm bảng riêng lẻ.

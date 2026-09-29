@@ -1,0 +1,114 @@
+QUY TRÌNH HỦY BOOTH VÀ ACTIVITY
+Cancellation & Change Handling
+Mục tiêu tài liệuMô tả rõ cách Partner gửi yêu cầu hủy, cách Organizer xử lý, và ảnh hưởng của việc hủy Booth/Activity đến các phần còn lại của hệ thống.
+1. Khái niệm cần phân biệt
+Khái niệm
+Hiểu đơn giản
+Booth
+Gian hàng / vị trí vật lý dùng chung của Đường Sách; có thể được dùng lại ở các Event không trùng thời gian.
+Activity
+Hoạt động / chương trình diễn ra tại một thời gian và địa điểm cụ thể.
+Booth Assignment
+Việc một Booth được phân cho một Partner trong một Event/khoảng thời gian cụ thể.
+Cancellation Request
+Yêu cầu hủy được Partner gửi sau khi nội dung đã được duyệt/phân bổ.
+Withdraw
+Rút một request/proposal khi nó vẫn còn Pending, chưa được duyệt.
+Câu dễ nhớBooth là “chỗ”, Activity là “việc”. Hủy một Activity không đồng nghĩa mất Booth. Hủy quyền sử dụng Booth chỉ ảnh hưởng những Activity đang diễn ra tại Booth đó.
+2. Nguyên tắc chung về hủy
+Nếu Booth Request hoặc Activity Proposal vẫn ở trạng thái Pending: Partner được tự Withdraw, không cần Organizer xác nhận.
+Nếu Booth đã được phân hoặc Activity đã Approved/Published: Partner gửi Cancellation Request; Organizer là người xác nhận và xử lý chính thức trên hệ thống.
+Không xóa dữ liệu lịch sử. Hệ thống giữ lại request, lý do hủy, thời điểm hủy và trạng thái để phục vụ báo cáo.
+Nên dùng “Confirm Cancellation” thay vì hiểu Organizer có thể ép Partner tiếp tục. Organizer xác nhận và xử lý hậu quả của việc hủy.
+3. Hủy Booth / Hủy Booth Assignment
+Thực tế không nên “xóa Booth”. Booth là tài nguyên vật lý dùng chung của Đường Sách; chỉ Booth Assignment của Partner trong một Event bị hủy/release.
+3.1 Khi Booth Request chưa được duyệt
+Partner có thể bấm Withdraw Request. Booth chưa được cấp nên không cần Organizer duyệt việc rút request.
+3.2 Khi Booth đã được phân
+Partner mở Booth đã được cấp và chọn “Request Cancellation / Yêu cầu hủy gian hàng”.
+Partner nhập lý do hủy và gửi yêu cầu.
+Organizer nhận yêu cầu trong màn hình quản lý Booth Cancellation Requests.
+Organizer kiểm tra thời điểm hủy và các Activity đang dùng Booth đó.
+Organizer Confirm Cancellation. Booth Assignment của Partner trong Event chuyển sang Cancelled/Released.
+Hệ thống tính lại availability của Booth cho Event/khoảng thời gian liên quan. Booth vật lý không đổi trạng thái ASSIGNED toàn cục.
+3.3 Hủy Booth sớm và hủy Booth sát giờ
+Tình huống
+Organizer xử lý
+Kết quả
+Hủy còn xa ngày sự kiện
+Release Booth và có thể mở lại cho Partner khác đăng ký / phân bổ lại.
+Booth có thể trở lại AVAILABLE cho Event/thời gian đó nếu không có hold/assignment overlap.
+Hủy sát giờ
+Release Booth nhưng thường không mở đăng ký tự động. Organizer quyết định có reassign hay để trống.
+Booth được release cho Event đó nhưng thường để trống nếu không còn đủ thời gian setup; Organizer có thể reassign thủ công.
+Organizer cấu hình boothCancellationDeadline theo từng Event. Trước cutoff, Booth đã release có thể mở lại cho request mới; sau cutoff, Organizer quyết định reassign thủ công hay để trống.
+3.4 Activity đang nằm tại Booth bị hủy thì sao?
+Hệ thống không nên tự động hủy tất cả Activity. Khi Booth Assignment bị release, hệ thống liệt kê các Activity có location chính là Booth đó để Organizer xử lý.
+Đổi địa điểm Activity sang Booth/Stage/Area khác nếu còn phù hợp.
+Reschedule nếu cần thêm thời gian chuẩn bị.
+Cancel Activity nếu không còn địa điểm hoặc Partner không thể tổ chức.
+Ví dụKim Đồng mất Booth A05. Activity “Mini game tại A05” bị ảnh hưởng; nhưng Activity “Giao lưu tác giả tại Main Stage” không bị ảnh hưởng.
+4. Hủy Activity
+4.1 Khi Activity Proposal còn Pending
+Partner có thể Withdraw Proposal trực tiếp. Vì Activity chưa được duyệt và chưa public nên không cần Organizer xác nhận.
+4.2 Khi Activity đã Approved/Published
+Partner chọn Activity và gửi “Activity Cancellation Request”.
+Partner nhập lý do hủy, ghi chú và gửi yêu cầu.
+Organizer xem số người đã đăng ký, thời gian còn lại, địa điểm và khả năng xử lý thay thế.
+Organizer chọn phương án: Confirm Cancel, Reschedule, Change Location hoặc Request More Information.
+Nếu Cancel: Activity chuyển sang Cancelled và hệ thống xử lý tự động các đăng ký liên quan.
+4.3 Nếu Activity bị hủy sau khi đã có Participant đăng ký
+Thành phần
+Xử lý khi Activity Cancelled
+Activity
+Chuyển trạng thái CANCELLED, vẫn giữ lịch sử.
+Registration
+Giữ record để theo dõi lịch sử; không xóa.
+Activity QR
+Activity QR không còn hiệu lực để tạo Attendance cho Activity đã hủy.
+BoothVisit / Points
+Hủy Activity không tự động xóa Point đã phát sinh từ BoothVisit hợp lệ; Activity không phải nguồn Point trong MVP.
+Certificate
+Không cấp chứng nhận cho Activity bị hủy.
+Participant
+Nhận thông báo hủy/thay đổi lịch.
+4.4 Hủy Activity sát giờ
+Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organizer xác nhận việc hủy ngay trên hệ thống; hệ thống thông báo hàng loạt cho Participant, vô hiệu QR và không cấp điểm/chứng nhận. Organizer không xử lý từng người thủ công.
+5. Partner rút khỏi toàn bộ Event
+Đây là trường hợp lớn hơn Cancel Booth hoặc Cancel Activity. Partner chọn “Withdraw from Event” và gửi yêu cầu cho Organizer.
+Organizer xác nhận Partner không còn tham gia Event.
+Các Booth Assignment của Partner trong Event được Release; availability được tính lại cho đúng Event/thời gian.
+Các Activity do Partner tổ chức được Cancel hoặc xử lý theo phương án của Organizer.
+Participant đã đăng ký các Activity bị ảnh hưởng được thông báo.
+Activity QR, Attendance và Certificate của Activity bị hủy được xử lý theo rule tương ứng. Points trong MVP đến từ BoothVisit nên không phụ thuộc trực tiếp vào việc hủy Activity.
+6. Business Rule đề xuất
+Trạng thái / tình huống
+Partner
+Organizer
+Booth Request - Pending
+Withdraw trực tiếp
+Không cần xác nhận
+Booth đã Assigned
+Gửi Cancellation Request
+Confirm + Release Booth
+Activity Proposal - Pending
+Withdraw trực tiếp
+Không cần xác nhận
+Activity Approved/Published
+Gửi Cancellation Request
+Cancel / Reschedule / Change Location
+Booth hủy sớm
+Gửi yêu cầu
+Release assignment; có thể mở lại cho Event/time đó nếu còn trước cutoff
+Booth hủy sát giờ
+Gửi yêu cầu
+Release assignment; thường để trống hoặc chủ động reassign
+Activity hủy sát giờ
+Gửi yêu cầu
+Confirm cancel + notify Participant
+Rút khỏi Event
+Gửi Withdrawal Request
+Release Booth + xử lý Activity
+7. Flow tóm tắt
+Booth: Partner chọn Booth → Request/Hold → Organizer Approve → Booth Assignment theo Event → Partner Cancellation Request → Organizer Confirm → Release Assignment → tính lại availability cho Event/time → Reassign hoặc để trống.
+Activity: Partner Proposal → Organizer Approve → Activity Published → Partner Cancellation Request → Organizer Handle → Cancel/Reschedule/Change Location → System Notify Participant.

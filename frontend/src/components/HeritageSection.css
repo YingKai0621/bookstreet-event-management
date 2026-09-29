@@ -1,0 +1,36 @@
+.figma-heritage-section { padding: 5.5rem 0 5rem; background: #F5EFEB; position: relative; overflow: hidden; }
+.figma-heritage-section > .container { position: relative; z-index: 1; }
+.heritage-fan-header { max-width: 48rem; margin: 0 auto 1.5rem; text-align: center; }
+.heritage-fan-shell { min-height: 31rem; display: flex; align-items: center; justify-content: center; padding: 0 1rem; }
+.heritage-fan-stage { width: min(100%, 74rem); height: 27rem; position: relative; isolation: isolate; touch-action: pan-y; }
+
+.heritage-fan-card { position: absolute; left: 50%; top: 1.5rem; width: clamp(10rem, 19vw, 15.5rem); aspect-ratio: .7; overflow: hidden; border: 1px solid rgba(244, 236, 211, .82); border-radius: 6px; background: #1d3831; box-shadow: 0 1rem 1.9rem rgba(22, 45, 38, .22); transform-origin: center 115%; text-decoration: none; color: #fff; will-change: transform, opacity; }
+.heritage-fan-card img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; transform: translateZ(0); }
+.heritage-fan-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 29, 25, .04) 29%, rgba(8, 29, 25, .88) 100%); }
+.heritage-fan-code { position: absolute; top: .8rem; left: .75rem; font: 700 .7rem var(--font-sans); letter-spacing: .04em; padding: .3rem .45rem; color: #214239; background: #f0cf7a; border-radius: 2px; }
+.heritage-fan-copy { position: absolute; left: .9rem; right: .9rem; bottom: .9rem; display: grid; gap: .36rem; }
+.heritage-fan-place { display: inline-flex; align-items: center; gap: .25rem; font: 500 .73rem var(--font-sans); color: #f3dba0; }
+.heritage-fan-copy strong { font-family: var(--font-serif); font-size: clamp(.92rem, 1.3vw, 1.15rem); line-height: 1.22; }
+.heritage-fan-open { display: inline-flex; align-items: center; gap: .32rem; font: 600 .72rem var(--font-sans); opacity: 0; transform: translateY(.3rem); transition: opacity 180ms ease, transform 180ms ease; }
+.heritage-fan-card:hover, .heritage-fan-card:focus-visible { box-shadow: 0 1.45rem 2.35rem rgba(22, 45, 38, .34); outline: none; }
+.heritage-fan-card:focus-visible { outline: 3px solid #d09b35; outline-offset: 4px; }
+.heritage-fan-card:hover .heritage-fan-open, .heritage-fan-card:focus-visible .heritage-fan-open { opacity: 1; transform: translateY(0); }
+
+.heritage-fan-controls { display: flex; align-items: center; justify-content: center; gap: .85rem; margin: -.4rem 0 .7rem; }
+.heritage-fan-control { width: 2.65rem; height: 2.65rem; display: grid; place-items: center; padding: 0; color: #1b4137; background: rgba(255, 255, 255, .58); border: 1px solid rgba(27, 65, 55, .18); border-radius: 50%; cursor: pointer; transition: color 180ms ease, background 180ms ease, transform 180ms ease; }
+.heritage-fan-control:hover { color: #fff; background: #1b4137; transform: translateY(-2px); }
+.heritage-fan-control:focus-visible { outline: 3px solid #d09b35; outline-offset: 3px; }
+.heritage-fan-dots { display: flex; align-items: center; gap: .42rem; min-width: 5.1rem; justify-content: center; }
+.heritage-fan-dots span { width: .38rem; height: .38rem; border-radius: 50%; background: rgba(27, 65, 55, .25); transition: width 280ms ease, background 280ms ease; }
+.heritage-fan-dots .is-active { width: 1.15rem; border-radius: .5rem; background: #b97623; }
+
+.heritage-section-more-row { display: flex; justify-content: center; margin-top: .25rem; }
+.heritage-btn-see-more-borderless { display: inline-flex; align-items: center; gap: .45rem; color: #1b4137; font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; text-decoration: none; padding: .6rem .85rem; position: relative; }
+.heritage-btn-see-more-borderless::after { content: ''; position: absolute; bottom: 4px; left: .85rem; right: .85rem; height: 1.5px; background: #c78b27; transform: scaleX(0); transform-origin: right; transition: transform 260ms ease; }
+.heritage-btn-see-more-borderless:hover::after, .heritage-btn-see-more-borderless:focus-visible::after { transform: scaleX(1); transform-origin: left; }
+.heritage-more-icon { color: #b97623; transition: transform 200ms ease; }
+.heritage-btn-see-more-borderless:hover .heritage-more-icon { transform: translateX(4px); }
+
+@media (max-width: 760px) { .figma-heritage-section { padding: 3.7rem 0; } .heritage-fan-shell { min-height: 39rem; padding: 0; } .heritage-fan-stage { width: 100%; height: 35rem; } .heritage-fan-card { width: clamp(10.2rem, 45.6vw, 12.6rem); top: 2rem; } .heritage-fan-copy { left: .8rem; right: .8rem; bottom: .9rem; } .heritage-fan-copy strong { font-size: .9rem; } .heritage-fan-place { font-size: .68rem; } .heritage-fan-code { top: .75rem; left: .7rem; font-size: .68rem; padding: .28rem .4rem; } .heritage-fan-open { display: none; } .heritage-fan-controls { margin-top: -1rem; } }
+@media (max-width: 390px) { .heritage-fan-card { width: clamp(9.6rem, 45.6vw, 11.1rem); } }
+@media (prefers-reduced-motion: reduce) { .heritage-fan-card, .heritage-fan-open, .heritage-more-icon, .heritage-fan-control, .heritage-fan-dots span { transition: none; } }
