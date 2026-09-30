@@ -1,0 +1,82 @@
+/* Shared Heritage & Editorial Experience Styling for Booths and Events */
+
+/* Nút trở về không khung viền đặt trên đầu hàng Kicker */
+.exp-btn-return-frameless {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  color: #294c37;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 0 14px 0;
+  margin-bottom: 8px;
+  transition: color 180ms ease, transform 180ms ease;
+  user-select: none;
+  width: fit-content;
+}
+
+.exp-btn-return-frameless:hover {
+  color: #a34332;
+  transform: translateX(-4px);
+}
+
+.exp-btn-return-frameless svg {
+  transition: transform 180ms ease;
+}
+
+.exp-btn-return-frameless:hover svg {
+  transform: translateX(-2px);
+}
+
+.heritage-card-code {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  background: #a34332;
+  color: #ffdd9e;
+  padding: 8px 10px 18px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%);
+  font: 700 13px var(--font-sans);
+  z-index: 2;
+}
+
+.heritage-card-period {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(17, 37, 28, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.heritage-card-cat {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a34332;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.heritage-card-arrow-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #294c37;
+  transition: color 180ms ease;
+}
+
+.heritage-collection-card:hover .heritage-card-arrow-text {
+  color: #a34332;
+}

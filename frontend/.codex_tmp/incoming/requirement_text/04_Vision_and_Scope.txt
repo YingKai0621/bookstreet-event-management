@@ -1,0 +1,163 @@
+HỆ THỐNG QUẢN LÝ TỔ CHỨCSỰ KIỆN ĐƯỜNG SÁCH
+Book Street Event Management System
+VISION & SCOPE
+MVP Baseline v1.2
+BaselineTài liệu này chốt hướng sản phẩm và phạm vi MVP sau khi thống nhất Actor, Booth, Activity, Participant, QR attendance, Points/Badge/Certificate và các business rules cốt lõi.
+1. Mục đích tài liệu
+Tài liệu Vision & Scope xác định vì sao sản phẩm được xây dựng, ai sử dụng, hệ thống giải quyết bài toán nào, phần nào nằm trong MVP và phần nào chủ động loại khỏi MVP. Đây là baseline để team tiếp tục viết Use Case Specification, ERD, SRS và triển khai.
+2. Bối cảnh sản phẩm
+Hệ thống phục vụ một không gian Đường Sách vật lý cố định. Trong cùng không gian này, Ban quản lý có thể tổ chức nhiều Event ở các thời điểm khác nhau. Các Event cùng sử dụng những tài nguyên vật lý chung như Main Stage, Workshop Area, khu vực và Booth; vì vậy hệ thống phải quản lý lịch, xung đột địa điểm và phân bổ Booth một cách tập trung.
+Website công khai cho phép khách xem Event, Activity, Booth, bản đồ và nội dung văn hóa mà không cần đăng nhập.
+Partner/Exhibitor có thể đăng ký tham gia Event, chọn Booth cụ thể trên bản đồ và đề xuất Activity.
+Participant có thể Join Event, đăng ký Activity, tự quét Activity QR để ghi nhận Attendance; quét QR của BoothAssignment khi ghé Booth để tạo BoothVisit, tích điểm/mở Badge và nhận Certificate từ Activity khi đủ điều kiện.
+Organizer là tài khoản thuộc Ban quản lý Đường Sách. Event thuộc Đường Sách, không thuộc riêng Organizer đã tạo.
+3. Problem Statement
+Việc tổ chức Event tại Đường Sách cần phối hợp nhiều bên: Ban tổ chức, đơn vị tham gia, gian hàng, Activity và người tham dự. Nếu quản lý rời rạc bằng biểu mẫu, bảng tính và trao đổi thủ công, Ban tổ chức dễ gặp vấn đề trùng lịch, khó theo dõi Booth, khó kiểm soát đề xuất Activity, thay đổi/hủy sát giờ và khó tổng hợp dữ liệu tham dự. Đồng thời khách tham quan cần một kênh trực quan để khám phá sự kiện, gian hàng và vị trí trước khi quyết định tham gia.
+4. Product Vision
+Vision StatementXây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ chức quản lý Event, Booth, Activity và người tham dự một cách rõ ràng; giúp Partner chủ động đăng ký và phối hợp với Ban tổ chức; đồng thời mang đến cho khách tham quan trải nghiệm khám phá, đăng ký và ghi nhận hành trình tham gia thuận tiện.
+5. Business Objectives
+ID
+Business Objective
+BO-01
+Tập trung hóa quản lý Event, lịch, Location, Booth và Activity tại một Đường Sách.
+BO-02
+Cho phép Partner tự phục vụ: đăng ký Event, chọn Booth trên map, gửi Activity Proposal và theo dõi trạng thái.
+BO-03
+Giảm thao tác thủ công của Organizer bằng conflict checking, capacity checking, trạng thái và deadline.
+BO-04
+Cung cấp public website trực quan để Guest xem Event, Activity, Booth và bản đồ mà không bắt buộc đăng nhập.
+BO-05
+Quản lý Participant từ đăng ký đến Attendance bằng Activity QR tự quét; ghi nhận BoothVisit bằng QR của BoothAssignment; hỗ trợ Points, Badge và Certificate theo hai flow riêng.
+BO-06
+Xử lý thay đổi/hủy rõ ràng, giữ lịch sử và thông báo đúng đối tượng thay vì xóa dữ liệu.
+BO-07
+Cung cấp báo cáo cơ bản về Partner, Booth occupancy, Activity, registrations, attendance và feedback.
+6. Stakeholders và Actors
+Actor
+Hiểu đơn giản
+Trách nhiệm chính
+Guest / Public Visitor
+Khách chưa đăng nhập
+Xem nội dung công khai: Event, Activity, Booth, Map, Heritage; có thể gửi general feedback.
+Participant
+Người dùng đã đăng nhập
+Join/Leave Event, đăng ký Activity, tự quét Activity QR/Booth QR, theo dõi Attendance, BoothVisit, Points, Badge, Certificate và Activity rating.
+Partner / Exhibitor
+Nhà xuất bản / đơn vị tham gia
+Apply Event, chọn Booth, gửi Booth Request, Activity Proposal và các request thay đổi/hủy.
+Event Organizer
+Ban quản lý / Ban tổ chức Đường Sách
+Tạo và quản lý nhiều Event của Đường Sách, duyệt request, quản lý lịch/booth/activity/attendance/report.
+System Admin
+Quản trị hệ thống
+Quản lý account, role, Badge và cấu hình hệ thống.
+7. In Scope - MVP
+Public website: danh sách/chi tiết Event, Activity, Booth, Booth Map hiển thị Location/Booth và supporting heritage content.
+Account, authentication và multi-role cơ bản thông qua UserRole/Role; MVP chưa tách Permission/RolePermission riêng.
+Event lifecycle, publish/cancel, configurable registration/proposal/cancellation deadlines.
+Partner Organization profile và Apply to Join Event trước khi Request Booth / Submit Activity Proposal.
+Interactive Booth selection theo Event: Partner chọn Booth cụ thể; hệ thống tạo Hold và hiển thị AVAILABLE / ON_HOLD / ASSIGNED dựa trên Event và khoảng thời gian.
+Booth change, cancellation/release, manual reassign và xử lý Activity bị ảnh hưởng.
+Activity Proposal của Partner: exact time + location, review, request change, approve/reject, publish.
+Organizer tạo Activity của BTC trực tiếp.
+Conflict checking theo physical Location + Time, kể cả giữa nhiều Event cùng dùng một địa điểm.
+Participant Event Registration: Join/Leave Event, My Events và Event-level notifications; không giữ chỗ Activity và không có Event QR.
+Participant Activity Registration với capacity control; Participant tự quét Activity QR trong time window hợp lệ để tạo Attendance = ATTENDED. MVP không yêu cầu check-in + check-out + attendance duration.
+Points được cộng từ BoothVisit hợp lệ; Badge dựa trên total Points tích lũy; Certificate dựa trên Attendance Activity hợp lệ và cấu hình certificate của Activity.
+Activity/Event reschedule/cancellation, notification và lịch sử trạng thái.
+General feedback, verified Activity rating và basic analytics/report.
+8. Out of Scope - MVP
+AI chatbot, AI recommendation và các chức năng AI khác.
+Paid ticket, Payment Gateway, refund, invoice và thanh toán Booth.
+Staff scheduling, shift/task assignment và workforce management.
+Waitlist cho Activity đầy chỗ.
+Reward store/đổi Points thành quà hoặc voucher.
+Sponsor management chuyên biệt.
+Inventory/booking thiết bị; equipment trong MVP chỉ là requirement/note.
+Digital signature/blockchain/legal verification cho Certificate.
+Recurring activity/session engine phức tạp; mỗi timeslot được mô hình như một Activity riêng.
+Hệ thống quản lý di sản độc lập; Heritage chỉ là supporting public content.
+Advanced Map Editor (nhiều map version, click-to-create Location/Booth, drag/drop) là Future/Stretch Scope; MVP chỉ cần map hiển thị/selection và CRUD Location/Booth thông thường.
+9. High-level Functional Modules
+Module
+Phạm vi
+Public Experience
+Browse/Search Event, Activity, Booth; Map; Heritage; public feedback.
+Identity & Access
+Authentication, multi-role qua UserRole/Role, ownership và private data access.
+Event Management
+Create, publish, configure deadlines/limits, lifecycle, cancel.
+Partner Participation
+Organization profile, apply Event, approval and withdrawal.
+Booth Management
+Map selection, event-scoped availability, hold, request, approve, assignment, change, release/reassign.
+Activity Management
+Proposal, approval, publish, conflict/capacity check, change/reschedule/cancel.
+Participant Registration
+Register/cancel, capacity, QR, schedule and status.
+Attendance & Engagement
+Activity QR self-scan → Attendance/Certificate; BoothAssignment QR self-scan → BoothVisit/Points/Badge.
+Notification & Feedback
+In-app notifications, general feedback and verified Activity rating.
+Analytics
+Partner/Booth/Activity/registration/attendance/no-show/BoothVisit/cancellation summaries.
+10. Core Business Flows
+Luồng
+Tóm tắt
+Flow 1 - Partner tham gia Event
+Partner Profile → Apply to Event → Organizer Review → Approved → được phép Request Booth và Submit Activity Proposal.
+Flow 2 - Booth
+Partner mở Booth Map của Event → chọn Booth AVAILABLE → Submit Request → tạo Booth Hold/ON_HOLD → Organizer Approve/Reject → Booth Assignment hoặc release Hold. Availability được tính theo Event/time.
+Flow 3 - Activity của Partner
+Submit Proposal (time + location) → system validation/conflict check → Organizer Review → Approve → Publish → Participant nhìn thấy/đăng ký.
+Flow 4 - Participant
+Browse public → Login → Join Event (hoặc auto-create EventRegistration khi đăng ký Activity/quét Booth QR) → Register Activity → tự quét Activity QR → Attendance; khi ghé Booth tự quét BoothAssignment QR → BoothVisit → Points/Badge; Attendance hợp lệ có thể tạo Certificate.
+Flow 5 - Change/Cancel
+Partner/Organizer tạo Change/Cancellation flow → xử lý dependency → update status → notify affected users → giữ lịch sử.
+11. Assumptions & Constraints
+MVP quản lý một Đường Sách vật lý cố định với nhiều Event theo thời gian.
+Mọi Organizer hợp lệ thuộc Ban quản lý có thể quản lý Event của Đường Sách; createdBy được lưu để trace nhưng không tạo quyền sở hữu riêng.
+Booth là tài nguyên vật lý dùng chung. Booth Assignment gắn với Partner + Event; cùng một Booth có thể được dùng ở Event khác nếu thời gian không overlap. Availability trên map được tính theo Event/time, không phải status ASSIGNED toàn cục.
+Booth Assignment mặc định có hiệu lực trong toàn bộ Event, không chia thuê theo từng ngày.
+Partner phải được approved tham gia Event trước khi đăng ký Booth hoặc gửi Activity Proposal.
+Activity có thể diễn ra ở Booth hoặc Location khác (Main Stage, Workshop Area...).
+Activity và Booth của MVP là miễn phí; thanh toán nằm ngoài MVP.
+Mỗi ActivityRegistration có tối đa một Attendance; scan Activity QR lặp không tạo Attendance hoặc Certificate trùng.
+Notification bắt buộc trong MVP là in-app; email là optional.
+12. Success Criteria
+Organizer tạo/publish một Event và cấu hình deadline, Location, Booth và giới hạn cần thiết.
+Partner apply Event, được duyệt, chọn Booth cụ thể trên Map, gửi request và theo dõi kết quả.
+Partner gửi Activity Proposal với exact time/location; hệ thống phát hiện hard conflict và Organizer review được.
+Guest xem được Event/Activity/Booth/Map và gửi general feedback mà không cần đăng nhập.
+Participant có thể Join Event, đăng ký Activity trong giới hạn capacity, tự quét Activity QR để ghi nhận Attendance và quét BoothAssignment QR để ghi nhận BoothVisit.
+Activity QR hợp lệ tạo Attendance; BoothAssignment QR hợp lệ tạo BoothVisit. Points/Badge đến từ BoothVisit, còn Certificate chỉ cấp khi Attendance Activity đủ điều kiện.
+Change/cancellation không làm mất lịch sử và notification đến đúng đối tượng.
+Dashboard cung cấp số liệu cơ bản về booth occupancy, activity, registrations và attendance.
+13. Scope Control & Future Scope
+Sau khi baseline này được team/thầy chấp thuận, mọi feature mới phải được đánh giá là thay đổi scope. Payment, Waitlist, Staff Scheduling, Voucher/Reward Store, Sponsor Module, AI và Advanced Map Editor nên để Future/Stretch Scope thay vì thêm trực tiếp vào MVP.
+Scope LockTừ baseline này, team nên ưu tiên hoàn thiện Use Case Specification, ERD, UI/UX và implementation thay vì tiếp tục mở rộng feature.
+14. Glossary ngắn
+Thuật ngữ
+Định nghĩa
+Event
+Một đợt/chương trình sự kiện do Đường Sách tổ chức.
+Activity
+Một hoạt động cụ thể có thời gian và Location, ví dụ workshop/talkshow/ký tặng.
+Booth
+Gian hàng vật lý dùng chung của Đường Sách; không mang trạng thái ASSIGNED toàn cục.
+Location
+Địa điểm vật lý chung: Booth, Main Stage, Workshop Area, Reading Area...
+Booth Request
+Yêu cầu Partner gửi để xin một Booth cụ thể.
+Activity Proposal
+Đề xuất của Partner; chưa phải Official Activity cho đến khi được Organizer duyệt.
+Registration
+Bản ghi Participant đăng ký một Activity.
+Attendance
+Bản ghi xác nhận Participant thực sự tham dự Activity, được tạo khi Participant có ActivityRegistration hợp lệ và tự quét Activity QR trong time window cho phép.
+Booth Hold
+Giữ tạm một Booth cho một request trong Event/khoảng thời gian; có thời hạn và có thể hết hạn.
+Booth Assignment
+Quan hệ xác nhận một Booth được cấp cho một Partner trong một Event/khoảng thời gian cụ thể.
+Booth Availability
+Trạng thái hiển thị theo Event/time: AVAILABLE, ON_HOLD, ASSIGNED hoặc UNAVAILABLE.

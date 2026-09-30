@@ -1,0 +1,213 @@
+QUY TRÌNH ĐĂNG KÝ BOOTH VÀ ĐỀ XUẤT ACTIVITY
+Bao phủ đăng ký mới, Hold, duyệt, đổi, hủy Booth và vòng đời Activity
+MVP Baseline — cập nhật 20/09/2026
+Mục tiêu: giúp toàn team hiểu cùng một quy trình từ lúc Partner xin tham gia Event → xin/đổi/hủy Booth → đề xuất/đổi/hủy Activity → các bước sau khi được duyệt. Tài liệu này dùng cùng baseline với Business Rules và ERD hiện tại.
+1. Các khái niệm phải phân biệt trước
+Khái niệm
+Hiểu đơn giản
+Điểm cần nhớ
+Physical Booth
+Gian hàng vật lý của Đường Sách, ví dụ A05.
+Tồn tại lâu dài và dùng lại qua nhiều Event; không có trạng thái ASSIGNED toàn cục.
+BoothRequest
+Yêu cầu xin Booth mới của Partner trong một Event.
+Không nối trực tiếp Booth trong mô hình dữ liệu; Booth mục tiêu được thể hiện qua BoothHold.
+BoothHold
+Giữ tạm Booth trong thời gian chờ xử lý.
+Có thời hạn; Active Hold chặn xung đột cùng Booth/time.
+BoothAssignment
+Booth đã được cấp chính thức cho Partner trong Event.
+QR Booth thuộc BoothAssignment đang ACTIVE, không phải QR vĩnh viễn của Booth vật lý.
+BoothChangeRequest
+Yêu cầu đổi từ Booth đang được cấp sang Booth khác.
+Booth cũ vẫn được giữ cho đến khi Change được Approve.
+ActivityProposal
+Đề xuất Activity do Partner gửi.
+Chưa phải Activity chính thức cho đến khi Organizer Approve.
+Activity
+Hoạt động chính thức trong Event.
+Có exact time, exact Location và capacity; Publish là bước riêng sau Approve.
+ActivityChangeRequest
+Yêu cầu Partner đổi Activity đã Approved/Published.
+Dùng khi đổi time/location hoặc thay đổi đáng kể cần Organizer xác nhận.
+Câu dễ nhớ: Booth là “CHỖ”; Activity là “VIỆC”. BoothRequest/Hold/Assignment là ba khái niệm khác nhau. ActivityProposal cũng khác Activity chính thức.
+2. Điều kiện trước: Partner phải được duyệt tham gia Event
+Partner tạo/cập nhật Partner Organization và gửi Apply to Event.
+Organizer Review PartnerEventApplication và Approve hoặc Reject.
+Chỉ PartnerEventApplication = APPROVED mới được tạo BoothRequest hoặc ActivityProposal trong Event đó.
+Partner không bắt buộc phải có Booth mới được đề xuất Activity; Activity có thể diễn ra tại Main Stage, Workshop Area hoặc Location hợp lệ khác.
+PartnerOrganization → PartnerEventApplication → APPROVED → được phép Request Booth / Submit Activity Proposal
+3. Quy trình đăng ký Booth mới
+3.1 Partner chọn Booth
+Partner mở Booth Map của Event. MVP có map hiển thị và cho chọn Booth; Map Editor nhiều version/click-to-create không nằm trong MVP.
+Map hiển thị availability theo Event/time: AVAILABLE / ON_HOLD / ASSIGNED / UNAVAILABLE.
+Partner chọn một Booth cụ thể đang AVAILABLE, ví dụ A05.
+Hệ thống kiểm tra Partner đã được duyệt, deadline và quota Booth của Event.
+3.2 Tạo BoothRequest + BoothHold
+Khi Partner bấm Submit, hệ thống phải tạo BoothRequest và Active BoothHold trong cùng một transaction. Nếu A05 vừa bị người khác giữ/cấp trước thời điểm submit thì request không được tạo thành công.
+Select A05 → atomic validation → BoothRequest(PENDING) + BoothHold(A05, ACTIVE)
+Trong thời gian Hold còn hiệu lực, Partner khác không thể tạo Active Hold/Assignment xung đột với A05 trong cùng khoảng thời gian.
+BoothHold có thời hạn. Khi hết hạn trước khi được duyệt: BoothRequest → EXPIRED, Hold được release và A05 trở lại AVAILABLE nếu không có xung đột khác.
+Organizer không được Approve BoothRequest đã EXPIRED hoặc có Hold không còn hợp lệ.
+3.3 Organizer duyệt BoothRequest
+Organizer xem Partner, Event, Booth đã chọn, quota, deadline và trạng thái Hold.
+Approve: re-check Hold/availability rồi tạo BoothAssignment cho đúng Booth Partner đã chọn.
+Reject: request chuyển REJECTED và Hold được release.
+Partner có thể Withdraw BoothRequest khi request còn PENDING; Hold được release, không cần Organizer xác nhận.
+APPROVE: BoothRequest + valid Hold → BoothAssignment ACTIVE → kết thúc Hold
+REJECT/WITHDRAW/EXPIRE: BoothRequest → release Hold → Booth AVAILABLE nếu không có xung đột khác
+3.4 Booth được dùng lại giữa nhiều Event
+Booth A05 là tài nguyên vật lý chung. Một Booth có thể được cấp cho các Event khác nhau nếu thời gian không overlap. Availability luôn được tính theo Event/time dựa trên Hold và Assignment đang active.
+Không dùng Booth.status = ASSIGNED toàn cục và không lưu Partner trực tiếp trên Booth. Quyền sử dụng Booth nằm ở BoothAssignment.
+4. QR của Booth sau khi được cấp
+Mỗi BoothAssignment đang ACTIVE có một QR riêng. Participant tự quét QR khi ghé Booth để hệ thống tạo BoothVisit.
+QR gắn với BoothAssignment, nên biết đúng Booth + Partner + Event của lần cấp đó.
+Khi BoothAssignment RELEASED/CANCELLED hoặc Event kết thúc, QR cũ mất hiệu lực nhưng BoothVisit lịch sử vẫn giữ.
+Scan Booth QR = đã ghé Booth; không đồng nghĩa đã tham gia một Activity ở Booth đó.
+Mỗi EventRegistration + BoothAssignment chỉ được tính tối đa một BoothVisit/reward hợp lệ; scan lặp không cộng thêm Point.
+BoothAssignment ACTIVE → QR → Participant scan → BoothVisit → PointTransaction → Badge evaluation
+5. Quy trình đổi Booth đã được cấp
+5.1 Vì sao không release Booth cũ ngay?
+Khi Partner đang có A05 và muốn đổi sang A07, A05 phải tiếp tục giữ Assignment trong lúc chờ duyệt. Nếu thả A05 ngay mà A07 bị Reject/Expire thì Partner có thể mất cả Booth cũ lẫn Booth mới.
+Current Assignment A05 → BoothChangeRequest xin A07 → Replacement Hold A07
+5.2 Tạo BoothChangeRequest
+Partner chọn Booth mới đang AVAILABLE và gửi BoothChangeRequest cho Assignment hiện tại.
+Hệ thống tạo Replacement Hold cho Booth mới; Booth cũ vẫn ACTIVE.
+Mỗi Partner chỉ được có tối đa một Active BoothChangeRequest, tương ứng tối đa một Replacement Hold, trong cùng một Event tại một thời điểm.
+Replacement Hold không được tính như một Booth sở hữu mới trong quota; đây chỉ là chỗ tạm giữ cho yêu cầu đổi.
+5.3 Organizer xử lý Change
+Approve phải atomic: kiểm tra Replacement Hold còn hợp lệ → release Assignment cũ → kết thúc Hold mới → tạo Result BoothAssignment mới.
+Nếu bất kỳ bước nào lỗi, toàn bộ transaction rollback; Booth cũ vẫn giữ nguyên.
+Reject / Withdraw / Expire: release Replacement Hold, Booth cũ vẫn giữ Assignment.
+Trước khi Booth cũ được reassign cho đơn vị khác, các Activity đang dùng Booth đó phải được move hoặc cancel theo quy trình Activity.
+APPROVE: A05 Assignment → RELEASED | A07 Hold → END | tạo A07 Assignment ACTIVE
+REJECT/WITHDRAW/EXPIRE: release Hold A07 | A05 vẫn ACTIVE
+6. Quy trình hủy Booth đã được cấp
+Hủy Booth Assignment khác với Withdraw BoothRequest. Khi Booth đã được cấp, Partner không được tự release ngay mà phải gửi BoothCancellationRequest.
+Partner gửi lý do hủy.
+Organizer kiểm tra thời điểm hủy, cancellation cutoff và các Activity đang phụ thuộc Booth.
+Organizer Confirm Cancellation thì BoothAssignment mới chuyển RELEASED/CANCELLED và availability được tính lại.
+Request gửi sau cancellation cutoff vẫn được nhận nhưng đánh dấu LATE_CANCELLATION; Organizer quyết định reassign hay để trống và hệ thống lưu lịch sử xử lý.
+Không hard-delete Booth/Assignment lịch sử.
+BoothAssignment ACTIVE → BoothCancellationRequest → Organizer Confirm → Assignment RELEASED/CANCELLED
+7. Quy trình đề xuất Activity của Partner
+7.1 Partner tạo ActivityProposal
+Partner mở Event mà PartnerEventApplication đã APPROVED.
+Nhập title, description/type, exact start time, exact end time, exact Location, capacity và equipment note nếu có.
+Location có thể là Booth đã được assign cho Partner hoặc Location hợp lệ khác như Main Stage/Workshop Area.
+Gửi ActivityProposal và theo dõi trạng thái PENDING / NEED_CHANGES / APPROVED / REJECTED / WITHDRAWN.
+7.2 Validation trước khi duyệt
+ActivityProposal PENDING không hard-lock Location/time slot.
+Hệ thống kiểm tra capacity không vượt capacity của Location.
+Hard conflict: cùng physical Location và thời gian overlap thì bị chặn, kể cả Activity thuộc Event khác.
+Ngay trước khi Approve, hệ thống phải check conflict/capacity lại để tránh dữ liệu thay đổi trong thời gian chờ duyệt.
+7.3 Organizer Review / Approve / Publish
+Organizer có thể Approve, Reject hoặc Request Change/More Information.
+Approve Proposal tạo/cho phép hình thành Activity chính thức; Approve chưa đồng nghĩa public.
+Publish là bước riêng. Chỉ Activity PUBLISHED mới hiển thị như chương trình chính thức cho Guest/Participant.
+ActivityProposal → Validation → Organizer Review → APPROVED → Activity → PUBLISHED
+8. Activity do Ban tổ chức tạo
+Organizer có thể tạo trực tiếp Activity của BTC mà không cần ActivityProposal. Tuy vậy Activity vẫn phải tuân thủ Location/time conflict, capacity và lifecycle trước khi Publish.
+9. Quy trình đổi Activity đã Approved/Published
+Nếu Partner muốn đổi time/location của Activity đã Approved/Published, phải gửi ActivityChangeRequest. Không sửa trực tiếp Activity chính thức trước khi Organizer duyệt.
+Activity hiện tại vẫn giữ thông tin đang hiệu lực trong lúc Change Request chờ xử lý.
+Change Request có thể đề xuất time mới, Location mới hoặc thay đổi lớn khác.
+Nếu chỉ đổi nội dung nhỏ không ảnh hưởng lịch/địa điểm, cách xử lý cụ thể có thể do Organizer quyết định; ERD vẫn cho phép Change Request không có Location mới.
+Khi Approve, hệ thống re-check conflict và capacity với dữ liệu mới nhất.
+Nếu đổi time/location của Activity đã có Participant đăng ký, hệ thống phải notify các Participant bị ảnh hưởng và cho phép họ cancel dù đã qua deadline hủy thông thường.
+Nếu đổi sang Booth, Booth đó phải là Location hợp lệ và phải thỏa quyền sử dụng/Assignment của Partner nếu Activity thuộc Partner.
+Activity hiện tại → ActivityChangeRequest → Organizer Review → validation lại → Apply change/reschedule → Notify registrations
+10. Quy trình hủy Activity
+10.1 Khi ActivityProposal còn PENDING
+Partner có thể Withdraw Proposal trực tiếp; không cần Organizer xác nhận vì chưa có Activity chính thức/public.
+10.2 Khi Activity đã Approved/Published
+Partner gửi ActivityCancellationRequest và lý do.
+Organizer phải xác nhận trước khi việc hủy có hiệu lực.
+Request sau cancellation cutoff vẫn được tiếp nhận nhưng đánh dấu Late/LATE_CANCELLATION để Organizer xử lý hậu quả.
+Khi Cancel: Activity chuyển CANCELLED; giữ registration lịch sử, notify Participant, Activity QR không còn tạo Attendance, không cấp Certificate mới.
+Không hard-delete Activity đã phát sinh nghiệp vụ.
+Activity APPROVED/PUBLISHED → ActivityCancellationRequest → Organizer Confirm → Activity CANCELLED → Notify Participant
+11. Activity Registration, QR Attendance và Certificate sau khi Publish
+Sau khi Activity được Publish, Participant có thể đăng ký nếu Activity yêu cầu registration và còn capacity.
+Nếu User đăng ký Activity mà chưa có EventRegistration, hệ thống tự tạo EventRegistration trước rồi tạo ActivityRegistration.
+Activity QR thuộc Activity, không thuộc Participant. Participant có ActivityRegistration active tự scan QR tại Activity trong time window hợp lệ.
+Scan hợp lệ tạo Attendance = ATTENDED; chỉ đăng ký mà không scan hợp lệ thì chưa được coi là đã tham dự.
+Mỗi ActivityRegistration có tối đa một Attendance; scan lặp không tạo Attendance/Certificate/Rating trùng.
+Attendance hợp lệ có thể dẫn tới Certificate nếu Activity hỗ trợ certificate và đủ điều kiện.
+Activity PUBLISHED → ActivityRegistration → Participant scan Activity QR → Attendance ATTENDED → Certificate / ActivityRating
+12. Partner rút khỏi toàn bộ Event
+Withdraw from Event là nghiệp vụ lớn hơn hủy một Booth hoặc một Activity. Partner gửi PartnerWithdrawalRequest và Organizer xác nhận trước khi rút có hiệu lực.
+Release/cancel các BoothAssignment theo quy trình phù hợp.
+Xử lý các Activity của Partner: cancel/move/reschedule tùy trường hợp.
+Thông báo Participant bị ảnh hưởng và giữ lịch sử nghiệp vụ.
+13. Các rule quan trọng cần nhớ khi code
+Rule
+Ý nghĩa thực tế
+Atomic New Booth Hold
+BoothRequest + Active Hold phải tạo cùng transaction; chỉ một request thắng khi tranh chấp cùng Booth.
+Hold Expiration
+Hold hết hạn → request EXPIRED → không được Approve request cũ.
+No global ASSIGNED
+Booth vật lý không có trạng thái ASSIGNED toàn cục; availability theo Event/time.
+One active Booth Change
+Mỗi Partner tối đa một BoothChangeRequest active / một Replacement Hold trong một Event tại một thời điểm.
+Atomic Booth Swap
+Approve đổi Booth phải release cũ + kết thúc hold mới + tạo assignment mới trong một transaction.
+Cancellation confirmation
+Booth/Activity đã được duyệt chỉ hủy sau khi Organizer xác nhận; sau cutoff vẫn nhận nhưng đánh dấu late.
+Activity conflict
+Cùng physical Location + overlap time bị block; check lại ngay trước Approve.
+QR separation
+BoothAssignment QR tạo BoothVisit; Activity QR tạo Attendance. Hai mục đích khác nhau.
+Keep history
+Request/Assignment/Activity đã phát sinh không hard-delete; dùng status/lifecycle.
+14. Bảng trạng thái chính
+Đối tượng
+Trạng thái chính / lifecycle
+PartnerEventApplication
+PENDING → APPROVED / REJECTED / WITHDRAWN
+BoothRequest
+PENDING/ON_HOLD → APPROVED / REJECTED / WITHDRAWN / EXPIRED
+BoothHold
+ACTIVE → RELEASED / EXPIRED / CONSUMED (tùy implementation)
+BoothAssignment
+ACTIVE → RELEASED / CANCELLED / ENDED
+BoothChangeRequest
+PENDING → APPROVED / REJECTED / WITHDRAWN / EXPIRED
+BoothCancellationRequest
+PENDING → CONFIRMED / REJECTED / WITHDRAWN (tùy final status set)
+ActivityProposal
+PENDING → NEED_CHANGES → APPROVED / REJECTED / WITHDRAWN
+Activity
+DRAFT / PUBLISHED / ONGOING / COMPLETED / CANCELLED / RESCHEDULED
+ActivityChangeRequest
+PENDING → APPROVED / REJECTED / WITHDRAWN
+ActivityCancellationRequest
+PENDING → CONFIRMED / REJECTED / WITHDRAWN
+ActivityRegistration
+ACTIVE/REGISTERED → CANCELLED / NO_SHOW / ATTENDED (tùy implementation, Attendance là record riêng)
+15. Flow tổng hợp để team dễ nhớ
+15.1 Xin Booth mới
+Apply Event → APPROVED → Select Booth → BoothRequest + Hold → Organizer Approve → BoothAssignment ACTIVE → QR Assignment
+15.2 Đổi Booth
+Current Assignment → BoothChangeRequest → Replacement Hold → Approve atomic swap → Result Assignment mới
+15.3 Hủy Booth
+BoothAssignment → BoothCancellationRequest → Organizer Confirm → Release Assignment → xử lý Activity phụ thuộc
+15.4 Đề xuất Activity
+Partner APPROVED → ActivityProposal(time + Location + capacity) → Validation → Organizer Approve → Activity → Publish
+15.5 Đổi Activity
+Activity Approved/Published → ActivityChangeRequest → re-check conflict/capacity → Approve → update/reschedule → notify Participant
+15.6 Hủy Activity
+Activity Approved/Published → ActivityCancellationRequest → Organizer Confirm → CANCELLED → notify / invalidate attendance QR
+15.7 Participant sau khi Activity được publish
+Register Activity → ActivityRegistration → scan Activity QR → Attendance ATTENDED → Certificate/Rating
+15.8 Khám phá Booth
+Scan BoothAssignment QR → BoothVisit → PointTransaction → Badge evaluation
+16. Phạm vi MVP liên quan tài liệu này
+Có Booth Map để Guest/Partner xem và Partner chọn Booth cụ thể.
+Có CRUD Location/Booth thông thường.
+Không làm Advanced Map Editor: nhiều map version, click-to-create Location/Booth, drag/drop là Future/Stretch scope.
+Không payment, paid Booth/ticket, waitlist, staff scheduling, reward redemption hoặc equipment inventory trong MVP.
+17. Kết luận
+Tài liệu này là baseline quy trình Booth + Activity cho MVP hiện tại. Khi requirement thay đổi, cần cập nhật đồng thời Business Rules, Use Case, ERD và tài liệu này để tránh team dùng các flow cũ khác nhau.
+Điểm chốt: New Booth = Request → Hold → Assignment. Đổi Booth = Assignment cũ → Change Request → Replacement Hold → Assignment mới. Activity = Proposal → Approve → Activity → Publish; đổi/hủy Activity đã chính thức phải đi qua Request và Organizer xác nhận.

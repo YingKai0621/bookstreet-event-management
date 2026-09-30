@@ -1,0 +1,58 @@
+ACTORS & MAIN ACTIVITIES
+Updated baseline for Event participation, Booth selection and feedback
+1. Tổng quan
+Hệ thống có 5 Actor chính. Guest và Participant có thể là cùng một người ở hai trạng thái: chưa đăng nhập là Guest; sau khi đăng nhập và dùng chức năng cá nhân thì là Participant.
+Actor
+Hiểu đơn giản
+Trọng tâm
+Guest / Public Visitor
+Khách chưa đăng nhập
+Khám phá public information và gửi general feedback.
+Participant
+Người dùng đã đăng nhập
+Join Event, Activity registration, attendance, rewards và rating.
+Partner / Exhibitor
+Nhà xuất bản / đơn vị tham gia
+Apply Event, chọn Booth, đề xuất Activity.
+Event Organizer
+Ban quản lý / Ban tổ chức
+Quản lý nhiều Event, duyệt và vận hành nghiệp vụ.
+System Admin
+Quản trị hệ thống
+Account, role, Badge và cấu hình chung.
+2. Guest / Public Visitor
+Guest không cần tài khoản để xem nội dung public.
+Explore Book Street: xem/tìm Event, Activity, Booth, Booth Map và Heritage content.
+Submit General Feedback: gửi góp ý chung về Đường Sách mà không cần đăng nhập.
+Create Account: tạo tài khoản khi muốn dùng chức năng cá nhân.
+Sign In: đăng nhập để sử dụng Participant/Partner/Organizer/Admin role phù hợp.
+3. Participant
+Participant có toàn bộ khả năng public của Guest, cộng thêm các chức năng cá nhân.
+Manage Event Participation: Join/Leave Event, My Events và nhận Event-level notification.
+Manage Activity Registrations: đăng ký/hủy Activity cần giữ chỗ; khi đến Activity, Participant tự quét Activity QR trong time window hợp lệ để ghi nhận Attendance.
+Track Participation: theo dõi My Events, Activity registrations, Attendance, BoothVisit, Points, Badge và Certificate; Participant tự quét QR của BoothAssignment đang active khi ghé Booth.
+Rate Activity: đánh giá Activity khi Participant đã đủ điều kiện tham dự.
+4. Partner / Exhibitor
+Partner là tổ chức tham gia Event; tài khoản đại diện thao tác cho tổ chức.
+Apply to Event: xin tham gia Event và chờ Organizer duyệt.
+Manage Booth Request: sau khi được duyệt vào Event, chọn Booth cụ thể trên map rồi gửi/đổi/hủy request.
+View Booth Assignment: xem Booth đã được duyệt trong Event.
+Manage Activity Proposal: tạo/sửa/gửi/rút đề xuất Activity.
+Request Activity Change / Cancellation: yêu cầu thay đổi hoặc hủy Activity đã được duyệt.
+Withdraw from Event: xin rút toàn bộ đơn vị khỏi Event.
+Lưu ý: Booth availability được tính theo Event/thời gian. Cùng một Booth vật lý có thể dùng cho Event khác nếu lịch không overlap.
+5. Event Organizer
+Organizer thuộc Ban quản lý Đường Sách. Event thuộc Đường Sách, không thuộc riêng Organizer đã tạo.
+Manage Events: tạo, cập nhật, publish, cancel, deadline và lifecycle.
+Manage Locations & Booths: Area, Stage, physical Booth, availability, Hold và Assignment.
+Review Partner Applications & Booth Requests.
+Review Activity Proposals.
+Manage Activities: Activity của BTC, publish, reschedule, move hoặc cancel.
+Monitor Participation & Attendance: theo dõi registrations, attendance/no-show và thực hiện correction/override khi cần, có lưu lý do xử lý.
+View Reports & Manage Public Content.
+6. System Admin
+Admin quản trị hệ thống, không thay Organizer điều hành Event.
+Manage Accounts.
+Manage Roles: quản lý role và gán role; MVP chưa tách Permission/RolePermission riêng.
+Manage Badges: quản lý Badge và ngưỡng total Points dùng để unlock Badge.
+Manage System Settings.
