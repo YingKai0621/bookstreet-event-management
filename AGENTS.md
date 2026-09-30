@@ -24,6 +24,7 @@ Before modifying code, read these sources in order:
 4. The Use Case Specifications referenced by `docs/sprints/CURRENT_SPRINT.md`
 5. The API Contract referenced by `docs/sprints/CURRENT_SPRINT.md`
 6. Relevant Business Rules and the current Physical ERD under `docs/`
+7. Coding style - `docs/development/BACKEND_AI_CODING_GUIDELINES.md`
 
 Do not begin implementation until the active Sprint scope and Acceptance Criteria are understood.
 
@@ -74,6 +75,8 @@ Sprint documents limit what is implemented now; they do not silently change the 
 ## Code organization
 
 Organize backend code by feature, including `auth`, `event`, `partner`, `security` and `common`. Within a feature, use focused subpackages such as `controller`, `dto`, `entity`, `repository` and `service`. Do not create one global package containing every Entity or Controller.
+
+
 
 ## Team workflow
 
