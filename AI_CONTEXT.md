@@ -1,21 +1,83 @@
 # BookStreet AI Context
 
-## Current implementation scope
+Last updated: `2026-09-30`
 
-- Active sprint: `Sprint 01`
-- Sprint status: `READY FOR IMPLEMENTATION`
-- Read first: `docs/sprints/CURRENT_SPRINT.md`
-- Do not implement features outside the active sprint unless the team explicitly changes the sprint scope.
+## Current implementation status
 
-## Required reading order
+- The foundation pull request is merged into `main`.
+- `V1__init_auth_schema.sql` and `V2__seed_system_roles.sql` exist in `main`.
+- The local PostgreSQL runtime was manually verified by the user through Spring Boot logs showing Flyway version 2.
+- The user manually verified a successful PostgreSQL connection and Spring Boot startup.
+- Spring Session Redis configuration exists; this does not claim that Codex independently verified Docker or the Redis runtime.
+- Hibernate uses `ddl-auto: validate`.
+- Java feature implementation has not started.
 
-1. `docs/sprints/CURRENT_SPRINT.md`
-2. `docs/sprints/sprint-01.md`
-3. `docs/use-cases/sprint-01-use-case-specifications.md`
-4. `docs/api/sprint-01-api-contract.md`
-5. The current requirement and design documents under `docs/requirements` and `docs/design`
+## Current database state
 
-## Current baseline
+`V1__init_auth_schema.sql` creates:
+
+- `users`
+- `roles`
+- `user_roles`
+- `user_tokens`
+
+`V2__seed_system_roles.sql` seeds:
+
+- `PARTICIPANT`
+- `PARTNER`
+- `ORGANIZER`
+- `ADMIN`
+
+Sprint 1 is still missing these business tables:
+
+- `events`
+- `partner_organizations`
+- `partner_event_applications`
+
+## Not yet implemented
+
+- JPA Entities
+- Repositories
+- Services
+- Controllers
+- Custom Spring Security configuration
+- Account registration
+- Login and server-side Session flow
+- `GET /auth/me`
+- Logout and Session invalidation
+- Organizer Event management and public Published Event queries
+- Partner Organization profile
+- Partner Event Application submission and withdrawal
+- Organizer application review
+- Demo Organizer and Partner accounts
+- Sprint 1 integration tests
+
+## Immediate next task
+
+- Branch: `chore/sprint1-business-schema`
+- Migration: `backend/src/main/resources/db/migration/V3__init_sprint1_business_schema.sql`
+- Tables:
+  - `events`
+  - `partner_organizations`
+  - `partner_event_applications`
+- V3 must not modify V1 or V2.
+- V3 must not include Java code.
+- V3 must not include demo accounts.
+- V3 must not include out-of-scope tables.
+
+## Active Sprint
+
+Active Sprint: Sprint 01 Account and Partner Application.
+
+Included Use Cases:
+
+- UC-G02 Create Account
+- UC-G03 Manage Account Access, Sprint 1 slice
+- UC-O01 Manage Events, create/update/publish slice
+- UC-E01 Apply to Event
+- UC-O03 Review Partner Applications
+
+## Current approved baselines
 
 - Requirement baseline: v4
 - Use Case Diagram: V2 only
@@ -26,29 +88,22 @@
 
 Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation source.
 
-## Source-of-truth order
+## Authentication baseline
 
-When documents appear inconsistent, use this order and report the conflict before coding:
+- Authentication uses a Spring Security server-side Session stored in Redis.
+- Sprint 1 does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
+- The `user_tokens` table is reserved for future email-verification and password-reset flows.
+- Forgot/Reset Password is outside Sprint 1.
 
-1. `05_Business_Rules`
-2. `06_Use_Case_List`
-3. Active Sprint Use Case Specifications and Acceptance Criteria
-4. Physical ERD
-5. Active Sprint API Contract
-6. Overview, demo and supporting reports
+## Sprint 1 scope guard
 
-Sprint documents limit what is implemented now. They do not silently change the business baseline.
+Sprint 1 excludes:
 
-## Hard implementation rules
-
-- Do not invent new roles, statuses, tables, relationships or business flows.
-- Do not change the Physical ERD without updating the design documents first.
-- Use the exact role codes `PARTICIPANT`, `PARTNER`, `ORGANIZER` and `ADMIN`.
-- A new account receives the `PARTICIPANT` role by default.
-- `PARTNER`, `ORGANIZER` and `ADMIN` require a verified email.
-- Username uniqueness is case-insensitive.
-- `confirmPassword` is validated by the client/server request flow but is never stored.
-- Passwords must be hashed and never logged or stored as plaintext.
-- Authentication uses Spring Security server-side sessions stored in Redis. The browser receives only a Secure, HttpOnly session cookie; do not introduce JWT or refresh-token flows without a baseline change.
-- Every feature must satisfy its Acceptance Criteria before it is marked complete.
-- If a requirement is unclear, stop and ask the team instead of assuming.
+- Booth configuration, request, hold, assignment, change and cancellation
+- Payment and refund
+- Activity proposal, management, registration and rating
+- QR flows
+- Attendance and Booth Visit
+- Points, Badge and Certificate rewards
+- General Feedback
+- Reporting
