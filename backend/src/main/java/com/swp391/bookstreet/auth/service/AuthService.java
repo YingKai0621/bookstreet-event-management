@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -48,12 +49,17 @@ public class AuthService {
         String email = normalizeOptionalEmail(request.email());
         validateUniqueEmail(email);
 
-        Role participantRole = roleRepository.findByCode(RoleCode.PARTICIPANT)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "SYSTEM_ROLE_NOT_FOUND",
-                        "The PARTICIPANT system role is not configured."
-                ));
+        Optional<Role> participantRoleResult = roleRepository.findByCode(RoleCode.PARTICIPANT);
+
+        if (participantRoleResult.isEmpty()) {
+            throw new ApiException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "SYSTEM_ROLE_NOT_FOUND",
+                    "The PARTICIPANT system role is not configured."
+            );
+        }
+
+        Role participantRole = participantRoleResult.get();
 
         User user = new User(
                 request.username(),
@@ -104,7 +110,15 @@ public class AuthService {
     }
 
     private String normalizeOptionalEmail(String email) {
-        return email == null || email.isBlank() ? null : email;
+        if (email == null) {
+            return null;
+        }
+
+        if (email.isBlank()) {
+            return null;
+        }
+
+        return email;
     }
 
     private ApiException mapDuplicateConstraint(DataIntegrityViolationException exception) {
