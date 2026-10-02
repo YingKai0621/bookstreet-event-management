@@ -67,6 +67,14 @@ Request:
 }
 ```
 
+Registration validation:
+
+- `username` contains 3 to 20 characters, starts with an ASCII letter and contains only ASCII letters and digits.
+- `fullName` contains 2 to 50 characters after surrounding and repeated whitespace is normalized.
+- `password` and `confirmPassword` contain 8 to 64 characters and do not exceed 72 UTF-8 bytes.
+- `email` is optional; a supplied value is trimmed, has at most 255 characters and must be a valid email address.
+- `password` and `confirmPassword` must match exactly. Password values are never trimmed.
+
 Response `201`:
 
 ```json
@@ -96,7 +104,7 @@ Request:
 
 ```json
 {
-  "username": "partner_demo",
+  "username": "partnerdemo",
   "password": "example-password"
 }
 ```
@@ -107,12 +115,14 @@ Response `200`:
 {
   "user": {
     "userId": 22,
-    "username": "partner_demo",
+    "username": "partnerdemo",
     "fullName": "Demo Partner",
     "roles": ["PARTICIPANT", "PARTNER"]
   }
 }
 ```
+
+Login validation applies the same username format. Password is required and is limited to 64 characters and 72 UTF-8 bytes, but an invalid credential is still reported with the generic authentication error below.
 
 The backend also sets a Secure, HttpOnly session cookie. The session identifier is not returned in the JSON body and is not readable by frontend JavaScript.
 
@@ -139,7 +149,7 @@ Response `200`:
 ```json
 {
   "userId": 22,
-  "username": "partner_demo",
+  "username": "partnerdemo",
   "fullName": "Demo Partner",
   "email": "partner@example.com",
   "emailVerified": true,

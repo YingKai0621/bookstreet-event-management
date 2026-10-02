@@ -234,7 +234,7 @@ public class AuthService {
             return null;
         }
 
-        return email;
+        return email.strip();
     }
 
     private ApiException mapDuplicateConstraint(DataIntegrityViolationException exception) {
