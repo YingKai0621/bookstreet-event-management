@@ -19,6 +19,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -69,7 +70,30 @@ class DatabaseAuthenticationUnitTests {
         }
 
         assertThat(authorityNames).containsExactly("ROLE_PARTICIPANT");
+        assertThat(principal.isEmailVerified()).isFalse();
         assertThat(principal.getPassword()).isNull();
+    }
+
+    @Test
+    void doesNotGrantPartnerAuthorityWhenEmailIsNotVerified() {
+        User user = userWithRole(RoleCode.PARTNER, null);
+
+        AuthenticatedUser principal = AuthenticatedUser.from(user);
+
+        List<String> authorityNames = authorityNames(principal);
+        assertThat(authorityNames).isEmpty();
+        assertThat(principal.isEmailVerified()).isFalse();
+    }
+
+    @Test
+    void grantsPartnerAuthorityWhenEmailIsVerified() {
+        User user = userWithRole(RoleCode.PARTNER, Instant.now());
+
+        AuthenticatedUser principal = AuthenticatedUser.from(user);
+
+        List<String> authorityNames = authorityNames(principal);
+        assertThat(authorityNames).containsExactly("ROLE_PARTNER");
+        assertThat(principal.isEmailVerified()).isTrue();
     }
 
     @Test
@@ -113,8 +137,14 @@ class DatabaseAuthenticationUnitTests {
     }
 
     private User userWithStatus(AccountStatus status) {
+        User user = userWithRole(RoleCode.PARTICIPANT, null);
+        when(user.getStatus()).thenReturn(status);
+        return user;
+    }
+
+    private User userWithRole(RoleCode roleCode, Instant emailVerifiedAt) {
         Role role = mock(Role.class);
-        when(role.getCode()).thenReturn(RoleCode.PARTICIPANT);
+        when(role.getCode()).thenReturn(roleCode);
 
         UserRole userRole = mock(UserRole.class);
         when(userRole.getRole()).thenReturn(role);
@@ -123,9 +153,20 @@ class DatabaseAuthenticationUnitTests {
         when(user.getId()).thenReturn(42L);
         when(user.getUsername()).thenReturn(USERNAME);
         when(user.getPasswordHash()).thenReturn(passwordEncoder.encode(RAW_PASSWORD));
-        when(user.getStatus()).thenReturn(status);
+        when(user.getStatus()).thenReturn(AccountStatus.ACTIVE);
+        when(user.getEmailVerifiedAt()).thenReturn(emailVerifiedAt);
         when(user.getUserRoles()).thenReturn(Set.of(userRole));
         return user;
+    }
+
+    private List<String> authorityNames(AuthenticatedUser principal) {
+        List<String> authorityNames = new ArrayList<>();
+
+        for (GrantedAuthority authority : principal.getAuthorities()) {
+            authorityNames.add(authority.getAuthority());
+        }
+
+        return authorityNames;
     }
 
     private Authentication authenticate(String username, String password) {

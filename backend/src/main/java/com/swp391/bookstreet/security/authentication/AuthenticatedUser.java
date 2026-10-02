@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.security.authentication;
 
 import com.swp391.bookstreet.auth.entity.AccountStatus;
+import com.swp391.bookstreet.auth.entity.RoleCode;
 import com.swp391.bookstreet.auth.entity.User;
 import com.swp391.bookstreet.auth.entity.UserRole;
 import org.springframework.security.core.CredentialsContainer;
@@ -22,6 +23,7 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
     private final String username;
     private String password;
     private final boolean enabled;
+    private final boolean emailVerified;
     private final List<GrantedAuthority> authorities;
 
     private AuthenticatedUser(
@@ -29,20 +31,29 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
             String username,
             String password,
             boolean enabled,
+            boolean emailVerified,
             List<GrantedAuthority> authorities
     ) {
         this.userId = userId;
         this.username = username;
         this.password = password;
         this.enabled = enabled;
+        this.emailVerified = emailVerified;
         this.authorities = List.copyOf(authorities);
     }
 
     public static AuthenticatedUser from(User user) {
         List<GrantedAuthority> authorities = new ArrayList<>();
+        boolean emailVerified = user.getEmailVerifiedAt() != null;
 
         for (UserRole userRole : user.getUserRoles()) {
-            String roleName = userRole.getRole().getCode().name();
+            RoleCode roleCode = userRole.getRole().getCode();
+
+            if (requiresVerifiedEmail(roleCode) && !emailVerified) {
+                continue;
+            }
+
+            String roleName = roleCode.name();
             String authorityName = "ROLE_" + roleName;
 
             GrantedAuthority authority = new SimpleGrantedAuthority(authorityName);
@@ -56,8 +67,15 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
                 user.getUsername(),
                 user.getPasswordHash(),
                 enabled,
+                emailVerified,
                 authorities
         );
+    }
+
+    private static boolean requiresVerifiedEmail(RoleCode roleCode) {
+        return roleCode == RoleCode.PARTNER
+                || roleCode == RoleCode.ORGANIZER
+                || roleCode == RoleCode.ADMIN;
     }
 
     public Long getUserId() {
@@ -82,6 +100,10 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
     }
 
     @Override

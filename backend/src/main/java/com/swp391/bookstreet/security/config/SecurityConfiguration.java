@@ -82,6 +82,7 @@ public class SecurityConfiguration {
                         "/swagger-ui/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
                 .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
                 .anyRequest().authenticated()
