@@ -6,15 +6,18 @@ import com.swp391.bookstreet.auth.dto.LoginResponse;
 import com.swp391.bookstreet.auth.dto.RegisterRequest;
 import com.swp391.bookstreet.auth.service.AuthService;
 import com.swp391.bookstreet.auth.service.LoginResult;
+import com.swp391.bookstreet.security.authentication.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,5 +66,12 @@ public class AuthController {
         securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
 
         return loginResult.response();
+    }
+
+    @GetMapping("/me")
+    public AccountResponse getCurrentAccount(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ) {
+        return authService.getCurrentAccount(authenticatedUser.getUserId());
     }
 }

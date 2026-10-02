@@ -171,6 +171,38 @@ public class AuthService {
         return new LoginResult(authenticationResult, loginResponse);
     }
 
+    @Transactional(readOnly = true)
+    public AccountResponse getCurrentAccount(Long userId) {
+        Optional<User> userResult = userRepository.findByIdWithRoles(userId);
+
+        if (userResult.isEmpty()) {
+            throw new ApiException(
+                    HttpStatus.UNAUTHORIZED,
+                    "AUTHENTICATION_REQUIRED",
+                    "Authentication is required."
+            );
+        }
+
+        User user = userResult.get();
+        List<RoleCode> roles = new ArrayList<>();
+
+        for (UserRole userRole : user.getUserRoles()) {
+            roles.add(userRole.getRole().getCode());
+        }
+
+        Collections.sort(roles);
+
+        return new AccountResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getEmailVerifiedAt() != null,
+                user.getStatus(),
+                roles
+        );
+    }
+
     private void validatePasswordConfirmation(RegisterRequest request) {
         if (!Objects.equals(request.password(), request.confirmPassword())) {
             throw new ApiException(
