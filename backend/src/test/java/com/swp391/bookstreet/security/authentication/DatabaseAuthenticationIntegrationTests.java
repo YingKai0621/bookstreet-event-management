@@ -40,7 +40,7 @@ class DatabaseAuthenticationIntegrationTests {
 
     @Test
     void authenticatesActiveUserCaseInsensitivelyWithDatabaseRole() {
-        String username = "security_" + uniqueSuffix();
+        String username = "security" + uniqueSuffix();
         register(username);
 
         Authentication authentication = authenticate(username.toUpperCase(), RAW_PASSWORD);
@@ -65,7 +65,7 @@ class DatabaseAuthenticationIntegrationTests {
 
     @Test
     void rejectsIncorrectPasswordWithGenericAuthenticationFailure() {
-        String username = "wrong_password_" + uniqueSuffix();
+        String username = "wrongpass" + uniqueSuffix();
         register(username);
 
         try {
@@ -78,7 +78,7 @@ class DatabaseAuthenticationIntegrationTests {
 
     @Test
     void rejectsUnknownUsernameWithSameGenericAuthenticationFailure() {
-        String unknownUsername = "missing_" + uniqueSuffix();
+        String unknownUsername = "missing" + uniqueSuffix();
 
         try {
             authenticate(unknownUsername, RAW_PASSWORD);
@@ -90,7 +90,7 @@ class DatabaseAuthenticationIntegrationTests {
 
     @Test
     void rejectsDisabledAccount() {
-        String username = "disabled_" + uniqueSuffix();
+        String username = "disabled" + uniqueSuffix();
         register(username);
 
         User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();

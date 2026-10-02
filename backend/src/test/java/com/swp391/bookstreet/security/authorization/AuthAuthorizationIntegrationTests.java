@@ -94,7 +94,7 @@ class AuthAuthorizationIntegrationTests {
 
     @Test
     void participantCannotAccessOrganizerOrPartnerEndpoints() throws Exception {
-        String username = "participant_auth_" + uniqueSuffix();
+        String username = "part" + uniqueSuffix();
         register(username, null);
 
         Cookie sessionCookie = login(username);
@@ -126,7 +126,7 @@ class AuthAuthorizationIntegrationTests {
 
     @Test
     void organizerRoleCanAccessOrganizerEndpoint() throws Exception {
-        String username = "organizer_auth_" + uniqueSuffix();
+        String username = "organizer" + uniqueSuffix();
         register(username, username + "@example.com");
         assignVerifiedRole(username, RoleCode.ORGANIZER);
 
@@ -142,7 +142,7 @@ class AuthAuthorizationIntegrationTests {
 
     @Test
     void partnerRoleCanAccessPartnerEndpoint() throws Exception {
-        String username = "partner_auth_" + uniqueSuffix();
+        String username = "partner" + uniqueSuffix();
         register(username, username + "@example.com");
         assignVerifiedRole(username, RoleCode.PARTNER);
 
@@ -164,7 +164,7 @@ class AuthAuthorizationIntegrationTests {
 
     @Test
     void unverifiedPartnerRoleCannotAccessPartnerEndpoint() throws Exception {
-        String username = "unverified_partner_" + uniqueSuffix();
+        String username = "uvpartner" + uniqueSuffix();
         register(username, username + "@example.com");
         assignRoleWithoutVerifyingEmail(username, RoleCode.PARTNER);
 
