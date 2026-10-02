@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,7 +57,7 @@ class AuthLoginIntegrationTests {
 
     @Test
     void loginCreatesRedisSessionAndUpdatesLastLoginTime() throws Exception {
-        String username = "login_" + uniqueSuffix();
+        String username = "login" + uniqueSuffix();
         register(username);
 
         User userBeforeLogin = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
@@ -111,13 +113,13 @@ class AuthLoginIntegrationTests {
 
     @Test
     void loginRejectsIncorrectPasswordWithGenericError() throws Exception {
-        String username = "wrong_password_" + uniqueSuffix();
+        String username = "wrongpass" + uniqueSuffix();
         register(username);
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginJson(username, "incorrect-password")))
+                        .content(loginJson(username, "x")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
                 .andExpect(jsonPath("$.message").value("Invalid username or password."));
@@ -128,7 +130,7 @@ class AuthLoginIntegrationTests {
 
     @Test
     void loginHidesUnknownUsernameBehindSameGenericError() throws Exception {
-        String unknownUsername = "missing_" + uniqueSuffix();
+        String unknownUsername = "missing" + uniqueSuffix();
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .with(csrf())
@@ -141,7 +143,7 @@ class AuthLoginIntegrationTests {
 
     @Test
     void loginRejectsDisabledAccount() throws Exception {
-        String username = "disabled_login_" + uniqueSuffix();
+        String username = "disabled" + uniqueSuffix();
         register(username);
 
         User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
@@ -167,12 +169,34 @@ class AuthLoginIntegrationTests {
                         .content(loginJson("", "")))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.fieldErrors.length()").value(2));
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItems("username", "password")));
+    }
+
+    @Test
+    void loginRejectsUsernameOutsideApprovedFormat() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson("partner_demo", RAW_PASSWORD)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItem("username")));
+    }
+
+    @Test
+    void loginRejectsOversizedPasswordBeforeAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson("validlogin", "a".repeat(65))))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItem("password")));
     }
 
     @Test
     void loginRemainsProtectedByCsrf() throws Exception {
-        String username = "login_csrf_" + uniqueSuffix();
+        String username = "logincsrf" + uniqueSuffix();
         register(username);
 
         mockMvc.perform(post("/api/v1/auth/login")

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,7 +38,7 @@ class AuthRegistrationIntegrationTests {
     @Test
     void registerCreatesActiveParticipantAndHashesPassword() throws Exception {
         String suffix = uniqueSuffix();
-        String username = "participant_" + suffix;
+        String username = "part" + suffix;
         String rawPassword = "learning-password";
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -66,7 +67,7 @@ class AuthRegistrationIntegrationTests {
 
     @Test
     void registerRejectsPasswordConfirmationMismatch() throws Exception {
-        String username = "mismatch_" + uniqueSuffix();
+        String username = "mismatch" + uniqueSuffix();
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .with(csrf())
@@ -87,7 +88,7 @@ class AuthRegistrationIntegrationTests {
     @Test
     void registerRejectsCaseInsensitiveDuplicateUsername() throws Exception {
         String suffix = uniqueSuffix();
-        String username = "duplicate_" + suffix;
+        String username = "duplicate" + suffix;
 
         performSuccessfulRegistration(username, "First Account", null);
 
@@ -110,13 +111,13 @@ class AuthRegistrationIntegrationTests {
         String suffix = uniqueSuffix();
         String email = "student_" + suffix + "@example.com";
 
-        performSuccessfulRegistration("first_" + suffix, "First Account", email);
+        performSuccessfulRegistration("first" + suffix, "First Account", email);
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(
-                                "second_" + suffix,
+                                "second" + suffix,
                                 "Second Account",
                                 "learning-password",
                                 "learning-password",
@@ -135,7 +136,93 @@ class AuthRegistrationIntegrationTests {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.fieldErrors").isArray())
-                .andExpect(jsonPath("$.fieldErrors.length()").value(5));
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItems(
+                        "username",
+                        "fullName",
+                        "password",
+                        "confirmPassword",
+                        "email"
+                )));
+    }
+
+    @Test
+    void registerAcceptsApprovedLengthBoundaries() throws Exception {
+        String minimumPassword = "a".repeat(8);
+        String maximumPassword = "b".repeat(64);
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson("Abc", "An", minimumPassword, minimumPassword, null)))
+                .andExpect(status().isCreated());
+
+        String maximumUsername = "B" + "1".repeat(19);
+        String maximumFullName = "N".repeat(50);
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(
+                                maximumUsername,
+                                maximumFullName,
+                                maximumPassword,
+                                maximumPassword,
+                                null
+                        )))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void registerRejectsUsernameOutsideApprovedFormat() throws Exception {
+        expectRegistrationFieldError("ab", "Valid Account", "learning-password", "username");
+        expectRegistrationFieldError("1booklover", "Valid Account", "learning-password", "username");
+        expectRegistrationFieldError("book_lover", "Valid Account", "learning-password", "username");
+        expectRegistrationFieldError("a".repeat(21), "Valid Account", "learning-password", "username");
+    }
+
+    @Test
+    void registerRejectsFullNameOutsideApprovedLength() throws Exception {
+        expectRegistrationFieldError("validuser", "A", "learning-password", "fullName");
+        expectRegistrationFieldError("validuser", "A".repeat(51), "learning-password", "fullName");
+    }
+
+    @Test
+    void registerRejectsPasswordOutsideApprovedLimits() throws Exception {
+        expectRegistrationFieldError("validuser", "Valid Account", "a".repeat(7), "password");
+        expectRegistrationFieldError("validuser", "Valid Account", "a".repeat(65), "password");
+
+        String passwordOverBcryptByteLimit = "😀".repeat(19);
+        expectRegistrationFieldError(
+                "validuser",
+                "Valid Account",
+                passwordOverBcryptByteLimit,
+                "password"
+        );
+    }
+
+    @Test
+    void registerNormalizesFullNameAndEmail() throws Exception {
+        String suffix = uniqueSuffix();
+        String username = "normal" + suffix;
+        String email = "student" + suffix + "@example.com";
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(
+                                username,
+                                "  Nguyễn   Văn An  ",
+                                "learning-password",
+                                "learning-password",
+                                "  " + email + "  "
+                        )))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Văn An"))
+                .andExpect(jsonPath("$.email").value(email));
+
+        User savedUser = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        assertThat(savedUser.getFullName()).isEqualTo("Nguyễn Văn An");
+        assertThat(savedUser.getEmail()).isEqualTo(email);
     }
 
     @Test
@@ -145,7 +232,7 @@ class AuthRegistrationIntegrationTests {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerJson(
-                                "csrf_" + suffix,
+                                "csrf" + suffix,
                                 "CSRF Account",
                                 "learning-password",
                                 "learning-password",
@@ -166,6 +253,21 @@ class AuthRegistrationIntegrationTests {
                                 email
                         )))
                 .andExpect(status().isCreated());
+    }
+
+    private void expectRegistrationFieldError(
+            String username,
+            String fullName,
+            String password,
+            String expectedField
+    ) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(username, fullName, password, password, null)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors[*].field").value(hasItems(expectedField)));
     }
 
     private String registerJson(

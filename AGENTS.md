@@ -65,6 +65,9 @@ Sprint documents limit what is implemented now; they do not silently change the 
 
 - The exact role codes are `PARTICIPANT`, `PARTNER`, `ORGANIZER` and `ADMIN`.
 - New self-registered accounts receive only `PARTICIPANT`.
+- Usernames are 3 to 20 characters, start with an ASCII letter and contain only ASCII letters and digits.
+- Full names are normalized for surrounding/repeated whitespace and contain 2 to 50 characters.
+- Registration passwords contain 8 to 64 characters and must not exceed 72 UTF-8 bytes before BCrypt hashing.
 - Username uniqueness is case-insensitive.
 - Email is optional but case-insensitively unique when supplied.
 - `confirmPassword` is validated but never stored.

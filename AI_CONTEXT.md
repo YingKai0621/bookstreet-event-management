@@ -1,16 +1,22 @@
 # BookStreet AI Context
 
-Last updated: `2026-09-30`
+Last updated: `2026-10-02`
 
 ## Current implementation status
 
-- The foundation pull request is merged into `main`.
-- `V1__init_auth_schema.sql` and `V2__seed_system_roles.sql` exist in `main`.
-- The local PostgreSQL runtime was manually verified by the user through Spring Boot logs showing Flyway version 2.
-- The user manually verified a successful PostgreSQL connection and Spring Boot startup.
-- Spring Session Redis configuration exists; this does not claim that Codex independently verified Docker or the Redis runtime.
+- The foundation and Sprint 1 business-schema pull requests are merged into `main`.
+- `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql` and `V3__create_sprint1_business_schema.sql` exist in `main`.
+- The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
+- Flyway validates and applies the current schema through version 3.
+- Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
-- Java feature implementation has not started.
+- Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
+- Implemented authentication APIs cover account registration, login, logout and the current-account endpoint.
+- New self-registered accounts receive only the `PARTICIPANT` role.
+- Role-protected Organizer and Partner routes use the authenticated principal and server-side Session.
+- `PARTNER`, `ORGANIZER` and `ADMIN` authorities require `email_verified_at` to be present.
+- Swagger/OpenAPI is available for local API exploration.
+- The current Maven test suite passes with 39 tests and no failures or errors.
 
 ## Current database state
 
@@ -28,7 +34,7 @@ Last updated: `2026-09-30`
 - `ORGANIZER`
 - `ADMIN`
 
-Sprint 1 is still missing these business tables:
+`V3__create_sprint1_business_schema.sql` creates:
 
 - `events`
 - `partner_organizations`
@@ -36,34 +42,22 @@ Sprint 1 is still missing these business tables:
 
 ## Not yet implemented
 
-- JPA Entities
-- Repositories
-- Services
-- Controllers
-- Custom Spring Security configuration
-- Account registration
-- Login and server-side Session flow
-- `GET /auth/me`
-- Logout and Session invalidation
 - Organizer Event management and public Published Event queries
 - Partner Organization profile
 - Partner Event Application submission and withdrawal
 - Organizer application review
 - Demo Organizer and Partner accounts
-- Sprint 1 integration tests
+- Event and Partner feature tests
+- Email-verification mail delivery and verification endpoints; `user_tokens` is reserved for this future flow
+- Forgot/Reset Password
 
 ## Immediate next task
 
-- Branch: `chore/sprint1-business-schema`
-- Migration: `backend/src/main/resources/db/migration/V3__init_sprint1_business_schema.sql`
-- Tables:
-  - `events`
-  - `partner_organizations`
-  - `partner_event_applications`
-- V3 must not modify V1 or V2.
-- V3 must not include Java code.
-- V3 must not include demo accounts.
-- V3 must not include out-of-scope tables.
+- Implement Organizer Event management and public Published Event queries on the Event feature branch.
+- Implement Partner Organization, Partner Event Application and Organizer application review on the Partner feature branch.
+- Both feature modules must derive the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
+- Add demo Organizer and Partner accounts only through a separately reviewed migration or seed-data pull request.
+- Do not modify applied migrations V1, V2 or V3.
 
 ## Active Sprint
 

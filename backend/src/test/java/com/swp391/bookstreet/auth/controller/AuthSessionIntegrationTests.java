@@ -48,7 +48,7 @@ class AuthSessionIntegrationTests {
 
     @Test
     void currentAccountUsesIdentityFromAuthenticatedSession() throws Exception {
-        String username = "current_user_" + uniqueSuffix();
+        String username = "current" + uniqueSuffix();
         register(username);
 
         Cookie sessionCookie = login(username);
@@ -71,7 +71,7 @@ class AuthSessionIntegrationTests {
 
     @Test
     void logoutInvalidatesRedisSessionAndOldCookieCannotAccessCurrentAccount() throws Exception {
-        String username = "logout_" + uniqueSuffix();
+        String username = "logout" + uniqueSuffix();
         register(username);
 
         Cookie sessionCookie = login(username);
@@ -108,7 +108,7 @@ class AuthSessionIntegrationTests {
 
     @Test
     void logoutRemainsProtectedByCsrf() throws Exception {
-        String username = "logout_csrf_" + uniqueSuffix();
+        String username = "logoutcsrf" + uniqueSuffix();
         register(username);
 
         Cookie sessionCookie = login(username);
