@@ -1,0 +1,105 @@
+MVP SCOPE
+Book Street Event Management System
+1. MVP Goal
+MVP phải đủ để Ban quản lý Đường Sách tổ chức nhiều Event trong cùng một không gian vật lý; Partner đăng ký tham gia Event, chủ động chọn Booth và đề xuất Activity; Guest khám phá nội dung công khai và gửi góp ý chung; Participant Join Event, đăng ký Activity, ghi nhận attendance và nhận rewards khi đủ điều kiện.
+Scope lockTập trung vào Event - Partner - Booth - Activity - Participant - Attendance. Feature mới ngoài chuỗi này đưa vào Future Scope.
+2. Actors
+Actor
+MVP responsibility
+Guest
+Explore public Book Street information and submit general feedback.
+Participant
+Event participation, Activity registration, attendance, rewards and Activity rating.
+Partner / Exhibitor
+Event application, Booth request and Activity proposal.
+Event Organizer
+Event operations, reviews, participation monitoring, public content and reports.
+System Admin
+Accounts, roles, Badge and system settings.
+3. In Scope
+Public Experience
+Explore Events, Activities, Booths, Booth Map and Heritage content without login.
+Submit General Feedback without login.
+Participant Event Participation
+Join/Leave Event
+My Events
+Event-level in-app notifications
+Auto-create Event Registration when registering an Activity or scanning a valid BoothAssignment QR without joining first
+Activity Registration
+Register/cancel Activity
+Capacity control
+Schedule-overlap warning
+My Activity registrations, Attendance, BoothVisit, Points, Badge and Certificate
+Partner Participation
+Partner profile
+Apply to Event
+Organizer approval
+Withdraw from Event
+Booth
+Manage physical Area/Booth resources
+Select a specific Booth on the MVP Booth Map; advanced map editor is not required
+Event/time-based availability: AVAILABLE / ON_HOLD / ASSIGNED / UNAVAILABLE
+Booth Request, Booth Hold and Booth Assignment are separate records/concepts.
+Request/change/cancel Booth
+Configurable per-Event Booth limit and Hold expiration
+The same physical Booth may be reused by different Events when their time ranges do not overlap.
+Release/reassign rules
+Activity
+Activity Proposal with exact time/location
+Organizer approval and separate Publish step
+BTC Activity creation
+Conflict/capacity checking
+Change/reschedule/cancel
+Configurable per-Event activity limit
+QR Participation & Rewards
+Activity QR belongs to Activity; registered Participant self-scans in valid time window to create Attendance = ATTENDED
+BoothAssignment QR is active only while Assignment/Event is active; Participant self-scans to create BoothVisit
+Duplicate Activity/Booth QR scans do not create duplicate Attendance/BoothVisit rewards
+Points from valid BoothVisit
+Badge from cumulative total Points
+Certificate from valid Activity Attendance when the Activity supports certificate
+Communication & Feedback
+In-app notifications
+General Feedback without login
+Verified Activity Rating for eligible Participants
+Reporting
+Partner/Booth/Activity counts
+Event and Activity registrations
+Attendance/no-shows/BoothVisit
+Participation rate
+Basic feedback summary
+Administration
+Accounts
+Roles via UserRole/Role; no separate Permission model in MVP
+Badge definitions and total-Points thresholds
+System settings
+4. Important MVP Boundaries
+Event Registration is not an entrance ticket and has no Event QR.
+Activity Registration is the seat/capacity-controlled registration. Activity QR belongs to the Activity; a registered Participant self-scans it to create Attendance.
+Partner must be APPROVED in an Event before requesting a Booth or submitting an Activity Proposal.
+A physical Booth is not globally ASSIGNED; its availability is calculated per Event/time through Booth Hold and Booth Assignment.
+Activities and Booth participation are FREE in MVP.
+Heritage is supporting public content, not a separate heritage-management workflow.
+Equipment needs are notes only; no inventory/booking module.
+Organizer accounts can manage multiple Events of the same Book Street.
+5. Out of Scope
+AI chatbot/recommendation
+Payment Gateway / paid tickets
+Booth billing/refunds
+Staff shift management
+Waitlist
+Sponsor management
+Equipment inventory
+Reward redemption/vouchers
+Advanced BI/predictive analytics
+Recurring activity engine
+Legal/digital-signature certificates
+Advanced Map Editor: multiple map versions, upload/delete map, click-to-create Location/Booth, drag/drop positioning.
+6. MVP Completion Criteria
+Guest browses public information and submits General Feedback without login.
+Participant can Join Event, see My Events, register Activity, self-scan Activity QR for Attendance and BoothAssignment QR for BoothVisit.
+Partner can apply to an Event, be approved, select/request a specific Booth and submit an Activity Proposal.
+Organizer can manage Event/Location/Booth/Activity and handle change/cancel workflows.
+System enforces capacity, conflict, Event/time Booth availability and access rules while maintaining history.
+BoothVisit produces Point/Badge progression correctly; valid Activity Attendance can produce Certificate and rating eligibility.
+Organizer can see basic participation/occupancy reports.
