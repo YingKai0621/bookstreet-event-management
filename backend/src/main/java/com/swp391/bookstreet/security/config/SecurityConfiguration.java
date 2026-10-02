@@ -71,6 +71,8 @@ public class SecurityConfiguration {
                 .securityContextRepository(securityContextRepository)
         );
 
+        http.csrf(csrf -> csrf.spa());
+
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                         "/api/v1/auth/register",
