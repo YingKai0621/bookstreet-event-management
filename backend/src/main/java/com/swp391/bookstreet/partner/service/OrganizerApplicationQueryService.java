@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @Transactional(readOnly = true)
 public class OrganizerApplicationQueryService {
@@ -56,6 +58,43 @@ public class OrganizerApplicationQueryService {
         return applicationRepository
                 .findOrganizerApplications(eventId, organizerUserId, status, pageable)
                 .map(OrganizerApplicationQueryService::toResponse);
+    }
+
+    public OrganizerApplicationResponse findApplication(
+            Long applicationId,
+            Long organizerUserId
+    ) {
+        if (!applicationRepository.existsById(applicationId)) {
+            throw new PartnerApiException(
+                    HttpStatus.NOT_FOUND,
+                    "APPLICATION_NOT_FOUND",
+                    "Application was not found."
+            );
+        }
+
+        if (!applicationRepository.existsByIdAndEventOrganizerUserId(
+                applicationId,
+                organizerUserId
+        )) {
+            throw new PartnerApiException(
+                    HttpStatus.FORBIDDEN,
+                    "EVENT_ACCESS_DENIED",
+                    "You do not have access to this Event."
+            );
+        }
+
+        Optional<OrganizerApplicationRow> application =
+                applicationRepository.findOrganizerApplicationById(
+                        applicationId,
+                        organizerUserId
+                );
+
+        return application.map(OrganizerApplicationQueryService::toResponse)
+                .orElseThrow(() -> new PartnerApiException(
+                        HttpStatus.NOT_FOUND,
+                        "APPLICATION_NOT_FOUND",
+                        "Application was not found."
+                ));
     }
 
     private static OrganizerApplicationResponse toResponse(OrganizerApplicationRow row) {

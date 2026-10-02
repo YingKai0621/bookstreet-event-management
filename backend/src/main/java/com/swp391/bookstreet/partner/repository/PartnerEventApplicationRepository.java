@@ -19,6 +19,45 @@ public interface PartnerEventApplicationRepository
             Pageable pageable
     );
 
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM partner_event_applications a
+                JOIN events e ON e.event_id = a.event_id
+                WHERE a.application_id = :applicationId
+                  AND e.organizer_user_id = :organizerUserId
+            )
+            """, nativeQuery = true)
+    boolean existsByIdAndEventOrganizerUserId(
+            @Param("applicationId") Long applicationId,
+            @Param("organizerUserId") Long organizerUserId
+    );
+
+    @Query(value = """
+            SELECT a.application_id AS applicationId,
+                   a.event_id AS eventId,
+                   po.partner_organization_id AS partnerOrganizationId,
+                   po.name AS partnerOrganizationName,
+                   po.category_code AS partnerCategoryCode,
+                   a.status AS status,
+                   a.application_note AS applicationNote,
+                   a.review_note AS reviewNote,
+                   a.submitted_at AS submittedAt,
+                   a.reviewed_at AS reviewedAt,
+                   a.withdrawn_at AS withdrawnAt
+            FROM partner_event_applications a
+            JOIN partner_organizations po
+              ON po.partner_organization_id = a.partner_organization_id
+            JOIN events e
+              ON e.event_id = a.event_id
+            WHERE a.application_id = :applicationId
+              AND e.organizer_user_id = :organizerUserId
+            """, nativeQuery = true)
+    Optional<OrganizerApplicationRow> findOrganizerApplicationById(
+            @Param("applicationId") Long applicationId,
+            @Param("organizerUserId") Long organizerUserId
+    );
+
     Optional<PartnerEventApplication> findByIdAndPartnerOrganization_RepresentativeUserId(
             Long applicationId,
             Long representativeUserId
