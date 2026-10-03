@@ -86,6 +86,12 @@ public class PartnerEventApplication {
         this.reviewedAt = reviewedAt;
     }
 
+    public void reject(String reviewNote, Instant reviewedAt) {
+        this.status = ApplicationStatus.REJECTED;
+        this.reviewNote = reviewNote;
+        this.reviewedAt = reviewedAt;
+    }
+
     public Long getId() {
         return id;
     }

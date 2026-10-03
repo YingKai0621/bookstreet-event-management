@@ -37,4 +37,17 @@ public class OrganizerApplicationReviewController {
                 request
         ));
     }
+
+    @PostMapping("/{applicationId}/reject")
+    public ResponseEntity<OrganizerApplicationResponse> rejectApplication(
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal(expression = "userId") Long organizerUserId,
+            @RequestBody(required = false) ReviewPartnerApplicationRequest request
+    ) {
+        return ResponseEntity.ok(reviewService.reject(
+                applicationId,
+                organizerUserId,
+                request
+        ));
+    }
 }

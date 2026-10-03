@@ -27,6 +27,34 @@ public class OrganizerApplicationReviewService {
             Long organizerUserId,
             ReviewPartnerApplicationRequest request
     ) {
+        return review(
+                applicationId,
+                organizerUserId,
+                request,
+                PartnerEventApplication.ApplicationStatus.APPROVED
+        );
+    }
+
+    @Transactional
+    public OrganizerApplicationResponse reject(
+            Long applicationId,
+            Long organizerUserId,
+            ReviewPartnerApplicationRequest request
+    ) {
+        return review(
+                applicationId,
+                organizerUserId,
+                request,
+                PartnerEventApplication.ApplicationStatus.REJECTED
+        );
+    }
+
+    private OrganizerApplicationResponse review(
+            Long applicationId,
+            Long organizerUserId,
+            ReviewPartnerApplicationRequest request,
+            PartnerEventApplication.ApplicationStatus decision
+    ) {
         PartnerEventApplication application = applicationRepository
                 .findWithLockById(applicationId)
                 .orElseThrow(() -> new PartnerApiException(
@@ -50,12 +78,16 @@ public class OrganizerApplicationReviewService {
             throw new PartnerApiException(
                     HttpStatus.CONFLICT,
                     "APPLICATION_NOT_PENDING",
-                    "Only a Pending application can be approved."
+                    "Only a Pending application can be reviewed."
             );
         }
 
         String reviewNote = request == null ? null : request.reviewNote();
-        application.approve(reviewNote, Instant.now());
+        if (decision == PartnerEventApplication.ApplicationStatus.APPROVED) {
+            application.approve(reviewNote, Instant.now());
+        } else {
+            application.reject(reviewNote, Instant.now());
+        }
 
         return new OrganizerApplicationResponse(
                 application.getId(),
