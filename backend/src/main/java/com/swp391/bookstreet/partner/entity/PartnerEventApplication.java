@@ -80,6 +80,12 @@ public class PartnerEventApplication {
         this.withdrawnAt = withdrawnAt;
     }
 
+    public void approve(String reviewNote, Instant reviewedAt) {
+        this.status = ApplicationStatus.APPROVED;
+        this.reviewNote = reviewNote;
+        this.reviewedAt = reviewedAt;
+    }
+
     public Long getId() {
         return id;
     }

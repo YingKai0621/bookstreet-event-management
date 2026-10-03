@@ -14,6 +14,12 @@ import java.util.Optional;
 public interface PartnerEventApplicationRepository
         extends JpaRepository<PartnerEventApplication, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT application FROM PartnerEventApplication application WHERE application.id = :applicationId")
+    Optional<PartnerEventApplication> findWithLockById(
+            @Param("applicationId") Long applicationId
+    );
+
     Page<PartnerEventApplication> findAllByPartnerOrganization_RepresentativeUserId(
             Long representativeUserId,
             Pageable pageable
