@@ -1,6 +1,6 @@
 package com.swp391.bookstreet.event;
 
-import com.swp391.bookstreet.event.security.EventPrincipal;
+import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.event.exception.EventException;
 import java.time.Duration;
@@ -266,7 +266,7 @@ class EventApiIntegrationTests {
         mvc.perform(get(ORGANIZER).with(authentication(identity(owner, true, "PARTICIPANT"))))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
         mvc.perform(get(ORGANIZER).with(authentication(identity(owner, false, "ORGANIZER"))))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("EVENT_ACCESS_DENIED"));
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test
@@ -507,6 +507,6 @@ class EventApiIntegrationTests {
                 List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
-    record Identity(Long userId, boolean emailVerified) implements EventPrincipal {
+    record Identity(Long userId, boolean emailVerified) implements AuthenticatedPrincipal {
     }
 }

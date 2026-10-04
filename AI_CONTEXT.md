@@ -20,9 +20,11 @@ Last updated: `2026-10-04`
 - Sprint 1 Event management is implemented with Organizer-owned Draft creation, listing, detail, update and publication APIs.
 - Public Event APIs return only Published Events.
 - Event publication validates completeness, time order, deadlines and non-negative limits, and uses a row lock for concurrent publication.
+- `AuthenticatedPrincipal` is the shared session-identity boundary used by feature modules; Auth no longer depends on Event security code.
+- Role-based authorization failures use the shared `ACCESS_DENIED` response; resource ownership remains enforced inside the owning feature.
 - Swagger/OpenAPI is available for local API exploration.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event API integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The current Maven test suite passes with 156 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
+- The current Maven test suite passes with 157 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
 
 ## Current database state
 
@@ -60,7 +62,6 @@ Last updated: `2026-10-04`
 
 - Implement Partner Organization, Partner Event Application and Organizer application review on the Partner feature branch.
 - Both feature modules must derive the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
-- Align the shared authenticated-principal boundary and authorization error codes before extending the same integration pattern to more feature modules.
 - Add demo Organizer and Partner accounts only through a separately reviewed migration or seed-data pull request.
 - Do not modify applied migrations V1, V2 or V3.
 

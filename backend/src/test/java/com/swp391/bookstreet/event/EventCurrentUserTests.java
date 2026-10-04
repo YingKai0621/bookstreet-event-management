@@ -2,7 +2,7 @@ package com.swp391.bookstreet.event;
 
 import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.security.EventCurrentUser;
-import com.swp391.bookstreet.event.security.EventPrincipal;
+import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -34,19 +34,25 @@ class EventCurrentUserTests {
     @Test
     void unverifiedOrganizerIsForbidden() {
         authenticate(new Identity(7L, false), "ROLE_ORGANIZER");
-        assertError(403, "EVENT_ACCESS_DENIED");
+        assertError(403, "ACCESS_DENIED");
     }
 
     @Test
     void participantCannotManageEvents() {
         authenticate(new Identity(7L, true), "ROLE_PARTICIPANT");
-        assertError(403, "ORGANIZER_ROLE_REQUIRED");
+        assertError(403, "ACCESS_DENIED");
     }
 
     @Test
     void unsupportedPrincipalCannotClaimOwnership() {
         authenticate("7", "ROLE_ORGANIZER");
-        assertError(403, "EVENT_ACCESS_DENIED");
+        assertError(403, "ACCESS_DENIED");
+    }
+
+    @Test
+    void invalidUserIdCannotClaimOwnership() {
+        authenticate(new Identity(0L, true), "ROLE_ORGANIZER");
+        assertError(403, "ACCESS_DENIED");
     }
 
     @Test
@@ -69,7 +75,7 @@ class EventCurrentUserTests {
                 });
     }
 
-    record Identity(Long userId, boolean emailVerified) implements EventPrincipal {
+    record Identity(Long userId, boolean emailVerified) implements AuthenticatedPrincipal {
     }
 }
 

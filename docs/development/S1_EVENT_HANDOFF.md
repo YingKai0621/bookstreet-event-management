@@ -47,12 +47,14 @@ Response phân trang có `content`, `page`, `size`, `totalElements`, `totalPages
 
 ## Tích hợp với thành viên 1
 
-Auth/login/session Redis đã có; AuthenticatedUser triển khai EventPrincipal.
+Auth/login/session Redis đã có; `AuthenticatedUser` triển khai
+`AuthenticatedPrincipal` dùng chung.
 GET public đã được permitAll trong cấu hình security thật.
 
-`event/security/EventPrincipal` là interface tích hợp của Event:
+`security/authentication/AuthenticatedPrincipal` là interface nhận diện dùng chung:
 `Long userId()`, `boolean emailVerified()`, kế thừa `Serializable`.
-Principal thật do Auth tạo sau khi xác thực phải triển khai interface này.
+Principal thật do Auth tạo sau khi xác thực triển khai interface này; Event và các
+module nghiệp vụ khác chỉ phụ thuộc vào hợp đồng dùng chung, không phụ thuộc lẫn nhau.
 Authority Organizer dùng `ROLE_ORGANIZER`, theo quy ước Spring Security.
 Event đọc principal từ `SecurityContextHolder`, không từ body/header do client tự khai.
 
