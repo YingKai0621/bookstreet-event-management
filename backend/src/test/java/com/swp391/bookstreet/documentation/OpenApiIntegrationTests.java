@@ -52,7 +52,21 @@ class OpenApiIntegrationTests {
                 .andExpect(jsonPath("$.components.schemas.RegisterRequest.properties.password.maxLength").value(64))
                 .andExpect(jsonPath("$.components.schemas.LoginRequest.properties.username.minLength").value(3))
                 .andExpect(jsonPath("$.components.schemas.LoginRequest.properties.username.maxLength").value(20))
-                .andExpect(jsonPath("$.components.schemas.LoginRequest.properties.password.maxLength").value(64));
+                .andExpect(jsonPath("$.components.schemas.LoginRequest.properties.password.maxLength").value(64))
+                .andExpect(jsonPath("$.components.schemas.ConfirmEmailVerificationRequest.properties.token.minLength")
+                        .value(43))
+                .andExpect(jsonPath("$.components.schemas.ConfirmEmailVerificationRequest.properties.token.maxLength")
+                        .value(43));
+    }
+
+    @Test
+    void openApiDocumentIncludesEmailVerificationEndpoints() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/email-verification/confirm'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/email-verification/resend'].post")
+                        .exists());
     }
 
     @Test

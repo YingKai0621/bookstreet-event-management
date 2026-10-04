@@ -46,6 +46,8 @@ Recommended status usage:
 
 ## 3 Authentication APIs
 
+The approved parallel email-verification extension is defined separately in [`email-verification-api-contract.md`](email-verification-api-contract.md). It does not change the core Sprint 1 endpoint traceability below.
+
 | Method | Path | Access | Purpose |
 |---|---|---|---|
 | POST | `/auth/register` | Public | Create Participant account |
@@ -379,7 +381,6 @@ Acceptance Criteria: AC-O03-01 through AC-O03-05.
 
 The following are intentionally absent from Sprint 1:
 
-- Email-verification delivery and endpoints; the approved future contract is [`email-verification-api-contract.md`](email-verification-api-contract.md)
 - Forgot/Reset Password
 - Admin account and role management
 - Cancel Event
