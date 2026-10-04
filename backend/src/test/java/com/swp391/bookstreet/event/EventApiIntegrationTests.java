@@ -3,6 +3,9 @@ package com.swp391.bookstreet.event;
 import com.swp391.bookstreet.event.security.EventPrincipal;
 import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.event.exception.EventException;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -52,25 +55,6 @@ class EventApiIntegrationTests {
 
     private static final String ORGANIZER = "/api/v1/organizer/events";
     private static final String PUBLIC = "/api/v1/events";
-    private static final String VALID = """
-            {
-              "name": "Book Street Festival",
-              "description": "Annual event",
-              "startAt": "2026-11-01T08:00:00+07:00",
-              "endAt": "2026-11-03T21:00:00+07:00",
-              "partnerApplicationDeadlineAt": "2026-10-10T23:59:59+07:00",
-              "boothRequestDeadlineAt": "2026-10-20T23:59:59+07:00",
-              "activityProposalDeadlineAt": "2026-10-20T23:59:59+07:00",
-              "participantRegistrationDeadlineAt": "2026-11-01T07:30:00+07:00",
-              "partnerWithdrawalCutoffAt": "2026-10-20T23:59:59+07:00",
-              "boothCancellationCutoffAt": "2026-10-20T23:59:59+07:00",
-              "activityCancellationCutoffAt": "2026-10-25T23:59:59+07:00",
-              "boothPaymentWindowMinutes": 30,
-              "maxBoothsPerPartner": 1,
-              "maxActivitiesPerPartner": 5,
-              "bannerUrl": null
-            }
-            """;
 
     @Autowired WebApplicationContext context;
     @Autowired JdbcTemplate jdbc;
@@ -79,6 +63,9 @@ class EventApiIntegrationTests {
     MockMvc mvc;
     Long owner;
     Long other;
+    Instant eventStartAt;
+    Instant eventEndAt;
+    String validEventRequestJson;
 
     @BeforeEach
     void setup() {
@@ -88,6 +75,7 @@ class EventApiIntegrationTests {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         owner = insertUser();
         other = insertUser();
+        validEventRequestJson = buildValidEventRequestJson();
     }
 
     @AfterEach
@@ -118,12 +106,17 @@ class EventApiIntegrationTests {
     @Test
     void invalidDeadlinePatchRollsBackOtherChanges() throws Exception {
         long id = createEvent();
+        String invalidDeadline = eventStartAt.plus(Duration.ofHours(1)).toString();
+        String requestBody = """
+                {
+                  "name": "Should roll back",
+                  "partnerApplicationDeadlineAt": "%s"
+                }
+                """.formatted(invalidDeadline);
+
         mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
                         .with(authentication(identity(owner, true, "ORGANIZER")))
-                        .contentType("application/json").content("""
-                            {"name":"Should roll back",
-                             "partnerApplicationDeadlineAt":"2026-11-02T08:00:00+07:00"}
-                            """))
+                        .contentType("application/json").content(requestBody))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"));
         assertThat(jdbc.queryForObject("select name from events where event_id = ?", String.class, id))
@@ -204,9 +197,14 @@ class EventApiIntegrationTests {
 
     @Test
     void invalidRangeIs422AndIsNotPersisted() throws Exception {
+        String invalidRequest = validEventRequestJson.replace(
+                eventEndAt.toString(),
+                eventStartAt.toString()
+        );
+
         mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER"))).with(csrf())
                         .contentType("application/json")
-                        .content(VALID.replace("2026-11-03T21:00:00+07:00", "2026-11-01T08:00:00+07:00")))
+                        .content(invalidRequest))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("endAt"));
@@ -217,9 +215,17 @@ class EventApiIntegrationTests {
     @Test
     void invalidPatchRollsBackAllFields() throws Exception {
         long id = createEvent();
+        String invalidEndAt = eventStartAt.minus(Duration.ofHours(1)).toString();
+        String requestBody = """
+                {
+                  "name": "Must rollback",
+                  "endAt": "%s"
+                }
+                """.formatted(invalidEndAt);
+
         mvc.perform(patch(ORGANIZER + "/" + id).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json")
-                        .content("{\"name\":\"Must rollback\",\"endAt\":\"2026-10-01T00:00:00Z\"}"))
+                        .content(requestBody))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"));
         assertThat(jdbc.queryForObject("select name from events where event_id = ?", String.class, id))
@@ -240,8 +246,10 @@ class EventApiIntegrationTests {
 
     @Test
     void negativeQuotaAndBlankNameAreRejected() throws Exception {
-        for (String body : List.of(VALID.replace("\"maxBoothsPerPartner\": 1", "\"maxBoothsPerPartner\": -1"),
-                VALID.replace("Book Street Festival", "   "))) {
+        for (String body : List.of(
+                validEventRequestJson.replace("\"maxBoothsPerPartner\": 1", "\"maxBoothsPerPartner\": -1"),
+                validEventRequestJson.replace("Book Street Festival", "   ")
+        )) {
             mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
                             .with(csrf()).contentType("application/json").content(body))
                     .andExpect(status().isUnprocessableContent())
@@ -252,7 +260,8 @@ class EventApiIntegrationTests {
     @Test
     void missingSessionAndWrongRoleAndUnverifiedEmailAreRejected() throws Exception {
         mvc.perform(get(ORGANIZER)).andExpect(status().isUnauthorized());
-        mvc.perform(post(ORGANIZER).with(csrf()).contentType("application/json").content(VALID))
+        mvc.perform(post(ORGANIZER).with(csrf()).contentType("application/json")
+                        .content(validEventRequestJson))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get(ORGANIZER).with(authentication(identity(owner, true, "PARTICIPANT"))))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -263,7 +272,7 @@ class EventApiIntegrationTests {
     @Test
     void csrfIsRequiredForMutation() throws Exception {
         mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
-                        .contentType("application/json").content(VALID))
+                        .contentType("application/json").content(validEventRequestJson))
                 .andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("select count(*) from events where organizer_user_id = ?",
                 Long.class, owner)).isZero();
@@ -329,7 +338,7 @@ class EventApiIntegrationTests {
     void requestCannotSetOwnerOrStatus() throws Exception {
         for (String field : List.of("\"organizerUserId\": " + other, "\"userId\": " + other,
                 "\"status\": \"PUBLISHED\"")) {
-            String body = VALID.replaceFirst("\\{", "{" + field + ",");
+            String body = validEventRequestJson.replaceFirst("\\{", "{" + field + ",");
             mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
                             .with(csrf()).contentType("application/json").content(body))
                     .andExpect(status().isBadRequest())
@@ -387,14 +396,14 @@ class EventApiIntegrationTests {
     void nameLengthMissingFieldsAndInvalidTimestampAreRejected() throws Exception {
         mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json")
-                        .content(VALID.replace("Book Street Festival", "a".repeat(151))))
+                        .content(validEventRequestJson.replace("Book Street Festival", "a".repeat(151))))
                 .andExpect(status().isUnprocessableContent());
         mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json").content("{}"))
                 .andExpect(status().isUnprocessableContent());
         mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json")
-                        .content(VALID.replace("2026-11-01T08:00:00+07:00", "not-a-time")))
+                        .content(validEventRequestJson.replace(eventStartAt.toString(), "not-a-time")))
                 .andExpect(status().isBadRequest());
     }
 
@@ -428,7 +437,7 @@ class EventApiIntegrationTests {
 
     private long createEvent() throws Exception {
         String json = mvc.perform(post(ORGANIZER).with(authentication(identity(owner, true, "ORGANIZER")))
-                        .with(csrf()).contentType("application/json").content(VALID))
+                        .with(csrf()).contentType("application/json").content(validEventRequestJson))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(json).get("eventId").asLong();
@@ -447,6 +456,50 @@ class EventApiIntegrationTests {
                 """, Long.class, "event_" + UUID.randomUUID().toString().substring(0, 20),
                 new BCryptPasswordEncoder().encode(UUID.randomUUID().toString()),
                 UUID.randomUUID() + "@example.test");
+    }
+
+    private String buildValidEventRequestJson() {
+        Instant baseTime = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        Instant partnerApplicationDeadlineAt = baseTime.plus(Duration.ofDays(10));
+        Instant boothRequestDeadlineAt = baseTime.plus(Duration.ofDays(20));
+        Instant activityProposalDeadlineAt = baseTime.plus(Duration.ofDays(20));
+        Instant partnerWithdrawalCutoffAt = baseTime.plus(Duration.ofDays(20));
+        Instant boothCancellationCutoffAt = baseTime.plus(Duration.ofDays(20));
+        Instant activityCancellationCutoffAt = baseTime.plus(Duration.ofDays(25));
+
+        eventStartAt = baseTime.plus(Duration.ofDays(30));
+        eventEndAt = eventStartAt.plus(Duration.ofDays(2));
+        Instant participantRegistrationDeadlineAt = eventStartAt.minus(Duration.ofMinutes(30));
+
+        return """
+                {
+                  "name": "Book Street Festival",
+                  "description": "Annual event",
+                  "startAt": "%s",
+                  "endAt": "%s",
+                  "partnerApplicationDeadlineAt": "%s",
+                  "boothRequestDeadlineAt": "%s",
+                  "activityProposalDeadlineAt": "%s",
+                  "participantRegistrationDeadlineAt": "%s",
+                  "partnerWithdrawalCutoffAt": "%s",
+                  "boothCancellationCutoffAt": "%s",
+                  "activityCancellationCutoffAt": "%s",
+                  "boothPaymentWindowMinutes": 30,
+                  "maxBoothsPerPartner": 1,
+                  "maxActivitiesPerPartner": 5,
+                  "bannerUrl": null
+                }
+                """.formatted(
+                eventStartAt,
+                eventEndAt,
+                partnerApplicationDeadlineAt,
+                boothRequestDeadlineAt,
+                activityProposalDeadlineAt,
+                participantRegistrationDeadlineAt,
+                partnerWithdrawalCutoffAt,
+                boothCancellationCutoffAt,
+                activityCancellationCutoffAt
+        );
     }
 
     private static UsernamePasswordAuthenticationToken identity(Long id, boolean verified, String role) {
