@@ -19,6 +19,12 @@ Deliver the first end-to-end business slice: account creation and access, basic 
 - UC-E01 Apply to Event
 - UC-O03 Review Partner Applications
 
+## Approved parallel extension
+
+- UC-G03 Email Verification is implemented in the Auth module.
+- Its scope and Acceptance Criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
+- This extension does not add work to the Event or Partner feature branches and does not block the Sprint 1 Definition of Done.
+
 ## Scope guard
 
 Booth, payment, refund, Activity, QR, Attendance, Points, Badge, Certificate, feedback and reporting are not part of Sprint 1.

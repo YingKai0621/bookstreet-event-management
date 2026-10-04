@@ -1,10 +1,13 @@
 package com.swp391.bookstreet.auth.controller;
 
 import com.swp391.bookstreet.auth.dto.AccountResponse;
+import com.swp391.bookstreet.auth.dto.ConfirmEmailVerificationRequest;
 import com.swp391.bookstreet.auth.dto.LoginRequest;
 import com.swp391.bookstreet.auth.dto.LoginResponse;
 import com.swp391.bookstreet.auth.dto.RegisterRequest;
 import com.swp391.bookstreet.auth.service.AuthService;
+import com.swp391.bookstreet.auth.service.EmailVerificationResendService;
+import com.swp391.bookstreet.auth.service.EmailVerificationTokenService;
 import com.swp391.bookstreet.auth.service.LoginResult;
 import com.swp391.bookstreet.security.authentication.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,15 +32,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailVerificationResendService emailVerificationResendService;
+    private final EmailVerificationTokenService emailVerificationTokenService;
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
 
     public AuthController(
             AuthService authService,
+            EmailVerificationResendService emailVerificationResendService,
+            EmailVerificationTokenService emailVerificationTokenService,
             SecurityContextRepository securityContextRepository,
             SessionAuthenticationStrategy sessionAuthenticationStrategy
     ) {
         this.authService = authService;
+        this.emailVerificationResendService = emailVerificationResendService;
+        this.emailVerificationTokenService = emailVerificationTokenService;
         this.securityContextRepository = securityContextRepository;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
     }
@@ -46,6 +55,22 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AccountResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @PostMapping("/email-verification/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirmEmailVerification(
+            @Valid @RequestBody ConfirmEmailVerificationRequest request
+    ) {
+        emailVerificationTokenService.confirmToken(request.getToken());
+    }
+
+    @PostMapping("/email-verification/resend")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resendEmailVerification(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ) {
+        emailVerificationResendService.resend(authenticatedUser.getUserId());
     }
 
     @PostMapping("/login")

@@ -10,9 +10,9 @@ This contract defines the REST API required by Sprint 1. It is derived from the 
 - Media type: `application/json`
 - Time format: ISO 8601 with timezone, stored by the backend as UTC
 - Authentication: Spring Security server-side session stored in Redis
-- Browser credential: Secure, HttpOnly session cookie; frontend requests include credentials
-- Cross-origin deployment: allow only the configured frontend origin, enable credentialed CORS, and use `SameSite=None; Secure` over HTTPS
-- CSRF: state-changing requests must use the Spring Security CSRF protection agreed by the frontend and backend
+- Browser credential: HttpOnly session cookie; frontend requests include credentials
+- Cross-origin deployment: allow only configured frontend origins and enable credentialed CORS
+- Cookie and CSRF details follow the approved [`browser-security-contract.md`](browser-security-contract.md)
 - Session expiry: the user logs in again; Sprint 1 has no JWT or refresh-token endpoint
 - Identifier format: numeric IDs matching Physical ERD v1
 - Pagination query: `page`, `size`, optional `sort`
@@ -45,6 +45,8 @@ Recommended status usage:
 | 422 | Field or business validation failed |
 
 ## 3 Authentication APIs
+
+The approved parallel email-verification extension is defined separately in [`email-verification-api-contract.md`](email-verification-api-contract.md). It does not change the core Sprint 1 endpoint traceability below.
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
@@ -228,8 +230,7 @@ Publish response: `200` with `status = PUBLISHED`.
 
 Errors:
 
-- `403 ORGANIZER_ROLE_REQUIRED`
-- `403 EVENT_ACCESS_DENIED`
+- `403 ACCESS_DENIED`
 - `404 EVENT_NOT_FOUND`
 - `409 EVENT_NOT_DRAFT`
 - `422 EVENT_TIME_INVALID`
@@ -237,6 +238,33 @@ Errors:
 - `422 EVENT_INCOMPLETE_FOR_PUBLISH`
 
 Acceptance Criteria: AC-O01-01 through AC-O01-05.
+
+### Event deadline policy (2026-10-04)
+
+Concrete scheduling policy selected for the requested realistic deadline validation,
+supporting UC-O01 alternative A2 and AC-O01-01/03/04:
+
+- Every supplied Event deadline/cutoff must be at or before `startAt`.
+- When both are supplied, `boothRequestDeadlineAt` and `activityProposalDeadlineAt`
+  must each be at or after `partnerApplicationDeadlineAt`, allowing the Partner
+  application stage to precede downstream requests.
+- Equality is allowed; timestamps are compared as instants, independently of their UTC offset.
+- Cancellation/withdrawal cutoffs are independent of application deadlines. They
+  may be later than application deadlines. Under BR-08/BR-16 they classify late
+  cancellation/refund eligibility, not an absolute prohibition on cancellation.
+- These checks apply to create, the merged state after PATCH, and publish. Invalid
+  values return `422 EVENT_TIME_INVALID` with the offending field; no changes persist.
+- Draft create/PATCH may omit deadlines. Null means unfinished configuration, not unlimited acceptance.
+- Before publish, all seven deadline/cutoff fields are required (including when a
+  quota is zero); missing fields return `422 EVENT_INCOMPLETE_FOR_PUBLISH`.
+- Publication requires `startAt` and every deadline/cutoff to be strictly later
+  than one server UTC timestamp captured for that validation. Equal-to-now or
+  past values return `422 EVENT_TIME_INVALID`. Equality with `startAt` remains valid.
+- Description and banner remain optional. Existing name/time/non-negative quota
+  requirements still apply. Failed publication leaves the Event DRAFT.
+- Drafts may retain past dates while being edited; this does not permit publication.
+- This publication policy was concretized on 2026-10-04 at the user's request.
+  It does not implement Partner submission, late cancellation, or refund APIs.
 
 ## 6 Partner Organization APIs
 
@@ -267,7 +295,7 @@ Response `200` or `201` contains the organization summary and status. The backen
 
 Errors:
 
-- `403 PARTNER_ROLE_REQUIRED`
+- `403 ACCESS_DENIED`
 - `409 REPRESENTATIVE_ALREADY_HAS_ORGANIZATION`
 - `422 VALIDATION_FAILED`
 
@@ -310,7 +338,7 @@ Response `201`:
 
 Errors:
 
-- `403 PARTNER_ROLE_REQUIRED`
+- `403 ACCESS_DENIED`
 - `404 EVENT_NOT_FOUND`
 - `409 PARTNER_ORGANIZATION_REQUIRED`
 - `409 EVENT_NOT_ACCEPTING_APPLICATIONS`

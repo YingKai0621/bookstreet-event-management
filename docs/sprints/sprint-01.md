@@ -51,7 +51,16 @@ Forgot/Reset Password is intentionally deferred until the team approves the reco
 
 Database structure must follow Physical ERD v1. A developer must not add or rename columns merely to make an endpoint easier to implement.
 
-The Physical `user_tokens` table remains reserved for email verification and password-reset tokens. Those flows are deferred from Sprint 1. Login sessions are temporary data stored in Redis through Spring Session, so no session table or JWT refresh-token table is added to the Physical ERD.
+The Physical `user_tokens` table supports the approved parallel email-verification extension and remains reserved for the future password-reset flow. Email verification is implemented in the Auth module with its separate approved Acceptance Criteria; it is not a dependency for completing the Event and Partner Sprint 1 slices. Forgot/Reset Password remains deferred. Login sessions are temporary data stored in Redis through Spring Session, so no session table or JWT refresh-token table is added to the Physical ERD.
+
+## 5.1 Approved parallel Auth extension
+
+- Scope: email-verification token creation, delivery, confirmation and authenticated resend.
+- Use Case Specification: `docs/use-cases/email-verification-use-case-specification.md`.
+- API Contract: `docs/api/email-verification-api-contract.md`.
+- Browser security rules: `docs/api/browser-security-contract.md`.
+- Acceptance Criteria: `AC-G03-EV-01` through `AC-G03-EV-10`.
+- This extension does not change the Event/Partner demo sequence or add a new condition to the Sprint 1 Definition of Done.
 
 ## 6 Demo accounts and role bootstrap
 

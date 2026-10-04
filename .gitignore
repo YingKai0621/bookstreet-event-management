@@ -1,6 +1,9 @@
 # Environment
 .env
 
+# Local-only demo seed scripts and credentials
+/local-data/
+
 
 # IntelliJ IDEA
 .idea/
@@ -25,6 +28,9 @@ dist/
 Thumbs.db
 
 note/
+<<<<<<< HEAD
 
 # Local-only Flyway test fixtures and runner; never push test accounts/data.
 /backend/local-seed/
+=======
+>>>>>>> origin/main

@@ -179,6 +179,34 @@ class AuthAuthorizationIntegrationTests {
         deleteSession(sessionCookie);
     }
 
+    @Test
+    void emailVerificationDoesNotElevateExistingSessionButReloginDoes() throws Exception {
+        String username = "refresh" + uniqueSuffix();
+        register(username, username + "@example.com");
+        assignRoleWithoutVerifyingEmail(username, RoleCode.PARTNER);
+
+        Cookie unverifiedSessionCookie = login(username);
+
+        User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        user.setEmailVerifiedAt(Instant.now());
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(get("/api/v1/partner/authorization-test")
+                        .cookie(unverifiedSessionCookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        Cookie verifiedSessionCookie = login(username);
+
+        mockMvc.perform(get("/api/v1/partner/authorization-test")
+                        .cookie(verifiedSessionCookie))
+                .andExpect(status().isOk())
+                .andExpect(content().string("PARTNER_ACCESS_GRANTED"));
+
+        deleteSession(unverifiedSessionCookie);
+        deleteSession(verifiedSessionCookie);
+    }
+
     private void register(String username, String email) {
         RegisterRequest request = new RegisterRequest(
                 username,

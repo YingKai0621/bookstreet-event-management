@@ -15,6 +15,7 @@ import com.swp391.bookstreet.auth.repository.UserRoleRepository;
 import com.swp391.bookstreet.common.exception.ApiException;
 import com.swp391.bookstreet.security.authentication.AuthenticatedUser;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,19 +42,25 @@ public class AuthService {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final EmailVerificationTokenService emailVerificationTokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
             UserRoleRepository userRoleRepository,
             PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            EmailVerificationTokenService emailVerificationTokenService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
+        this.emailVerificationTokenService = emailVerificationTokenService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -87,6 +94,10 @@ public class AuthService {
             userRepository.saveAndFlush(user);
             UserRole userRole = user.addRole(participantRole);
             userRoleRepository.saveAndFlush(userRole);
+
+            if (email != null) {
+                requestEmailVerification(user);
+            }
         } catch (DataIntegrityViolationException exception) {
             throw mapDuplicateConstraint(exception);
         }
@@ -100,6 +111,21 @@ public class AuthService {
                 user.getStatus(),
                 List.of(participantRole.getCode())
         );
+    }
+
+    private void requestEmailVerification(User user) {
+        IssuedEmailVerificationToken issuedToken =
+                emailVerificationTokenService.issueToken(user);
+
+        EmailVerificationMessageRequested event =
+                new EmailVerificationMessageRequested(
+                        user.getId(),
+                        issuedToken.getTokenId(),
+                        user.getEmail(),
+                        issuedToken.getRawToken()
+                );
+
+        eventPublisher.publishEvent(event);
     }
 
     @Transactional

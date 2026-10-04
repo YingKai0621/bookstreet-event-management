@@ -156,9 +156,9 @@ The user submits username and password.
 - Successful logout invalidates the current session.
 - No endpoint returns the password hash.
 
-### Deferred part of UC-G03
+### Parallel extension and deferred part of UC-G03
 
-Forgot/Reset Password is not implemented in Sprint 1. The team must first approve how accounts without email recover access.
+Email verification is an approved parallel Auth extension with separate Acceptance Criteria in [`email-verification-use-case-specification.md`](email-verification-use-case-specification.md). It does not block the Sprint 1 Event and Partner Definition of Done. Forgot/Reset Password remains deferred; the team must first approve how accounts without email recover access.
 
 ### Acceptance Criteria
 
@@ -299,6 +299,16 @@ When the Organizer publishes it
 Then the Event status becomes PUBLISHED
 And public Event endpoints can return it
 ```
+
+Additional publication acceptance cases (policy clarified 2026-10-04):
+
+- A Draft may omit any deadline/cutoff while being edited.
+- Publishing with any of the seven deadlines/cutoffs missing returns 422
+  EVENT_INCOMPLETE_FOR_PUBLISH and leaves the Event DRAFT.
+- Publishing at/after startAt or at/after any deadline/cutoff returns 422
+  EVENT_TIME_INVALID and leaves the Event DRAFT.
+- Complete future schedules satisfying the deadline ordering in the API Contract
+  can be published; description/banner are optional.
 
 **AC-O01-05 Draft visibility**
 

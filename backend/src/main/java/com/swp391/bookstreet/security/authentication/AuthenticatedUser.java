@@ -9,12 +9,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public final class AuthenticatedUser implements UserDetails, CredentialsContainer {
+public final class AuthenticatedUser implements UserDetails, CredentialsContainer, AuthenticatedPrincipal {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -109,5 +110,15 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
     @Override
     public void eraseCredentials() {
         password = null;
+    }
+
+    @Override
+    public Long userId() {
+        return userId;
+    }
+
+    @Override
+    public boolean emailVerified() {
+        return emailVerified;
     }
 }

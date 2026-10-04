@@ -1,13 +1,13 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-02`
+Last updated: `2026-10-04`
 
 ## Current implementation status
 
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql` and `V3__create_sprint1_business_schema.sql` exist in `main`.
+- The current baseline includes `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql`, `V3__create_sprint1_business_schema.sql` and `V4__seed_sprint1_demo_accounts.sql`.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway validates and applies the current schema through version 3.
+- Flyway validates and applies the current schema and seed data through version 4.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
 - Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
@@ -15,8 +15,17 @@ Last updated: `2026-10-02`
 - New self-registered accounts receive only the `PARTICIPANT` role.
 - Role-protected Organizer and Partner routes use the authenticated principal and server-side Session.
 - `PARTNER`, `ORGANIZER` and `ADMIN` authorities require `email_verified_at` to be present.
+- Email verification is implemented with 60-minute single-use tokens, SHA-256 token hashes, post-commit registration delivery, authenticated resend limits and atomic confirmation.
+- Email-verification delivery was manually verified with both a local mail catcher and a real SMTP mailbox.
+- Sprint 1 Event management is implemented with Organizer-owned Draft creation, listing, detail, update and publication APIs.
+- Public Event APIs return only Published Events.
+- Event publication validates completeness, time order, deadlines and non-negative limits, and uses a row lock for concurrent publication.
+- `AuthenticatedPrincipal` is the shared session-identity boundary used by feature modules; Auth no longer depends on Event security code.
+- Role-based authorization failures use the shared `ACCESS_DENIED` response; resource ownership remains enforced inside the owning feature.
+- Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
-- The current Maven test suite passes with 39 tests and no failures or errors.
+- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event API integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
+- The current Maven test suite passes with 157 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
 
 ## Current database state
 
@@ -40,24 +49,25 @@ Last updated: `2026-10-02`
 - `partner_organizations`
 - `partner_event_applications`
 
+`V4__seed_sprint1_demo_accounts.sql` seeds:
+
+- `organizerdemo` with `PARTICIPANT` and `ORGANIZER`
+- `partnerdemo` with `PARTICIPANT` and `PARTNER`
+
 ## Not yet implemented
 
-- Organizer Event management and public Published Event queries
 - Partner Organization profile
 - Partner Event Application submission and withdrawal
 - Organizer application review
-- Demo Organizer and Partner accounts
-- Event and Partner feature tests
-- Email-verification mail delivery and verification endpoints; `user_tokens` is reserved for this future flow
+- Partner feature tests
+- Final environment-driven CORS, Session cookie and frontend CSRF integration; the browser security design is approved but only partially implemented
 - Forgot/Reset Password
 
 ## Immediate next task
 
-- Implement Organizer Event management and public Published Event queries on the Event feature branch.
 - Implement Partner Organization, Partner Event Application and Organizer application review on the Partner feature branch.
 - Both feature modules must derive the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
-- Add demo Organizer and Partner accounts only through a separately reviewed migration or seed-data pull request.
-- Do not modify applied migrations V1, V2 or V3.
+- Do not modify applied migrations V1, V2, V3 or V4.
 
 ## Active Sprint
 
@@ -86,7 +96,11 @@ Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation so
 
 - Authentication uses a Spring Security server-side Session stored in Redis.
 - Sprint 1 does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
-- The `user_tokens` table is reserved for future email-verification and password-reset flows.
+- The `user_tokens` table stores email-verification token hashes and remains reserved for the future password-reset flow.
+- The approved email-verification extension uses the existing `users.email_verified_at` and `user_tokens` schema; it requires no new migration.
+- Verification does not grant roles. Existing Sessions are not silently elevated; eligible advanced authorities take effect after re-login.
+- Email-verification endpoints, token policy and acceptance criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
+- The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
 - Forgot/Reset Password is outside Sprint 1.
 
 ## Sprint 1 scope guard
