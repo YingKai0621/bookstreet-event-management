@@ -300,6 +300,16 @@ Then the Event status becomes PUBLISHED
 And public Event endpoints can return it
 ```
 
+Additional publication acceptance cases (policy clarified 2026-10-04):
+
+- A Draft may omit any deadline/cutoff while being edited.
+- Publishing with any of the seven deadlines/cutoffs missing returns 422
+  EVENT_INCOMPLETE_FOR_PUBLISH and leaves the Event DRAFT.
+- Publishing at/after startAt or at/after any deadline/cutoff returns 422
+  EVENT_TIME_INVALID and leaves the Event DRAFT.
+- Complete future schedules satisfying the deadline ordering in the API Contract
+  can be published; description/banner are optional.
+
 **AC-O01-05 Draft visibility**
 
 ```gherkin
