@@ -194,7 +194,7 @@ class AuthAuthorizationIntegrationTests {
         mockMvc.perform(get("/api/v1/partner/authorization-test")
                         .cookie(unverifiedSessionCookie))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"));
 
         Cookie verifiedSessionCookie = login(username);
 
