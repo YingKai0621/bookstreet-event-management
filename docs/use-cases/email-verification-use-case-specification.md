@@ -3,8 +3,8 @@
 ## 1 Status and scope
 
 - Decision status: approved design.
-- Implementation status: not implemented.
-- This is a future extension of `UC-G03 Manage Account Access`, not a new top-level Use Case.
+- Implementation status: implemented in the Auth module.
+- This is a parallel extension of `UC-G03 Manage Account Access`, not a new top-level Use Case.
 - It is not part of the Sprint 1 Definition of Done and does not expand the Event or Partner feature scope.
 
 ## 2 Goal
@@ -45,7 +45,7 @@ Registered User
 - Registration with email still creates only the `PARTICIPANT` role.
 - Verification does not assign `PARTNER`, `ORGANIZER` or `ADMIN`.
 - Verification-message delivery runs only after the account transaction commits.
-- A delivery failure must not roll back or delete the new account. The failed token is revoked and the User can request another message.
+- A delivery failure must not roll back or delete the new account. The failed token is revoked and the User can request another message subject to the normal issuance limits.
 
 ## 8 Resend flow
 
@@ -60,9 +60,9 @@ Registered User
 
 - A1. The submitted token is invalid, expired, used or revoked: reject it with the same generic error and do not reveal which condition failed.
 - A2. The resend request has no account email: reject it without creating a token.
-- A3. The resend cooldown or hourly limit is exceeded: reject it without creating or sending another token.
+- A3. The token-issuance cooldown or hourly limit is exceeded: reject it without creating or sending another token.
 - A4. The email is already verified: return an idempotent success and send no email.
-- A5. Email delivery fails during resend: revoke the newly created token and report temporary delivery failure; do not change the User.
+- A5. Email delivery fails during resend: revoke the newly created token and report temporary delivery failure; do not change the User. The issuance attempt still counts toward the limits.
 - A6. Two confirmations race for the same token: only one transaction may consume it successfully.
 
 ## 10 Postconditions
@@ -143,8 +143,8 @@ And exactly one newly issued token can be confirmed
 **AC-G03-EV-07 Resend limits**
 
 ```gherkin
-Given an authenticated User recently received verification messages
-When the User exceeds the cooldown or hourly limit
+Given an authenticated User recently requested verification tokens
+When the User exceeds the 60-second cooldown or 5-per-hour issuance limit
 Then the system returns HTTP 429
 And creates and sends no new token
 ```

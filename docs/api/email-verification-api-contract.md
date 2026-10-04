@@ -3,8 +3,8 @@
 ## 1 Status and scope
 
 - Decision status: approved design.
-- Implementation status: not implemented.
-- This contract extends `UC-G03 Manage Account Access` after Sprint 1.
+- Implementation status: implemented in the Auth module.
+- This contract defines the parallel email-verification extension of `UC-G03 Manage Account Access`.
 - It does not add email verification to the Sprint 1 Definition of Done.
 
 Base path: `/api/v1/auth/email-verification`
@@ -64,7 +64,7 @@ Errors:
 - `429 EMAIL_VERIFICATION_RATE_LIMITED`
 - `503 EMAIL_DELIVERY_UNAVAILABLE`
 
-If delivery fails, the newly created token is revoked and does not count as a successfully delivered message.
+If delivery fails, the newly created token is revoked. The issuance attempt still counts toward the cooldown and hourly limit.
 
 ## 5 Registration integration
 
@@ -73,7 +73,7 @@ If delivery fails, the newly created token is revoked and does not count as a su
 - No email: do not create a verification token and do not send email.
 - Email supplied: create the Participant account normally and trigger verification-message delivery after the account transaction commits.
 - Initial mail failure does not change the successful `201` registration result, roll back the account or remove the Participant role.
-- The token for a failed initial delivery is revoked so the authenticated User can resend without waiting for the cooldown.
+- The token for a failed initial delivery is revoked. The authenticated User can use resend subject to the normal cooldown and hourly limit.
 
 ## 6 Token policy
 
@@ -84,8 +84,9 @@ If delivery fails, the newly created token is revoked and does not count as a su
 - Set `created_at` and `expires_at` explicitly in application code; the verification TTL is 60 minutes.
 - A token is single-use.
 - Issuing another token revokes previous unused `EMAIL_VERIFICATION` tokens for that User.
-- Cooldown: at least 60 seconds between successfully delivered verification messages.
-- Hourly limit: at most 5 successfully delivered verification messages per User in a rolling hour.
+- Cooldown: at least 60 seconds between token issuance attempts.
+- Hourly limit: at most 5 token issuance attempts per User in a rolling hour.
+- Every persisted token counts as an issuance attempt, including a token later revoked because email delivery failed.
 - Never place the raw token, complete verification URL or mail-provider credential in application logs.
 
 Physical ERD v1 already provides the required `users.email_verified_at` and `user_tokens` fields. This approved design requires no new table, column or Flyway migration.
@@ -108,6 +109,8 @@ Implementation uses the Spring mail abstraction and injects provider values thro
 - `MAIL_USERNAME`
 - `MAIL_PASSWORD`
 - `MAIL_FROM`
+- `MAIL_SMTP_AUTH`
+- `MAIL_STARTTLS_ENABLE`
 - `FRONTEND_BASE_URL`
 
 Verification-link format:

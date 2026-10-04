@@ -156,9 +156,9 @@ The user submits username and password.
 - Successful logout invalidates the current session.
 - No endpoint returns the password hash.
 
-### Deferred part of UC-G03
+### Parallel extension and deferred part of UC-G03
 
-Email verification and Forgot/Reset Password are not implemented in Sprint 1. The approved future email-verification design is documented separately in [`email-verification-use-case-specification.md`](email-verification-use-case-specification.md). The team must still approve how accounts without email recover access before implementing Forgot/Reset Password.
+Email verification is an approved parallel Auth extension with separate Acceptance Criteria in [`email-verification-use-case-specification.md`](email-verification-use-case-specification.md). It does not block the Sprint 1 Event and Partner Definition of Done. Forgot/Reset Password remains deferred; the team must first approve how accounts without email recover access.
 
 ### Acceptance Criteria
 
