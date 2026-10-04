@@ -25,8 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -110,7 +108,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
+                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"))
                 .andExpect(jsonPath("$.path").value("/api/v1/partner/authorization-test"));
 
         mockMvc.perform(post("/api/v1/events/1/applications")
@@ -118,7 +116,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
+                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"))
                 .andExpect(jsonPath("$.path").value("/api/v1/events/1/applications"));
 
         deleteSession(sessionCookie);
@@ -155,9 +153,11 @@ class AuthAuthorizationIntegrationTests {
 
         mockMvc.perform(post("/api/v1/events/1/applications")
                         .with(csrf())
-                        .cookie(sessionCookie))
-                .andExpect(status().isOk())
-                .andExpect(content().string("PARTNER_APPLICATION_ACCESS_GRANTED"));
+                        .cookie(sessionCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_REQUIRED"));
 
         deleteSession(sessionCookie);
     }
@@ -174,7 +174,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"));
 
         deleteSession(sessionCookie);
     }
@@ -263,9 +263,5 @@ class AuthAuthorizationIntegrationTests {
             return "PARTNER_ACCESS_GRANTED";
         }
 
-        @PostMapping("/api/v1/events/{eventId}/applications")
-        String partnerApplicationEndpoint(@PathVariable Long eventId) {
-            return "PARTNER_APPLICATION_ACCESS_GRANTED";
-        }
     }
 }

@@ -25,3 +25,6 @@ dist/
 Thumbs.db
 
 note/
+
+# Local-only Flyway test fixtures and runner; never push test accounts/data.
+/backend/local-seed/
