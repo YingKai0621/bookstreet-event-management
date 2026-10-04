@@ -158,7 +158,7 @@ The user submits username and password.
 
 ### Deferred part of UC-G03
 
-Forgot/Reset Password is not implemented in Sprint 1. The team must first approve how accounts without email recover access.
+Email verification and Forgot/Reset Password are not implemented in Sprint 1. The approved future email-verification design is documented separately in [`email-verification-use-case-specification.md`](email-verification-use-case-specification.md). The team must still approve how accounts without email recover access before implementing Forgot/Reset Password.
 
 ### Acceptance Criteria
 

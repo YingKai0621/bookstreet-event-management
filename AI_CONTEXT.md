@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-02`
+Last updated: `2026-10-04`
 
 ## Current implementation status
 
@@ -16,7 +16,8 @@ Last updated: `2026-10-02`
 - Role-protected Organizer and Partner routes use the authenticated principal and server-side Session.
 - `PARTNER`, `ORGANIZER` and `ADMIN` authorities require `email_verified_at` to be present.
 - Swagger/OpenAPI is available for local API exploration.
-- The current Maven test suite passes with 39 tests and no failures or errors.
+- GitHub Actions CI runs backend verification and frontend lint/build for pushes and pull requests targeting `main`.
+- The current Maven test suite passes with 49 tests and no failures or errors.
 
 ## Current database state
 
@@ -48,7 +49,8 @@ Last updated: `2026-10-02`
 - Organizer application review
 - Demo Organizer and Partner accounts
 - Event and Partner feature tests
-- Email-verification mail delivery and verification endpoints; `user_tokens` is reserved for this future flow
+- Email-verification mail delivery and verification endpoints; the future design is approved but not implemented
+- Final environment-driven CORS, Session cookie and frontend CSRF integration; the browser security design is approved but only partially implemented
 - Forgot/Reset Password
 
 ## Immediate next task
@@ -87,6 +89,10 @@ Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation so
 - Authentication uses a Spring Security server-side Session stored in Redis.
 - Sprint 1 does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
 - The `user_tokens` table is reserved for future email-verification and password-reset flows.
+- The approved email-verification extension uses the existing `users.email_verified_at` and `user_tokens` schema; it requires no new migration.
+- Verification does not grant roles. Existing Sessions are not silently elevated; eligible advanced authorities take effect after re-login.
+- Email-verification endpoints, token policy and acceptance criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
+- The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
 - Forgot/Reset Password is outside Sprint 1.
 
 ## Sprint 1 scope guard

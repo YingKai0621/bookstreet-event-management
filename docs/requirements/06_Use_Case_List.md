@@ -36,7 +36,7 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 |--------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | UC-G01 | Explore Book Street     | Khám phá Event, Activity, Booth, Booth Map và Heritage/public content.                                                                                                             |
 | UC-G02 | Create Account          | Đăng ký bằng username, full name, password và confirm password; email tùy chọn với Participant. Username duy nhất không phân biệt hoa thường; confirm password không lưu database. |
-| UC-G03 | Manage Account Access   | Đăng nhập, đăng xuất và yêu cầu đặt lại mật khẩu; role PARTNER, ORGANIZER và ADMIN yêu cầu verified email.                                                                         |
+| UC-G03 | Manage Account Access   | Đăng nhập, đăng xuất, xác minh email và yêu cầu đặt lại mật khẩu; role PARTNER, ORGANIZER và ADMIN yêu cầu verified email.                                                         |
 | UC-G04 | Submit General Feedback | Gửi góp ý về đúng một target BOOK_STREET, EVENT hoặc HERITAGE; không target Location hoặc Activity và không cần đăng nhập.                                                         |
 
 ## Participant

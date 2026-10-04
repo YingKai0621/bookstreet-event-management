@@ -10,9 +10,9 @@ This contract defines the REST API required by Sprint 1. It is derived from the 
 - Media type: `application/json`
 - Time format: ISO 8601 with timezone, stored by the backend as UTC
 - Authentication: Spring Security server-side session stored in Redis
-- Browser credential: Secure, HttpOnly session cookie; frontend requests include credentials
-- Cross-origin deployment: allow only the configured frontend origin, enable credentialed CORS, and use `SameSite=None; Secure` over HTTPS
-- CSRF: state-changing requests must use the Spring Security CSRF protection agreed by the frontend and backend
+- Browser credential: HttpOnly session cookie; frontend requests include credentials
+- Cross-origin deployment: allow only configured frontend origins and enable credentialed CORS
+- Cookie and CSRF details follow the approved [`browser-security-contract.md`](browser-security-contract.md)
 - Session expiry: the user logs in again; Sprint 1 has no JWT or refresh-token endpoint
 - Identifier format: numeric IDs matching Physical ERD v1
 - Pagination query: `page`, `size`, optional `sort`
@@ -379,6 +379,7 @@ Acceptance Criteria: AC-O03-01 through AC-O03-05.
 
 The following are intentionally absent from Sprint 1:
 
+- Email-verification delivery and endpoints; the approved future contract is [`email-verification-api-contract.md`](email-verification-api-contract.md)
 - Forgot/Reset Password
 - Admin account and role management
 - Cancel Event
