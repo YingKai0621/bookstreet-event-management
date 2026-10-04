@@ -238,6 +238,33 @@ Errors:
 
 Acceptance Criteria: AC-O01-01 through AC-O01-05.
 
+### Event deadline policy (2026-10-04)
+
+Concrete scheduling policy selected for the requested realistic deadline validation,
+supporting UC-O01 alternative A2 and AC-O01-01/03/04:
+
+- Every supplied Event deadline/cutoff must be at or before `startAt`.
+- When both are supplied, `boothRequestDeadlineAt` and `activityProposalDeadlineAt`
+  must each be at or after `partnerApplicationDeadlineAt`, allowing the Partner
+  application stage to precede downstream requests.
+- Equality is allowed; timestamps are compared as instants, independently of their UTC offset.
+- Cancellation/withdrawal cutoffs are independent of application deadlines. They
+  may be later than application deadlines. Under BR-08/BR-16 they classify late
+  cancellation/refund eligibility, not an absolute prohibition on cancellation.
+- These checks apply to create, the merged state after PATCH, and publish. Invalid
+  values return `422 EVENT_TIME_INVALID` with the offending field; no changes persist.
+- Draft create/PATCH may omit deadlines. Null means unfinished configuration, not unlimited acceptance.
+- Before publish, all seven deadline/cutoff fields are required (including when a
+  quota is zero); missing fields return `422 EVENT_INCOMPLETE_FOR_PUBLISH`.
+- Publication requires `startAt` and every deadline/cutoff to be strictly later
+  than one server UTC timestamp captured for that validation. Equal-to-now or
+  past values return `422 EVENT_TIME_INVALID`. Equality with `startAt` remains valid.
+- Description and banner remain optional. Existing name/time/non-negative quota
+  requirements still apply. Failed publication leaves the Event DRAFT.
+- Drafts may retain past dates while being edited; this does not permit publication.
+- This publication policy was concretized on 2026-10-04 at the user's request.
+  It does not implement Partner submission, late cancellation, or refund APIs.
+
 ## 6 Partner Organization APIs
 
 All endpoints require role `PARTNER` and verified email.

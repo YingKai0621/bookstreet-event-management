@@ -1,6 +1,9 @@
 # Environment
 .env
 
+# Local-only demo seed scripts and credentials
+/local-data/
+
 
 # IntelliJ IDEA
 .idea/
