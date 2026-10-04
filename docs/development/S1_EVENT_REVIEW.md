@@ -6,8 +6,9 @@ Báo cáo này thay thế các nhận xét cũ ngày 2026-10-01.
 ## 1. Auth/public đã tích hợp
 
 SecurityConfiguration cho phép GET public; repository chỉ trả PUBLISHED.
-AuthenticatedUser triển khai EventPrincipal. Event kiểm tra session, ROLE_ORGANIZER,
-email verified và lấy owner từ principal. Test API dùng security thật với principal test.
+AuthenticatedUser triển khai `AuthenticatedPrincipal` dùng chung. Event kiểm tra session,
+ROLE_ORGANIZER, email verified và lấy owner từ principal. Test API dùng security thật
+với principal test. Các lỗi từ chối quyền tại ranh giới security dùng mã `ACCESS_DENIED`.
 Không còn nạp EventTestSecurityConfiguration; test này không thay thế demo frontend login thật.
 
 ## 2. Ownership và transaction

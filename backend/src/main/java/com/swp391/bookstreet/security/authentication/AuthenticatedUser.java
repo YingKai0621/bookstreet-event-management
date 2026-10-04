@@ -4,7 +4,6 @@ import com.swp391.bookstreet.auth.entity.AccountStatus;
 import com.swp391.bookstreet.auth.entity.RoleCode;
 import com.swp391.bookstreet.auth.entity.User;
 import com.swp391.bookstreet.auth.entity.UserRole;
-import com.swp391.bookstreet.event.security.EventPrincipal;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -16,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public final class AuthenticatedUser implements UserDetails, CredentialsContainer, EventPrincipal{
+public final class AuthenticatedUser implements UserDetails, CredentialsContainer, AuthenticatedPrincipal {
 
     @Serial
     private static final long serialVersionUID = 1L;

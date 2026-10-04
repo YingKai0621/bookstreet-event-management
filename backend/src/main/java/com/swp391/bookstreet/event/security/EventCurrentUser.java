@@ -1,37 +1,65 @@
 package com.swp391.bookstreet.event.security;
 
 import com.swp391.bookstreet.event.exception.EventException;
+import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EventCurrentUser {
+
     public Long requireOrganizerId() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             throw new EventException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED",
                     "An authenticated session is required.");
         }
-        boolean organizer = authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority()));
-        if (!organizer) {
-            throw new EventException(HttpStatus.FORBIDDEN, "ORGANIZER_ROLE_REQUIRED",
-                    "The ORGANIZER role is required.");
+
+        if (!hasOrganizerRole(authentication)) {
+            throw accessDenied();
         }
-        if (!(authentication.getPrincipal() instanceof EventPrincipal principal)
-                || principal.userId() == null || principal.userId() <= 0) {
-            // Fail closed until Auth supplies the agreed identity contract.
-            throw new EventException(HttpStatus.FORBIDDEN, "EVENT_ACCESS_DENIED",
-                    "The session does not contain a supported user identity.");
+
+        Object principalObject = authentication.getPrincipal();
+        if (!(principalObject instanceof AuthenticatedPrincipal)) {
+            throw accessDenied();
         }
+
+        AuthenticatedPrincipal principal = (AuthenticatedPrincipal) principalObject;
+        Long userId = principal.userId();
+
+        if (userId == null || userId <= 0) {
+            throw accessDenied();
+        }
+
         if (!principal.emailVerified()) {
-            throw new EventException(HttpStatus.FORBIDDEN, "EVENT_ACCESS_DENIED",
-                    "A verified email is required.");
+            throw accessDenied();
         }
-        return principal.userId();
+
+        return userId;
+    }
+
+    private boolean hasOrganizerRole(Authentication authentication) {
+        for (GrantedAuthority authority : authentication.getAuthorities()) {
+            if ("ROLE_ORGANIZER".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private EventException accessDenied() {
+        return new EventException(
+                HttpStatus.FORBIDDEN,
+                "ACCESS_DENIED",
+                "You do not have permission to access this resource."
+        );
     }
 }
 

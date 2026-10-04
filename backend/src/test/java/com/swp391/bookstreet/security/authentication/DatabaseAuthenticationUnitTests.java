@@ -59,6 +59,7 @@ class DatabaseAuthenticationUnitTests {
 
         assertThat(authentication.isAuthenticated()).isTrue();
         assertThat(authentication.getPrincipal()).isInstanceOf(AuthenticatedUser.class);
+        assertThat(authentication.getPrincipal()).isInstanceOf(AuthenticatedPrincipal.class);
 
         AuthenticatedUser principal = (AuthenticatedUser) authentication.getPrincipal();
         assertThat(principal.getUserId()).isEqualTo(42L);
