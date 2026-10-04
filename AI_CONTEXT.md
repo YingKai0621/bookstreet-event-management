@@ -17,9 +17,12 @@ Last updated: `2026-10-04`
 - `PARTNER`, `ORGANIZER` and `ADMIN` authorities require `email_verified_at` to be present.
 - Email verification is implemented with 60-minute single-use tokens, SHA-256 token hashes, post-commit registration delivery, authenticated resend limits and atomic confirmation.
 - Email-verification delivery was manually verified with both a local mail catcher and a real SMTP mailbox.
+- Sprint 1 Event management is implemented with Organizer-owned Draft creation, listing, detail, update and publication APIs.
+- Public Event APIs return only Published Events.
+- Event publication validates completeness, time order, deadlines and non-negative limits, and uses a row lock for concurrent publication.
 - Swagger/OpenAPI is available for local API exploration.
-- GitHub Actions CI runs backend verification and frontend lint/build for pushes and pull requests targeting `main`.
-- The current Maven test suite passes with 93 tests and no failures or errors.
+- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event API integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
+- The current Maven test suite passes with 156 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
 
 ## Current database state
 
@@ -45,20 +48,19 @@ Last updated: `2026-10-04`
 
 ## Not yet implemented
 
-- Organizer Event management and public Published Event queries
 - Partner Organization profile
 - Partner Event Application submission and withdrawal
 - Organizer application review
 - Demo Organizer and Partner accounts
-- Event and Partner feature tests
+- Partner feature tests
 - Final environment-driven CORS, Session cookie and frontend CSRF integration; the browser security design is approved but only partially implemented
 - Forgot/Reset Password
 
 ## Immediate next task
 
-- Implement Organizer Event management and public Published Event queries on the Event feature branch.
 - Implement Partner Organization, Partner Event Application and Organizer application review on the Partner feature branch.
 - Both feature modules must derive the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
+- Align the shared authenticated-principal boundary and authorization error codes before extending the same integration pattern to more feature modules.
 - Add demo Organizer and Partner accounts only through a separately reviewed migration or seed-data pull request.
 - Do not modify applied migrations V1, V2 or V3.
 
