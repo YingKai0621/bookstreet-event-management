@@ -3,6 +3,7 @@ package com.swp391.bookstreet.partner.controller;
 import com.swp391.bookstreet.partner.dto.PartnerApiErrorResponse;
 import com.swp391.bookstreet.partner.dto.PartnerApplicationResponse;
 import com.swp391.bookstreet.partner.service.PartnerApplicationQueryService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,6 +34,7 @@ public class PartnerApplicationQueryController {
     @GetMapping
     public Page<PartnerApplicationResponse> listOwnApplications(
             @AuthenticationPrincipal(expression = "userId") Long currentUserId,
+            @ParameterObject
             @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {

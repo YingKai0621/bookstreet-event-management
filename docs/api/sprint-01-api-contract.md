@@ -355,6 +355,17 @@ Acceptance Criteria: AC-E01-01 through AC-E01-04.
 
 Acceptance Criterion: AC-E01-05.
 
+### Partner application list pagination
+
+`GET /partner/applications` accepts these optional query parameters:
+
+- `page`
+- `size`
+- `sort`, using the format `field,direction`
+
+The allowed sort fields are `submittedAt`, `status`, `eventId`, `reviewedAt` and
+`withdrawnAt`. An unsupported sort field returns `400 INVALID_SORT`.
+
 ## 8 Organizer Application Review APIs
 
 All endpoints require role `ORGANIZER`. The current Organizer must own the related Event.
@@ -373,7 +384,10 @@ Optional query parameters:
 - `status=PENDING|APPROVED|REJECTED|WITHDRAWN`
 - `page`
 - `size`
-- `sort`
+- `sort`, using the format `field,direction`
+
+The allowed sort fields are `submittedAt`, `status`, `eventId`, `reviewedAt` and
+`withdrawnAt`. An unsupported sort field returns `400 INVALID_SORT`.
 
 ### Review request
 

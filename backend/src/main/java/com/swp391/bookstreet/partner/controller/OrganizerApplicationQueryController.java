@@ -2,6 +2,7 @@ package com.swp391.bookstreet.partner.controller;
 
 import com.swp391.bookstreet.partner.dto.OrganizerApplicationResponse;
 import com.swp391.bookstreet.partner.service.OrganizerApplicationQueryService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,6 +34,7 @@ public class OrganizerApplicationQueryController {
             @PathVariable Long eventId,
             @AuthenticationPrincipal(expression = "userId") Long organizerUserId,
             @RequestParam(required = false) String status,
+            @ParameterObject
             @PageableDefault(size = 20, sort = "submittedAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
