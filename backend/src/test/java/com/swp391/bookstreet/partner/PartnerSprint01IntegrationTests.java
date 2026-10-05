@@ -198,6 +198,57 @@ class PartnerSprint01IntegrationTests {
                 Long.class, eventId)).isEqualTo(2);
     }
 
+    @Test
+    void partnerApplicationListRejectsUnsupportedSortField() throws Exception {
+        User partner = user(RoleCode.PARTNER);
+
+        String[] allowedSortFields = {
+                "submittedAt", "status", "eventId", "reviewedAt", "withdrawnAt"
+        };
+
+        for (String sortField : allowedSortFields) {
+            mvc.perform(get("/api/v1/partner/applications")
+                            .param("page", "0")
+                            .param("size", "20")
+                            .param("sort", sortField + ",desc")
+                            .with(as(partner)))
+                    .andExpect(status().isOk());
+        }
+
+        mvc.perform(get("/api/v1/partner/applications")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .param("sort", "[\"string\"]")
+                        .with(as(partner)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_SORT"))
+                .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
+    @Test
+    void organizerApplicationListRejectsUnsupportedSortField() throws Exception {
+        User organizer = user(RoleCode.ORGANIZER);
+        long eventId = event(organizer, "PUBLISHED", Instant.now().plusSeconds(86400));
+
+        String[] allowedSortFields = {
+                "submittedAt", "status", "eventId", "reviewedAt", "withdrawnAt"
+        };
+
+        for (String sortField : allowedSortFields) {
+            mvc.perform(get("/api/v1/organizer/events/{eventId}/applications", eventId)
+                            .param("sort", sortField + ",desc")
+                            .with(as(organizer)))
+                    .andExpect(status().isOk());
+        }
+
+        mvc.perform(get("/api/v1/organizer/events/{eventId}/applications", eventId)
+                        .param("sort", "unknownField,asc")
+                        .with(as(organizer)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_SORT"))
+                .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
     private User user(RoleCode roleCode) {
         String username = "s1" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         User user = new User(username, username + "@example.test", "unused-hash", "Sprint One Test");

@@ -70,6 +70,36 @@ class OpenApiIntegrationTests {
     }
 
     @Test
+    void openApiDocumentDescribesApplicationPaginationAsQueryParameters() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/partner/applications'].get.parameters[?(@.name == 'page')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/partner/applications'].get.parameters[?(@.name == 'size')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/partner/applications'].get.parameters[?(@.name == 'sort')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/partner/applications'].get.parameters[?(@.name == 'pageable')]"
+                ).isEmpty())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/applications'].get.parameters[?(@.name == 'page')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/applications'].get.parameters[?(@.name == 'size')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/applications'].get.parameters[?(@.name == 'sort')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/applications'].get.parameters[?(@.name == 'pageable')]"
+                ).isEmpty());
+    }
+
+    @Test
     void unsafeRequestWithoutCsrfTokenIsRejected() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

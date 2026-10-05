@@ -26,6 +26,8 @@ public class PartnerApplicationQueryService {
             Long representativeUserId,
             Pageable pageable
     ) {
+        PartnerPagination.validateSort(pageable);
+
         return applicationRepository
                 .findAllByPartnerOrganization_RepresentativeUserId(representativeUserId, pageable)
                 .map(PartnerApplicationResponse::from);

@@ -29,6 +29,8 @@ public class OrganizerApplicationQueryService {
             String status,
             Pageable pageable
     ) {
+        PartnerPagination.validateSort(pageable);
+
         if (status != null && !java.util.Set.of(
                 "PENDING", "APPROVED", "REJECTED", "WITHDRAWN"
         ).contains(status)) {
