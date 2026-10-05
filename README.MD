@@ -11,6 +11,9 @@ SWP391 project for managing Book Street events, partners, booths, activities and
 
 ## Project Status
 
-Requirement, Conceptual ERD, Logical ERD and Physical ERD have been completed.
+Sprint 1 backend is complete. Frontend integration and the full browser
+end-to-end demo are pending.
 
-The project is currently preparing for implementation.
+Start with the shared documentation in [`docs/README.MD`](docs/README.MD). The
+frontend team should follow the
+[`Sprint 1 Frontend Handoff`](docs/development/SPRINT_01_FRONTEND_HANDOFF.md).

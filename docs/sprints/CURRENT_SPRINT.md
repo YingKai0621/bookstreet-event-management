@@ -19,6 +19,7 @@ Deliver the first end-to-end business slice: account creation and access, basic 
 - Authentication, Event management, Partner Organization and Partner application flows were manually exercised through Swagger UI.
 - The overall Sprint remains open until the frontend calls the real backend and the complete demo flow is verified end to end.
 - Detailed backend evidence and deferred work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
+- Frontend setup, integration gaps and the end-to-end checklist are recorded in `docs/development/SPRINT_01_FRONTEND_HANDOFF.md`.
 
 ## Included Use Cases
 

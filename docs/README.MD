@@ -39,6 +39,7 @@ Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn
 - Email verification đã triển khai: [`use-cases/email-verification-use-case-specification.md`](use-cases/email-verification-use-case-specification.md) và [`api/email-verification-api-contract.md`](api/email-verification-api-contract.md)
 - Browser Session/CORS/CSRF mới triển khai một phần và vẫn chờ cấu hình frontend theo môi trường: [`api/browser-security-contract.md`](api/browser-security-contract.md)
 - Báo cáo hoàn thành Sprint 1 Backend: [`development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`](development/SPRINT_01_BACKEND_COMPLETION_REPORT.md)
+- Hướng dẫn bàn giao và tích hợp Sprint 1 cho frontend: [`development/SPRINT_01_FRONTEND_HANDOFF.md`](development/SPRINT_01_FRONTEND_HANDOFF.md)
 
 Các tài liệu extension trên không tự động mở rộng Definition of Done của Sprint 1.
 
