@@ -2,7 +2,7 @@
 
 ## Sprint 01 Account and Partner Application
 
-- Status: `READY FOR IMPLEMENTATION`
+- Status: `BACKEND COMPLETE - FRONTEND INTEGRATION PENDING`
 - Sprint file: `docs/sprints/sprint-01.md`
 - Use Case Specifications: `docs/use-cases/sprint-01-use-case-specifications.md`
 - API Contract: `docs/api/sprint-01-api-contract.md`
@@ -10,6 +10,15 @@
 ## Sprint goal
 
 Deliver the first end-to-end business slice: account creation and access, basic Event management, Partner application submission, and Organizer review.
+
+## Current completion state
+
+- The Sprint 1 backend scope is implemented and merged into `main` through merge commit `7890278`.
+- Backend verification passes with 165 tests, 0 failures, 0 errors and 0 skipped tests.
+- Flyway validates migrations V1 through V4 and Hibernate validates the mapped schema.
+- Authentication, Event management, Partner Organization and Partner application flows were manually exercised through Swagger UI.
+- The overall Sprint remains open until the frontend calls the real backend and the complete demo flow is verified end to end.
+- Detailed backend evidence and deferred work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
 
 ## Included Use Cases
 
