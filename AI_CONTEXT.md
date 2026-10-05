@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-04`
+Last updated: `2026-10-05`
 
 ## Current implementation status
 
@@ -20,12 +20,16 @@ Last updated: `2026-10-04`
 - Sprint 1 Event management is implemented with Organizer-owned Draft creation, listing, detail, update and publication APIs.
 - Public Event APIs return only Published Events.
 - Event publication validates completeness, time order, deadlines and non-negative limits, and uses a row lock for concurrent publication.
+- Sprint 1 Partner Organization profile creation and update are implemented for the authenticated Partner representative.
+- Partner application submission, owned queries and Pending withdrawal are implemented with duplicate and concurrency protection.
+- Organizer application listing, detail, approval and rejection enforce Event ownership and lock review transitions.
+- Partner integration and concurrency tests cover the Sprint 1 application workflow.
 - `AuthenticatedPrincipal` is the shared session-identity boundary used by feature modules; Auth no longer depends on Event security code.
 - Role-based authorization failures use the shared `ACCESS_DENIED` response; resource ownership remains enforced inside the owning feature.
 - Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
-- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event API integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The current Maven test suite passes with 157 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
+- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
+- The current Maven test suite passes with 162 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
 
 ## Current database state
 
@@ -56,17 +60,14 @@ Last updated: `2026-10-04`
 
 ## Not yet implemented
 
-- Partner Organization profile
-- Partner Event Application submission and withdrawal
-- Organizer application review
-- Partner feature tests
 - Final environment-driven CORS, Session cookie and frontend CSRF integration; the browser security design is approved but only partially implemented
 - Forgot/Reset Password
 
 ## Immediate next task
 
-- Implement Partner Organization, Partner Event Application and Organizer application review on the Partner feature branch.
-- Both feature modules must derive the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
+- Validate the complete Sprint 1 demo flow through the real frontend, backend and PostgreSQL persistence.
+- Complete the environment-driven browser CORS, Session cookie and CSRF integration without changing the approved server-side Session architecture.
+- Feature modules must continue deriving the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
 - Do not modify applied migrations V1, V2, V3 or V4.
 
 ## Active Sprint

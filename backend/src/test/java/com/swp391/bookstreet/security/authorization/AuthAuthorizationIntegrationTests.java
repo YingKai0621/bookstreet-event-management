@@ -108,7 +108,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"))
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
                 .andExpect(jsonPath("$.path").value("/api/v1/partner/authorization-test"));
 
         mockMvc.perform(post("/api/v1/events/1/applications")
@@ -116,7 +116,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"))
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
                 .andExpect(jsonPath("$.path").value("/api/v1/events/1/applications"));
 
         deleteSession(sessionCookie);
@@ -174,7 +174,7 @@ class AuthAuthorizationIntegrationTests {
                         .cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"));
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         deleteSession(sessionCookie);
     }
@@ -194,7 +194,7 @@ class AuthAuthorizationIntegrationTests {
         mockMvc.perform(get("/api/v1/partner/authorization-test")
                         .cookie(unverifiedSessionCookie))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("PARTNER_ROLE_REQUIRED"));
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         Cookie verifiedSessionCookie = login(username);
 
