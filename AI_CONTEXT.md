@@ -4,6 +4,7 @@ Last updated: `2026-10-05`
 
 ## Current implementation status
 
+- Sprint 1 Backend is complete on `main` through merge commit `7890278`; full Sprint closure still waits for real frontend integration and the end-to-end demo.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
 - The current baseline includes `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql`, `V3__create_sprint1_business_schema.sql` and `V4__seed_sprint1_demo_accounts.sql`.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
@@ -23,13 +24,15 @@ Last updated: `2026-10-05`
 - Sprint 1 Partner Organization profile creation and update are implemented for the authenticated Partner representative.
 - Partner application submission, owned queries and Pending withdrawal are implemented with duplicate and concurrency protection.
 - Organizer application listing, detail, approval and rejection enforce Event ownership and lock review transitions.
+- Partner and Organizer application list pagination exposes separate `page`, `size` and `sort` query parameters. Unsupported sort fields return `400 INVALID_SORT` instead of reaching JPA as a server error.
 - Partner integration and concurrency tests cover the Sprint 1 application workflow.
 - `AuthenticatedPrincipal` is the shared session-identity boundary used by feature modules; Auth no longer depends on Event security code.
 - Role-based authorization failures use the shared `ACCESS_DENIED` response; resource ownership remains enforced inside the owning feature.
 - Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The current Maven test suite passes with 162 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
+- The current Maven test suite passes with 165 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
+- The backend completion evidence and remaining handoff work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
 
 ## Current database state
 
@@ -65,14 +68,15 @@ Last updated: `2026-10-05`
 
 ## Immediate next task
 
-- Validate the complete Sprint 1 demo flow through the real frontend, backend and PostgreSQL persistence.
+- Integrate the real frontend with the completed Sprint 1 backend APIs.
+- Validate the complete Sprint 1 demo flow through the real frontend, backend, Redis Session and PostgreSQL persistence.
 - Complete the environment-driven browser CORS, Session cookie and CSRF integration without changing the approved server-side Session architecture.
 - Feature modules must continue deriving the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
 - Do not modify applied migrations V1, V2, V3 or V4.
 
 ## Active Sprint
 
-Active Sprint: Sprint 01 Account and Partner Application.
+Active Sprint: Sprint 01 Account and Partner Application. Backend complete; frontend integration pending.
 
 Included Use Cases:
 

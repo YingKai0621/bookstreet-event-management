@@ -20,6 +20,7 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 | `sprints/` | Phạm vi, mục tiêu và trạng thái Sprint |
 | `use-cases/` | Use Case Specification và Acceptance Criteria theo Sprint hoặc extension đã duyệt |
 | `api/` | API Contract theo Sprint và cross-cutting contract |
+| `development/` | Coding guideline, review, handoff và báo cáo hoàn thành kỹ thuật |
 
 ## Baseline hiện tại
 
@@ -29,13 +30,15 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 - Logical ERD: v7
 - Physical ERD: v1
 - Active Sprint: Sprint 01
+- Sprint 1 Backend: Complete; frontend integration pending
 
 Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn chỉnh sửa sơ đồ; ảnh trong `design/assets/` dùng để xem trực tiếp trên GitHub và trong report.
 
-## Thiết kế extension đã duyệt nhưng chưa triển khai
+## Trạng thái extension đã duyệt
 
-- Email verification: [`use-cases/email-verification-use-case-specification.md`](use-cases/email-verification-use-case-specification.md) và [`api/email-verification-api-contract.md`](api/email-verification-api-contract.md)
-- Browser Session/CORS/CSRF: [`api/browser-security-contract.md`](api/browser-security-contract.md)
+- Email verification đã triển khai: [`use-cases/email-verification-use-case-specification.md`](use-cases/email-verification-use-case-specification.md) và [`api/email-verification-api-contract.md`](api/email-verification-api-contract.md)
+- Browser Session/CORS/CSRF mới triển khai một phần và vẫn chờ cấu hình frontend theo môi trường: [`api/browser-security-contract.md`](api/browser-security-contract.md)
+- Báo cáo hoàn thành Sprint 1 Backend: [`development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`](development/SPRINT_01_BACKEND_COMPLETION_REPORT.md)
 
 Các tài liệu extension trên không tự động mở rộng Definition of Done của Sprint 1.
 
