@@ -32,8 +32,65 @@ export interface OrganizerFeedback {
 }
 
 export interface OrganizerPartnerApplication {
-  id: string; eventId: string; orgName: string; rep: string; phone: string;
-  date: string; desc: string; status: string; reviewNote?: string;
+  id: string;
+  eventId: string;
+  partnerOrganizationId: string;
+  orgName: string;
+  categoryCode: string;
+  date: string;
+  applicationNote: string;
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  reviewNote: string;
+  reviewedAt: string;
+  withdrawnAt: string;
+}
+
+interface OrganizerPartnerApplicationResponse {
+  applicationId: number;
+  eventId: number;
+  partnerOrganizationId: number;
+  partnerOrganizationName: string;
+  partnerCategoryCode: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+  applicationNote: string | null;
+  reviewNote: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+  withdrawnAt: string | null;
+}
+
+interface PartnerApplicationPageResponse {
+  content: OrganizerPartnerApplicationResponse[];
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+function toOrganizerPartnerApplication(
+  application: OrganizerPartnerApplicationResponse,
+): OrganizerPartnerApplication {
+  const formatDateTime = (value: string | null): string => value
+    ? new Date(value).toLocaleString('vi-VN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Asia/Ho_Chi_Minh',
+    })
+    : '';
+
+  return {
+    id: String(application.applicationId),
+    eventId: String(application.eventId),
+    partnerOrganizationId: String(application.partnerOrganizationId),
+    orgName: application.partnerOrganizationName,
+    categoryCode: application.partnerCategoryCode,
+    date: formatDateTime(application.submittedAt),
+    applicationNote: application.applicationNote || '',
+    status: application.status.toLowerCase() as OrganizerPartnerApplication['status'],
+    reviewNote: application.reviewNote || '',
+    reviewedAt: formatDateTime(application.reviewedAt),
+    withdrawnAt: formatDateTime(application.withdrawnAt),
+  };
 }
 
 function mapEventStatus(status: OrganizerEventStatus): OrganizerEvent['status'] {
@@ -199,12 +256,27 @@ export const organizerApi = {
   publishActivity: (id: string) => apiClient.post(`/organizer/activities/${encodeURIComponent(id)}/publish`, {}),
   createActivity: (data: unknown) => apiClient.post('/organizer/activities', data),
   updateActivity: (id: string, data: unknown) => apiClient.patch(`/organizer/activities/${encodeURIComponent(id)}`, data),
-  async getPartnerApplications(eventId?: string): Promise<OrganizerPartnerApplication[]> {
-    const rows = await apiClient.get<any[]>(`/organizer/partner-applications${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-    return rows.map(item => ({ id: item.id, eventId: item.eventId, orgName: item.organization?.name || '', rep: item.organization?.representativeName || '', phone: item.organization?.phone || '', date: item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '', desc: item.organization?.shortDesc || '', status: item.status, reviewNote: item.reviewNote || undefined }));
+  async getPartnerApplications(eventId: string): Promise<OrganizerPartnerApplication[]> {
+    const query = new URLSearchParams({
+      page: '0',
+      size: '100',
+      sort: 'submittedAt,desc',
+    });
+    const response = await apiClient.get<PartnerApplicationPageResponse>(
+      `/organizer/events/${encodeURIComponent(eventId)}/applications?${query.toString()}`,
+    );
+    return response.content.map(toOrganizerPartnerApplication);
   },
-  approvePartnerApplication: (id: string) => apiClient.post(`/organizer/partner-applications/${encodeURIComponent(id)}/approve`, {}),
-  rejectPartnerApplication: (id: string, note: string) => apiClient.post(`/organizer/partner-applications/${encodeURIComponent(id)}/reject`, { note }),
+  approvePartnerApplication: (id: string, reviewNote = '') =>
+    apiClient.post<OrganizerPartnerApplicationResponse>(
+      `/organizer/applications/${encodeURIComponent(id)}/approve`,
+      { reviewNote },
+    ),
+  rejectPartnerApplication: (id: string, reviewNote: string) =>
+    apiClient.post<OrganizerPartnerApplicationResponse>(
+      `/organizer/applications/${encodeURIComponent(id)}/reject`,
+      { reviewNote },
+    ),
   getProposals: (eventId?: string) => apiClient.get<any[]>(`/organizer/activity-proposals?limit=100${eventId ? `&eventId=${encodeURIComponent(eventId)}` : ''}`),
   approveProposal: (id: string, note?: string) => apiClient.post(`/organizer/activity-proposals/${encodeURIComponent(id)}/approve`, { note }),
   rejectProposal: (id: string, note: string) => apiClient.post(`/organizer/activity-proposals/${encodeURIComponent(id)}/reject`, { note }),

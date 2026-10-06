@@ -278,6 +278,7 @@ export interface PartnerOrganization {
   id: string;
   name: string;
   shortDesc: string;
+  categoryCode: string;
   logoUrl?: string;
   representativeName: string;
   email: string;
@@ -285,6 +286,7 @@ export interface PartnerOrganization {
   address: string;
   website: string;
   categories: string[];
+  status: 'ACTIVE' | 'INACTIVE' | '';
   isVerified?: boolean;
 }
 
@@ -295,9 +297,12 @@ export interface PartnerEventApplication {
   dateRange: string;
   location: string;
   imageUrl: string;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'need_changes';
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  applicationNote: string;
+  reviewNote: string;
   submittedAt: string;
-  step: number; // 1 to 4
+  reviewedAt: string;
+  withdrawnAt: string;
   organizationName: string;
   shortDesc: string;
   logoUrl?: string;
