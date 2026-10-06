@@ -181,10 +181,34 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
           <h2 id="available-events-title" style={{ margin: 0, fontSize: '1.2rem' }}>Sự kiện đang công bố</h2>
         </div>
 
-        {isLoading && <p className="app-loading-state" role="status">Đang tải sự kiện và hồ sơ...</p>}
-        {!isLoading && events.length === 0 && (
-          <div className="partner-empty-state">Hiện chưa có sự kiện công khai để đăng ký.</div>
-        )}
+        {isLoading ? (
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {[1, 2].map(idx => (
+              <div key={idx} className="partner-card skeleton-card" style={{ padding: '1.25rem', pointerEvents: 'none' }}>
+                <div style={{ display: 'flex', gap: '1.25rem' }}>
+                  <div className="skeleton-box" style={{ width: 140, height: 100, borderRadius: 10, flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <div className="skeleton-box" style={{ width: '40%', height: '1.2rem', borderRadius: 4 }} />
+                    <div className="skeleton-box" style={{ width: '80%', height: '0.9rem', borderRadius: 4 }} />
+                    <div className="skeleton-box" style={{ width: '35%', height: '0.85rem', borderRadius: 4 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : events.length === 0 ? (
+          <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+            <CalendarDays size={36} color="#B3862A" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+            <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
+              {language === 'vi' ? 'Hiện chưa có sự kiện mở đăng ký' : 'No Events Open for Registration'}
+            </h3>
+            <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
+              {language === 'vi'
+                ? 'Ban Quản Lý Đường Sách sẽ sớm công bố lịch các sự kiện văn hóa và tuần lễ sách tiếp theo. Hãy đảm bảo hồ sơ tổ chức đã hoàn thiện để sẵn sàng gửi đăng ký.'
+                : 'Upcoming Book Street events will be published here soon. Please make sure your organization profile is completed to be ready.'}
+            </p>
+          </div>
+        ) : null}
 
         <div style={{ display: 'grid', gap: '1rem' }}>
           {events.map(event => {
@@ -265,7 +289,17 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </div>
 
         {!isLoading && applications.length === 0 && (
-          <div className="partner-empty-state">Bạn chưa gửi hồ sơ tham gia sự kiện nào.</div>
+          <div className="partner-card" style={{ padding: '2rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+            <FileText size={32} color="#7A8E87" style={{ margin: '0 auto 0.65rem', display: 'block' }} />
+            <h3 style={{ margin: '0 0 0.25rem', color: '#172421', fontSize: '1.05rem' }}>
+              {language === 'vi' ? 'Bạn chưa gửi hồ sơ tham gia sự kiện nào' : 'No Submitted Applications Yet'}
+            </h3>
+            <p style={{ margin: 0, color: '#637771', fontSize: '0.86rem' }}>
+              {language === 'vi'
+                ? 'Khi có sự kiện mở đăng ký ở danh mục phía trên, hãy chọn sự kiện và gửi hồ sơ để bắt đầu.'
+                : 'Apply for open events in the section above to track review status and approvals.'}
+            </p>
+          </div>
         )}
 
         <div style={{ display: 'grid', gap: '0.85rem' }}>

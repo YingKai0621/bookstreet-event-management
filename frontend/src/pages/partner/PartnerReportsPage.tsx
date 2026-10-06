@@ -118,110 +118,124 @@ export const PartnerReportsPage: React.FC<PartnerReportsPageProps> = ({
         </div>
       </div>
 
-      {/* 3. Charts Grid matching Sketch Screen 7 */}
-      <div className="partner-charts-grid">
-        {/* Chart 1: Participation by Activity (Horizontal bar chart) */}
-        <div className="partner-chart-card">
-          <h3 className="chart-card-title">
-            {language === 'vi' ? 'Lượt tham gia theo hoạt động' : 'Participation by Activity'}
+      {/* 3. Charts Grid or Waiting State */}
+      {reportStats.activityStats.length === 0 && reportStats.totalParticipants === 0 ? (
+        <div className="partner-card" style={{ padding: '3rem 2rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+          <BarChart3 size={40} color="#B3862A" style={{ margin: '0 auto 1rem', display: 'block' }} />
+          <h3 style={{ margin: '0 0 0.4rem', color: '#172421', fontSize: '1.25rem', fontFamily: 'var(--font-serif)' }}>
+            {language === 'vi' ? 'Chưa có dữ liệu thống kê sau sự kiện' : 'No Post-Event Data Yet'}
           </h3>
-
-          <div style={{ marginTop: '1.25rem' }}>
-            {reportStats.activityStats.map((item, idx) => {
-              const maxVal = Math.max(1, ...reportStats.activityStats.map(stat => stat.count));
-              const widthPct = Math.round((item.count / maxVal) * 100);
-
-              return (
-                <div key={idx} className="horizontal-bar-item">
-                  <div className="bar-meta">
-                    <span>{item.name}</span>
-                    <strong>{item.count} {language === 'vi' ? 'lượt' : 'attendants'}</strong>
-                  </div>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${widthPct}%` }}></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#8C9F9A', marginTop: '1.5rem', borderTop: '1px solid #EEF2F0', paddingTop: '0.65rem' }}>
-            <span>0</span>
-            <span>50</span>
-            <span>100</span>
-            <span>150</span>
-            <span>200</span>
-          </div>
+          <p style={{ margin: 0, color: '#637771', fontSize: '0.9rem', maxWidth: '540px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.55 }}>
+            {language === 'vi'
+              ? 'Số liệu lượt tham gia, tỷ lệ điểm danh và biểu đồ đánh giá từ bạn đọc sẽ được hệ thống tổng hợp tự động theo thời gian thực khi sự kiện diễn ra.'
+              : 'Attendance rates, reader check-ins, and activity ratings will be aggregated automatically during and after the event.'}
+          </p>
         </div>
+      ) : (
+        <div className="partner-charts-grid">
+          {/* Chart 1: Participation by Activity (Horizontal bar chart) */}
+          <div className="partner-chart-card">
+            <h3 className="chart-card-title">
+              {language === 'vi' ? 'Lượt tham gia theo hoạt động' : 'Participation by Activity'}
+            </h3>
 
-        {/* Chart 2: Activity Ratings Breakdown matching Sketch Screen 7 */}
-        <div className="partner-chart-card">
-          <h3 className="chart-card-title">
-            {language === 'vi' ? 'Đánh giá hoạt động' : 'Activity Ratings'}
-          </h3>
+            <div style={{ marginTop: '1.25rem' }}>
+              {reportStats.activityStats.map((item, idx) => {
+                const maxVal = Math.max(1, ...reportStats.activityStats.map(stat => stat.count));
+                const widthPct = Math.round((item.count / maxVal) * 100);
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '1.5rem' }}>
-            {/* Visual SVG Donut Indicator */}
-            <div style={{ position: 'relative', width: '110px', height: '110px', flexShrink: 0 }}>
-              <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#E5ECE8" strokeWidth="3.8" />
-                <circle 
-                  cx="18" 
-                  cy="18" 
-                  r="15.9" 
-                  fill="none" 
-                  stroke="#10B981" 
-                  strokeWidth="3.8" 
-                  strokeDasharray="68, 100" 
-                  strokeDashoffset="0" 
-                />
-                <circle 
-                  cx="18" 
-                  cy="18" 
-                  r="15.9" 
-                  fill="none" 
-                  stroke="#E9BC63" 
-                  strokeWidth="3.8" 
-                  strokeDasharray="22, 100" 
-                  strokeDashoffset="-68" 
-                />
-              </svg>
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.2rem',
-                fontWeight: 800,
-                color: '#172421'
-              }}>
-                4.8
-                <span style={{ fontSize: '0.65rem', color: '#637771', fontWeight: 600 }}>/ 5.0</span>
+                return (
+                  <div key={idx} className="horizontal-bar-item">
+                    <div className="bar-meta">
+                      <span>{item.name}</span>
+                      <strong>{item.count} {language === 'vi' ? 'lượt' : 'attendants'}</strong>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${widthPct}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#8C9F9A', marginTop: '1.5rem', borderTop: '1px solid #EEF2F0', paddingTop: '0.65rem' }}>
+              <span>0</span>
+              <span>50</span>
+              <span>100</span>
+              <span>150</span>
+              <span>200</span>
+            </div>
+          </div>
+
+          {/* Chart 2: Activity Ratings Breakdown matching Sketch Screen 7 */}
+          <div className="partner-chart-card">
+            <h3 className="chart-card-title">
+              {language === 'vi' ? 'Đánh giá hoạt động' : 'Activity Ratings'}
+            </h3>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '1.5rem' }}>
+              {/* Visual SVG Donut Indicator */}
+              <div style={{ position: 'relative', width: '110px', height: '110px', flexShrink: 0 }}>
+                <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#E5ECE8" strokeWidth="3.8" />
+                  <circle 
+                    cx="18" 
+                    cy="18" 
+                    r="15.9" 
+                    fill="none" 
+                    stroke="#10B981" 
+                    strokeWidth="3.8" 
+                    strokeDasharray="68, 100" 
+                    strokeDashoffset="0" 
+                  />
+                  <circle 
+                    cx="18" 
+                    cy="18" 
+                    r="15.9" 
+                    fill="none" 
+                    stroke="#E9BC63" 
+                    strokeWidth="3.8" 
+                    strokeDasharray="22, 100" 
+                    strokeDashoffset="-68" 
+                  />
+                </svg>
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.2rem',
+                  fontWeight: 800,
+                  color: '#172421'
+                }}>
+                  {reportStats.averageRating || '0.0'}
+                  <span style={{ fontSize: '0.65rem', color: '#637771', fontWeight: 600 }}>/ 5.0</span>
+                </div>
+              </div>
+
+              {/* Breakdown List */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {reportStats.ratingDistribution.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#495D57', fontWeight: 600 }}>
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: idx === 0 ? '#10B981' : idx === 1 ? '#E9BC63' : idx === 2 ? '#60A5FA' : '#F87171'
+                      }}></span>
+                      {item.stars}
+                    </span>
+                    <strong style={{ color: '#172421' }}>{item.percent}%</strong>
+                  </div>
+                ))}
               </div>
             </div>
-
-            {/* Breakdown List */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              {reportStats.ratingDistribution.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#495D57', fontWeight: 600 }}>
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: idx === 0 ? '#10B981' : idx === 1 ? '#E9BC63' : idx === 2 ? '#60A5FA' : '#F87171'
-                    }}></span>
-                    {item.stars}
-                  </span>
-                  <strong style={{ color: '#172421' }}>{item.percent}%</strong>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

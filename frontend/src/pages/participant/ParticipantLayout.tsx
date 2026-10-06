@@ -307,8 +307,16 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                 setNotifDropdownOpen(false);
               }}
             >
-              <div className="user-avatar-circle">
-                {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'NA'}
+              <div className="user-avatar-circle" style={{ overflow: 'hidden' }}>
+                {profile.avatar ? (
+                  <img 
+                    src={profile.avatar} 
+                    alt={profile.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                  />
+                ) : (
+                  profile.name ? profile.name.slice(0, 2).toUpperCase() : 'NA'
+                )}
               </div>
               <div className="user-info-text">
                 <span className="user-name">{profile.name}</span>

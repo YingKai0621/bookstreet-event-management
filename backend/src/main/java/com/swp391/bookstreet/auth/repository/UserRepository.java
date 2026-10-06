@@ -26,4 +26,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsernameIgnoreCase(String username);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    @EntityGraph(attributePaths = {"userRoles", "userRoles.role"})
+    @Query("select distinct u from User u order by u.id asc")
+    java.util.List<User> findAllWithRoles();
 }

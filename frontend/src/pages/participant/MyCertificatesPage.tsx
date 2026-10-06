@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Award, Download, Eye, Calendar, FileText, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Award, Download, Eye, Calendar, QrCode, Sparkles, ArrowRight } from 'lucide-react';
 import { Language, ParticipantCertificate } from '../../types';
 import './ParticipantPages.css';
 
@@ -7,12 +8,14 @@ interface MyCertificatesPageProps {
   language: Language;
   certificates: ParticipantCertificate[];
   participantName: string;
+  isLoading?: boolean;
 }
 
 export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
   language,
   certificates,
   participantName,
+  isLoading = false,
 }) => {
   const [selectedCert, setSelectedCert] = useState<ParticipantCertificate | null>(null);
 
@@ -159,59 +162,215 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
         </p>
       </div>
 
-      {/* 2. Certificate Rows List matching Sketch Screen 8 */}
-      <div className="certificates-list-container">
-        {certificates.map((cert) => (
-          <div key={cert.id} className="certificate-card-row">
-            {/* Mini preview frame with gold border */}
-            <div className="certificate-mini-preview" title="Chứng nhận số">
-              <Award size={26} />
-            </div>
+      {/* 2. Top Summary Metrics */}
+      <div className="participant-summary-grid cert-summary-grid" style={{ marginBottom: '1.5rem' }}>
+        <div className="summary-stat-card">
+          <div className="stat-number-box gold">
+            <Award className="stat-badge-icon" size={24} />
+            <span>{certificates.length}</span>
+          </div>
+          <div className="stat-label-text">
+            {language === 'vi' ? 'Chứng nhận đã nhận' : 'Earned Certificates'}
+          </div>
+        </div>
 
-            {/* Certificate information */}
-            <div className="certificate-info-col">
-              <h3 className="certificate-title">{cert.title}</h3>
-              <div className="certificate-activity-name">{cert.activityTitle}</div>
-              <div className="certificate-meta-line">
-                <div className="cert-meta-item">
-                  <span>{cert.eventTitle}</span>
-                </div>
-                <div className="cert-meta-item">
-                  <span>{cert.issueDate}</span>
-                </div>
-                <div className="cert-meta-item">
-                  <span className="cert-meta-code">
-                    {cert.certificateCode}
-                  </span>
-                </div>
+        <div className="summary-stat-card">
+          <div className="stat-number-box">
+            <Sparkles className="stat-star-icon" size={24} />
+            <span>{certificates.length > 0 ? 'Hoạt động' : 'Sẵn sàng'}</span>
+          </div>
+          <div className="stat-label-text">
+            {language === 'vi' ? 'Trạng thái xác thực số' : 'Digital Verification'}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Skeleton Loading State or Certificate List or Empty State */}
+      {isLoading ? (
+        <div className="certificates-list-container" aria-label="Đang tải chứng nhận...">
+          {[1, 2, 3].map((idx) => (
+            <div key={idx} className="certificate-card-row skeleton-card" style={{ pointerEvents: 'none' }}>
+              <div className="skeleton-box" style={{ width: 80, height: 56, borderRadius: 6, flexShrink: 0 }} />
+              <div className="certificate-info-col" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="skeleton-box" style={{ width: '45%', height: '1.1rem', borderRadius: 4 }} />
+                <div className="skeleton-box" style={{ width: '65%', height: '0.9rem', borderRadius: 4 }} />
+                <div className="skeleton-box" style={{ width: '30%', height: '0.8rem', borderRadius: 4 }} />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="skeleton-box" style={{ width: 90, height: 36, borderRadius: 6 }} />
+                <div className="skeleton-box" style={{ width: 100, height: 36, borderRadius: 6 }} />
               </div>
             </div>
+          ))}
+        </div>
+      ) : certificates.length === 0 ? (
+        <div className="certificate-empty-card">
+          <div className="cert-empty-icon-wrap" aria-hidden="true">
+            <Award size={44} />
+          </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <button
-                type="button"
-                className="btn-part-secondary"
-                style={{ height: '36px', padding: '0 0.95rem' }}
-                onClick={() => setSelectedCert(cert)}
-              >
-                <Eye size={15} />
-                <span>{language === 'vi' ? 'Xem trước' : 'Preview'}</span>
-              </button>
+          <h2 className="cert-empty-title">
+            {language === 'vi' ? 'Bạn chưa có chứng nhận nào' : 'No Certificates Yet'}
+          </h2>
 
-              <button
-                type="button"
-                className="btn-part-primary"
-                style={{ height: '36px', padding: '0 1.1rem' }}
-                onClick={() => handleDownloadCertificate(cert)}
-              >
-                <Download size={15} />
-                <span>{language === 'vi' ? 'Tải xuống' : 'Download'}</span>
-              </button>
+          <p className="cert-empty-desc">
+            {language === 'vi' 
+              ? 'Hãy tham gia các buổi tọa đàm tác giả, triển lãm và workshop sáng tạo tại Đường Sách TP.HCM để hoàn tất điểm danh và nhận chứng nhận số chính thức được lưu vĩnh viễn trong hồ sơ.' 
+              : 'Join author talks, exhibitions, and creative workshops at Ho Chi Minh City Book Street to complete check-in and earn official digital certificates.'}
+          </p>
+
+          {/* 3 Step Guidance Cards */}
+          <div className="cert-guidance-heading">
+            <h3 className="cert-guidance-title">
+              {language === 'vi' ? 'Làm thế nào để nhận chứng nhận?' : 'How to Earn Your Certificate?'}
+            </h3>
+            <p className="cert-guidance-sub">
+              {language === 'vi'
+                ? 'Hoàn thành 3 bước đơn giản dưới đây để sở hữu chứng chỉ điện tử có giá trị lưu giữ vĩnh viễn'
+                : 'Follow 3 simple steps to receive and store your permanent verified certificate'}
+            </p>
+          </div>
+
+          <div className="cert-empty-steps-grid">
+            <div className="cert-step-card">
+              <span className="cert-step-badge">
+                <Calendar size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                {language === 'vi' ? 'BƯỚC 1' : 'STEP 1'}
+              </span>
+              <h4 className="cert-step-title">
+                {language === 'vi' ? '1. Đăng ký sự kiện & hoạt động' : '1. Register Events & Activities'}
+              </h4>
+              <p className="cert-step-desc">
+                {language === 'vi' 
+                  ? 'Khám phá lịch tọa đàm tác giả, ra mắt sách và workshop hấp dẫn đang mở đăng ký.' 
+                  : 'Browse upcoming book launches, talkshows, and workshops open for registration.'}
+              </p>
+            </div>
+
+            <div className="cert-step-card">
+              <span className="cert-step-badge">
+                <QrCode size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                {language === 'vi' ? 'BƯỚC 2' : 'STEP 2'}
+              </span>
+              <h4 className="cert-step-title">
+                {language === 'vi' ? '2. Check-in QR tại chỗ' : '2. Check-in on-site with QR'}
+              </h4>
+              <p className="cert-step-desc">
+                {language === 'vi' 
+                  ? 'Xuất trình mã QR cá nhân trên điện thoại tại bàn tiếp tân khi đến tham dự sự kiện.' 
+                  : 'Present your personal QR code at the reception desk upon arriving at the venue.'}
+              </p>
+            </div>
+
+            <div className="cert-step-card">
+              <span className="cert-step-badge">
+                <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                {language === 'vi' ? 'BƯỚC 3' : 'STEP 3'}
+              </span>
+              <h4 className="cert-step-title">
+                {language === 'vi' ? '3. Nhận chứng nhận số' : '3. Earn Verified Certificate'}
+              </h4>
+              <p className="cert-step-desc">
+                {language === 'vi' 
+                  ? 'Hệ thống tự động cấp chứng chỉ với mã tra cứu độc bản, có thể tải về và in bản cứng.' 
+                  : 'System automatically issues your certificate with unique code to view and print.'}
+              </p>
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Action CTAs */}
+          <div className="cert-empty-actions-row">
+            <Link
+              to="/participant/events"
+              className="btn-part-primary"
+              style={{
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                padding: '0.85rem 1.75rem',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.96rem'
+              }}
+            >
+              <Calendar size={18} />
+              <span>{language === 'vi' ? 'Khám phá sự kiện sắp diễn ra' : 'Explore Upcoming Events'}</span>
+              <ArrowRight size={16} />
+            </Link>
+
+            <Link
+              to="/participant/activities"
+              className="btn-part-secondary"
+              style={{
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.85rem 1.5rem',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}
+            >
+              <span>{language === 'vi' ? 'Xem hoạt động của tôi' : 'My Registered Activities'}</span>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="certificates-list-container">
+          {certificates.map((cert) => (
+            <div key={cert.id} className="certificate-card-row">
+              {/* Mini preview frame with gold border */}
+              <div className="certificate-mini-preview" title="Chứng nhận số">
+                <Award size={26} />
+              </div>
+
+              {/* Certificate information */}
+              <div className="certificate-info-col">
+                <h3 className="certificate-title">{cert.title}</h3>
+                <div className="certificate-activity-name">{cert.activityTitle}</div>
+                <div className="certificate-meta-line">
+                  <div className="cert-meta-item">
+                    <span>{cert.eventTitle}</span>
+                  </div>
+                  <div className="cert-meta-item">
+                    <span>{cert.issueDate}</span>
+                  </div>
+                  <div className="cert-meta-item">
+                    <span className="cert-meta-code">
+                      {cert.certificateCode}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <button
+                  type="button"
+                  className="btn-part-secondary"
+                  style={{ height: '36px', padding: '0 0.95rem' }}
+                  onClick={() => setSelectedCert(cert)}
+                >
+                  <Eye size={15} />
+                  <span>{language === 'vi' ? 'Xem trước' : 'Preview'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-part-primary"
+                  style={{ height: '36px', padding: '0 1.1rem' }}
+                  onClick={() => handleDownloadCertificate(cert)}
+                >
+                  <Download size={15} />
+                  <span>{language === 'vi' ? 'Tải xuống' : 'Download'}</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal preview when user clicks 'Xem trước' */}
       {selectedCert && (

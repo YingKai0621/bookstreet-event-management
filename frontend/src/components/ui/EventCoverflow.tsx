@@ -7,11 +7,12 @@ interface EventCoverflowProps {
   events: EventItem[];
   language: Language;
   weekEventIds: Set<string>;
+  isLoading?: boolean;
   onDetails: (event: EventItem) => void;
   onRegister: (event: EventItem) => void;
 }
 
-export function EventCoverflow({ events, language, weekEventIds, onDetails, onRegister }: EventCoverflowProps) {
+export function EventCoverflow({ events, language, weekEventIds, isLoading = false, onDetails, onRegister }: EventCoverflowProps) {
   const [selected, setSelected] = useState(0);
   const dragStart = useRef<number | null>(null);
   const suppressClick = useRef(false);
@@ -33,8 +34,69 @@ export function EventCoverflow({ events, language, weekEventIds, onDetails, onRe
     return offset;
   };
 
-  if (!current) {
-    return <p className="event-coverflow-empty">{language === 'vi' ? 'Chưa có sự kiện nào.' : 'No events yet.'}</p>;
+  if (isLoading || events.length === 0) {
+    return (
+      <div className="event-coverflow skeleton-coverflow" role="region" aria-busy="true" aria-label={language === 'vi' ? 'Đang tải sự kiện' : 'Loading events'}>
+        <div className="event-coverflow-stage-wrap">
+          <button type="button" className="event-coverflow-arrow" disabled aria-hidden="true">
+            <ChevronLeft size={23} />
+          </button>
+          <div className="event-coverflow-stage" style={{ pointerEvents: 'none' }}>
+            <div
+              className="event-coverflow-slide skeleton-card"
+              style={{
+                transform: 'translateX(calc(-50% - 65%)) translateZ(-120px) rotateY(35deg)',
+                opacity: 0.65,
+                zIndex: 6,
+              }}
+            >
+              <div className="skeleton-box" style={{ width: '100%', height: '100%' }} />
+            </div>
+            <div
+              className="event-coverflow-slide is-selected skeleton-card"
+              style={{
+                transform: 'translateX(-50%) translateZ(0px) rotateY(0deg)',
+                opacity: 1,
+                zIndex: 10,
+              }}
+            >
+              <div className="skeleton-box" style={{ width: '100%', height: '100%' }} />
+            </div>
+            <div
+              className="event-coverflow-slide skeleton-card"
+              style={{
+                transform: 'translateX(calc(-50% + 65%)) translateZ(-120px) rotateY(-35deg)',
+                opacity: 0.65,
+                zIndex: 6,
+              }}
+            >
+              <div className="skeleton-box" style={{ width: '100%', height: '100%' }} />
+            </div>
+          </div>
+          <button type="button" className="event-coverflow-arrow" disabled aria-hidden="true">
+            <ChevronRight size={23} />
+          </button>
+        </div>
+
+        <div className="event-coverflow-details" aria-hidden="true">
+          <div className="event-coverflow-details-main" style={{ width: '100%' }}>
+            <div className="skeleton-box" style={{ width: '110px', height: '16px', marginBottom: '8px' }} />
+            <div className="skeleton-box" style={{ width: '60%', height: '28px', marginBottom: '10px' }} />
+            <div className="skeleton-box" style={{ width: '90%', height: '15px', marginBottom: '6px' }} />
+            <div className="skeleton-box" style={{ width: '75%', height: '15px', marginBottom: '14px' }} />
+            <div className="event-coverflow-meta">
+              <div className="skeleton-box" style={{ width: '130px', height: '18px' }} />
+              <div className="skeleton-box" style={{ width: '90px', height: '18px' }} />
+              <div className="skeleton-box" style={{ width: '150px', height: '18px' }} />
+            </div>
+          </div>
+          <div className="event-coverflow-actions">
+            <div className="skeleton-box" style={{ width: '110px', height: '42px', borderRadius: '5px' }} />
+            <div className="skeleton-box" style={{ width: '140px', height: '42px', borderRadius: '5px' }} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

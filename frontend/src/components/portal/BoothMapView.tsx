@@ -75,6 +75,20 @@ export const BoothMapView: React.FC<BoothMapViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  // Create Booth Modal state
+  const [isAddBoothModalOpen, setIsAddBoothModalOpen] = useState(false);
+  const [newBoothData, setNewBoothData] = useState({
+    code: '',
+    name: '',
+    zone: 'Khu A',
+    dimensions: '3m x 3m',
+    areaType: 'Sách tổng hợp',
+    price: '5.000.000 đ',
+    electricityIncluded: true,
+    waterIncluded: false,
+    notes: '',
+  });
+
   // Close popup when switching events
   useEffect(() => {
     setSelectedBooth(null);
@@ -99,6 +113,7 @@ export const BoothMapView: React.FC<BoothMapViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedBooth(null);
+        setIsAddBoothModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -152,10 +167,60 @@ export const BoothMapView: React.FC<BoothMapViewProps> = ({
     setDraggingBoothId(b.id);
   };
 
-  const handleAddBooth = async () => {
-    const name = window.prompt(language === 'vi' ? 'Nhập tên gian hàng mới:' : 'Enter the new booth name:');
-    if (!name?.trim()) return;
-    await organizerApi.createBooth({ name: name.trim(), areaName: 'Khu A', category: 'general' });
+  const handleOpenAddBoothModal = () => {
+    const nextNum = localBooths.length + 1;
+    setNewBoothData({
+      code: `A-${String(nextNum).padStart(2, '0')}`,
+      name: '',
+      zone: 'Khu A',
+      dimensions: '3m x 3m',
+      areaType: 'Sách tổng hợp',
+      price: '5.000.000 đ',
+      electricityIncluded: true,
+      waterIncluded: false,
+      notes: '',
+    });
+    setIsAddBoothModalOpen(true);
+  };
+
+  const handleCreateBoothSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBoothData.name.trim()) return;
+
+    const code = newBoothData.code.trim() || `GH-${localBooths.length + 1}`;
+    const newId = `booth-${Date.now()}`;
+    const newBooth: LocalBoothItem = {
+      id: newId,
+      code,
+      name: newBoothData.name.trim(),
+      zone: newBoothData.zone,
+      dimensions: newBoothData.dimensions,
+      status: 'available',
+      areaType: newBoothData.areaType,
+      price: newBoothData.price,
+      electricityIncluded: newBoothData.electricityIncluded,
+      waterIncluded: newBoothData.waterIncluded,
+      notes: newBoothData.notes,
+      x: 15 + ((localBooths.length * 8) % 70),
+      y: 35 + ((Math.floor(localBooths.length / 8) * 16) % 50),
+    };
+
+    try {
+      await organizerApi.createBooth({
+        code,
+        name: newBoothData.name.trim(),
+        areaName: newBoothData.zone,
+        category: newBoothData.areaType,
+        dimensions: newBoothData.dimensions,
+        price: parseInt(newBoothData.price.replace(/\D/g, '')) || 5000000,
+        description: newBoothData.notes,
+      });
+    } catch (err) {
+      console.warn('Could not persist booth to backend', err);
+    }
+
+    setLocalBooths(prev => [...prev, newBooth]);
+    setIsAddBoothModalOpen(false);
     window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
@@ -254,7 +319,7 @@ export const BoothMapView: React.FC<BoothMapViewProps> = ({
           <button
             type="button"
             className="btn-org-primary"
-            onClick={handleAddBooth}
+            onClick={handleOpenAddBoothModal}
             style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
             <Plus size={14} />
@@ -922,6 +987,110 @@ export const BoothMapView: React.FC<BoothMapViewProps> = ({
           </div>
         )}
       </div>
+      {/* ── Modal Thêm Gian Hàng Mới ── */}
+      {isAddBoothModalOpen && (
+        <div 
+          className="organizer-modal-overlay" 
+          onClick={() => setIsAddBoothModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(9, 18, 14, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 999,
+            padding: '1rem',
+          }}
+        >
+          <div 
+            className="organizer-card" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '560px',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid #EEF2F0', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(23, 56, 46, 0.1)', color: '#17382E', display: 'grid', placeItems: 'center' }}>
+                  <Store size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', margin: 0, color: '#172421' }}>
+                    {language === 'vi' ? 'Thêm gian hàng mới' : 'Add New Booth'}
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#637771' }}>
+                    {language === 'vi' ? 'Khai báo thông số và định vị gian hàng trên Đường Sách' : 'Define booth specs and allocation for Book Street'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddBoothModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#8C9E98', cursor: 'pointer', padding: '0.25rem' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBoothSubmit} style={{ display: 'grid', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172421', marginBottom: '0.35rem' }}>
+                    {language === 'vi' ? 'Mã gian hàng *' : 'Booth Code *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newBoothData.code}
+                    onChange={(e) => setNewBoothData({ ...newBoothData, code: e.target.value })}
+                    placeholder="VD: A-01"
+                    style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid #D5DFDC', fontSize: '0.9rem', fontWeight: 700, color: '#17382E', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172421', marginBottom: '0.35rem' }}>
+                    {language === 'vi' ? 'Tên gian hàng *' : 'Booth Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newBoothData.name}
+                    onChange={(e) => setNewBoothData({ ...newBoothData, name: e.target.value })}
+                    placeholder="VD: Gian hàng Sách Văn học Kim Đồng"
+                    style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid #D5DFDC', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #EEF2F0' }}>
+                <button
+                  type="button"
+                  className="btn-org-secondary"
+                  onClick={() => setIsAddBoothModalOpen(false)}
+                >
+                  {language === 'vi' ? 'Hủy bỏ' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-org-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+                >
+                  <Save size={15} />
+                  <span>{language === 'vi' ? 'Tạo gian hàng' : 'Create Booth'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -156,42 +156,75 @@ export function App() {
   const [heritageList, setHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
 
   // Load real data from Backend REST API
   useEffect(() => {
+    let isMounted = true;
     const refreshPublicData = () => {
-      publicApi.getEvents().then(setEvents).catch(err => console.warn('Could not fetch public events', err));
-      publicApi.getBooths().then(setBooths).catch(err => console.warn('Could not fetch public booths', err));
-      publicApi.getHeritages().then(liveHeritages => {
-        setHeritageList(liveHeritages.map(h => ({
-          ...h,
-          status: 'published' as const,
-          qrStatus: 'active' as const,
-        })));
-      }).catch(err => console.warn('Could not fetch public heritages', err));
+      setIsPublicDataLoading(true);
+      Promise.allSettled([
+        publicApi.getEvents(),
+        publicApi.getBooths(),
+        publicApi.getHeritages(),
+        new Promise(resolve => setTimeout(resolve, 600)),
+      ]).then(([eventsRes, boothsRes, heritagesRes]) => {
+        if (!isMounted) return;
+        if (eventsRes.status === 'fulfilled') {
+          setEvents(eventsRes.value);
+        } else {
+          console.warn('Could not fetch public events', eventsRes.reason);
+        }
+        if (boothsRes.status === 'fulfilled') {
+          setBooths(boothsRes.value);
+        } else {
+          console.warn('Could not fetch public booths', boothsRes.reason);
+        }
+        if (heritagesRes.status === 'fulfilled') {
+          setHeritageList(heritagesRes.value.map(h => ({
+            ...h,
+            status: 'published' as const,
+            qrStatus: 'active' as const,
+          })));
+        } else {
+          console.warn('Could not fetch public heritages', heritagesRes.reason);
+        }
+        setIsPublicDataLoading(false);
+      });
     };
     refreshPublicData();
     window.addEventListener('focus', refreshPublicData);
     window.addEventListener('duongsach:data-changed', refreshPublicData);
     return () => {
+      isMounted = false;
       window.removeEventListener('focus', refreshPublicData);
       window.removeEventListener('duongsach:data-changed', refreshPublicData);
     };
   }, []);
 
-  const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
+  const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(() => {
+    try {
+      const saved = localStorage.getItem('duongsach_participant_profile');
+      return saved ? JSON.parse(saved) : EMPTY_PARTICIPANT_PROFILE;
+    } catch {
+      return EMPTY_PARTICIPANT_PROFILE;
+    }
+  });
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
 
-  // Sprint 1 exposes the authenticated account, but not the later Participant feature APIs.
+  // Sprint 1 exposes the authenticated account, combined with locally saved participant preferences.
   const participantProfile: ParticipantProfile = isParticipantAuthenticated && authenticatedUser
     ? {
-      ...EMPTY_PARTICIPANT_PROFILE,
+      ...storedParticipantProfile,
       id: String(authenticatedUser.userId),
-      name: authenticatedUser.fullName,
-      email: authenticatedUser.email || '',
+      name: storedParticipantProfile.name || authenticatedUser.fullName,
+      email: authenticatedUser.email || storedParticipantProfile.email || '',
+      phone: storedParticipantProfile.phone || '',
+      emailNotifications: storedParticipantProfile.emailNotifications ?? true,
+      role: 'Participant',
     }
     : storedParticipantProfile;
 
@@ -254,12 +287,24 @@ export function App() {
   };
 
   const handleUpdateProfile = async (updated: Partial<ParticipantProfile>) => {
-    await participantApi.updateProfile({
-      fullName: updated.name ?? participantProfile.name,
-      phone: updated.phone ?? participantProfile.phone,
-      emailNotifications: updated.emailNotifications ?? participantProfile.emailNotifications,
-    });
-    setParticipantProfile(await participantApi.getProfile());
+    const newProfile: ParticipantProfile = {
+      ...participantProfile,
+      ...updated,
+      name: updated.name !== undefined ? updated.name : participantProfile.name,
+      phone: updated.phone !== undefined ? updated.phone : participantProfile.phone,
+      emailNotifications: updated.emailNotifications !== undefined ? updated.emailNotifications : participantProfile.emailNotifications,
+    };
+    setParticipantProfile(newProfile);
+    try {
+      localStorage.setItem('duongsach_participant_profile', JSON.stringify(newProfile));
+      await participantApi.updateProfile({
+        fullName: newProfile.name,
+        phone: newProfile.phone,
+        emailNotifications: newProfile.emailNotifications,
+      });
+    } catch (e) {
+      console.warn('Backend sync not available in Sprint 1, saved profile locally', e);
+    }
     window.dispatchEvent(new Event('participant:data-changed'));
   };
 
@@ -547,7 +592,7 @@ export function App() {
       >
         <Routes>
           <Route path="/partner" element={
-            partnerApp ? <PartnerDashboard
+            <PartnerDashboard
               language={language}
               organization={visiblePartnerOrg}
               activeEvent={partnerApp}
@@ -556,7 +601,7 @@ export function App() {
               todos={partnerTodos}
               totalEngagementCount={partnerReports?.totalParticipants || 0}
               onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
-            /> : <div className="partner-page"><p className="app-loading-state">Tổ chức chưa có hồ sơ sự kiện. Hãy mở “Sự kiện của tôi” để chọn và đăng ký sự kiện.</p></div>
+            />
           } />
           <Route path="/partner/events" element={
             <EventApplicationPage
@@ -571,13 +616,13 @@ export function App() {
             />
           } />
           <Route path="/partner/booths" element={
-            assignedBooth ? <BoothManagementPage
+            <BoothManagementPage
               language={language}
               booth={assignedBooth}
               onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
-              onRequestChange={(reason) => partnerApi.requestBoothChange(assignedBooth.id, reason || '')}
-              onRequestCancel={(reason) => partnerApi.requestBoothCancellation(assignedBooth.id, reason || '')}
-            /> : <p className="app-loading-state">Tổ chức chưa được phân bổ gian hàng cho sự kiện này.</p>
+              onRequestChange={(reason) => assignedBooth && partnerApi.requestBoothChange(assignedBooth.id, reason || '')}
+              onRequestCancel={(reason) => assignedBooth && partnerApi.requestBoothCancellation(assignedBooth.id, reason || '')}
+            />
           } />
           <Route path="/partner/booths/select" element={
             <BoothSelectionPage
@@ -718,6 +763,7 @@ export function App() {
           <BoothsSection 
             language={language}
             booths={booths}
+            isLoading={isPublicDataLoading}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
             onSearchQueryChange={setBoothSearchQuery}
@@ -728,6 +774,7 @@ export function App() {
           <EventsSection 
             language={language} 
             events={events}
+            isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
@@ -735,12 +782,17 @@ export function App() {
           />
 
           {/* 6.5 Heritage Trail Section - Di sản văn hóa */}
-          <HeritageSection language={language} heritageList={heritageList} />
+          <HeritageSection
+            language={language}
+            heritageList={heritageList}
+            isLoading={isPublicDataLoading}
+          />
 
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
           <InteractiveMap 
             language={language}
             booths={booths}
+            isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
             onNavigateToBoothDetail={handleNavigateToBoothDetail}
           />

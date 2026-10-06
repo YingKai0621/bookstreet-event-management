@@ -10,6 +10,7 @@ import './HeritageSection.css';
 interface HeritageSectionProps {
   language: Language;
   heritageList?: HeritageProfile[];
+  isLoading?: boolean;
 }
 
 const VISIBLE_LANDMARKS = 7;
@@ -27,7 +28,7 @@ const FAN_SLOTS = [
 const imageFor = (item: HeritageProfile) => item.image?.url || '';
 const imageAlt = (item: HeritageProfile) => item.image?.alt || `Ảnh tư liệu: ${item.name}`;
 
-export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heritageList }) => {
+export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heritageList, isLoading = false }) => {
   const vi = language === 'vi';
   const landmarks = heritageList || [];
   const [centerIndex, setCenterIndex] = useState(HALF_FAN);
@@ -214,6 +215,61 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
   };
 
   const visibleCards = getVisibleMap();
+
+  if (isLoading || landmarks.length === 0) {
+    return (
+      <section className="figma-heritage-section" id="di-san" aria-busy="true">
+        <div className="container">
+          <div className="figma-section-header heritage-fan-header">
+            <span className="figma-eyebrow">
+              <IconHeritageSeal size={16} color="var(--figma-gold)" style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              {vi ? 'HÀNH TRÌNH DI SẢN' : 'HERITAGE TRAIL'}
+            </span>
+            <h2 className="figma-section-title">{vi ? 'Khám phá di sản qua từng trang ảnh' : 'Discover heritage through every card'}</h2>
+            <p className="figma-section-subtitle">
+              {vi ? 'Dùng nút điều hướng để xem lần lượt 10 di tích; mỗi thời điểm chỉ có bảy thẻ trên hành trình.' : 'Use the controls to browse all ten landmarks, with seven cards shown at a time.'}
+            </p>
+          </div>
+
+          <div className="heritage-fan-shell" aria-hidden="true">
+            <div className="heritage-fan-stage" style={{ pointerEvents: 'none' }}>
+              {FAN_SLOTS.map((slot, index) => {
+                const isCenter = index === HALF_FAN;
+                const isMobile = typeof window !== 'undefined' && window.innerWidth <= 760;
+                const spacing = isMobile ? 60 : 160;
+                const xOffset = (index - HALF_FAN) * spacing;
+                return (
+                  <div
+                    key={index}
+                    className="heritage-fan-card skeleton-card"
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate(-50%, -50%) translate3d(${xOffset}px, ${slot.y * 8}px, 0px) rotate(${slot.rotation}deg) scale(${slot.scale})`,
+                      zIndex: slot.zIndex,
+                      opacity: 1,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <div className="skeleton-box" style={{ width: '100%', height: '100%' }} />
+                    <span className="heritage-fan-shade" aria-hidden="true" />
+                    {isCenter && (
+                      <span className="heritage-fan-copy" style={{ zIndex: 12 }}>
+                        <div className="skeleton-box" style={{ width: '90px', height: '14px', marginBottom: '6px' }} />
+                        <div className="skeleton-box" style={{ width: '140px', height: '18px', marginBottom: '8px' }} />
+                        <div className="skeleton-box" style={{ width: '100px', height: '14px' }} />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="figma-heritage-section" id="di-san">

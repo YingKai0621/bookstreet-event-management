@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Shield, 
   Check, 
@@ -15,6 +15,7 @@ import {
   AdminRolePermissionConfig, 
   AdminPermissionItem
 } from '../../types/admin';
+
 interface AdminRolesPermissionsViewProps {
   roleConfigs: Record<AdminRoleType, AdminRolePermissionConfig>;
   permissions: AdminPermissionItem[];
@@ -22,33 +23,75 @@ interface AdminRolesPermissionsViewProps {
   onResetDefaults: (roleId: AdminRoleType) => void | Promise<void>;
 }
 
+const DEFAULT_ROLE_CONFIGS: Record<AdminRoleType, AdminRolePermissionConfig> = {
+  participant: { 
+    roleId: 'participant', 
+    roleName: 'Độc giả', 
+    description: 'Tài khoản người dùng tham gia các sự kiện và trải nghiệm Đường Sách', 
+    assignedPermissionCodes: [] 
+  },
+  partner: { 
+    roleId: 'partner', 
+    roleName: 'Đối tác', 
+    description: 'Đơn vị xuất bản, phát hành hoặc đối tác đăng ký gian hàng và hoạt động', 
+    assignedPermissionCodes: [] 
+  },
+  organizer: { 
+    roleId: 'organizer', 
+    roleName: 'Ban tổ chức', 
+    description: 'Đội ngũ điều hành, phê duyệt và giám sát hoạt động tại Đường Sách', 
+    assignedPermissionCodes: [] 
+  },
+  admin: { 
+    roleId: 'admin', 
+    roleName: 'Quản trị viên', 
+    description: 'Toàn quyền cấu hình hệ thống, quản lý tài khoản và phân quyền', 
+    assignedPermissionCodes: [] 
+  },
+};
+
+const ALL_ROLES: AdminRoleType[] = ['participant', 'partner', 'organizer', 'admin'];
+
 export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps> = ({
-  roleConfigs,
-  permissions,
+  roleConfigs = {} as Record<AdminRoleType, AdminRolePermissionConfig>,
+  permissions = [],
   onSaveRolePermissions,
   onResetDefaults
 }) => {
   const [selectedRoleId, setSelectedRoleId] = useState<AdminRoleType>('organizer');
   const [currentPermissions, setCurrentPermissions] = useState<Record<AdminRoleType, string[]>>({
-    participant: [...roleConfigs.participant.assignedPermissionCodes],
-    partner: [...roleConfigs.partner.assignedPermissionCodes],
-    organizer: [...roleConfigs.organizer.assignedPermissionCodes],
-    admin: [...roleConfigs.admin.assignedPermissionCodes]
+    participant: roleConfigs?.participant?.assignedPermissionCodes || [],
+    partner: roleConfigs?.partner?.assignedPermissionCodes || [],
+    organizer: roleConfigs?.organizer?.assignedPermissionCodes || [],
+    admin: roleConfigs?.admin?.assignedPermissionCodes || []
   });
 
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
 
-  const activeRoleConfig = roleConfigs[selectedRoleId];
+  // Sync state when roleConfigs is loaded asynchronously
+  useEffect(() => {
+    if (roleConfigs && Object.keys(roleConfigs).length > 0) {
+      setCurrentPermissions({
+        participant: roleConfigs.participant?.assignedPermissionCodes || [],
+        partner: roleConfigs.partner?.assignedPermissionCodes || [],
+        organizer: roleConfigs.organizer?.assignedPermissionCodes || [],
+        admin: roleConfigs.admin?.assignedPermissionCodes || []
+      });
+    }
+  }, [roleConfigs]);
+
+  const activeRoleConfig = roleConfigs?.[selectedRoleId] || DEFAULT_ROLE_CONFIGS[selectedRoleId];
   const activeAssignedCodes = currentPermissions[selectedRoleId] || [];
 
   // Group permissions by module
-  const groupedPermissions = React.useMemo(() => {
+  const groupedPermissions = useMemo(() => {
     const groups: Record<string, { label: string; items: AdminPermissionItem[] }> = {};
-    permissions.forEach((item: AdminPermissionItem) => {
+    (permissions || []).forEach((item: AdminPermissionItem) => {
+      if (!item || !item.module) return;
       if (!groups[item.module]) {
         groups[item.module] = {
-          label: item.moduleLabelVi,
+          label: item.moduleLabelVi || item.module,
           items: []
         };
       }
@@ -92,9 +135,10 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
 
   const handleReset = async () => {
     await onResetDefaults(selectedRoleId);
+    const defaults = roleConfigs?.[selectedRoleId]?.assignedPermissionCodes || DEFAULT_ROLE_CONFIGS[selectedRoleId].assignedPermissionCodes;
     setCurrentPermissions(prev => ({
       ...prev,
-      [selectedRoleId]: [...roleConfigs[selectedRoleId].assignedPermissionCodes]
+      [selectedRoleId]: [...defaults]
     }));
     setHasChanges(false);
   };
@@ -121,6 +165,7 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
         <div className="adm-page-header-actions">
           {hasChanges && (
             <button 
+              type="button"
               className="adm-btn adm-btn-secondary"
               onClick={handleReset}
             >
@@ -129,6 +174,7 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
             </button>
           )}
           <button 
+            type="button"
             className="adm-btn adm-btn-primary"
             onClick={handleSave}
             disabled={!hasChanges}
@@ -140,21 +186,22 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
       </div>
 
       {saveSuccessNotice && (
-        <div className="adm-toast-banner">
+        <div className="adm-toast-banner" style={{ marginTop: '1rem' }}>
           <Check size={16} />
           <span>{saveSuccessNotice}</span>
         </div>
       )}
 
       {/* Role Selection Tabs */}
-      <div className="adm-card adm-role-selector-card">
+      <div className="adm-card adm-role-selector-card" style={{ marginTop: '1.25rem' }}>
         <div className="adm-role-tabs-row">
-          {(['participant', 'partner', 'organizer', 'admin'] as AdminRoleType[]).map((rId) => {
-            const cfg = roleConfigs[rId];
+          {ALL_ROLES.map((rId) => {
+            const cfg = roleConfigs?.[rId] || DEFAULT_ROLE_CONFIGS[rId];
             const isSelected = selectedRoleId === rId;
             const count = (currentPermissions[rId] || []).length;
             return (
               <button
+                type="button"
                 key={rId}
                 className={`adm-role-tab-btn ${isSelected ? 'active' : ''}`}
                 onClick={() => {
@@ -176,7 +223,7 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
       </div>
 
       {/* Role Overview Description Card */}
-      <div className="adm-card adm-role-meta-card">
+      <div className="adm-card adm-role-meta-card" style={{ marginTop: '1.25rem' }}>
         <div className="adm-role-meta-header">
           <div className="adm-role-meta-icon">
             <Shield size={20} />
@@ -192,13 +239,19 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
       </div>
 
       {/* Permission Groups */}
-      <div className="adm-permissions-container">
+      <div className="adm-permissions-container" style={{ marginTop: '1.25rem' }}>
+        {Object.keys(groupedPermissions).length === 0 && (
+          <div className="adm-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+            <p style={{ color: '#64748B', margin: 0 }}>Đang tải danh sách quyền từ hệ thống...</p>
+          </div>
+        )}
+
         {Object.entries(groupedPermissions).map(([moduleKey, group]) => {
           const groupCodes = group.items.map(i => i.code);
           const enabledInGroupCount = groupCodes.filter(c => activeAssignedCodes.includes(c)).length;
 
           return (
-            <div key={moduleKey} className="adm-card adm-perm-module-card">
+            <div key={moduleKey} className="adm-card adm-perm-module-card" style={{ marginBottom: '1rem' }}>
               <div className="adm-perm-module-header">
                 <div>
                   <h4 className="adm-perm-module-title">{group.label}</h4>
@@ -252,12 +305,14 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
           </div>
           <div className="adm-floating-actions">
             <button 
+              type="button"
               className="adm-btn adm-btn-secondary"
               onClick={handleReset}
             >
               Hủy
             </button>
             <button 
+              type="button"
               className="adm-btn adm-btn-primary"
               onClick={handleSave}
             >
@@ -269,4 +324,3 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
     </div>
   );
 };
-

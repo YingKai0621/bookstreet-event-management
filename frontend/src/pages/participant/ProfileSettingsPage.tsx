@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Edit3, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Edit3, Check, Camera, Upload } from 'lucide-react';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 
@@ -15,16 +15,60 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({
   onUpdateProfile,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(profile.name);
+  const [name, setName] = useState(profile.name || '');
   const [phone, setPhone] = useState(profile.phone || '');
+  const [avatar, setAvatar] = useState(profile.avatar || '');
   const [emailNotifications, setEmailNotifications] = useState(profile.emailNotifications ?? true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    setName(profile.name || '');
+    setPhone(profile.phone || '');
+    setAvatar(profile.avatar || '');
+    setEmailNotifications(profile.emailNotifications ?? true);
+  }, [profile.name, profile.phone, profile.avatar, profile.emailNotifications]);
 
   const saveProfile = async () => {
-    await onUpdateProfile({ name, phone, emailNotifications });
-    setIsEditing(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setIsSaving(true);
+    try {
+      await onUpdateProfile({ name, phone, emailNotifications, avatar });
+      setIsEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e) {
+      console.error('Failed to save profile', e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(language === 'vi' ? 'Kích thước ảnh tối đa là 5MB.' : 'Image size must not exceed 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setAvatar(base64);
+        try {
+          await onUpdateProfile({ name, phone, emailNotifications, avatar: base64 });
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err) {
+          console.error('Failed to save uploaded avatar', err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleToggleNotifications = () => {
@@ -69,24 +113,111 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({
       {/* 2. Main Profile Card matching Sketch Screen 9 */}
       <div className="profile-card-container">
         {/* User summary header */}
-        <div className="profile-card-header">
+        <div className="profile-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div className="profile-user-summary">
-            <div className="profile-avatar-large">
-              {profile.name ? profile.name.slice(0, 2).toUpperCase() : 'NA'}
+            {/* Avatar with Upload Icon */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <div 
+                className="profile-avatar-large"
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  border: '2px solid #E9BC63',
+                  background: avatar ? '#14241F' : 'linear-gradient(135deg, #E9BC63 0%, #D4A359 100%)'
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                title={language === 'vi' ? 'Bấm để đổi ảnh đại diện' : 'Click to change avatar'}
+              >
+                {avatar ? (
+                  <img 
+                    src={avatar} 
+                    alt={name || profile.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  name ? name.slice(0, 2).toUpperCase() : 'DE'
+                )}
+              </div>
+
+              {/* Camera Upload Badge */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title={language === 'vi' ? 'Tải ảnh đại diện lên từ máy tính' : 'Upload photo from device'}
+                style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: '#14241F',
+                  border: '2px solid #FFFFFF',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  color: '#E9BC63',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                  transition: 'transform 160ms ease, background 160ms ease'
+                }}
+              >
+                <Camera size={14} />
+              </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={handleAvatarFileSelect}
+              />
             </div>
+
             <div className="profile-names">
-              <h2>{profile.name}</h2>
+              <h2>{name || profile.name}</h2>
               <p>{profile.email}</p>
-              <span className="activity-tag" style={{ background: '#E6F5EE', color: '#267A58', border: '1px solid #BFE8D6' }}>
-                {profile.role}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <span className="activity-tag" style={{ background: '#E6F5EE', color: '#267A58', border: '1px solid #BFE8D6' }}>
+                  {profile.role || 'Participant'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#185E48',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.15rem 0.35rem',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  <Upload size={12} />
+                  <span>{language === 'vi' ? 'Tải ảnh mới' : 'Upload photo'}</span>
+                </button>
+              </div>
             </div>
           </div>
 
           <button
             type="button"
             className={isEditing ? "btn-part-primary" : "btn-part-secondary"}
-            style={{ height: '36px', padding: '0 1rem' }}
+            disabled={isSaving}
+            style={{ 
+              height: '38px', 
+              padding: '0 1.25rem', 
+              flex: '0 0 auto', 
+              width: 'auto', 
+              minWidth: 'auto',
+              borderRadius: '8px',
+              whiteSpace: 'nowrap'
+            }}
             onClick={async () => {
               if (isEditing) {
                 await saveProfile();
@@ -98,7 +229,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({
             {isEditing ? (
               <>
                 <Check size={14} />
-                <span>{language === 'vi' ? 'Lưu' : 'Save'}</span>
+                <span>{isSaving ? (language === 'vi' ? 'Đang lưu...' : 'Saving...') : (language === 'vi' ? 'Lưu' : 'Save')}</span>
               </>
             ) : (
               <>

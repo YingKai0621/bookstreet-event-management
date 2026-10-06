@@ -14,6 +14,7 @@ import './InteractiveMap.css';
 interface InteractiveMapProps {
   language: Language;
   booths?: Booth[];
+  isLoading?: boolean;
   highlightedBoothId: string | null;
   onNavigateToBoothDetail: (boothId: string) => void;
 }
@@ -21,25 +22,41 @@ interface InteractiveMapProps {
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   booths,
+  isLoading = false,
   highlightedBoothId,
   onNavigateToBoothDetail,
 }) => {
   const allBooths = booths || [];
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
+  const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapImageUrl, setMapImageUrl] = useState<string>(DEFAULT_MAP_IMAGE);
   const [selectedPointId, setSelectedPointId] = useState<string>('');
 
   useEffect(() => {
-    const reloadMap = () => fetchMapHotspotsFromApi()
-      .then(points => {
-        setMapPoints(points);
-        setSelectedPointId(current => points.some(point => point.id === current) ? current : points[0]?.id || '');
-      })
-      .catch(error => console.warn('Không thể tải dữ liệu bản đồ', error));
+    let isMounted = true;
+    const reloadMap = () => {
+      setIsMapLoading(true);
+      Promise.all([
+        fetchMapHotspotsFromApi().catch(error => {
+          console.warn('Không thể tải dữ liệu bản đồ', error);
+          return [];
+        }),
+        new Promise(resolve => setTimeout(resolve, 600)),
+      ])
+        .then(([points]) => {
+          if (!isMounted) return;
+          setMapPoints(points as MapLocationPoint[]);
+          setSelectedPointId(current => (points as MapLocationPoint[]).some(point => point.id === current) ? current : (points as MapLocationPoint[])[0]?.id || '');
+        })
+        .finally(() => {
+          if (isMounted) setIsMapLoading(false);
+        });
+    };
     void reloadMap();
     window.addEventListener('focus', reloadMap);
     window.addEventListener('duongsach:data-changed', reloadMap);
     return () => {
+      isMounted = false;
       window.removeEventListener('focus', reloadMap);
       window.removeEventListener('duongsach:data-changed', reloadMap);
     };
@@ -168,18 +185,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   }, [highlightedBoothId, mapPoints, allBooths]);
 
   // Selected point data
+  const isSectionLoading = isLoading || isMapLoading || mapPoints.length === 0;
   const selectedPoint = mapPoints.find(p => p.id === selectedPointId) || mapPoints[0];
   const activeBooth = selectedPoint
     ? allBooths.find(b => b.code === selectedPoint.code || b.name.toLowerCase().includes(selectedPoint.name.toLowerCase()))
     : null;
-
-  if (!selectedPoint) {
-    return (
-      <section className="figma-map-section" id="ban-do" aria-busy="true">
-        <p className="app-loading-state">Đang tải dữ liệu bản đồ Đường Sách…</p>
-      </section>
-    );
-  }
 
   return (
     <section className="figma-map-section" id="ban-do">
@@ -267,13 +277,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               >
                 <img
                   className="illustrated-map-image"
-                  src={mapImageUrl || undefined}
+                  src={mapImageUrl || DEFAULT_MAP_IMAGE}
                   alt={language === 'vi' ? 'Sơ đồ minh họa Đường Sách Nguyễn Văn Bình, Quận 1, Thành phố Hồ Chí Minh' : 'Illustrated map of Nguyen Van Binh Book Street in District 1, Ho Chi Minh City'}
                   draggable={false}
                 />
 
                 {mapPoints.map((point, index) => {
-                  const isSelected = selectedPoint.id === point.id;
+                  const isSelected = selectedPoint && selectedPoint.id === point.id;
                   const markerScale = 1 / zoomLevel;
 
                   return (
@@ -308,131 +318,212 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               </div>
             </div>
 
-            {/* Standard unified marker styling for landing page visitors */}
-
             {/* Mobile Quick Location Selector Chips */}
-            <div className="mobile-map-quick-selector" aria-label="Chọn nhanh địa điểm">
-              <span className="quick-selector-label">
-                {language === 'vi' ? 'Chọn nhanh địa điểm:' : 'Quick Select:'}
-              </span>
-              <div className="quick-selector-chips">
-                {mapPoints.map((point, index) => {
-                  const isSelected = selectedPoint.id === point.id;
-                  return (
-                    <button
-                      key={point.id}
-                      type="button"
-                      className={`quick-spot-chip ${isSelected ? 'active' : ''}`}
-                      onClick={() => setSelectedPointId(point.id)}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="spot-chip-index">{index + 1}</span>
-                      <span>{point.code}</span>
-                    </button>
-                  );
-                })}
+            {mapPoints.length > 0 && (
+              <div className="mobile-map-quick-selector" aria-label="Chọn nhanh địa điểm">
+                <span className="quick-selector-label">
+                  {language === 'vi' ? 'Chọn nhanh địa điểm:' : 'Quick Select:'}
+                </span>
+                <div className="quick-selector-chips">
+                  {mapPoints.map((point, index) => {
+                    const isSelected = selectedPoint && selectedPoint.id === point.id;
+                    return (
+                      <button
+                        key={point.id}
+                        type="button"
+                        className={`quick-spot-chip ${isSelected ? 'active' : ''}`}
+                        onClick={() => setSelectedPointId(point.id)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="spot-chip-index">{index + 1}</span>
+                        <span>{point.code}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column: Full Info Card for Selected Unit */}
           <div id="map-location-detail" className="blueprint-detail-panel" aria-live="polite" aria-atomic="true">
-            {/* Header with Unit Code badge & Category */}
-            <div className="panel-unit-top">
-              <span className="panel-code-badge">{selectedPoint.code}</span>
-              <span className="panel-category-name">
-                {selectedPoint.category === 'stage'
-                  ? (language === 'vi' ? 'Sân khấu Sự kiện' : 'Event Stage')
-                  : selectedPoint.category === 'cafe'
-                  ? (language === 'vi' ? 'Cà phê Sách' : 'Book Cafe')
-                  : selectedPoint.category === 'facility'
-                  ? (language === 'vi' ? 'Tiện ích & Cảnh quan' : 'Public Facility')
-                  : (language === 'vi' ? 'Gian hàng Xuất bản' : 'Bookstall Unit')}
-              </span>
-            </div>
+            {isSectionLoading ? (
+              <div className="map-detail-skeleton" aria-hidden="true">
+                <div className="panel-unit-top">
+                  <div className="skeleton-box" style={{ width: '60px', height: '24px', borderRadius: '4px' }} />
+                  <div className="skeleton-box" style={{ width: '120px', height: '18px', borderRadius: '4px' }} />
+                </div>
+                <div className="skeleton-box" style={{ width: '75%', height: '26px', marginTop: '12px', marginBottom: '10px' }} />
+                <div className="skeleton-box" style={{ width: '100%', height: '14px', marginBottom: '6px' }} />
+                <div className="skeleton-box" style={{ width: '85%', height: '14px', marginBottom: '18px' }} />
+                <div className="panel-highlights-box" style={{ borderStyle: 'dashed' }}>
+                  <div className="skeleton-box" style={{ width: '55%', height: '12px', marginBottom: '10px' }} />
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div className="skeleton-box" style={{ width: '80px', height: '24px', borderRadius: '4px' }} />
+                    <div className="skeleton-box" style={{ width: '100px', height: '24px', borderRadius: '4px' }} />
+                    <div className="skeleton-box" style={{ width: '70px', height: '24px', borderRadius: '4px' }} />
+                  </div>
+                </div>
+                <div className="panel-contact-list">
+                  <div className="contact-item">
+                    <Clock size={15} />
+                    <div className="skeleton-box" style={{ width: '90px', height: '14px' }} />
+                  </div>
+                </div>
+                <div className="panel-booth-preview">
+                  <div className="preview-thumb">
+                    <div className="skeleton-box" style={{ width: '100%', height: '100%' }} />
+                  </div>
+                  <div className="preview-info" style={{ width: '100%' }}>
+                    <div className="skeleton-box" style={{ width: '90px', height: '12px', marginBottom: '6px' }} />
+                    <div className="skeleton-box" style={{ width: '70%', height: '16px' }} />
+                  </div>
+                </div>
+              </div>
+            ) : selectedPoint ? (
+              <>
+                {/* Header with Unit Code badge & Category */}
+                <div className="panel-unit-top">
+                  <span className="panel-code-badge">{selectedPoint.code}</span>
+                  <span className="panel-category-name">
+                    {selectedPoint.category === 'stage'
+                      ? (language === 'vi' ? 'Sân khấu Sự kiện' : 'Event Stage')
+                      : selectedPoint.category === 'cafe'
+                      ? (language === 'vi' ? 'Cà phê Sách' : 'Book Cafe')
+                      : selectedPoint.category === 'facility'
+                      ? (language === 'vi' ? 'Tiện ích & Cảnh quan' : 'Public Facility')
+                      : (language === 'vi' ? 'Gian hàng Xuất bản' : 'Bookstall Unit')}
+                  </span>
+                </div>
 
-            {/* Title */}
-            <h3 className="panel-unit-title">
-              {language === 'vi' ? selectedPoint.name : (selectedPoint.nameEn || selectedPoint.name)}
-            </h3>
+                {/* Title */}
+                <h3 className="panel-unit-title">
+                  {language === 'vi' ? selectedPoint.name : (selectedPoint.nameEn || selectedPoint.name)}
+                </h3>
 
-            {/* Description */}
-            <p className="panel-unit-desc">
-              {language === 'vi' ? selectedPoint.shortDesc : (selectedPoint.shortDescEn || selectedPoint.shortDesc)}
-            </p>
+                {/* Description */}
+                <p className="panel-unit-desc">
+                  {language === 'vi' ? selectedPoint.shortDesc : (selectedPoint.shortDescEn || selectedPoint.shortDesc)}
+                </p>
 
-            {/* Highlights & Features Box */}
-            {selectedPoint.features && selectedPoint.features.length > 0 && (
-              <div className="panel-highlights-box">
-                <span className="highlights-header-label">
-                  {language === 'vi' ? 'ĐẶC TRƯNG & TIỆN ÍCH NỔI BẬT:' : 'HIGHLIGHTS & SERVICES:'}
-                </span>
-                <div className="highlights-chips-container">
-                  {selectedPoint.features.map((feat: string, fIdx: number) => (
-                    <span key={fIdx} className="highlight-chip">
-                      ✓ {feat}
+                {/* Highlights & Features Box */}
+                {selectedPoint.features && selectedPoint.features.length > 0 && (
+                  <div className="panel-highlights-box">
+                    <span className="highlights-header-label">
+                      {language === 'vi' ? 'ĐẶC TRƯNG & TIỆN ÍCH NỔI BẬT:' : 'HIGHLIGHTS & SERVICES:'}
                     </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Featured Books if booth is selected */}
-            {selectedPoint.featuredBooks && selectedPoint.featuredBooks.length > 0 && (
-              <div className="panel-featured-books-box">
-                <span className="highlights-header-label">
-                  {language === 'vi' ? 'SÁCH TIÊU BIỂU GỢI Ý:' : 'FEATURED TITLES:'}
-                </span>
-                <p className="featured-books-text">
-                  {selectedPoint.featuredBooks.join(' • ')}
-                </p>
-              </div>
-            )}
-
-            {/* Contact & Hours */}
-            <div className="panel-contact-list">
-              <div className="contact-item">
-                <Clock size={15} />
-                <span>{selectedPoint.openHours || '08:00 - 22:00'}</span>
-              </div>
-              {selectedPoint.phone && (
-                <div className="contact-item">
-                  <Phone size={15} />
-                  <span>{selectedPoint.phone}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Operator info */}
-            <div className="panel-booth-preview">
-              <div className="preview-thumb">
-                <img
-                  src={selectedPoint.imageUrl || activeBooth?.image.url || undefined}
-                  alt={selectedPoint.name}
-                  decoding="async"
-                />
-              </div>
-              <div className="preview-info">
-                <span className="preview-label">
-                  {selectedPoint.category === 'booth'
-                    ? (language === 'vi' ? 'ĐƠN VỊ VẬN HÀNH' : 'OPERATOR')
-                    : (language === 'vi' ? 'QUẢN LÝ KHÔNG GIAN' : 'SPACE MANAGEMENT')}
-                </span>
-                <p className="preview-name">
-                  {selectedPoint.orgName || (activeBooth ? activeBooth.name : (language === 'vi' ? 'Ban Quản Lý Đường Sách TP.HCM' : 'Ho Chi Minh City Book Street Board'))}
-                </p>
-                {activeBooth && (
-                  <button
-                    type="button"
-                    className="btn-navigate-booth"
-                    onClick={() => onNavigateToBoothDetail(activeBooth.id)}
-                  >
-                    <span>{language === 'vi' ? 'Xem trong danh mục gian hàng' : 'Inspect Stall Catalog'}</span>
-                    <ChevronRight size={14} />
-                  </button>
+                    <div className="highlights-chips-container">
+                      {selectedPoint.features.map((feat: string, fIdx: number) => (
+                        <span key={fIdx} className="highlight-chip">
+                          ✓ {feat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
-            </div>
+
+                {/* Featured Books if booth is selected */}
+                {selectedPoint.featuredBooks && selectedPoint.featuredBooks.length > 0 && (
+                  <div className="panel-featured-books-box">
+                    <span className="highlights-header-label">
+                      {language === 'vi' ? 'SÁCH TIÊU BIỂU GỢI Ý:' : 'FEATURED TITLES:'}
+                    </span>
+                    <p className="featured-books-text">
+                      {selectedPoint.featuredBooks.join(' • ')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Contact & Hours */}
+                <div className="panel-contact-list">
+                  <div className="contact-item">
+                    <Clock size={15} />
+                    <span>{selectedPoint.openHours || '08:00 - 22:00'}</span>
+                  </div>
+                  {selectedPoint.phone && (
+                    <div className="contact-item">
+                      <Phone size={15} />
+                      <span>{selectedPoint.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Operator info */}
+                <div className="panel-booth-preview">
+                  <div className="preview-thumb">
+                    <img
+                      src={selectedPoint.imageUrl || activeBooth?.image.url || undefined}
+                      alt={selectedPoint.name}
+                      decoding="async"
+                    />
+                  </div>
+                  <div className="preview-info">
+                    <span className="preview-label">
+                      {selectedPoint.category === 'booth'
+                        ? (language === 'vi' ? 'ĐƠN VỊ VẬN HÀNH' : 'OPERATOR')
+                        : (language === 'vi' ? 'QUẢN LÝ KHÔNG GIAN' : 'SPACE MANAGEMENT')}
+                    </span>
+                    <p className="preview-name">
+                      {selectedPoint.orgName || (activeBooth ? activeBooth.name : (language === 'vi' ? 'Ban Quản Lý Đường Sách TP.HCM' : 'Ho Chi Minh City Book Street Board'))}
+                    </p>
+                    {activeBooth && (
+                      <button
+                        type="button"
+                        className="btn-navigate-booth"
+                        onClick={() => onNavigateToBoothDetail(activeBooth.id)}
+                      >
+                        <span>{language === 'vi' ? 'Xem trong danh mục gian hàng' : 'Inspect Stall Catalog'}</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Fallback overview information when map hotspots are not yet populated */}
+                <div className="panel-unit-top">
+                  <span className="panel-code-badge">NVB</span>
+                  <span className="panel-category-name">
+                    {language === 'vi' ? 'Không gian Tuyến phố' : 'Street Space'}
+                  </span>
+                </div>
+                <h3 className="panel-unit-title">
+                  {language === 'vi' ? 'Sơ đồ Đường Sách Nguyễn Văn Bình' : 'Nguyen Van Binh Book Street Plan'}
+                </h3>
+                <p className="panel-unit-desc">
+                  {language === 'vi'
+                    ? 'Không gian văn hóa và tri thức mở tại trung tâm TP.HCM. Bạn có thể tương tác với sơ đồ để quan sát toàn cảnh quy hoạch tuyến đường.'
+                    : 'Open cultural and literary space in central HCMC. Explore the architectural layout of the street.'}
+                </p>
+                <div className="panel-highlights-box">
+                  <span className="highlights-header-label">
+                    {language === 'vi' ? 'ĐẶC TRƯNG KHÔNG GIAN:' : 'SPATIAL FEATURES:'}
+                  </span>
+                  <div className="highlights-chips-container">
+                    <span className="highlight-chip">✓ {language === 'vi' ? 'Phố đi bộ văn hóa' : 'Pedestrian culture zone'}</span>
+                    <span className="highlight-chip">✓ {language === 'vi' ? 'Sân khấu sự kiện ngoài trời' : 'Outdoor event stage'}</span>
+                    <span className="highlight-chip">✓ {language === 'vi' ? 'Cà phê sách & Cảnh quan' : 'Book cafes & Amenities'}</span>
+                  </div>
+                </div>
+                <div className="panel-contact-list">
+                  <div className="contact-item">
+                    <Clock size={15} />
+                    <span>08:00 - 22:00</span>
+                  </div>
+                </div>
+                <div className="panel-booth-preview">
+                  <div className="preview-info">
+                    <span className="preview-label">
+                      {language === 'vi' ? 'QUẢN LÝ VẬN HÀNH' : 'MANAGEMENT'}
+                    </span>
+                    <p className="preview-name">
+                      {language === 'vi' ? 'Ban Quản Lý Đường Sách TP.HCM' : 'Ho Chi Minh City Book Street Board'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

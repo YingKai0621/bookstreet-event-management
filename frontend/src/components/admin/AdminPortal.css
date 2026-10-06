@@ -2275,6 +2275,545 @@
 .adm-sec-title { font-weight: 600; font-size: 0.88rem; color: #1F2937; }
 .adm-sec-desc { font-size: 0.78rem; color: #6B7280; margin-top: 0.15rem; }
 
+/* --- Dashboard Styles --- */
+.adm-dashboard-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.adm-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.adm-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.adm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.adm-kpi-card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid #E2EAE5;
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 2px 10px rgba(20, 36, 31, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.adm-kpi-card.kpi-user {
+  border-top: 3px solid #10B981;
+}
+
+.adm-kpi-card.kpi-event {
+  border-top: 3px solid #3B82F6;
+}
+
+.adm-kpi-card.kpi-booth {
+  border-top: 3px solid #F59E0B;
+}
+
+.adm-kpi-card.kpi-activity {
+  border-top: 3px solid #8B5CF6;
+}
+
+.adm-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20, 36, 31, 0.08);
+  border-color: #CBDDD5;
+}
+
+.adm-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.adm-kpi-label {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: #556B65;
+  letter-spacing: -0.01em;
+}
+
+.adm-kpi-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  transition: transform 180ms ease;
+}
+
+.adm-kpi-card:hover .adm-kpi-icon-wrap {
+  transform: scale(1.08);
+}
+
+.adm-kpi-icon-wrap.icon-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+}
+
+.adm-kpi-icon-wrap.icon-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3B82F6;
+}
+
+.adm-kpi-icon-wrap.icon-amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+}
+
+.adm-kpi-icon-wrap.icon-purple {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8B5CF6;
+}
+
+.adm-kpi-value {
+  font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #14241F;
+  line-height: 1.1;
+  margin-bottom: 0.65rem;
+}
+
+.adm-kpi-trend {
+  font-size: 0.78rem;
+  font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.adm-kpi-trend.trend-neutral {
+  color: #64748B;
+}
+
+.adm-kpi-trend.trend-warning {
+  color: #DC2626;
+}
+
+.adm-kpi-trend.trend-good {
+  color: #059669;
+}
+
+.adm-charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+  gap: 1.25rem;
+}
+
+.adm-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid #F0F4F2;
+}
+
+.adm-card-title {
+  font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #14241F;
+  margin: 0;
+}
+
+.adm-card-subtitle {
+  font-size: 0.78rem;
+  color: #64748B;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Bar Chart Styles */
+.adm-chart-container {
+  padding: 1.5rem 1.5rem 1.25rem;
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.adm-chart-bars-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  height: 180px;
+  border-bottom: 1px solid #E2EAE5;
+  padding-bottom: 0.25rem;
+}
+
+.adm-chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.adm-chart-bar-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #14241F;
+  margin-bottom: 6px;
+  background: #F1F5F3;
+  padding: 1px 6px;
+  border-radius: 4px;
+  transition: all 160ms ease;
+}
+
+.adm-chart-col:hover .adm-chart-bar-pill {
+  background: #14241F;
+  color: #E9BC63;
+  transform: translateY(-2px);
+}
+
+.adm-chart-bar {
+  width: 100%;
+  max-width: 36px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, #1B382F 0%, #2A5A4B 100%);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(27, 56, 47, 0.15);
+}
+
+.adm-chart-col:hover .adm-chart-bar {
+  background: linear-gradient(180deg, #E9BC63 0%, #B48A3C 100%);
+  box-shadow: 0 4px 12px rgba(233, 188, 99, 0.35);
+}
+
+.adm-chart-col-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748B;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.adm-chart-col-date {
+  font-size: 0.65rem;
+  color: #94A3B8;
+  display: block;
+}
+
+/* User Role Donut & Legend Styles matching exact design */
+.adm-donut-card-body {
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.adm-donut-chart-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.adm-donut-center-text {
+  position: absolute;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.adm-donut-center-number {
+  font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #172421;
+  display: block;
+}
+
+.adm-donut-center-label {
+  font-size: 0.72rem;
+  color: #64748B;
+}
+
+.adm-role-legend-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.adm-role-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.adm-role-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+}
+
+.adm-role-legend-dot-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: #1E293B;
+  font-size: 0.84rem;
+}
+
+.adm-role-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.adm-role-legend-percent {
+  font-weight: 700;
+  color: #14241F;
+  font-size: 0.82rem;
+}
+
+.adm-role-legend-line-track {
+  height: 2px;
+  background: #E2E8F0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.15rem;
+}
+
+.adm-role-legend-line-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 400ms ease;
+}
+
+.adm-role-legend-sub {
+  font-size: 0.72rem;
+  color: #8C9E98;
+}
+
+.adm-role-track {
+  height: 8px;
+  background: #F1F5F3;
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.adm-role-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 400ms ease;
+}
+
+.adm-role-fill.participant {
+  background: linear-gradient(90deg, #38BDF8 0%, #0284C7 100%);
+}
+
+.adm-role-fill.partner {
+  background: linear-gradient(90deg, #FBBF24 0%, #D97706 100%);
+}
+
+.adm-role-fill.organizer {
+  background: linear-gradient(90deg, #34D399 0%, #059669 100%);
+}
+
+.adm-role-fill.admin {
+  background: linear-gradient(90deg, #A78BFA 0%, #7C3AED 100%);
+}
+
+/* Bottom Grid Styles */
+.adm-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: 1.25rem;
+}
+
+.adm-activity-list {
+  padding: 0.5rem 1.25rem 1rem;
+}
+
+.adm-activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.5rem;
+  border-bottom: 1px solid #F0F4F2;
+  transition: background 140ms ease;
+  border-radius: 8px;
+}
+
+.adm-activity-item:last-child {
+  border-bottom: none;
+}
+
+.adm-activity-item:hover {
+  background: #F8FAF9;
+}
+
+.adm-activity-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.adm-activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #EAF2EE;
+  color: #1B382F;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.adm-activity-content strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #172421;
+}
+
+.adm-activity-content p {
+  margin: 0.2rem 0 0;
+  font-size: 0.76rem;
+  color: #64748B;
+}
+
+.adm-activity-time {
+  font-size: 0.72rem;
+  color: #94A3B8;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.adm-empty-state {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.adm-empty-state-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #F1F5F3;
+  color: #8C9E98;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.adm-empty-state-text {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin: 0;
+}
+
+.adm-security-card-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.adm-security-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #E2EAE5;
+  background: #F8FAF9;
+}
+
+.adm-security-tile-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.adm-security-tile-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.adm-security-tile-icon.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.adm-security-tile-icon.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+}
+
+.adm-security-tile-icon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+}
+
+.adm-security-tile-title {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: #172421;
+}
+
+.adm-security-tile-sub {
+  font-size: 0.74rem;
+  color: #64748B;
+  margin-top: 0.1rem;
+}
+
+.adm-link-btn {
+  background: none;
+  border: none;
+  color: #14241F;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 140ms ease;
+}
+
+.adm-link-btn:hover {
+  background: #F1F5F3;
+  color: #B48A3C;
+}
+
 /* --- Responsive --- */
 @media (max-width: 1100px) {
   .adm-kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2288,6 +2827,7 @@
 }
 
 @media (max-width: 768px) {
+  .adm-kpi-grid { grid-template-columns: 1fr; }
   .adm-prog-stepper {
     flex-direction: column;
     gap: 1.25rem;
@@ -2320,3 +2860,4 @@
     padding: 0 1.25rem 1.5rem;
   }
 }
+

@@ -169,6 +169,51 @@ button {
   z-index: 2;
 }
 
+/* ==========================================================================
+   Loading Skeleton Animation & Utility Classes
+   ========================================================================== */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-box {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(24, 41, 36, 0.05) 0%,
+    rgba(24, 41, 36, 0.12) 50%,
+    rgba(24, 41, 36, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm, 6px);
+  user-select: none;
+}
+
+.skeleton-dark {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm, 6px);
+  user-select: none;
+}
+
+.skeleton-card {
+  pointer-events: none;
+  border-color: rgba(24, 41, 36, 0.08) !important;
+}
+
 /* Figma Section Eyebrows */
 .figma-eyebrow {
   display: inline-block;
