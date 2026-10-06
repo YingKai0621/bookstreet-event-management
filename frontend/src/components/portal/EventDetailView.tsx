@@ -25,8 +25,8 @@ interface EventDetailViewProps {
   participants: OrganizerParticipantItem[];
   partnerApplications?: OrganizerPartnerApplication[];
   activityProposals?: any[];
-  onApprovePartnerApplication?: (applicationId: string) => void | Promise<void>;
-  onRejectPartnerApplication?: (applicationId: string) => void | Promise<void>;
+  onApprovePartnerApplication?: (applicationId: string, reviewNote?: string) => void | Promise<void>;
+  onRejectPartnerApplication?: (applicationId: string, reviewNote: string) => void | Promise<void>;
   onApproveProposal?: (proposalId: string) => void;
   onRejectProposal?: (proposalId: string) => void;
   onBack: () => void;
@@ -57,13 +57,25 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings'>('overview');
 
   const handleApprovePartner = (id: string) => {
-    void onApprovePartnerApplication?.(id);
+    const reviewNote = window.prompt(
+      language === 'vi'
+        ? 'Ghi chú xét duyệt (không bắt buộc):'
+        : 'Review note (optional):',
+      '',
+    );
+    if (reviewNote === null) return;
+    void onApprovePartnerApplication?.(id, reviewNote.trim());
   };
 
   const handleRejectPartner = (id: string) => {
-    if (confirm(language === 'vi' ? 'Bạn có chắc muốn từ chối hồ sơ đối tác này?' : 'Reject this partner application?')) {
-      void onRejectPartnerApplication?.(id);
-    }
+    const reviewNote = window.prompt(
+      language === 'vi'
+        ? 'Nhập lý do từ chối hồ sơ:'
+        : 'Enter the rejection reason:',
+      '',
+    );
+    if (reviewNote === null) return;
+    void onRejectPartnerApplication?.(id, reviewNote.trim());
   };
 
   return (
@@ -332,7 +344,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               <thead>
                 <tr>
                   <th>{language === 'vi' ? 'Tên tổ chức' : 'Organization'}</th>
-                  <th>{language === 'vi' ? 'Người đại diện' : 'Representative'}</th>
+                  <th>{language === 'vi' ? 'Loại hình' : 'Category'}</th>
                   <th>{language === 'vi' ? 'Ngày nộp' : 'Submitted Date'}</th>
                   <th>{language === 'vi' ? 'Nội dung đăng ký' : 'Application Summary'}</th>
                   <th>{language === 'vi' ? 'Trạng thái' : 'Status'}</th>
@@ -346,17 +358,22 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                       <strong style={{ color: '#172421' }}>{pa.orgName}</strong>
                     </td>
                     <td>
-                      <div>{pa.rep}</div>
-                      <span style={{ fontSize: '0.74rem', color: '#637771' }}>{pa.phone}</span>
+                      <span className="org-chip">{pa.categoryCode}</span>
                     </td>
                     <td>{pa.date}</td>
                     <td style={{ maxWidth: '320px', fontSize: '0.82rem', color: '#556B65' }}>
-                      {pa.desc}
+                      <div>{pa.applicationNote || 'Không có ghi chú đăng ký.'}</div>
+                      {pa.reviewNote && (
+                        <div style={{ marginTop: '0.35rem', color: '#7C5E1B' }}>
+                          Phản hồi: {pa.reviewNote}
+                        </div>
+                      )}
                     </td>
                     <td>
                       {pa.status === 'approved' && <span className="org-chip approved">● Đã duyệt</span>}
                       {pa.status === 'pending' && <span className="org-chip pending">● Chờ duyệt</span>}
                       {pa.status === 'rejected' && <span className="org-chip rejected">● Đã từ chối</span>}
+                      {pa.status === 'withdrawn' && <span className="org-chip">● Đã rút</span>}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       {pa.status === 'pending' ? (

@@ -1,13 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  CalendarDays, 
   Store, 
   Layers, 
-  Users, 
   ArrowRight, 
   Clock, 
-  CheckCircle2, 
   AlertCircle, 
   FileText,
   PlusCircle,
@@ -45,6 +42,28 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   onOpenAttendanceModal,
 }) => {
   const proposedActivitiesCount = activities.length;
+  const applicationStatus = {
+    pending: {
+      className: 'pending',
+      labelVi: 'Đang chờ xét duyệt',
+      labelEn: 'Pending review',
+    },
+    approved: {
+      className: 'approved',
+      labelVi: 'Đã được chấp thuận',
+      labelEn: 'Approved',
+    },
+    rejected: {
+      className: 'rejected',
+      labelVi: 'Đã bị từ chối',
+      labelEn: 'Rejected',
+    },
+    withdrawn: {
+      className: 'withdrawn',
+      labelVi: 'Đã rút hồ sơ',
+      labelEn: 'Withdrawn',
+    },
+  }[activeEvent.status];
 
   return (
     <div className="partner-dashboard-page">
@@ -98,8 +117,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
               <span>📍 {activeEvent.location}</span>
             </div>
             <div>
-              <span className="status-badge approved">
-                ✓ {language === 'vi' ? 'Đã được chấp thuận' : 'Approved'}
+              <span className={`status-badge ${applicationStatus.className}`}>
+                {language === 'vi' ? applicationStatus.labelVi : applicationStatus.labelEn}
               </span>
             </div>
           </div>

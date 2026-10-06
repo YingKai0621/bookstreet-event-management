@@ -1040,3 +1040,62 @@
 
 
 
+.partner-card {
+  background: #ffffff;
+  border: 1px solid #e2eae5;
+  border-radius: 14px;
+}
+
+.partner-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cfdad5;
+  border-radius: 9px;
+  padding: 0.7rem 0.8rem;
+  color: #172421;
+  background: #ffffff;
+  font: inherit;
+  resize: vertical;
+}
+
+.partner-card textarea:focus {
+  border-color: #17382e;
+  outline: 2px solid rgba(23, 56, 46, 0.12);
+}
+
+.partner-card textarea:disabled {
+  background: #f3f5f4;
+  cursor: not-allowed;
+}
+
+.partner-form-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.partner-form-alert.error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.partner-form-alert.success {
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.partner-empty-state {
+  padding: 1.25rem;
+  color: #637771;
+  text-align: center;
+  background: #ffffff;
+  border: 1px dashed #cfdad5;
+  border-radius: 12px;
+}

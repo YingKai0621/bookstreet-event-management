@@ -73,7 +73,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase();
     return { id: String(user?.userId || ''), name: fullName, role: 'ORGANIZER', department: 'Ban Tổ Chức Sự Kiện', organization: 'Đường Sách TP.HCM', email: user?.email || '', phone: '', avatarInitials: initials };
   });
-  const [partnerApplications] = useState<OrganizerPartnerApplication[]>([]);
+  const [partnerApplications, setPartnerApplications] = useState<OrganizerPartnerApplication[]>([]);
   const [proposalList] = useState<any[]>([]);
   const [eventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
@@ -105,6 +105,32 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     organizerApi.getEvent(selectedEventId).then(event => {
       setEventsList(current => current.map(item => item.id === event.id ? event : item));
     }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedEventId) {
+      setPartnerApplications([]);
+      return;
+    }
+
+    const refreshApplications = () => {
+      void organizerApi.getPartnerApplications(selectedEventId)
+        .then(setPartnerApplications)
+        .catch(error => setActionError(
+          error instanceof Error ? error.message : 'Không tải được hồ sơ đối tác.',
+        ));
+    };
+
+    refreshApplications();
+    const intervalId = window.setInterval(refreshApplications, 15000);
+    window.addEventListener('focus', refreshApplications);
+    window.addEventListener('duongsach:data-changed', refreshApplications);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshApplications);
+      window.removeEventListener('duongsach:data-changed', refreshApplications);
+    };
   }, [selectedEventId]);
 
   // Unread notifications count
@@ -171,16 +197,32 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     return result;
   };
 
-  const handleApprovePartnerApplication = async (applicationId: string) => {
-    await organizerApi.approvePartnerApplication(applicationId);
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
+  const handleApprovePartnerApplication = async (
+    applicationId: string,
+    reviewNote = '',
+  ) => {
+    if (!selectedEventId) return;
+    setActionError('');
+    try {
+      await organizerApi.approvePartnerApplication(applicationId, reviewNote);
+      setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Không thể duyệt hồ sơ đối tác.');
+    }
   };
 
-  const handleRejectPartnerApplication = async (applicationId: string) => {
-    await organizerApi.rejectPartnerApplication(applicationId, 'Hồ sơ chưa đáp ứng đầy đủ yêu cầu tham gia sự kiện.');
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
+  const handleRejectPartnerApplication = async (
+    applicationId: string,
+    reviewNote: string,
+  ) => {
+    if (!selectedEventId) return;
+    setActionError('');
+    try {
+      await organizerApi.rejectPartnerApplication(applicationId, reviewNote);
+      setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Không thể từ chối hồ sơ đối tác.');
+    }
   };
 
   const handleApproveProposal = async (proposalId: string) => {

@@ -197,14 +197,21 @@ export function App() {
 
   useEffect(() => {
     if (!isPartnerAuthenticated) return;
-    partnerApi.getProfile()
-      .then(organization => {
-        setPartnerOrg(organization);
-        setPartnerApp(null); setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
+    Promise.all([
+      partnerApi.getProfile(),
+      partnerApi.getApplications(),
+    ])
+      .then(([organization, applications]) => {
+        setPartnerOrg(organization ? {
+          ...organization,
+          representativeName: authenticatedUser?.fullName || '',
+        } : null);
+        setPartnerApp(applications[0] || null);
+        setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
         setPartnerBooths([]); _setPartnerReports(null); setPartnerEventLocations([]);
       })
       .catch(error => console.warn('Could not fetch partner data', error));
-  }, [isPartnerAuthenticated, dataRevision]);
+  }, [authenticatedUser?.fullName, isPartnerAuthenticated, dataRevision]);
 
   // Participant Action Handlers
   const handleRegisterActivity = async (activityId: string) => {
@@ -518,10 +525,11 @@ export function App() {
     }
 
     const visiblePartnerOrg: PartnerOrganization = partnerOrg || {
-      id: authenticatedUser ? String(authenticatedUser.userId) : '',
+      id: '',
       name: authenticatedUser?.fullName || 'Đối tác', shortDesc: '',
+      categoryCode: 'OTHER',
       representativeName: authenticatedUser?.fullName || '', email: authenticatedUser?.email || '',
-      phone: '', address: '', website: '', categories: [],
+      phone: '', address: '', website: '', categories: [], status: '',
     };
 
     const assignedBooth = partnerBooths.find(b => b.assignedOrgId === visiblePartnerOrg.id);
@@ -553,17 +561,13 @@ export function App() {
           <Route path="/partner/events" element={
             <EventApplicationPage
               language={language}
-              organization={visiblePartnerOrg}
-              activeApplication={partnerApp}
-              assets={partnerAssets}
+              organization={partnerOrg}
             />
           } />
           <Route path="/partner/events/apply" element={
             <EventApplicationPage
               language={language}
-              organization={visiblePartnerOrg}
-              activeApplication={partnerApp}
-              assets={partnerAssets}
+              organization={partnerOrg}
             />
           } />
           <Route path="/partner/booths" element={
@@ -620,7 +624,16 @@ export function App() {
             <PartnerProfilePage
               language={language}
               organization={visiblePartnerOrg}
-              onUpdateOrg={async (updated) => setPartnerOrg(await partnerApi.updateProfile(updated))}
+              onUpdateOrg={async (updated) => {
+                const savedOrganization = await partnerApi.updateProfile({
+                  ...visiblePartnerOrg,
+                  ...updated,
+                });
+                setPartnerOrg({
+                  ...savedOrganization,
+                  representativeName: authenticatedUser?.fullName || '',
+                });
+              }}
             />
           } />
         </Routes>
