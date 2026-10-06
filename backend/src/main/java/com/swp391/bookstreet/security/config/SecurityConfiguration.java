@@ -16,11 +16,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 public class SecurityConfiguration {
@@ -46,24 +56,72 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-        return new ChangeSessionIdAuthenticationStrategy();
+    CsrfTokenRepository csrfTokenRepository(BrowserSecurityProperties properties) {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieCustomizer(cookieBuilder -> cookieBuilder
+                .secure(properties.isSessionCookieSecure())
+                .sameSite(properties.getSessionCookieSameSite())
+        );
+        return repository;
     }
 
     @Bean
-    CookieSerializer sessionCookieSerializer() {
+    SessionAuthenticationStrategy sessionAuthenticationStrategy(
+            CsrfTokenRepository csrfTokenRepository
+    ) {
+        ChangeSessionIdAuthenticationStrategy changeSessionIdStrategy =
+                new ChangeSessionIdAuthenticationStrategy();
+        CsrfAuthenticationStrategy csrfAuthenticationStrategy =
+                new CsrfAuthenticationStrategy(csrfTokenRepository);
+
+        return new CompositeSessionAuthenticationStrategy(List.of(
+                changeSessionIdStrategy,
+                csrfAuthenticationStrategy
+        ));
+    }
+
+    @Bean
+    CookieSerializer sessionCookieSerializer(BrowserSecurityProperties properties) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setCookieName("SESSION");
         cookieSerializer.setCookiePath("/");
         cookieSerializer.setUseHttpOnlyCookie(true);
-        cookieSerializer.setSameSite("Lax");
+        cookieSerializer.setUseSecureCookie(properties.isSessionCookieSecure());
+        cookieSerializer.setSameSite(properties.getSessionCookieSameSite());
         return cookieSerializer;
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(BrowserSecurityProperties properties) {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(properties.getAllowedOrigins());
+        configuration.setAllowedMethods(List.of(
+                HttpMethod.GET.name(),
+                HttpMethod.POST.name(),
+                HttpMethod.PUT.name(),
+                HttpMethod.PATCH.name(),
+                HttpMethod.DELETE.name(),
+                HttpMethod.OPTIONS.name()
+        ));
+        configuration.setAllowedHeaders(List.of(
+                "Accept",
+                "Content-Type",
+                "X-XSRF-TOKEN"
+        ));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
     }
 
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
+            CsrfTokenRepository csrfTokenRepository,
+            CorsConfigurationSource corsConfigurationSource,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
@@ -71,12 +129,22 @@ public class SecurityConfiguration {
                 .securityContextRepository(securityContextRepository)
         );
 
-        http.csrf(csrf -> csrf.spa());
+        CsrfTokenRequestAttributeHandler csrfRequestHandler =
+                new CsrfTokenRequestAttributeHandler();
+        csrfRequestHandler.setCsrfRequestAttributeName(null);
+
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokenRepository)
+                .csrfTokenRequestHandler(csrfRequestHandler)
+        );
+
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource));
 
         http.authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",
+                        "/api/v1/auth/csrf",
                         "/api/v1/auth/email-verification/confirm",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",

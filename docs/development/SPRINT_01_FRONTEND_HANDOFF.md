@@ -9,16 +9,18 @@ cách chạy, thứ tự tích hợp và những điểm chưa khớp trong code
 Backend Sprint 1 đã hoàn thành và đã được kiểm thử độc lập. Sprint chỉ được xem
 là hoàn tất toàn bộ sau khi frontend gọi API thật và luồng demo end-to-end đạt.
 
-### Việc backend còn thiếu trước khi kiểm thử hoàn chỉnh trên trình duyệt
+### Browser security đã sẵn sàng để tích hợp
 
-Browser Security Contract đã được duyệt nhưng mới triển khai một phần:
+Backend đã triển khai Browser Security Contract:
 
-- Chưa có endpoint `GET /api/v1/auth/csrf`.
-- Chưa có CORS allowlist theo môi trường cho `http://localhost:5173`.
+- Có endpoint public `GET /api/v1/auth/csrf`.
+- Có CORS allowlist theo môi trường, mặc định local là `http://localhost:5173`.
+- Session cookie có thể cấu hình `Secure` và `SameSite` theo môi trường.
+- Kiểm thử tích hợp đã bao phủ cookie, CORS, CSRF và việc đổi token sau
+  login/logout.
 
-Đội frontend có thể triển khai màn hình, kiểu dữ liệu và API client ngay. Tuy
-nhiên, không nên xem browser integration là hoàn tất cho đến khi backend bổ sung
-hai phần trên và các kiểm thử CORS/CSRF tương ứng chạy đạt.
+Đội frontend có thể bắt đầu tích hợp browser end-to-end. Sprint chỉ đóng hoàn
+toàn sau khi luồng thực tế qua frontend, backend, Redis và PostgreSQL chạy đạt.
 
 ## 2. Tài liệu nguồn phải đọc
 
@@ -71,10 +73,10 @@ tiếp tới PostgreSQL hoặc Redis; frontend chỉ gọi HTTP API của backen
 `frontend/vite.config.ts` hiện proxy `/api` sang `http://localhost:4000`, là cấu
 hình cũ. Backend Spring Boot hiện chạy tại `http://localhost:8080`.
 
-Khi browser-security follow-up chưa hoàn thành, cách local ít vướng CORS nhất là
-giữ request theo đường dẫn tương đối `/api/v1/...` và đổi Vite proxy sang cổng
-`8080`. Khi gọi trực tiếp backend khác origin, backend phải hoàn thành CORS
-allowlist trước.
+Cách local đơn giản là giữ request theo đường dẫn tương đối `/api/v1/...` và đổi
+Vite proxy sang cổng `8080`. Frontend cũng có thể gọi trực tiếp
+`http://localhost:8080` từ origin đã được cấu hình trong `CORS_ALLOWED_ORIGINS`;
+khi đó mọi request cần cookie phải dùng `credentials: "include"`.
 
 ### 4.2 Session cookie, không phải JWT
 
@@ -144,8 +146,7 @@ Security Contract:
 4. Lấy token mới sau login và logout.
 5. Khi gặp lỗi CSRF 403, chỉ refresh token và retry tối đa một lần.
 
-Luồng này chỉ hoạt động đầy đủ sau khi backend bổ sung endpoint CSRF nói trên.
-Không tắt CSRF để làm cho frontend chạy tạm.
+Backend đã hỗ trợ đầy đủ luồng này. Không tắt CSRF để làm cho frontend chạy tạm.
 
 ## 6. Endpoint theo màn hình Sprint 1
 
@@ -283,8 +284,8 @@ mock data với dữ liệu trả từ backend Sprint 1.
 - Frontend gọi cổng `4000`: sửa proxy cũ để trỏ tới backend cổng `8080`.
 - Login thành công nhưng `/me` trả 401: kiểm tra `credentials: "include"` và cookie.
 - State-changing request trả 403: kiểm tra role, email verification và CSRF token.
-- Browser báo CORS: backend browser-security follow-up chưa hoàn thành hoặc origin
-  chưa nằm trong allowlist.
+- Browser báo CORS: kiểm tra origin frontend có nằm trong `CORS_ALLOWED_ORIGINS`
+  và backend đã được khởi động lại sau khi đổi cấu hình hay chưa.
 - Application list trả `INVALID_SORT`: dùng đúng `sort=field,direction` và field
   trong danh sách cho phép.
 

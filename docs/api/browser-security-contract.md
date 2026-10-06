@@ -3,7 +3,7 @@
 ## 1 Status and scope
 
 - Decision status: approved design.
-- Implementation status: partially implemented.
+- Implementation status: implemented and covered by backend integration tests.
 - This is a cross-cutting contract for the browser frontend and every session-authenticated backend API.
 - It can be implemented before the final UI because it depends on deployment origins and cookie policy, not page design.
 

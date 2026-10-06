@@ -2,6 +2,7 @@ package com.swp391.bookstreet.auth.controller;
 
 import com.swp391.bookstreet.auth.dto.AccountResponse;
 import com.swp391.bookstreet.auth.dto.ConfirmEmailVerificationRequest;
+import com.swp391.bookstreet.auth.dto.CsrfTokenResponse;
 import com.swp391.bookstreet.auth.dto.LoginRequest;
 import com.swp391.bookstreet.auth.dto.LoginResponse;
 import com.swp391.bookstreet.auth.dto.RegisterRequest;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -98,5 +100,13 @@ public class AuthController {
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
         return authService.getCurrentAccount(authenticatedUser.getUserId());
+    }
+
+    @GetMapping("/csrf")
+    public CsrfTokenResponse getCsrfToken(CsrfToken csrfToken) {
+        return new CsrfTokenResponse(
+                csrfToken.getHeaderName(),
+                csrfToken.getToken()
+        );
     }
 }

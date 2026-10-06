@@ -14,9 +14,10 @@ Deliver the first end-to-end business slice: account creation and access, basic 
 ## Current completion state
 
 - The Sprint 1 backend scope is implemented and merged into `main` through merge commit `7890278`.
-- Backend verification passes with 165 tests, 0 failures, 0 errors and 0 skipped tests.
+- The latest local Maven verification discovered 172 tests with 0 failures and 0 errors; 24 dedicated Event tests were skipped because `EVENT_TEST_DATABASE_URL` was not configured locally and are enabled by CI.
 - Flyway validates migrations V1 through V4 and Hibernate validates the mapped schema.
 - Authentication, Event management, Partner Organization and Partner application flows were manually exercised through Swagger UI.
+- Browser Session security now includes the CSRF bootstrap endpoint, environment-driven CORS allowlist and configurable Session cookie attributes.
 - The overall Sprint remains open until the frontend calls the real backend and the complete demo flow is verified end to end.
 - Detailed backend evidence and deferred work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
 - Frontend setup, integration gaps and the end-to-end checklist are recorded in `docs/development/SPRINT_01_FRONTEND_HANDOFF.md`.
