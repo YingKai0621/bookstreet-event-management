@@ -1,17 +1,19 @@
 import { apiClient } from './apiClient';
+import type {
+  AccountResponse,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+} from '../types/auth';
 
 export const authApi = {
-  login: (data: { email: string; password: string }) => 
-    apiClient.post<{ user: any; accessToken: string; refreshToken: string }>('/auth/login', data),
-  getDemoAccounts: () => apiClient.get<Array<{ role: 'participant' | 'partner' | 'organizer' | 'admin'; email: string }>>('/auth/demo-accounts'),
-  demoLogin: (role: 'participant' | 'partner' | 'organizer' | 'admin') =>
-    apiClient.post<{ user: any; accessToken: string; refreshToken: string }>('/auth/demo-login', { role }),
+  login: (request: LoginRequest) =>
+    apiClient.post<LoginResponse>('/auth/login', request),
 
-  register: (data: { email: string; password: string; fullName: string; phone?: string; role?: string }) => 
-    apiClient.post<{ user: any; accessToken: string; refreshToken: string }>('/auth/register', data),
+  register: (request: RegisterRequest) =>
+    apiClient.post<AccountResponse>('/auth/register', request),
 
-  getMe: () => apiClient.get<{ user: any }>('/auth/me'),
+  getMe: () => apiClient.get<AccountResponse>('/auth/me'),
 
-  logout: (refreshToken?: string) => apiClient.post('/auth/logout', { refreshToken }),
-  forgotPassword: (email: string) => apiClient.post('/auth/forgot-password', { email }),
+  logout: () => apiClient.post<void>('/auth/logout'),
 };

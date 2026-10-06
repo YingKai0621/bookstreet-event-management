@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Language } from '../../types';
-import { authApi } from '../../services/authApi';
+import { useAuth } from '../../auth/useAuth';
 import '../PortalLoginPage.css';
 
 interface PartnerLoginPageProps {
@@ -25,6 +25,7 @@ export const PartnerLoginPage: React.FC<PartnerLoginPageProps> = ({
   language,
   onLoginSuccess,
 }) => {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,26 +44,19 @@ export const PartnerLoginPage: React.FC<PartnerLoginPageProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await authApi.login({
-        email: username.trim(),
-        password: password,
+      const account = await login({
+        username: username.trim(),
+        password,
       });
 
-      const { user, accessToken } = res;
-      if (user.primaryRole !== 'partner' && user.primaryRole !== 'admin') {
+      if (!account.roles.includes('PARTNER')) {
         throw new Error(language === 'vi' ? 'Tài khoản không thuộc vai trò Đối tác/Gian hàng' : 'Unauthorized for Partner Portal');
       }
 
-      localStorage.setItem('duongsach_token', accessToken);
-      sessionStorage.setItem('duongsach_token', accessToken);
-      localStorage.setItem('duongsach_user', JSON.stringify(user));
-      sessionStorage.setItem('duongsach_partner_auth_v1', 'authenticated_partner');
-      localStorage.setItem('duongsach_partner_auth_v1', 'true');
-
       onLoginSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (language === 'vi'
+        (err instanceof Error && err.message) || (language === 'vi'
           ? 'Tên đăng nhập hoặc mật khẩu đối tác chưa chính xác trong hệ thống.'
           : 'Invalid credentials in database.')
       );

@@ -39,7 +39,7 @@ import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPa
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
 import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
 import { AdminPortal } from './components/AdminPortal';
-import { AdminLoginPage, ADMIN_SESSION_KEY } from './pages/admin/AdminLoginPage';
+import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { 
   Language, 
   EventItem, 
@@ -62,37 +62,17 @@ import {
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
+import { useAuth } from './auth/useAuth';
 import './App.css';
 
-const PORTAL_SESSION_KEY = 'duongsach_portal_auth';
-const PARTICIPANT_SESSION_KEY = 'duongsach_participant_auth_v1';
 const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,
 };
 
-const storedSessionRole = (): string => {
-  try {
-    const raw = localStorage.getItem('duongsach_user') || sessionStorage.getItem('duongsach_user');
-    return raw ? String(JSON.parse(raw).primaryRole || '') : '';
-  } catch {
-    return '';
-  }
-};
-
-const storedSessionUser = (): { id?: string; fullName?: string; email?: string } => {
-  try {
-    const raw = localStorage.getItem('duongsach_user') || sessionStorage.getItem('duongsach_user');
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
-
-const hasAccessToken = () => Boolean(localStorage.getItem('duongsach_token') || sessionStorage.getItem('duongsach_token'));
-
 export function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { status: authenticationStatus, user: authenticatedUser, logout } = useAuth();
   const isHeritage = /^\/di-san(?:\/|$)/.test(location.pathname);
   const isBooths = /^\/gian-hang(?:\/|$)/.test(location.pathname);
   const isEvents = /^\/su-kien(?:\/|$)/.test(location.pathname);
@@ -103,30 +83,11 @@ export function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
   const isPortalRoute = location.pathname === '/portal' || location.pathname === '/organizer';
-  const PARTNER_SESSION_KEY = 'duongsach_partner_auth_v1';
-  const [isPortalAuthenticated, setIsPortalAuthenticated] = useState<boolean>(() => {
-    return hasAccessToken() && ['organizer', 'admin'].includes(storedSessionRole());
-  });
-  const [isParticipantAuthenticated, setIsParticipantAuthenticated] = useState<boolean>(() => {
-    return hasAccessToken() && storedSessionRole() === 'participant';
-  });
-  const [isPartnerAuthenticated, setIsPartnerAuthenticated] = useState<boolean>(() => {
-    return hasAccessToken() && ['partner', 'admin'].includes(storedSessionRole());
-  });
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return hasAccessToken() && storedSessionRole() === 'admin';
-  });
-
-  useEffect(() => {
-    const handleUnauthorized = () => {
-      setIsAdminAuthenticated(false);
-      setIsPortalAuthenticated(false);
-      setIsPartnerAuthenticated(false);
-      setIsParticipantAuthenticated(false);
-    };
-    window.addEventListener('auth:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, []);
+  const isAuthenticated = authenticationStatus === 'authenticated';
+  const isPortalAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ORGANIZER'));
+  const isParticipantAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
+  const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
+  const isAdminAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ADMIN'));
 
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
@@ -218,38 +179,21 @@ export function App() {
     };
   }, []);
 
-  const [participantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
+  const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
 
-  // Database is the only source of truth for participant data.
-  useEffect(() => {
-    if (!isParticipantAuthenticated) return;
-
-    participantApi.getProfile().then(profile => {
-      if (profile) {
-        setParticipantProfile(profile);
-      }
-    }).catch(err => console.warn('Could not fetch participant profile', err));
-
-    participantApi.getBadges().then(badges => {
-      setParticipantBadges(badges);
-    }).catch(err => console.warn('Could not fetch participant badges', err));
-
-    participantApi.getCertificates().then(certs => {
-      setParticipantCertificates(certs);
-    }).catch(err => console.warn('Could not fetch participant certs', err));
-
-    participantApi.getMyActivities().then(acts => {
-      setParticipantActivities(acts);
-    }).catch(err => console.warn('Could not fetch participant activities', err));
-
-    participantApi.getEvents().then(evts => {
-      setParticipantEvents(evts);
-    }).catch(err => console.warn('Could not fetch participant events', err));
-  }, [isParticipantAuthenticated, dataRevision]);
+  // Sprint 1 exposes the authenticated account, but not the later Participant feature APIs.
+  const participantProfile: ParticipantProfile = isParticipantAuthenticated && authenticatedUser
+    ? {
+      ...EMPTY_PARTICIPANT_PROFILE,
+      id: String(authenticatedUser.userId),
+      name: authenticatedUser.fullName,
+      email: authenticatedUser.email || '',
+    }
+    : storedParticipantProfile;
 
   useEffect(() => {
     if (!isPartnerAuthenticated) return;
@@ -312,27 +256,13 @@ export function App() {
     window.dispatchEvent(new Event('participant:data-changed'));
   };
 
-  const handleParticipantLogin = () => {
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsPortalAuthenticated(false);
-    setIsPartnerAuthenticated(false);
-    setIsAdminAuthenticated(false);
-
-    sessionStorage.setItem(PARTICIPANT_SESSION_KEY, 'true');
-    localStorage.setItem(PARTICIPANT_SESSION_KEY, 'true');
-    setIsParticipantAuthenticated(true);
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
   };
 
   const handleParticipantLogout = () => {
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    setIsParticipantAuthenticated(false);
-    navigate('/');
+    void handleLogout();
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -363,45 +293,21 @@ export function App() {
     }, 1200);
   };
 
-  const handlePortalLoginSuccess = () => {
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsParticipantAuthenticated(false);
-    setIsPartnerAuthenticated(false);
-    setIsAdminAuthenticated(false);
-
-    sessionStorage.setItem(PORTAL_SESSION_KEY, 'authenticated_bql');
-    localStorage.setItem(PORTAL_SESSION_KEY, 'authenticated_bql');
-    setIsPortalAuthenticated(true);
-  };
-
   const handlePortalLogout = () => {
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsPortalAuthenticated(false);
-    setIsParticipantAuthenticated(false);
-    setIsPartnerAuthenticated(false);
-    setIsAdminAuthenticated(false);
-    navigate('/');
+    void handleLogout();
   };
 
   // NẾU ĐANG TRUY CẬP ROUTE /portal DÀNH RIÊNG CHO BAN QUẢN LÝ
   if (isPortalRoute) {
+    if (authenticationStatus === 'loading') {
+      return <p className="app-loading-state">Đang kiểm tra phiên đăng nhập...</p>;
+    }
+
     if (!isPortalAuthenticated) {
       return (
         <PortalLoginPage 
           language={language}
-          onLoginSuccess={handlePortalLoginSuccess}
+          onLoginSuccess={() => navigate('/portal')}
         />
       );
     }
@@ -422,7 +328,6 @@ export function App() {
       <LoginPage 
         language={language}
         onLoginSuccess={(targetUrl?: string) => {
-          handleParticipantLogin();
           navigate(targetUrl || '/');
         }}
       />
@@ -434,19 +339,19 @@ export function App() {
     return (
       <RegisterPage 
         language={language}
-        onRegisterSuccess={(targetUrl?: string) => {
-          handleParticipantLogin();
-          navigate(targetUrl || '/');
-        }}
+        onRegisterSuccess={() => navigate('/login')}
       />
     );
   }
 
   // NẾU ĐANG TRUY CẬP KHU VỰC ĐỘC GIẢ / PARTICIPANT PORTAL (THEO BẢN PHÁC THẢO 9 MÀN HÌNH)
   if (isParticipantRoute) {
+    if (authenticationStatus === 'loading') {
+      return <p className="app-loading-state">Đang kiểm tra phiên đăng nhập...</p>;
+    }
+
     if (!isParticipantAuthenticated) {
-      navigate('/login', { state: { from: location.pathname } });
-      return null;
+      return <Navigate to="/login" state={{ from: location.pathname }} replace />;
     }
 
     return (
@@ -594,52 +499,28 @@ export function App() {
   };
 
   const handlePartnerLogout = () => {
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsPartnerAuthenticated(false);
-    setIsPortalAuthenticated(false);
-    setIsParticipantAuthenticated(false);
-    setIsAdminAuthenticated(false);
-    navigate('/');
-  };
-
-  const handlePartnerLogin = () => {
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setIsPortalAuthenticated(false);
-    setIsParticipantAuthenticated(false);
-    setIsAdminAuthenticated(false);
-
-    sessionStorage.setItem(PARTNER_SESSION_KEY, 'authenticated_partner');
-    localStorage.setItem(PARTNER_SESSION_KEY, 'true');
-    setIsPartnerAuthenticated(true);
+    void handleLogout();
   };
 
   // NẾU ĐANG TRUY CẬP KHU VỰC ĐỐI TÁC / PARTNER EXHIBITOR PORTAL (THEO BẢN PHÁC THẢO 10 MÀN HÌNH)
   if (isPartnerRoute) {
+    if (authenticationStatus === 'loading') {
+      return <p className="app-loading-state">Đang kiểm tra phiên đăng nhập...</p>;
+    }
+
     if (!isPartnerAuthenticated) {
       return (
         <PartnerLoginPage
           language={language}
-          onLoginSuccess={handlePartnerLogin}
+          onLoginSuccess={() => navigate('/partner')}
         />
       );
     }
 
-    const sessionUser = storedSessionUser();
     const visiblePartnerOrg: PartnerOrganization = partnerOrg || {
-      id: sessionUser.id || '', name: sessionUser.fullName || 'Đối tác', shortDesc: '',
-      representativeName: sessionUser.fullName || '', email: sessionUser.email || '',
+      id: authenticatedUser ? String(authenticatedUser.userId) : '',
+      name: authenticatedUser?.fullName || 'Đối tác', shortDesc: '',
+      representativeName: authenticatedUser?.fullName || '', email: authenticatedUser?.email || '',
       phone: '', address: '', website: '', categories: [],
     };
 
@@ -760,45 +641,21 @@ export function App() {
   }
 
   // --- Admin Portal Handlers & Routing ---
-  const handleAdminLoginSuccess = () => {
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    setIsPortalAuthenticated(false);
-    setIsParticipantAuthenticated(false);
-    setIsPartnerAuthenticated(false);
-
-    sessionStorage.setItem(ADMIN_SESSION_KEY, 'authenticated_admin');
-    localStorage.setItem(ADMIN_SESSION_KEY, 'true');
-    setIsAdminAuthenticated(true);
-  };
-
   const handleAdminLogout = () => {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    sessionStorage.removeItem(PORTAL_SESSION_KEY);
-    localStorage.removeItem(PORTAL_SESSION_KEY);
-    sessionStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    localStorage.removeItem(PARTICIPANT_SESSION_KEY);
-    sessionStorage.removeItem(PARTNER_SESSION_KEY);
-    localStorage.removeItem(PARTNER_SESSION_KEY);
-    setIsAdminAuthenticated(false);
-    setIsPortalAuthenticated(false);
-    setIsParticipantAuthenticated(false);
-    setIsPartnerAuthenticated(false);
-    navigate('/');
+    void handleLogout();
   };
 
   // NẾU ĐANG TRUY CẬP KHU VỰC QUẢN TRỊ VIÊN HỆ THỐNG / ADMIN PORTAL (/admin)
   if (isAdminRoute) {
+    if (authenticationStatus === 'loading') {
+      return <p className="app-loading-state">Đang kiểm tra phiên đăng nhập...</p>;
+    }
+
     if (!isAdminAuthenticated) {
       return (
         <AdminLoginPage
           language={language}
-          onLoginSuccess={handleAdminLoginSuccess}
+          onLoginSuccess={() => navigate('/admin')}
         />
       );
     }

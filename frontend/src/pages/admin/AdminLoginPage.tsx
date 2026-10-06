@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Language } from '../../types';
-import { authApi } from '../../services/authApi';
+import { useAuth } from '../../auth/useAuth';
 import './AdminLoginPage.css';
 
 interface AdminLoginPageProps {
@@ -25,6 +25,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   language,
   onLoginSuccess,
 }) => {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,26 +44,19 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await authApi.login({
-        email: username.trim(),
-        password: password,
+      const account = await login({
+        username: username.trim(),
+        password,
       });
 
-      const { user, accessToken } = res;
-      if (user.primaryRole !== 'admin') {
+      if (!account.roles.includes('ADMIN')) {
         throw new Error(language === 'vi' ? 'Tài khoản không có quyền Quản trị viên hệ thống' : 'Unauthorized for Admin Portal');
       }
 
-      localStorage.setItem('duongsach_token', accessToken);
-      sessionStorage.setItem('duongsach_token', accessToken);
-      localStorage.setItem('duongsach_user', JSON.stringify(user));
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'authenticated_admin');
-      localStorage.setItem(ADMIN_SESSION_KEY, 'true');
-
       onLoginSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (language === 'vi'
+        (err instanceof Error && err.message) || (language === 'vi'
           ? 'Tài khoản hoặc mật khẩu quản trị viên không chính xác trong hệ thống.'
           : 'Invalid administrator credentials in database.')
       );

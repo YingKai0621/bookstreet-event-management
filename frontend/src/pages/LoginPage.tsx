@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Lock, 
   Mail, 
@@ -6,12 +6,12 @@ import {
   EyeOff, 
   ArrowRight, 
   ArrowLeft,
-  CheckCircle2,
   ShieldCheck
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Language } from '../types';
-import { authApi } from '../services/authApi';
+import { useAuth } from '../auth/useAuth';
+import type { AccountResponse } from '../types/auth';
 import { NotificationCallout } from '../components/ui/NotificationCallout';
 import './LoginPage.css';
 
@@ -23,73 +23,24 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const returnTarget = (location.state as { from?: string })?.from || '/';
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [forgotModalOpen, setForgotModalOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSuccess, setForgotSuccess] = useState(false);
-  const [demoAccounts, setDemoAccounts] = useState<Array<{ role: 'participant' | 'partner' | 'organizer' | 'admin'; email: string }>>([]);
-
-  useEffect(() => {
-    authApi.getDemoAccounts().then(setDemoAccounts).catch(() => setDemoAccounts([]));
-  }, []);
-
-  const completeLogin = (res: Awaited<ReturnType<typeof authApi.login>>) => {
-      const { user, accessToken } = res;
-      localStorage.setItem('duongsach_token', accessToken);
-      sessionStorage.setItem('duongsach_token', accessToken);
-      localStorage.setItem('duongsach_user', JSON.stringify(user));
-
-      sessionStorage.removeItem('duongsach_admin_auth_v1');
-      localStorage.removeItem('duongsach_admin_auth_v1');
-      sessionStorage.removeItem('duongsach_portal_auth');
-      localStorage.removeItem('duongsach_portal_auth');
-      sessionStorage.removeItem('duongsach_partner_auth_v1');
-      localStorage.removeItem('duongsach_partner_auth_v1');
-      sessionStorage.removeItem('duongsach_participant_auth_v1');
-      localStorage.removeItem('duongsach_participant_auth_v1');
-
-      if (user.primaryRole === 'admin') {
-        sessionStorage.setItem('duongsach_admin_auth_v1', 'authenticated_admin');
-        localStorage.setItem('duongsach_admin_auth_v1', 'true');
-        setSuccessMsg(language === 'vi' ? 'Đăng nhập Quản Trị Viên thành công!' : 'Signed in as Administrator!');
-        setTimeout(() => { navigate('/admin'); window.location.reload(); }, 500);
-      } else if (user.primaryRole === 'organizer') {
-        sessionStorage.setItem('duongsach_portal_auth', 'authenticated_bql');
-        localStorage.setItem('duongsach_portal_auth', 'authenticated_bql');
-        setSuccessMsg(language === 'vi' ? 'Đăng nhập Ban Quản Lý thành công!' : 'Signed in as Organizer!');
-        setTimeout(() => { navigate('/portal'); window.location.reload(); }, 500);
-      } else if (user.primaryRole === 'partner') {
-        sessionStorage.setItem('duongsach_partner_auth_v1', 'authenticated_partner');
-        localStorage.setItem('duongsach_partner_auth_v1', 'true');
-        setSuccessMsg(language === 'vi' ? 'Đăng nhập Đối tác thành công!' : 'Signed in as Partner!');
-        setTimeout(() => { navigate('/partner'); window.location.reload(); }, 500);
-      } else {
-        sessionStorage.setItem('duongsach_participant_auth_v1', 'true');
-        localStorage.setItem('duongsach_participant_auth_v1', 'true');
-        setSuccessMsg(language === 'vi' ? 'Đăng nhập Độc giả thành công!' : 'Signed in successfully!');
-        setTimeout(() => onLoginSuccess ? onLoginSuccess('/participant') : navigate('/participant'), 500);
-      }
-  };
-
-  const handleDemoLogin = async (role: 'participant' | 'partner' | 'organizer' | 'admin') => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    setIsLoading(true);
-    try {
-      completeLogin(await authApi.demoLogin(role));
-    } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'Không thể đăng nhập tài khoản demo từ database.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  function resolveDestination(account: AccountResponse): string {
+    if (returnTarget.startsWith('/admin') && account.roles.includes('ADMIN')) return returnTarget;
+    if ((returnTarget.startsWith('/portal') || returnTarget.startsWith('/organizer')) && account.roles.includes('ORGANIZER')) return returnTarget;
+    if (returnTarget.startsWith('/partner') && account.roles.includes('PARTNER')) return returnTarget;
+    if (returnTarget.startsWith('/participant') && account.roles.includes('PARTICIPANT')) return returnTarget;
+    if (account.roles.includes('ADMIN')) return '/admin';
+    if (account.roles.includes('ORGANIZER')) return '/portal';
+    if (account.roles.includes('PARTNER')) return '/partner';
+    return '/participant';
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,32 +59,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
     setIsLoading(true);
 
     try {
-      const res = await authApi.login({
-        email: identifier.trim(),
-        password: password,
+      const account = await login({
+        username: identifier.trim(),
+        password,
       });
 
-      completeLogin(res);
-    } catch (err: any) {
+      const destination = resolveDestination(account);
+      setSuccessMsg(language === 'vi' ? 'Đăng nhập thành công!' : 'Signed in successfully!');
+      window.setTimeout(() => {
+        if (onLoginSuccess) {
+          onLoginSuccess(destination);
+        } else {
+          navigate(destination);
+        }
+      }, 350);
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (language === 'vi'
+        (err instanceof Error && err.message) || (language === 'vi'
           ? 'Tài khoản hoặc mật khẩu không chính xác trong hệ thống.'
           : 'Invalid account credentials in database.')
       );
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleForgotSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (forgotEmail.trim()) {
-      try {
-        await authApi.forgotPassword(forgotEmail.trim());
-        setForgotSuccess(true);
-      } catch (error) {
-        setErrorMsg(error instanceof Error ? error.message : 'Không thể gửi yêu cầu đặt lại mật khẩu');
-      }
     }
   };
 
@@ -239,7 +186,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
             {/* Identifier Field */}
             <div className="auth-field">
               <label htmlFor="login-identifier">
-                {language === 'vi' ? 'Email hoặc Tên đăng nhập' : 'Email or Username'}
+                {language === 'vi' ? 'Tên đăng nhập' : 'Username'}
               </label>
               <div className="auth-input-wrap">
                 <Mail size={18} className="auth-input-icon" />
@@ -249,7 +196,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
                   required
                   autoFocus
                   autoComplete="username"
-                  placeholder={language === 'vi' ? 'vi-du@duongsach.vn' : 'name@domain.com'}
+                  placeholder={language === 'vi' ? 'Ví dụ: booklover' : 'e.g. booklover'}
                   value={identifier}
                   onChange={(e) => {
                     setIdentifier(e.target.value);
@@ -265,13 +212,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
                 <label htmlFor="login-password">
                   {language === 'vi' ? 'Mật khẩu' : 'Password'}
                 </label>
-                <button
-                  type="button"
-                  className="auth-link-btn"
-                  onClick={() => setForgotModalOpen(true)}
-                >
-                  {language === 'vi' ? 'Quên mật khẩu?' : 'Forgot password?'}
-                </button>
               </div>
 
               <div className="auth-input-wrap">
@@ -280,6 +220,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  maxLength={64}
                   autoComplete="current-password"
                   placeholder={language === 'vi' ? 'Nhập mật khẩu' : 'Enter password'}
                   value={password}
@@ -297,21 +238,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="auth-remember-row">
-              <label className="auth-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span className="auth-checkbox-custom"></span>
-                <span className="auth-checkbox-text">
-                  {language === 'vi' ? 'Ghi nhớ đăng nhập trên thiết bị này' : 'Remember me on this device'}
-                </span>
-              </label>
             </div>
 
             {/* Submit Button */}
@@ -334,33 +260,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
             </button>
 
           </form>
-
-          {demoAccounts.length > 0 && (
-            <div className="auth-quick-roles-container">
-              <div className="auth-quick-roles-divider"><span>✨ {language === 'vi' ? 'Đăng nhập nhanh để demo' : 'Quick demo sign-in'}</span></div>
-              <div className="auth-quick-roles-grid">
-                {demoAccounts.map(account => {
-                  const roleConfig: Record<string, { label: string; icon: string; color: string }> = {
-                    participant: { label: language === 'vi' ? 'Độc giả' : 'Reader', icon: '📖', color: '#5CD4A6' },
-                    partner: { label: language === 'vi' ? 'Đối tác' : 'Partner', icon: '🏪', color: '#F3C975' },
-                    organizer: { label: language === 'vi' ? 'Ban Quản Lý' : 'Organizer', icon: '🏛️', color: '#68B5FF' },
-                    admin: { label: language === 'vi' ? 'Quản Trị' : 'Admin', icon: '⚡', color: '#C084FC' }
-                  };
-                  const cfg = roleConfig[account.role] || { label: account.role, icon: '👤', color: '#E9BC63' };
-
-                  return (
-                    <button key={account.role} type="button" className="auth-quick-role-btn" disabled={isLoading} onClick={() => void handleDemoLogin(account.role)}>
-                      <span className="quick-role-badge">
-                        <span>{cfg.icon}</span>
-                        <span style={{ color: cfg.color }}>{cfg.label}</span>
-                      </span>
-                      <span className="quick-role-email">{account.email}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Footer Switching to Register */}
           <div className="auth-switch-section">
@@ -392,60 +291,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
         </div>
       </div>
 
-      {/* Forgot Password Dialog */}
-      {forgotModalOpen && (
-        <div className="auth-modal-backdrop" onClick={() => setForgotModalOpen(false)}>
-          <div className="auth-modal-card" onClick={(e) => e.stopPropagation()} role="dialog">
-            <h3 className="auth-modal-title">
-              {language === 'vi' ? 'Khôi phục mật khẩu' : 'Reset Password'}
-            </h3>
-            <p className="auth-modal-sub">
-              {language === 'vi'
-                ? 'Nhập địa chỉ email liên kết với tài khoản bạn đọc để nhận liên kết đặt lại mật khẩu.'
-                : 'Enter your registered reader email address to receive a password reset link.'}
-            </p>
-
-            {forgotSuccess ? (
-              <div className="auth-alert success">
-                <CheckCircle2 size={18} />
-                <span>
-                  {language === 'vi'
-                    ? 'Đã gửi hướng dẫn khôi phục qua email của bạn!'
-                    : 'Password reset instructions have been sent to your email!'}
-                </span>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotSubmit}>
-                <div className="auth-field" style={{ marginBottom: '1.25rem' }}>
-                  <div className="auth-input-wrap">
-                    <Mail size={18} className="auth-input-icon" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="email@example.com"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="auth-modal-actions">
-                  <button
-                    type="button"
-                    className="auth-modal-cancel"
-                    onClick={() => setForgotModalOpen(false)}
-                  >
-                    {language === 'vi' ? 'Đóng' : 'Cancel'}
-                  </button>
-                  <button type="submit" className="auth-modal-submit">
-                    {language === 'vi' ? 'Gửi liên kết' : 'Send Link'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

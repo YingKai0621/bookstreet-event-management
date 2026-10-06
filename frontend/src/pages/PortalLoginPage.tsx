@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Language } from '../types';
-import { authApi } from '../services/authApi';
+import { useAuth } from '../auth/useAuth';
 import { NotificationCallout } from '../components/ui/NotificationCallout';
 import './PortalLoginPage.css';
 
@@ -24,6 +24,7 @@ export const PortalLoginPage: React.FC<PortalLoginPageProps> = ({
   language,
   onLoginSuccess,
 }) => {
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,26 +43,19 @@ export const PortalLoginPage: React.FC<PortalLoginPageProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await authApi.login({
-        email: username.trim(),
-        password: password,
+      const account = await login({
+        username: username.trim(),
+        password,
       });
 
-      const { user, accessToken } = res;
-      if (user.primaryRole !== 'organizer' && user.primaryRole !== 'admin') {
+      if (!account.roles.includes('ORGANIZER')) {
         throw new Error(language === 'vi' ? 'Tài khoản không có quyền truy cập Cổng Ban Quản Lý' : 'Unauthorized for Management Portal');
       }
 
-      localStorage.setItem('duongsach_token', accessToken);
-      sessionStorage.setItem('duongsach_token', accessToken);
-      localStorage.setItem('duongsach_user', JSON.stringify(user));
-      sessionStorage.setItem('duongsach_portal_auth', 'authenticated_bql');
-      localStorage.setItem('duongsach_portal_auth', 'authenticated_bql');
-
       onLoginSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (language === 'vi'
+        (err instanceof Error && err.message) || (language === 'vi'
           ? 'Tên đăng nhập hoặc mật khẩu chưa chính xác trong hệ thống.'
           : 'Invalid credentials in database.')
       );
