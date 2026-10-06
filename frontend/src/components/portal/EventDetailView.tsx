@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -8,14 +8,10 @@ import {
   Store, 
   Layers, 
   Star, 
-  Send, 
   Download, 
   Map, 
-  CheckCircle2, 
-  Save,
   Check,
-  Eye,
-  EyeOff
+  Send
 } from 'lucide-react';
 import { Language } from '../../types';
 import { OrganizerEvent, OrganizerBoothItem, OrganizerActivityItem, OrganizerParticipantItem } from '../../types/organizer';
@@ -36,9 +32,8 @@ interface EventDetailViewProps {
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
   onNavigateToReports: () => void;
-  onUpdateEventSettings?: (eventId: string, updatedSettings: Partial<OrganizerEvent>) => void;
-  onTogglePublishEvent?: (eventId: string) => void;
-  onBroadcastEvent?: (eventId: string) => void | Promise<void>;
+  onEditEvent: (event: OrganizerEvent) => void;
+  onPublishEvent: (eventId: string) => void | Promise<void>;
 }
 
 export const EventDetailView: React.FC<EventDetailViewProps> = ({
@@ -56,25 +51,10 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onBack,
   onNavigateToBoothsMap,
   onNavigateToReports,
-  onUpdateEventSettings,
-  onTogglePublishEvent,
-  onBroadcastEvent
+  onEditEvent,
+  onPublishEvent
 }) => {
-  const isPub = event.isPublished ?? (event.status !== 'draft');
   const [activeTab, setActiveTab] = useState<'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings'>('overview');
-
-  // Event settings form state
-  const dateInputValue = (value?: string) => value ? value.slice(0, 10) : '';
-  const [boothDeadline, setBoothDeadline] = useState(dateInputValue(event.boothDeadline));
-  const [activityDeadline, setActivityDeadline] = useState(dateInputValue(event.activityDeadline));
-  const [participantDeadline, setParticipantDeadline] = useState(dateInputValue(event.participantDeadline));
-  const [savedSettingsSuccess, setSavedSettingsSuccess] = useState(false);
-
-  useEffect(() => {
-    setBoothDeadline(dateInputValue(event.boothDeadline));
-    setActivityDeadline(dateInputValue(event.activityDeadline));
-    setParticipantDeadline(dateInputValue(event.participantDeadline));
-  }, [event.id, event.boothDeadline, event.activityDeadline, event.participantDeadline]);
 
   const handleApprovePartner = (id: string) => {
     void onApprovePartnerApplication?.(id);
@@ -84,19 +64,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
     if (confirm(language === 'vi' ? 'Bạn có chắc muốn từ chối hồ sơ đối tác này?' : 'Reject this partner application?')) {
       void onRejectPartnerApplication?.(id);
     }
-  };
-
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onUpdateEventSettings) {
-      onUpdateEventSettings(event.id, {
-        boothDeadline,
-        activityDeadline,
-        participantDeadline,
-      });
-    }
-    setSavedSettingsSuccess(true);
-    setTimeout(() => setSavedSettingsSuccess(false), 2500);
   };
 
   return (
@@ -152,46 +119,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Toggle publish button */}
-            <button
-              type="button"
-              onClick={() => onTogglePublishEvent && onTogglePublishEvent(event.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: 650,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                background: isPub ? '#F0FDF4' : '#F9FAFB',
-                border: isPub ? '1.5px solid #16A34A' : '1.5px solid #9CA3AF',
-                color: isPub ? '#15803D' : '#4B5563'
-              }}
-              title={isPub 
-                ? (language === 'vi' ? 'Nhấn để ẩn sự kiện này khỏi Landing Page' : 'Click to hide from Landing Page') 
-                : (language === 'vi' ? 'Nhấn để công bố sự kiện này lên Landing Page' : 'Click to publish to Landing Page')
-              }
-            >
-              {isPub ? <Eye size={14} color="#15803D" /> : <EyeOff size={14} color="#4B5563" />}
-              <span>
-                {isPub 
-                  ? (language === 'vi' ? 'Đang công bố' : 'Published') 
-                  : (language === 'vi' ? 'Đang ẩn' : 'Hidden')
-                }
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-org-secondary"
-              onClick={() => setActiveTab('settings')}
-            >
-              <Edit3 size={15} />
-              <span>{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</span>
-            </button>
+            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => void onPublishEvent(event.id)}><Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}</button>}
+            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}><Edit3 size={15} />{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</button>}
           </div>
         </div>
 
@@ -359,16 +288,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                <button
-                  type="button"
-                  className="btn-org-secondary"
-                  style={{ justifyContent: 'flex-start', gap: '0.75rem' }}
-                  onClick={() => void onBroadcastEvent?.(event.id)}
-                >
-                  <Send size={15} color="#17382E" />
-                  <span>{language === 'vi' ? 'Gửi thông báo' : 'Broadcast Message'}</span>
-                </button>
-
                 <button
                   type="button"
                   className="btn-org-secondary"
@@ -635,82 +554,30 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         </div>
       )}
 
-      {/* TAB: CÀI ĐẶT (EVENT SETTINGS - DEADLINES & LIMITS) */}
       {activeTab === 'settings' && (
-        <form className="organizer-card" onSubmit={handleSaveSettings} style={{ maxWidth: '680px' }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: '0 0 0.5rem 0' }}>
-            {language === 'vi' ? 'Cài đặt thời hạn & Giới hạn vận hành' : 'Configurable Event Limits & Deadlines'}
-          </h2>
-          <p style={{ fontSize: '0.82rem', color: '#556B65', margin: '0 0 1.5rem 0' }}>
-            {language === 'vi' 
-              ? 'Thiết lập các mốc thời gian tự động khóa đăng ký gian hàng, đề xuất hoạt động và sức chứa tối đa.'
-              : 'Configure operational deadlines for booth booking, proposal submission and capacity limits.'}
-          </p>
-
-          {savedSettingsSuccess && (
-            <div style={{
-              background: '#DCFCE7',
-              border: '1px solid #86EFAC',
-              color: '#166534',
-              padding: '0.75rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '1.25rem'
-            }}>
-              <CheckCircle2 size={16} />
-              <span>{language === 'vi' ? 'Đã lưu cấu hình sự kiện thành công!' : 'Settings updated successfully!'}</span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+        <div className="organizer-card" style={{ maxWidth: '760px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172421', marginBottom: '0.35rem' }}>
-                {language === 'vi' ? 'Hạn chót đăng ký gian hàng (Booth Deadline)' : 'Booth Request Deadline'}
-              </label>
-              <input
-                type="date"
-                value={boothDeadline}
-                onChange={(e) => setBoothDeadline(e.target.value)}
-                style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #D1DDD8', borderRadius: '6px', fontSize: '0.85rem' }}
-              />
+              <h2 style={{ margin: 0 }}>Cấu hình sự kiện</h2>
+              <p style={{ margin: '0.35rem 0 0', color: '#556B65', fontSize: '0.82rem' }}>Các giá trị đang được lưu trên backend.</p>
             </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172421', marginBottom: '0.35rem' }}>
-                {language === 'vi' ? 'Hạn chót nộp đề xuất hoạt động (Activity Proposal Deadline)' : 'Activity Proposal Deadline'}
-              </label>
-              <input
-                type="date"
-                value={activityDeadline}
-                onChange={(e) => setActivityDeadline(e.target.value)}
-                style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #D1DDD8', borderRadius: '6px', fontSize: '0.85rem' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172421', marginBottom: '0.35rem' }}>
-                {language === 'vi' ? 'Hạn chót độc giả đăng ký tham gia (Participant Deadline)' : 'Participant Registration Deadline'}
-              </label>
-              <input
-                type="date"
-                value={participantDeadline}
-                onChange={(e) => setParticipantDeadline(e.target.value)}
-                style={{ width: '100%', padding: '0.6rem 0.8rem', border: '1px solid #D1DDD8', borderRadius: '6px', fontSize: '0.85rem' }}
-              />
-            </div>
-
+            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
           </div>
-
-          <div style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button type="submit" className="btn-org-primary">
-              <Save size={15} />
-              <span>{language === 'vi' ? 'Lưu cấu hình' : 'Save Settings'}</span>
-            </button>
-          </div>
-        </form>
+          <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '0.75rem 1rem', margin: 0 }}>
+            {[
+              ['Hạn đối tác đăng ký', event.partnerApplicationDeadlineAt],
+              ['Hạn yêu cầu gian hàng', event.boothRequestDeadlineAt],
+              ['Hạn đề xuất hoạt động', event.activityProposalDeadlineAt],
+              ['Hạn người tham gia đăng ký', event.participantRegistrationDeadlineAt],
+              ['Hạn đối tác rút hồ sơ', event.partnerWithdrawalCutoffAt],
+              ['Hạn hủy gian hàng', event.boothCancellationCutoffAt],
+              ['Hạn hủy hoạt động', event.activityCancellationCutoffAt],
+              ['Thời hạn thanh toán gian hàng', `${event.boothPaymentWindowMinutes} phút`],
+              ['Số gian hàng tối đa / đối tác', String(event.maxBoothsPerPartner)],
+              ['Số hoạt động tối đa / đối tác', String(event.maxActivitiesPerPartner)],
+            ].map(([label, value]) => <React.Fragment key={label}><dt style={{ fontWeight: 650, color: '#445752' }}>{label}</dt><dd style={{ margin: 0 }}>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN') : value || 'Chưa thiết lập'}</dd></React.Fragment>)}
+          </dl>
+        </div>
       )}
     </div>
   );

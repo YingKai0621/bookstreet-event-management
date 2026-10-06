@@ -1,320 +1,85 @@
 import React, { useState } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Calendar, 
-  MapPin, 
-  Eye, 
-  EyeOff,
-  Edit3, 
-  MoreVertical
-} from 'lucide-react';
+import { Calendar, Edit3, Eye, Plus, Search, Send } from 'lucide-react';
 import { Language } from '../../types';
 import { OrganizerEvent } from '../../types/organizer';
 
 interface EventManagementViewProps {
   language: Language;
   events: OrganizerEvent[];
+  actionError?: string;
   onSelectEvent: (eventId: string) => void;
   onOpenCreateEvent: () => void;
-  onEditEvent?: (event: OrganizerEvent) => void;
-  onTogglePublishEvent?: (eventId: string) => void;
-  onBroadcastEvent?: (eventId: string) => void | Promise<void>;
-  onDuplicateEvent?: (eventId: string) => void | Promise<void>;
-  onCancelEvent?: (eventId: string) => void | Promise<void>;
+  onEditEvent: (event: OrganizerEvent) => void;
+  onPublishEvent: (eventId: string) => void | Promise<void>;
 }
+
+type StatusFilter = 'all' | OrganizerEvent['status'];
 
 export const EventManagementView: React.FC<EventManagementViewProps> = ({
   language,
   events,
+  actionError,
   onSelectEvent,
   onOpenCreateEvent,
   onEditEvent,
-  onTogglePublishEvent,
-  onBroadcastEvent,
-  onDuplicateEvent,
-  onCancelEvent
+  onPublishEvent,
 }) => {
-  const [activeStatusFilter, setActiveStatusFilter] = useState<'all' | 'happening' | 'upcoming' | 'completed' | 'draft'>('all');
+  const [activeStatusFilter, setActiveStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const filteredEvents = events.filter(e => {
-    if (activeStatusFilter !== 'all' && e.status !== activeStatusFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return e.title.toLowerCase().includes(q) || e.location.toLowerCase().includes(q);
-    }
-    return true;
+  const filteredEvents = events.filter(event => {
+    if (activeStatusFilter !== 'all' && event.status !== activeStatusFilter) return false;
+    return event.title.toLowerCase().includes(searchQuery.trim().toLowerCase());
   });
 
-  const getStatusChipClass = (status: OrganizerEvent['status']) => {
-    switch (status) {
-      case 'happening': return 'org-chip happening';
-      case 'upcoming': return 'org-chip upcoming';
-      case 'draft': return 'org-chip draft';
-      case 'completed': return 'org-chip unavailable';
-      default: return 'org-chip';
-    }
-  };
+  const filters: Array<{ value: StatusFilter; label: string }> = [
+    { value: 'all', label: language === 'vi' ? `Tất cả (${events.length})` : `All (${events.length})` },
+    { value: 'draft', label: language === 'vi' ? 'Bản nháp' : 'Draft' },
+    { value: 'upcoming', label: language === 'vi' ? 'Đã công bố' : 'Published' },
+    { value: 'happening', label: language === 'vi' ? 'Đang diễn ra' : 'Ongoing' },
+    { value: 'completed', label: language === 'vi' ? 'Đã kết thúc' : 'Completed' },
+    { value: 'cancelled', label: language === 'vi' ? 'Đã hủy' : 'Cancelled' },
+  ];
 
   return (
     <div className="organizer-content">
-      {/* 1. Header with title and Create Event button matching Sketch Screen 2 */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        marginBottom: '1.5rem'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         <div>
-          <h1 className="organizer-view-title">
-            {language === 'vi' ? 'Danh sách sự kiện' : 'Event Management'}
-          </h1>
-          <p className="organizer-view-sub">
-            {language === 'vi' ? 'Quản lý vòng đời, lịch trình và thiết lập cấu hình sự kiện' : 'Manage lifecycle, schedules, and event configurations'}
-          </p>
+          <h1 className="organizer-view-title">{language === 'vi' ? 'Danh sách sự kiện' : 'Event Management'}</h1>
+          <p className="organizer-view-sub">{language === 'vi' ? 'Tạo bản nháp, cập nhật thông tin và công bố sự kiện' : 'Create drafts, update details, and publish events'}</p>
         </div>
-
-        <button
-          type="button"
-          className="btn-org-primary"
-          onClick={onOpenCreateEvent}
-        >
-          <Plus size={16} />
-          <span>{language === 'vi' ? 'Tạo sự kiện mới' : 'Create New Event'}</span>
-        </button>
+        <button type="button" className="btn-org-primary" onClick={onOpenCreateEvent}><Plus size={16} />{language === 'vi' ? 'Tạo sự kiện mới' : 'Create Event'}</button>
       </div>
 
-      {/* 2. Filter tabs & Search toolbar matching Sketch Screen 2 */}
+      {actionError && <div role="alert" style={{ background: '#FEE2E2', color: '#B91C1C', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1rem' }}>{actionError}</div>}
+
       <div className="org-toolbar">
-        <div className="org-tabs-bar" style={{ marginBottom: 0, borderBottom: 'none' }}>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeStatusFilter === 'all' ? 'is-active' : ''}`}
-            onClick={() => setActiveStatusFilter('all')}
-          >
-            {language === 'vi' ? `Tất cả (${events.length})` : `All (${events.length})`}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeStatusFilter === 'upcoming' ? 'is-active' : ''}`}
-            onClick={() => setActiveStatusFilter('upcoming')}
-          >
-            {language === 'vi' ? 'Đang chuẩn bị' : 'Upcoming'}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeStatusFilter === 'happening' ? 'is-active' : ''}`}
-            onClick={() => setActiveStatusFilter('happening')}
-          >
-            {language === 'vi' ? 'Đang diễn ra' : 'Happening'}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeStatusFilter === 'completed' ? 'is-active' : ''}`}
-            onClick={() => setActiveStatusFilter('completed')}
-          >
-            {language === 'vi' ? 'Đã kết thúc' : 'Completed'}
-          </button>
+        <div className="org-tabs-bar" style={{ marginBottom: 0, borderBottom: 'none', flexWrap: 'wrap' }}>
+          {filters.map(filter => <button key={filter.value} type="button" className={`org-tab-btn ${activeStatusFilter === filter.value ? 'is-active' : ''}`} onClick={() => setActiveStatusFilter(filter.value)}>{filter.label}</button>)}
         </div>
-
-        <div className="organizer-search-box" style={{ maxWidth: '300px' }}>
-          <Search size={15} />
-          <input
-            type="text"
-            placeholder={language === 'vi' ? 'Tìm tên sự kiện...' : 'Search event name...'}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        <div className="organizer-search-box" style={{ maxWidth: '300px' }}><Search size={15} /><input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder={language === 'vi' ? 'Tìm tên sự kiện...' : 'Search event name...'} /></div>
       </div>
 
-      {/* 3. Event Cards matching Sketch Screen 2 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-        {filteredEvents.map((evt) => {
-          const isPub = evt.isPublished ?? (evt.status !== 'draft');
-          return (
-            <div 
-              key={evt.id}
-              className="organizer-card"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1.25rem',
-                padding: '1.25rem',
-                borderLeft: isPub ? '4px solid #16A34A' : '4px solid #9CA3AF'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, minWidth: '320px' }}>
-                <img
-                  src={evt.imageUrl}
-                  alt={evt.title}
-                  style={{
-                    width: '100px',
-                    height: '75px',
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    border: '1px solid #DCE5E0'
-                  }}
-                />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#172421', fontFamily: 'var(--font-serif)' }}>
-                      {evt.title}
-                    </h3>
-                    <span className={getStatusChipClass(evt.status)}>
-                      ● {evt.statusLabelVi}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: '#556B65' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Calendar size={13} color="#17382E" />
-                      <span>{evt.dateRange}</span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <MapPin size={13} color="#17382E" />
-                      <span>{evt.location}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions matching Sketch Screen 2 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                {/* Công bố / Ẩn toggle button */}
-                <button
-                  type="button"
-                  onClick={() => onTogglePublishEvent && onTogglePublishEvent(evt.id)}
-                  title={isPub 
-                    ? (language === 'vi' ? 'Nhấn để ẩn sự kiện này khỏi Landing Page' : 'Click to hide this event from landing page') 
-                    : (language === 'vi' ? 'Nhấn để công bố sự kiện này lên Landing Page' : 'Click to publish this event to landing page')
-                  }
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 650,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    background: isPub ? '#F0FDF4' : '#F9FAFB',
-                    border: isPub ? '1.5px solid #16A34A' : '1.5px solid #9CA3AF',
-                    color: isPub ? '#15803D' : '#4B5563'
-                  }}
-                >
-                  {isPub ? <Eye size={14} color="#15803D" /> : <EyeOff size={14} color="#4B5563" />}
-                  <span>
-                    {isPub 
-                      ? (language === 'vi' ? 'Đã công bố' : 'Published') 
-                      : (language === 'vi' ? 'Đang ẩn' : 'Hidden')
-                    }
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-org-secondary"
-                  onClick={() => onSelectEvent(evt.id)}
-                >
-                  <Eye size={14} />
-                  <span>{language === 'vi' ? 'Xem' : 'View'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-org-secondary"
-                  onClick={() => onEditEvent ? onEditEvent(evt) : onSelectEvent(evt.id)}
-                >
-                  <Edit3 size={14} />
-                  <span>{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</span>
-                </button>
-
-                <div style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    className="organizer-icon-button"
-                    style={{ width: '34px', height: '34px' }}
-                    onClick={() => setActiveMenuId(activeMenuId === evt.id ? null : evt.id)}
-                    aria-label="Thao tác khác"
-                  >
-                    <MoreVertical size={16} />
-                  </button>
-
-                  {activeMenuId === evt.id && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 4px)',
-                      right: 0,
-                      width: '180px',
-                      background: '#FFFFFF',
-                      border: '1px solid #E2EAE5',
-                      borderRadius: '8px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                      padding: '0.35rem',
-                      zIndex: 100
-                    }}>
-                      <button
-                        type="button"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'none', border: 'none', textAlign: 'left', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '4px' }}
-                        onClick={() => {
-                          if (onTogglePublishEvent) onTogglePublishEvent(evt.id);
-                          setActiveMenuId(null);
-                        }}
-                      >
-                        {isPub 
-                          ? (language === 'vi' ? 'Ẩn khỏi Landing Page' : 'Hide from Landing') 
-                          : (language === 'vi' ? 'Công bố lên Landing Page' : 'Publish to Landing')
-                        }
-                      </button>
-                      <button
-                        type="button"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'none', border: 'none', textAlign: 'left', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '4px' }}
-                        onClick={() => {
-                          void onBroadcastEvent?.(evt.id);
-                          setActiveMenuId(null);
-                        }}
-                      >
-                        {language === 'vi' ? 'Gửi thông báo' : 'Broadcast'}
-                      </button>
-                      <button
-                        type="button"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'none', border: 'none', textAlign: 'left', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '4px' }}
-                        onClick={() => {
-                          void onDuplicateEvent?.(evt.id);
-                          setActiveMenuId(null);
-                        }}
-                      >
-                        {language === 'vi' ? 'Nhân bản sự kiện' : 'Duplicate'}
-                      </button>
-                      <button
-                        type="button"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'none', border: 'none', textAlign: 'left', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '4px', color: '#C84C32' }}
-                        onClick={() => {
-                          if (confirm(language === 'vi' ? 'Bạn có chắc chắn muốn hủy sự kiện này?' : 'Are you sure you want to cancel this event?')) {
-                            void onCancelEvent?.(evt.id);
-                          }
-                          setActiveMenuId(null);
-                        }}
-                      >
-                        {language === 'vi' ? 'Hủy sự kiện' : 'Cancel Event'}
-                      </button>
-                    </div>
-                  )}
-                </div>
+        {filteredEvents.length === 0 && <div className="organizer-card"><p style={{ margin: 0 }}>{language === 'vi' ? 'Không có sự kiện phù hợp.' : 'No matching events.'}</p></div>}
+        {filteredEvents.map(event => (
+          <div key={event.id} className="organizer-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem', padding: '1.25rem', borderLeft: event.apiStatus === 'DRAFT' ? '4px solid #9CA3AF' : '4px solid #16A34A' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
+              {event.imageUrl ? <img src={event.imageUrl} alt={event.title} style={{ width: '100px', height: '75px', borderRadius: '8px', objectFit: 'cover' }} /> : <div style={{ width: '100px', height: '75px', borderRadius: '8px', background: '#E8EFEC', display: 'grid', placeItems: 'center' }}><Calendar size={24} /></div>}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>{event.title}</h3><span className={`org-chip ${event.status}`}>● {event.statusLabelVi}</span></div>
+                <p style={{ margin: '0.45rem 0 0', color: '#556B65', fontSize: '0.8rem' }}>{event.dateRange}</p>
               </div>
             </div>
-          );
-        })}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => void onPublishEvent(event.id)}><Send size={14} />{language === 'vi' ? 'Công bố' : 'Publish'}</button>}
+              <button type="button" className="btn-org-secondary" onClick={() => onSelectEvent(event.id)}><Eye size={14} />{language === 'vi' ? 'Xem' : 'View'}</button>
+              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}><Edit3 size={14} />{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</button>}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
-
-
