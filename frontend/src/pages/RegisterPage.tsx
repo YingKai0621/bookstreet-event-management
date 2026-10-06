@@ -3,7 +3,6 @@ import {
   User, 
   Mail, 
   Lock, 
-  Phone, 
   Eye, 
   EyeOff, 
   ArrowRight, 
@@ -16,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Language } from '../types';
-import { authApi } from '../services/authApi';
+import { useAuth } from '../auth/useAuth';
 import './RegisterPage.css';
 
 interface RegisterPageProps {
@@ -27,12 +26,13 @@ interface RegisterPageProps {
 export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegisterSuccess }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { register } = useAuth();
   const returnTarget = (location.state as { from?: string })?.from || '/';
   
   // Form fields
+  const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -46,16 +46,25 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
 
   // Email format validation
   const isEmailValid = useMemo(() => {
-    if (!email) return false;
+    if (!email.trim()) return true;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   }, [email]);
+
+  const isUsernameValid = useMemo(() => {
+    return /^[A-Za-z][A-Za-z0-9]{2,19}$/.test(username);
+  }, [username]);
+
+  const isPasswordLengthValid = useMemo(() => {
+    const utf8ByteLength = new TextEncoder().encode(password).length;
+    return password.length >= 8 && password.length <= 64 && utf8ByteLength <= 72;
+  }, [password]);
 
   // Password strength calculation
   const passwordStrength = useMemo(() => {
     if (!password) return { score: 0, labelVi: '', labelEn: '', color: '' };
     let score = 0;
-    if (password.length >= 6) score += 1;
     if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
     if (/[A-Z]/.test(password)) score += 1;
     if (/[0-9]/.test(password)) score += 1;
     if (/[^A-Za-z0-9]/.test(password)) score += 1;
@@ -79,12 +88,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
   const isFormValid = useMemo(() => {
     return (
       fullName.trim().length >= 2 &&
+      fullName.trim().length <= 50 &&
+      isUsernameValid &&
       isEmailValid &&
-      password.length >= 6 &&
+      isPasswordLengthValid &&
       password === confirmPassword &&
       agreeTerms
     );
-  }, [fullName, isEmailValid, password, confirmPassword, agreeTerms]);
+  }, [fullName, isUsernameValid, isEmailValid, isPasswordLengthValid, password, confirmPassword, agreeTerms]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,32 +113,25 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
     setIsLoading(true);
 
     try {
-      const res = await authApi.register({
-        email: email.trim().toLowerCase(),
-        password: password,
+      await register({
+        username,
         fullName: fullName.trim(),
-        phone: phone.trim() || undefined,
-        role: 'participant',
+        password,
+        confirmPassword,
+        email: email.trim() ? email.trim().toLowerCase() : null,
       });
-
-      const { user, accessToken } = res;
-      localStorage.setItem('duongsach_token', accessToken);
-      sessionStorage.setItem('duongsach_token', accessToken);
-      localStorage.setItem('duongsach_user', JSON.stringify(user));
-      sessionStorage.setItem('duongsach_participant_auth_v1', 'true');
-      localStorage.setItem('duongsach_participant_auth_v1', 'true');
 
       setIsSuccess(true);
       setTimeout(() => {
         if (onRegisterSuccess) {
-          onRegisterSuccess(returnTarget);
+          onRegisterSuccess('/login');
         } else {
-          navigate(returnTarget || '/');
+          navigate('/login', { state: { from: returnTarget } });
         }
       }, 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.message || (language === 'vi'
+        (err instanceof Error && err.message) || (language === 'vi'
           ? 'Đăng ký tài khoản thất bại. Vui lòng kiểm tra lại thông tin.'
           : 'Registration failed. Please check your information.')
       );
@@ -208,17 +212,17 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
               </h2>
               <p className="register-success-desc">
                 {language === 'vi'
-                  ? `Chào mừng ${fullName || 'bạn đọc'} đã gia nhập cộng đồng Đường Sách TP.HCM. Email xác nhận đã được gửi đến ${email}.`
-                  : `Welcome ${fullName || 'reader'} to the HCMC Book Street community! A confirmation email has been sent to ${email}.`}
+                  ? `Chào mừng ${fullName || 'bạn đọc'} đã gia nhập cộng đồng Đường Sách TP.HCM. Hãy đăng nhập bằng tài khoản vừa tạo.${email ? ` Email xác nhận đã được gửi đến ${email}.` : ''}`
+                  : `Welcome ${fullName || 'reader'} to the HCMC Book Street community. Sign in with your new account.${email ? ` A confirmation email has been sent to ${email}.` : ''}`}
               </p>
 
               <div className="register-success-actions">
-                <Link to={returnTarget} className="register-success-btn primary">
-                  <span>{language === 'vi' ? 'Bắt đầu khám phá ngay' : 'Start Exploring Now'}</span>
+                <Link to="/login" state={{ from: returnTarget }} className="register-success-btn primary">
+                  <span>{language === 'vi' ? 'Đi đến đăng nhập' : 'Continue to sign in'}</span>
                   <ArrowRight size={18} />
                 </Link>
-                <Link to="/participant" className="register-success-btn secondary">
-                  <span>{language === 'vi' ? 'Vào Khu vực cá nhân' : 'Personal Area'}</span>
+                <Link to="/" className="register-success-btn secondary">
+                  <span>{language === 'vi' ? 'Về trang chủ' : 'Back to home'}</span>
                 </Link>
               </div>
             </div>
@@ -257,6 +261,36 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
 
               {/* Form */}
               <form className="auth-form" onSubmit={handleSubmit} noValidate>
+                {/* Username Field */}
+                <div className="auth-field">
+                  <label htmlFor="reg-username">
+                    {language === 'vi' ? 'Tên đăng nhập *' : 'Username *'}
+                  </label>
+                  <div className="auth-input-wrap">
+                    <User size={18} className="auth-input-icon" />
+                    <input
+                      id="reg-username"
+                      type="text"
+                      required
+                      autoFocus
+                      autoComplete="username"
+                      minLength={3}
+                      maxLength={20}
+                      placeholder={language === 'vi' ? '3–20 ký tự chữ và số' : '3–20 letters and numbers'}
+                      value={username}
+                      onChange={(event) => {
+                        setUsername(event.target.value);
+                        if (errorMsg) setErrorMsg('');
+                      }}
+                    />
+                    {username && (
+                      <span className={`reg-inline-badge ${isUsernameValid ? 'valid' : 'invalid'}`}>
+                        {isUsernameValid ? <Check size={14} /> : <X size={14} />}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Full Name Field */}
                 <div className="auth-field">
                   <label htmlFor="reg-fullname">
@@ -268,8 +302,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
                       id="reg-fullname"
                       type="text"
                       required
-                      autoFocus
                       autoComplete="name"
+                      minLength={2}
+                      maxLength={50}
                       placeholder={language === 'vi' ? 'Ví dụ: Nguyễn Văn An' : 'e.g. John Doe'}
                       value={fullName}
                       onChange={(e) => {
@@ -283,15 +318,15 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
                 {/* Email Field */}
                 <div className="auth-field">
                   <label htmlFor="reg-email">
-                    {language === 'vi' ? 'Địa chỉ Email *' : 'Email Address *'}
+                    {language === 'vi' ? 'Địa chỉ Email (Không bắt buộc)' : 'Email Address (Optional)'}
                   </label>
                   <div className="auth-input-wrap">
                     <Mail size={18} className="auth-input-icon" />
                     <input
                       id="reg-email"
                       type="email"
-                      required
                       autoComplete="email"
+                      maxLength={255}
                       placeholder={language === 'vi' ? 'ban-doc@gmail.com' : 'you@example.com'}
                       value={email}
                       onChange={(e) => {
@@ -307,28 +342,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
                   </div>
                 </div>
 
-                {/* Phone Number Field (Optional) */}
-                <div className="auth-field">
-                  <label htmlFor="reg-phone">
-                    {language === 'vi' ? 'Số điện thoại (Không bắt buộc)' : 'Phone (Optional)'}
-                  </label>
-                  <div className="auth-input-wrap">
-                    <Phone size={18} className="auth-input-icon" />
-                    <input
-                      id="reg-phone"
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder={language === 'vi' ? '0901 234 567' : '+84 901 234 567'}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-
                 {/* Password Field */}
                 <div className="auth-field">
                   <label htmlFor="reg-password">
-                    {language === 'vi' ? 'Mật khẩu (Tối thiểu 6 ký tự) *' : 'Password (Min. 6 chars) *'}
+                    {language === 'vi' ? 'Mật khẩu (8–64 ký tự) *' : 'Password (8–64 chars) *'}
                   </label>
                   <div className="auth-input-wrap">
                     <Lock size={18} className="auth-input-icon" />
@@ -336,6 +353,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
                       id="reg-password"
                       type={showPassword ? 'text' : 'password'}
                       required
+                      minLength={8}
+                      maxLength={64}
                       autoComplete="new-password"
                       placeholder={language === 'vi' ? 'Nhập mật khẩu an toàn' : 'Create strong password'}
                       value={password}
@@ -389,6 +408,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
                       id="reg-confirm-password"
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
+                      minLength={8}
+                      maxLength={64}
                       autoComplete="new-password"
                       placeholder={language === 'vi' ? 'Nhập lại mật khẩu trên' : 'Re-enter your password'}
                       value={confirmPassword}
