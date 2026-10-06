@@ -2,6 +2,10 @@ import { apiClient } from './apiClient';
 import {
   OrganizerProfile,
   OrganizerEvent,
+  OrganizerEventPageResponse,
+  OrganizerEventRequest,
+  OrganizerEventResponse,
+  OrganizerEventStatus,
   OrganizerBoothItem,
   OrganizerActivityItem,
   OrganizerParticipantItem,
@@ -32,6 +36,91 @@ export interface OrganizerPartnerApplication {
   date: string; desc: string; status: string; reviewNote?: string;
 }
 
+function mapEventStatus(status: OrganizerEventStatus): OrganizerEvent['status'] {
+  switch (status) {
+    case 'DRAFT':
+      return 'draft';
+    case 'PUBLISHED':
+      return 'upcoming';
+    case 'ONGOING':
+      return 'happening';
+    case 'COMPLETED':
+      return 'completed';
+    case 'CANCELLED':
+      return 'cancelled';
+  }
+}
+
+function getEventStatusLabel(status: OrganizerEventStatus): string {
+  switch (status) {
+    case 'DRAFT':
+      return 'Bản nháp';
+    case 'PUBLISHED':
+      return 'Đã công bố';
+    case 'ONGOING':
+      return 'Đang diễn ra';
+    case 'COMPLETED':
+      return 'Đã kết thúc';
+    case 'CANCELLED':
+      return 'Đã hủy';
+  }
+}
+
+function formatEventDateRange(startAt: string, endAt: string): string {
+  const options: Intl.DateTimeFormatOptions = {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  };
+
+  const start = new Date(startAt).toLocaleString('vi-VN', options);
+  const end = new Date(endAt).toLocaleString('vi-VN', options);
+  return `${start} - ${end}`;
+}
+
+export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent {
+  return {
+    id: String(event.eventId),
+    organizerUserId: event.organizerUserId,
+    title: event.name,
+    dateRange: formatEventDateRange(event.startAt, event.endAt),
+    startDate: event.startAt,
+    endDate: event.endAt,
+    location: 'Đường Sách TP.HCM',
+    status: mapEventStatus(event.status),
+    apiStatus: event.status,
+    statusLabelVi: getEventStatusLabel(event.status),
+    imageUrl: event.bannerUrl || '',
+    coverImage: event.bannerUrl || undefined,
+    description: event.description || '',
+    boothOccupancy: '0',
+    boothsCount: 0,
+    maxBooths: event.maxBoothsPerPartner,
+    activitiesCount: 0,
+    registrationsCount: 0,
+    attendanceRate: 0,
+    averageRating: 0,
+    boothDeadline: event.boothRequestDeadlineAt || undefined,
+    activityDeadline: event.activityProposalDeadlineAt || undefined,
+    participantDeadline: event.participantRegistrationDeadlineAt || undefined,
+    cancellationCutoff: event.partnerWithdrawalCutoffAt || undefined,
+    isPublished: event.status !== 'DRAFT',
+    partnerApplicationDeadlineAt: event.partnerApplicationDeadlineAt,
+    boothRequestDeadlineAt: event.boothRequestDeadlineAt,
+    activityProposalDeadlineAt: event.activityProposalDeadlineAt,
+    participantRegistrationDeadlineAt: event.participantRegistrationDeadlineAt,
+    partnerWithdrawalCutoffAt: event.partnerWithdrawalCutoffAt,
+    boothCancellationCutoffAt: event.boothCancellationCutoffAt,
+    activityCancellationCutoffAt: event.activityCancellationCutoffAt,
+    boothPaymentWindowMinutes: event.boothPaymentWindowMinutes,
+    maxBoothsPerPartner: event.maxBoothsPerPartner,
+    maxActivitiesPerPartner: event.maxActivitiesPerPartner,
+    bannerUrl: event.bannerUrl,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
+  };
+}
+
 export const organizerApi = {
   async getProfile(): Promise<OrganizerProfile> {
     const user = await apiClient.get<any>('/organizer/profile');
@@ -44,43 +133,33 @@ export const organizerApi = {
   },
   markNotificationRead: (id: string) => apiClient.patch(`/organizer/notifications/${encodeURIComponent(id)}/read`, {}),
   markAllNotificationsRead: () => apiClient.patch('/organizer/notifications/read-all', {}),
-  // Lấy danh sách sự kiện do BTC quản lý
-  async getEvents(): Promise<OrganizerEvent[]> {
-    const res = await apiClient.get<any[]>('/organizer/events');
-    return res.map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          titleEn: e.titleEn,
-          dateRange: `${new Date(e.startAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.endAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`,
-          startDate: e.startAt,
-          endDate: e.endAt,
-          location: e.venue?.name || 'Đường Sách TP.HCM',
-          status: (e.status === 'published' ? 'upcoming' : e.status === 'ongoing' ? 'happening' : e.status) as any,
-          statusLabelVi: e.status === 'ongoing' ? 'Đang diễn ra' : e.status === 'published' ? 'Sắp diễn ra' : e.status === 'draft' ? 'Bản nháp' : e.status === 'completed' ? 'Đã kết thúc' : 'Đã hủy',
-          imageUrl: e.coverImageUrl || '',
-          description: e.description || '',
-          boothOccupancy: `${e._count?.boothAssignments || 0}`,
-          boothsCount: e._count?.boothAssignments || 0,
-          maxBooths: e.settings?.maxBoothsPerPartner || 0,
-          activitiesCount: e._count?.activities || 0,
-          registrationsCount: e._count?.registrations || 0,
-          attendanceRate: 0,
-          averageRating: 0,
-          boothDeadline: e.settings?.boothRequestDeadline,
-          activityDeadline: e.settings?.proposalDeadline,
-          participantDeadline: e.settings?.participantRegDeadline,
-          isPublished: ['published', 'ongoing', 'completed'].includes(e.status),
-        }));
+  async getEvents(page = 0, size = 100, sort = 'createdAt,desc'): Promise<OrganizerEvent[]> {
+    const query = new URLSearchParams({
+      page: String(page),
+      size: String(size),
+      sort,
+    });
+    const response = await apiClient.get<OrganizerEventPageResponse>(`/organizer/events?${query.toString()}`);
+    return response.content.map(toOrganizerEvent);
   },
 
-  createEvent: (data: unknown) => apiClient.post('/organizer/events', data),
+  async getEvent(id: string): Promise<OrganizerEvent> {
+    const event = await apiClient.get<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}`);
+    return toOrganizerEvent(event);
+  },
+  async createEvent(data: OrganizerEventRequest): Promise<OrganizerEvent> {
+    const event = await apiClient.post<OrganizerEventResponse>('/organizer/events', data);
+    return toOrganizerEvent(event);
+  },
   getEventLocations: (eventId: string) => apiClient.get<Array<{ id: string; name: string; capacity: number }>>(`/organizer/event-locations?eventId=${encodeURIComponent(eventId)}`),
-  updateEvent: (id: string, data: unknown) => apiClient.put(`/organizer/events/${encodeURIComponent(id)}`, data),
-  publishEvent: (id: string) => apiClient.post(`/organizer/events/${encodeURIComponent(id)}/publish`, {}),
-  unpublishEvent: (id: string) => apiClient.post(`/organizer/events/${encodeURIComponent(id)}/unpublish`, {}),
-  cancelEvent: (id: string, reason: string) => apiClient.post(`/organizer/events/${encodeURIComponent(id)}/cancel`, { reason }),
-  duplicateEvent: (id: string) => apiClient.post(`/organizer/events/${encodeURIComponent(id)}/duplicate`, {}),
-  broadcastEvent: (id: string, message?: string) => apiClient.post(`/organizer/events/${encodeURIComponent(id)}/broadcast`, { message }),
+  async updateEvent(id: string, data: OrganizerEventRequest): Promise<OrganizerEvent> {
+    const event = await apiClient.patch<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}`, data);
+    return toOrganizerEvent(event);
+  },
+  async publishEvent(id: string): Promise<OrganizerEvent> {
+    const event = await apiClient.post<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}/publish`, {});
+    return toOrganizerEvent(event);
+  },
   getBooths: (eventId: string) => apiClient.get<OrganizerBoothItem[]>(`/organizer/booths?eventId=${encodeURIComponent(eventId)}`),
   approveBoothRequest: (id: string) => apiClient.post(`/organizer/booth-requests/${encodeURIComponent(id)}/approve`, {}),
   rejectBoothRequest: (id: string, note?: string) => apiClient.post(`/organizer/booth-requests/${encodeURIComponent(id)}/reject`, { note }),

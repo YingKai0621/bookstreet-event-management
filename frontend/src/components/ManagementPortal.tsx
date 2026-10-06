@@ -27,6 +27,7 @@ import { OrganizerFeedbackView } from './portal/OrganizerFeedbackView';
 
 import {
   OrganizerEvent,
+  OrganizerEventRequest,
   OrganizerBoothItem,
   OrganizerActivityItem,
   OrganizerParticipantItem,
@@ -34,6 +35,7 @@ import {
   OrganizerProfile
 } from '../types/organizer';
 import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';
+import { useAuth } from '../auth/useAuth';
 
 import './portal/OrganizerPortal.css';
 
@@ -46,6 +48,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   language,
   onLogout
 }) => {
+  const { user } = useAuth();
   // Navigation State
   const [activeTab, setActiveTab] = useState<OrganizerTab>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -56,49 +59,52 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   // Modal State
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<OrganizerEvent | null>(null);
   const [isCreateActivityOpen, setIsCreateActivityOpen] = useState(false);
 
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
-  const [boothsList, setBoothsList] = useState<OrganizerBoothItem[]>([]);
-  const [activitiesList, setActivitiesList] = useState<OrganizerActivityItem[]>([]);
-  const [participantsList, setParticipantsList] = useState<OrganizerParticipantItem[]>([]);
+  const [boothsList] = useState<OrganizerBoothItem[]>([]);
+  const [activitiesList] = useState<OrganizerActivityItem[]>([]);
+  const [participantsList] = useState<OrganizerParticipantItem[]>([]);
   const [notificationsList, setNotificationsList] = useState<OrganizerNotificationItem[]>([]);
-  const [profile, setProfile] = useState<OrganizerProfile>({ id: '', name: '', role: '', department: '', email: '', phone: '', avatarInitials: '' });
-  const [partnerApplications, setPartnerApplications] = useState<OrganizerPartnerApplication[]>([]);
-  const [proposalList, setProposalList] = useState<any[]>([]);
-  const [eventLocations, setEventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
+  const [profile, setProfile] = useState<OrganizerProfile>(() => {
+    const fullName = user?.fullName || '';
+    const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase();
+    return { id: String(user?.userId || ''), name: fullName, role: 'ORGANIZER', department: 'Ban Tổ Chức Sự Kiện', organization: 'Đường Sách TP.HCM', email: user?.email || '', phone: '', avatarInitials: initials };
+  });
+  const [partnerApplications] = useState<OrganizerPartnerApplication[]>([]);
+  const [proposalList] = useState<any[]>([]);
+  const [eventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
 
-  // Only the organizer profile is available in the reduced API. Clear stale data
-  // from legacy screens so they render their existing empty states consistently.
-  const refreshOrganizerData = async (_preferredEventId?: string | null) => {
-    const organizerProfile = await organizerApi.getProfile();
-    setProfile(organizerProfile);
-    setEventsList([]); setBoothsList([]); setActivitiesList([]); setParticipantsList([]);
-    setPartnerApplications([]); setProposalList([]); setEventLocations([]); setManagedHeritageList([]); setNotificationsList([]);
+  const refreshOrganizerData = async (preferredEventId?: string | null) => {
+    const events = await organizerApi.getEvents();
+    setEventsList(events);
+    if (preferredEventId && !events.some(event => event.id === preferredEventId)) {
+      setSelectedEventId(null);
+    }
     setLoadError('');
+    setIsLoadingEvents(false);
   };
 
   useEffect(() => {
-    void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); });
+    void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); setIsLoadingEvents(false); });
     const refresh = () => void refreshOrganizerData().catch(error => console.warn('Could not refresh organizer data', error));
     const intervalId = window.setInterval(refresh, 15000);
     window.addEventListener('focus', refresh);
     window.addEventListener('duongsach:data-changed', refresh);
     return () => { window.clearInterval(intervalId); window.removeEventListener('focus', refresh); window.removeEventListener('duongsach:data-changed', refresh); };
-  }, [selectedEventId]);
+  }, []);
 
   useEffect(() => {
     if (!selectedEventId) return;
-    Promise.all([
-      organizerApi.getBooths(selectedEventId), organizerApi.getActivities(selectedEventId), organizerApi.getParticipants(selectedEventId),
-      organizerApi.getPartnerApplications(selectedEventId), organizerApi.getProposals(selectedEventId), organizerApi.getEventLocations(selectedEventId),
-    ]).then(([booths, activities, participants, applications, activityProposals, locations]) => {
-      setBoothsList(booths); setActivitiesList(activities); setParticipantsList(participants);
-      setPartnerApplications(applications); setProposalList(activityProposals); setEventLocations(locations);
-    }).catch(error => console.warn('Could not load selected event data', error));
+    organizerApi.getEvent(selectedEventId).then(event => {
+      setEventsList(current => current.map(item => item.id === event.id ? event : item));
+    }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
   }, [selectedEventId]);
 
   // Unread notifications count
@@ -245,65 +251,29 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
-  // Event Settings Update
-  const handleUpdateEventSettings = async (eventId: string, updatedSettings: Partial<OrganizerEvent>) => {
-    await organizerApi.updateEvent(eventId, {
-      title: updatedSettings.title,
-      theme: updatedSettings.theme,
-      description: updatedSettings.description,
-      startAt: updatedSettings.startDate,
-      endAt: updatedSettings.endDate,
-      boothRequestDeadline: updatedSettings.boothDeadline,
-      proposalDeadline: updatedSettings.activityDeadline,
-      participantRegDeadline: updatedSettings.participantDeadline,
+  const handleSaveEvent = async (request: OrganizerEventRequest, eventId?: string) => {
+    setActionError('');
+    const savedEvent = eventId
+      ? await organizerApi.updateEvent(eventId, request)
+      : await organizerApi.createEvent(request);
+    setEventsList(current => {
+      const alreadyExists = current.some(event => event.id === savedEvent.id);
+      if (alreadyExists) return current.map(event => event.id === savedEvent.id ? savedEvent : event);
+      return [savedEvent, ...current];
     });
-    await refreshOrganizerData(eventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
-  // Toggle Publish / Hide Event on Landing Page
-  const handleTogglePublishEvent = async (eventId: string) => {
-    const event = eventsList.find(item => item.id === eventId);
-    if (!event) return;
-    if (event.isPublished) await organizerApi.unpublishEvent(eventId);
-    else await organizerApi.publishEvent(eventId);
-    await refreshOrganizerData(eventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
-  // Create Event Handler
-  const handleCreateNewEvent = async (newEventData: Partial<OrganizerEvent> & { title: string; startDate: string; endDate: string; location: string }) => {
-    const created: any = await organizerApi.createEvent({
-      title: newEventData.title, theme: newEventData.theme, location: newEventData.location,
-      startAt: `${newEventData.startDate}T00:00:00+07:00`, endAt: `${newEventData.endDate}T23:59:59+07:00`,
-      description: newEventData.description, coverImageUrl: newEventData.coverImage,
-      boothRequestDeadline: newEventData.boothDeadline ? `${newEventData.boothDeadline}T23:59:59+07:00` : null,
-      proposalDeadline: newEventData.activityDeadline ? `${newEventData.activityDeadline}T23:59:59+07:00` : null,
-      participantRegDeadline: newEventData.participantDeadline ? `${newEventData.participantDeadline}T23:59:59+07:00` : null,
-    });
-    if (newEventData.isPublished) await organizerApi.publishEvent(created.id);
-    setSelectedEventId(created.id);
-    await refreshOrganizerData(created.id);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
+    setEditingEvent(null);
+    setSelectedEventId(savedEvent.id);
     setActiveTab('events');
   };
 
-  const handleBroadcastEvent = async (eventId: string) => {
-    await organizerApi.broadcastEvent(eventId);
-    await refreshOrganizerData(selectedEventId);
-  };
-
-  const handleDuplicateEvent = async (eventId: string) => {
-    const created: any = await organizerApi.duplicateEvent(eventId);
-    await refreshOrganizerData(created.id);
-    setSelectedEventId(created.id);
-  };
-
-  const handleCancelEvent = async (eventId: string) => {
-    await organizerApi.cancelEvent(eventId, 'Hủy sự kiện theo quyết định điều hành của Ban Quản Lý.');
-    await refreshOrganizerData(selectedEventId === eventId ? null : selectedEventId);
-    if (selectedEventId === eventId) setSelectedEventId(null);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
+  const handlePublishEvent = async (eventId: string) => {
+    setActionError('');
+    try {
+      const publishedEvent = await organizerApi.publishEvent(eventId);
+      setEventsList(current => current.map(event => event.id === publishedEvent.id ? publishedEvent : event));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Không thể công bố sự kiện.');
+    }
   };
 
   // Create Activity Handler
@@ -371,8 +341,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         {/* Main Viewport */}
         <main className="organizer-main-viewport">
 
-        {loadError && <p className="app-loading-state" role="status">Dữ liệu nghiệp vụ điều hành đang chờ triển khai.</p>}
-        {!currentSelectedEvent && !loadError && <p className="app-loading-state" role="status">Chưa có dữ liệu sự kiện để hiển thị.</p>}
+        {loadError && <p className="app-loading-state" role="alert">{loadError}</p>}
+        {isLoadingEvents && <p className="app-loading-state" role="status">Đang tải danh sách sự kiện...</p>}
+        {actionError && activeTab === 'events' && selectedEventId && <p className="app-loading-state" role="alert">{actionError}</p>}
 
         {/* Dynamic Views Rendering based on activeTab */}
         {activeTab === 'venues' && <FacilityManagementView key="venues" kind="venues" />}
@@ -389,25 +360,24 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
               setActiveTab(tab);
               if (tab !== 'events') setSelectedEventId(null);
             }}
-            onOpenCreateEvent={() => setIsCreateEventOpen(true)}
+            onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
             onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
           />
         )}
 
         {activeTab === 'overview' && !currentSelectedEvent && (
-          <div className="organizer-content"><div className="organizer-card"><h2>Chưa có sự kiện</h2><p>Hãy tạo sự kiện đầu tiên để bắt đầu điều hành.</p><button type="button" className="btn-org-primary" onClick={() => setIsCreateEventOpen(true)}>Tạo sự kiện</button></div></div>
+          <div className="organizer-content"><div className="organizer-card"><h2>Chưa có sự kiện</h2><p>Hãy tạo sự kiện đầu tiên để bắt đầu điều hành.</p><button type="button" className="btn-org-primary" onClick={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}>Tạo sự kiện</button></div></div>
         )}
 
         {activeTab === 'events' && !selectedEventId && (
           <EventManagementView 
             language={language}
             events={eventsList}
-            onSelectEvent={(eventId: string) => setSelectedEventId(eventId)}
-            onOpenCreateEvent={() => setIsCreateEventOpen(true)}
-            onTogglePublishEvent={handleTogglePublishEvent}
-            onBroadcastEvent={handleBroadcastEvent}
-            onDuplicateEvent={handleDuplicateEvent}
-            onCancelEvent={handleCancelEvent}
+            actionError={actionError}
+            onSelectEvent={(eventId: string) => { setActionError(''); setSelectedEventId(eventId); }}
+            onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
+            onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
+            onPublishEvent={handlePublishEvent}
           />
         )}
 
@@ -429,9 +399,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
               setActiveTab('booths');
             }}
             onNavigateToReports={() => setActiveTab('reports')}
-            onUpdateEventSettings={handleUpdateEventSettings}
-            onTogglePublishEvent={handleTogglePublishEvent}
-            onBroadcastEvent={handleBroadcastEvent}
+            onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
+            onPublishEvent={handlePublishEvent}
           />
         )}
 
@@ -523,10 +492,12 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
       {/* Global Create Event Modal */}
       <OrganizerCreateEventModal 
+        key={`${editingEvent?.id || 'new'}-${isCreateEventOpen ? 'open' : 'closed'}`}
         language={language}
         isOpen={isCreateEventOpen}
-        onClose={() => setIsCreateEventOpen(false)}
-        onCreateEvent={handleCreateNewEvent}
+        event={editingEvent}
+        onClose={() => { setIsCreateEventOpen(false); setEditingEvent(null); }}
+        onSave={handleSaveEvent}
       />
 
       {/* Global Create Activity Modal */}

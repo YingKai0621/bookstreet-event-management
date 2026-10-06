@@ -27,8 +27,50 @@ export interface OrganizerProfile {
   };
 }
 
+export type OrganizerEventStatus =
+  | 'DRAFT'
+  | 'PUBLISHED'
+  | 'ONGOING'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface OrganizerEventRequest {
+  name: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  partnerApplicationDeadlineAt: string | null;
+  boothRequestDeadlineAt: string | null;
+  activityProposalDeadlineAt: string | null;
+  participantRegistrationDeadlineAt: string | null;
+  partnerWithdrawalCutoffAt: string | null;
+  boothCancellationCutoffAt: string | null;
+  activityCancellationCutoffAt: string | null;
+  boothPaymentWindowMinutes: number;
+  maxBoothsPerPartner: number;
+  maxActivitiesPerPartner: number;
+  bannerUrl: string | null;
+}
+
+export interface OrganizerEventResponse extends OrganizerEventRequest {
+  eventId: number;
+  organizerUserId: number;
+  status: OrganizerEventStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizerEventPageResponse {
+  content: OrganizerEventResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export interface OrganizerEvent {
   id: string;
+  organizerUserId: number;
   title: string;
   titleEn?: string;
   theme?: string;
@@ -36,7 +78,8 @@ export interface OrganizerEvent {
   startDate: string;
   endDate: string;
   location: string;
-  status: 'happening' | 'upcoming' | 'draft' | 'completed';
+  status: 'happening' | 'upcoming' | 'draft' | 'completed' | 'cancelled';
+  apiStatus: OrganizerEventStatus;
   statusLabelVi: string;
   imageUrl: string;
   coverImage?: string;
@@ -59,6 +102,19 @@ export interface OrganizerEvent {
   cancellationCutoff?: string;
   maxCapacity?: number;
   isPublished?: boolean;
+  partnerApplicationDeadlineAt: string | null;
+  boothRequestDeadlineAt: string | null;
+  activityProposalDeadlineAt: string | null;
+  participantRegistrationDeadlineAt: string | null;
+  partnerWithdrawalCutoffAt: string | null;
+  boothCancellationCutoffAt: string | null;
+  activityCancellationCutoffAt: string | null;
+  boothPaymentWindowMinutes: number;
+  maxBoothsPerPartner: number;
+  maxActivitiesPerPartner: number;
+  bannerUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface OrganizerBoothItem {
