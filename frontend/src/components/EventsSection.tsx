@@ -27,6 +27,7 @@ const startOfWeek = (date: Date) => {
 interface EventsSectionProps {
   language: Language;
   events?: EventItem[];
+  isLoading?: boolean;
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
@@ -36,6 +37,7 @@ interface EventsSectionProps {
 export const EventsSection: React.FC<EventsSectionProps> = ({ 
   language, 
   events = [],
+  isLoading = false,
   isParticipantAuthenticated = false,
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
@@ -148,6 +150,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
           events={displayedEvents}
           language={language}
           weekEventIds={weekEventIds}
+          isLoading={isLoading}
           onDetails={setActiveEventDetail}
           onRegister={handleOpenRegister}
         />

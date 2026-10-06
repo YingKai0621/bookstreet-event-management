@@ -6,9 +6,6 @@ import {
   Layers, 
   Users, 
   MessageSquare, 
-  Settings, 
-  Shield, 
-  Palette,
   ChevronRight
 } from 'lucide-react';
 import { Language } from '../../types';
@@ -106,7 +103,7 @@ export const OrganizerNotificationsView: React.FC<OrganizerNotificationsViewProp
       </div>
 
       {/* 3. Notification Rows List matching Sketch Screen 9 */}
-      <div className="organizer-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '2.5rem' }}>
+      <div className="organizer-card" style={{ padding: 0, overflow: 'hidden' }}>
         {filteredNotifs.map((item) => (
           <div
             key={item.id}
@@ -159,67 +156,6 @@ export const OrganizerNotificationsView: React.FC<OrganizerNotificationsViewProp
             </div>
           </div>
         ))}
-      </div>
-
-      {/* 4. Cài đặt sự kiện (Settings shortcuts) matching Sketch Screen 9 */}
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', color: '#172421', marginBottom: '1rem' }}>
-        {language === 'vi' ? 'Cài đặt sự kiện' : 'Event Settings Shortcuts'}
-      </h2>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-        <div 
-          className="organizer-card"
-          style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
-          onClick={() => onNavigateTab('events')}
-        >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F1F5F3', display: 'grid', placeItems: 'center', color: '#17382E' }}>
-            <Settings size={20} />
-          </div>
-          <div>
-            <strong style={{ display: 'block', fontSize: '0.9rem', color: '#172421' }}>
-              {language === 'vi' ? 'Thông tin cơ bản' : 'Basic Information'}
-            </strong>
-            <span style={{ fontSize: '0.75rem', color: '#637771' }}>
-              {language === 'vi' ? 'Chỉnh sửa tên, mô tả, thời gian, địa điểm...' : 'Edit title, description, date and location'}
-            </span>
-          </div>
-        </div>
-
-        <div 
-          className="organizer-card"
-          style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
-          onClick={() => onNavigateTab('profile')}
-        >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F1F5F3', display: 'grid', placeItems: 'center', color: '#17382E' }}>
-            <Shield size={20} />
-          </div>
-          <div>
-            <strong style={{ display: 'block', fontSize: '0.9rem', color: '#172421' }}>
-              {language === 'vi' ? 'Quản lý quyền truy cập' : 'Access Permissions'}
-            </strong>
-            <span style={{ fontSize: '0.75rem', color: '#637771' }}>
-              {language === 'vi' ? 'Phân quyền cho các thành viên trong ban tổ chức' : 'Manage organizers and supervisors'}
-            </span>
-          </div>
-        </div>
-
-        <div 
-          className="organizer-card"
-          style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
-          onClick={() => onNavigateTab('public_content')}
-        >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F1F5F3', display: 'grid', placeItems: 'center', color: '#17382E' }}>
-            <Palette size={20} />
-          </div>
-          <div>
-            <strong style={{ display: 'block', fontSize: '0.9rem', color: '#172421' }}>
-              {language === 'vi' ? 'Tùy chỉnh hiển thị' : 'Display & Public Content'}
-            </strong>
-            <span style={{ fontSize: '0.75rem', color: '#637771' }}>
-              {language === 'vi' ? 'Logo, banner, màu sắc, thông tin liên hệ...' : 'Banners, highlights and cultural stories'}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );

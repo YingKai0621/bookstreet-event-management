@@ -93,6 +93,10 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
     });
   };
 
+  const pendingCount = activities.filter(act => act.status === 'pending' || act.status === 'need_revision').length;
+  const approvedCount = activities.filter(act => act.status === 'approved').length;
+  const cancelledCount = activities.filter(act => act.status === 'cancelled' || act.status === 'rejected').length;
+
   const filteredActivities = activities.filter(act => {
     if (activeTab === 'pending' && act.status !== 'pending' && act.status !== 'need_revision') return false;
     if (activeTab === 'approved' && act.status !== 'approved') return false;
@@ -150,21 +154,21 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
             className={`org-tab-btn ${activeTab === 'pending' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('pending')}
           >
-            {language === 'vi' ? 'Chờ duyệt (3)' : 'Pending (3)'}
+            {language === 'vi' ? `Chờ duyệt (${pendingCount})` : `Pending (${pendingCount})`}
           </button>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'approved' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('approved')}
           >
-            {language === 'vi' ? 'Đã duyệt (8)' : 'Approved (8)'}
+            {language === 'vi' ? `Đã duyệt (${approvedCount})` : `Approved (${approvedCount})`}
           </button>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'cancelled' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('cancelled')}
           >
-            {language === 'vi' ? 'Đã hủy (1)' : 'Cancelled (1)'}
+            {language === 'vi' ? `Đã hủy (${cancelledCount})` : `Cancelled (${cancelledCount})`}
           </button>
         </div>
 
@@ -218,14 +222,54 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
           <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0 }} />
           <span>
             {language === 'vi'
-              ? 'Phát hiện 1 đề xuất có xung đột địa điểm / khung giờ với lịch kỹ thuật (Workshop Phục chế sách cổ tại Khu A).'
-              : '1 proposal has detected schedule/location conflict at Workshop Zone A.'}
+              ? 'Phát hiện 1 đề xuất có xung đột địa điểm / khung giờ với lịch kỹ thuật.'
+              : '1 proposal has detected schedule/location conflict.'}
           </span>
         </div>
       )}
 
-      {/* 4. Activity Cards matching Sketch Screen 6 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* 4. Activity Cards matching Sketch Screen 6 or Empty Waiting State */}
+      {filteredActivities.length === 0 ? (
+        <div className="organizer-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'rgba(212, 163, 89, 0.14)',
+            border: '2px dashed #D4A359',
+            display: 'grid',
+            placeItems: 'center',
+            margin: '0 auto 1.25rem',
+            color: '#B3862A'
+          }}>
+            <FileText size={32} />
+          </div>
+          <h3 style={{ margin: '0 0 0.45rem', color: '#172421', fontSize: '1.25rem', fontFamily: 'var(--font-serif)' }}>
+            {activeTab === 'all'
+              ? (language === 'vi' ? 'Chưa có hoạt động nào được tạo' : 'No Activities Found')
+              : activeTab === 'pending'
+              ? (language === 'vi' ? 'Không có hoạt động chờ duyệt' : 'No Pending Activities')
+              : activeTab === 'approved'
+              ? (language === 'vi' ? 'Chưa có hoạt động nào được phê duyệt' : 'No Approved Activities')
+              : (language === 'vi' ? 'Không có hoạt động bị hủy' : 'No Cancelled Activities')}
+          </h3>
+          <p style={{ margin: '0 auto 1.75rem', color: '#637771', fontSize: '0.9rem', maxWidth: '540px', lineHeight: 1.55 }}>
+            {language === 'vi'
+              ? 'Khi đối tác đăng ký gian hàng gửi đề xuất hoạt động (tọa đàm, workshop, ra mắt sách) hoặc Ban Quản Lý khởi tạo chương trình mới, danh sách sẽ hiển thị tại đây để xét duyệt và điều phối khung giờ.'
+              : 'When partners submit activity proposals or when you create a new event session, activities will appear here for review and location scheduling.'}
+          </p>
+          <button
+            type="button"
+            className="btn-org-primary"
+            onClick={onOpenCreateActivity}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}
+          >
+            <Plus size={16} />
+            <span>{language === 'vi' ? 'Thêm hoạt động mới' : 'Add Activity'}</span>
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {filteredActivities.map((act) => (
           <div
             key={act.id}
@@ -360,6 +404,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
           </div>
         ))}
       </div>
+      )}
 
       {/* Detail & Edit Modal if viewing or editing an activity */}
       {selectedActivity && formData && (

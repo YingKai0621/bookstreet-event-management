@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { AlertCircle, Building2, CheckCircle2, Save, UserRound } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { AlertCircle, Building2, CheckCircle2, Save, UserRound, Upload, X } from 'lucide-react';
 import { Language, PartnerOrganization } from '../../types';
 import { ApiError } from '../../services/apiClient';
 import './PartnerPages.css';
@@ -25,6 +25,28 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage(language === 'vi' ? 'Kích thước ảnh tối đa là 5MB.' : 'Image size must not exceed 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setLogoUrl(base64);
+        setErrorMessage('');
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   useEffect(() => {
     setName(organization.name);
@@ -95,27 +117,37 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.5fr)', gap: '1.5rem', alignItems: 'start' }}>
-        <aside className="partner-card" style={{ padding: '1.25rem' }}>
-          <Building2 size={30} color="#17382E" />
-          <h2 style={{ margin: '0.8rem 0 0.35rem', color: '#172421' }}>
-            {organization.id ? organization.name : 'Chưa có hồ sơ tổ chức'}
+      <div className="partner-profile-grid-layout">
+        <aside className="partner-card" style={{ padding: '1.5rem', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(23, 56, 46, 0.08)', display: 'grid', placeItems: 'center', color: '#17382E', marginBottom: '0.75rem' }}>
+            <Building2 size={26} />
+          </div>
+          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#8C6519', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+            {organization.id ? 'HỒ SƠ ĐỐI TÁC' : 'THIẾT LẬP BAN ĐẦU'}
+          </div>
+          <h2 style={{ margin: '0 0 0.45rem', color: '#172421', fontSize: '1.25rem', fontFamily: 'var(--font-serif)' }}>
+            {organization.id ? organization.name : (language === 'vi' ? 'Chưa có hồ sơ tổ chức' : 'No Organization Profile')}
           </h2>
-          <p style={{ margin: 0, color: '#637771', lineHeight: 1.55 }}>
+          <p style={{ margin: 0, color: '#556B65', lineHeight: 1.55, fontSize: '0.88rem' }}>
             {organization.id
               ? `Trạng thái: ${organization.status}`
-              : 'Hoàn thiện biểu mẫu để tạo hồ sơ tổ chức đang hoạt động.'}
+              : (language === 'vi'
+                ? 'Hoàn thiện thông tin bên phải để kích hoạt hồ sơ tổ chức và đủ điều kiện đăng ký sự kiện.'
+                : 'Complete the form on the right to activate your organization profile for event applications.')}
           </p>
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E2EAE5' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334943' }}>
-              <UserRound size={16} />
-              <strong>Người đại diện tài khoản</strong>
+
+          <div style={{ marginTop: '1.25rem', paddingTop: '1.15rem', borderTop: '1px solid #E2EAE5' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#172421', fontSize: '0.88rem' }}>
+              <UserRound size={16} color="#17382E" />
+              <strong>{language === 'vi' ? 'Người đại diện tài khoản' : 'Account Representative'}</strong>
             </div>
-            <p style={{ margin: '0.4rem 0 0', color: '#637771' }}>
-              {organization.representativeName || 'Tài khoản Partner hiện tại'}
+            <p style={{ margin: '0.35rem 0 0.5rem', color: '#334943', fontWeight: 600, fontSize: '0.92rem' }}>
+              {organization.representativeName || (language === 'vi' ? 'Tài khoản Partner hiện tại' : 'Current Partner Account')}
             </p>
-            <small style={{ color: '#7A8E87' }}>
-              Người đại diện được xác định từ phiên đăng nhập và không gửi trong request.
+            <small style={{ color: '#7A8E87', display: 'block', lineHeight: 1.45, fontSize: '0.78rem' }}>
+              {language === 'vi'
+                ? 'Người đại diện được đồng bộ tự động từ phiên đăng nhập tài khoản.'
+                : 'Representative is automatically linked from your authenticated session.'}
             </small>
           </div>
         </aside>
@@ -190,12 +222,95 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
 
           <div className="form-field-group">
             <label htmlFor="partner-organization-logo">URL logo</label>
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+              <input
+                id="partner-organization-logo"
+                type="text"
+                placeholder="https://... hoặc tải ảnh từ máy tính"
+                value={logoUrl}
+                onChange={changeEvent => setLogoUrl(changeEvent.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="btn-part-secondary"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0 0.9rem',
+                  height: '38px',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  flex: '0 0 auto',
+                  borderRadius: '8px'
+                }}
+              >
+                <Upload size={14} />
+                <span>Tải ảnh lên</span>
+              </button>
+            </div>
+
             <input
-              id="partner-organization-logo"
-              type="url"
-              value={logoUrl}
-              onChange={changeEvent => setLogoUrl(changeEvent.target.value)}
+              type="file"
+              ref={fileInputRef}
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+              style={{ display: 'none' }}
+              onChange={handleLogoUpload}
             />
+
+            {logoUrl && (
+              <div style={{
+                marginTop: '0.65rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.55rem 0.85rem',
+                background: '#F8FAF9',
+                borderRadius: '8px',
+                border: '1px solid #E2EAE5'
+              }}>
+                <img
+                  src={logoUrl}
+                  alt="Logo preview"
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    objectFit: 'contain',
+                    borderRadius: '6px',
+                    background: '#FFFFFF',
+                    border: '1px solid #E2EAE5',
+                    padding: '2px'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.78rem', color: '#172421', display: 'block' }}>Xem trước Logo</strong>
+                  <span style={{ fontSize: '0.72rem', color: '#637771', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                    {logoUrl.startsWith('data:') ? 'Ảnh đã tải từ máy tính' : logoUrl}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLogoUrl('')}
+                  title="Xóa logo"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#DC2626',
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: '0.25rem'
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
           </div>
 
           <button type="submit" className="btn-part-primary" disabled={isSaving}>

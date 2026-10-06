@@ -12,7 +12,8 @@ import {
   AlertCircle, 
   CheckCircle2, 
   X,
-  QrCode
+  QrCode,
+  Layers
 } from 'lucide-react';
 import { Language, PartnerActivityProposal } from '../../types';
 import './PartnerPages.css';
@@ -185,15 +186,40 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
 
       {/* 3. Activity List Items matching Sketch Screen 5 */}
       {filteredActivities.length === 0 ? (
-        <div style={{
-          background: '#FFFFFF',
-          border: '1px solid #E2EAE5',
-          borderRadius: '12px',
+        <div className="partner-card" style={{
           padding: '3rem 2rem',
           textAlign: 'center',
-          color: '#637771'
+          background: '#FAF8F5',
+          border: '1px solid #EAE5DC'
         }}>
-          <p>{language === 'vi' ? 'Không có hoạt động nào trong danh mục này.' : 'No activities found.'}</p>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'rgba(212, 163, 89, 0.14)',
+            display: 'grid',
+            placeItems: 'center',
+            margin: '0 auto 1rem',
+            color: '#B3862A'
+          }}>
+            <Layers size={32} />
+          </div>
+          <h3 style={{ margin: '0 0 0.4rem', color: '#172421', fontSize: '1.2rem', fontFamily: 'var(--font-serif)' }}>
+            {language === 'vi' ? 'Chưa có hoạt động đề xuất nào' : 'No Proposed Activities Yet'}
+          </h3>
+          <p style={{ margin: '0 auto 1.5rem', color: '#637771', fontSize: '0.9rem', maxWidth: '540px', lineHeight: 1.55 }}>
+            {language === 'vi'
+              ? 'Tổ chức có thể đề xuất các buổi tọa đàm, ra mắt tác phẩm hoặc workshop văn hóa để Ban Quản Lý phê duyệt khung giờ và hỗ trợ trang thiết bị.'
+              : 'Propose author talks, book signings, or workshops to be approved and scheduled by the Book Street Organizer.'}
+          </p>
+          <button
+            type="button"
+            className="btn-part-primary"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus size={16} />
+            <span>{language === 'vi' ? 'Đề xuất hoạt động mới' : 'Propose New Activity'}</span>
+          </button>
         </div>
       ) : (
         <div className="partner-activities-list">

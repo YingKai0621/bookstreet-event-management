@@ -40,7 +40,7 @@ interface BoothDocItem {
 
 export interface BoothManagementPageProps {
   language: Language;
-  booth: PartnerBooth;
+  booth?: PartnerBooth | null;
   onOpenAttendanceModal?: () => void;
   onRequestChange?: (reason?: string) => void | Promise<unknown>;
   onRequestCancel?: (reason?: string) => void | Promise<unknown>;
@@ -54,7 +54,7 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
   onRequestCancel,
 }) => {
   const navigate = useNavigate();
-  const [booth, setBooth] = useState<PartnerBooth>(initialBooth);
+  const [booth, setBooth] = useState<PartnerBooth | null>(initialBooth || null);
   const [activeTab, setActiveTab] = useState<'info' | 'images' | 'documents'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [modalType, setModalType] = useState<'none' | 'change' | 'cancel'>('none');
@@ -62,16 +62,16 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
   // Tab 1: Info State
-  const [editName, setEditName] = useState(booth.name);
-  const [editDescription, setEditDescription] = useState(booth.description);
-  const [editDimensions, setEditDimensions] = useState(booth.dimensions);
-  const [editAreaName, setEditAreaName] = useState(booth.areaName);
-  const [editCategories, setEditCategories] = useState<string[]>(booth.categories);
+  const [editName, setEditName] = useState(initialBooth?.name || '');
+  const [editDescription, setEditDescription] = useState(initialBooth?.description || '');
+  const [editDimensions, setEditDimensions] = useState(initialBooth?.dimensions || '');
+  const [editAreaName, setEditAreaName] = useState(initialBooth?.areaName || '');
+  const [editCategories, setEditCategories] = useState<string[]>(initialBooth?.categories || []);
   const [newCatInput, setNewCatInput] = useState('');
 
   // Tab 2: Images State
-  const [boothImages, setBoothImages] = useState<BoothImageItem[]>(booth.imageUrl ? [
-    { id: `booth:${booth.id}`, url: booth.imageUrl, caption: booth.name }
+  const [boothImages, setBoothImages] = useState<BoothImageItem[]>(initialBooth?.imageUrl ? [
+    { id: `booth:${initialBooth.id}`, url: initialBooth.imageUrl, caption: initialBooth.name }
   ] : []);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newImageCaption, setNewImageCaption] = useState('');
@@ -89,9 +89,10 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
   };
 
   useEffect(() => {
+    if (!initialBooth) return;
     setBooth(initialBooth);
     partnerApi.getBoothContent(initialBooth.id).then(content => {
-      setBooth(current => ({
+      setBooth(current => current ? ({
         ...current,
         name: content.name || current.name,
         description: content.description || '',
@@ -99,11 +100,102 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
         areaName: content.areaName || current.areaName,
         categories: content.categories || [],
         imageUrl: content.images?.[0]?.url || current.imageUrl,
-      }));
+      }) : null);
       setBoothImages(content.images || []);
       setBoothDocs(content.documents || []);
     }).catch(error => showToast(error instanceof Error ? error.message : 'Không tải được nội dung gian hàng'));
-  }, [initialBooth.id]);
+  }, [initialBooth?.id]);
+
+  if (!booth) {
+    return (
+      <div className="partner-page">
+        <div className="partner-page-header">
+          <h1 className="partner-page-title">
+            {language === 'vi' ? 'Quản lý gian hàng' : 'Booth Management'}
+          </h1>
+          <p className="partner-page-sub">
+            {language === 'vi'
+              ? 'Theo dõi thông tin gian hàng được phân bổ, trưng bày ấn phẩm và gửi yêu cầu đến Ban Quản Lý.'
+              : 'Manage assigned booth information, exhibition materials, and requests to Organizer.'}
+          </p>
+        </div>
+
+        <div className="partner-card" style={{ padding: '3rem 2rem', textAlign: 'center', maxWidth: '780px', margin: '0 auto' }}>
+          <div style={{
+            width: '76px',
+            height: '76px',
+            borderRadius: '50%',
+            background: 'rgba(212, 163, 89, 0.14)',
+            border: '2px dashed #D4A359',
+            display: 'grid',
+            placeItems: 'center',
+            margin: '0 auto 1.25rem',
+            color: '#B3862A'
+          }}>
+            <Store size={36} />
+          </div>
+
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            letterSpacing: '1.5px',
+            color: '#8C6519',
+            textTransform: 'uppercase',
+            marginBottom: '0.4rem'
+          }}>
+            {language === 'vi' ? 'TRẠNG THÁI PHÂN BỔ GIAN HÀNG' : 'ALLOCATION STATUS'}
+          </div>
+
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.45rem', color: '#172421', margin: '0 0 0.65rem 0' }}>
+            {language === 'vi' ? 'Chưa có gian hàng được phân bổ' : 'No Booth Assigned Yet'}
+          </h2>
+
+          <p style={{ fontSize: '0.92rem', color: '#556B65', maxWidth: '580px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
+            {language === 'vi'
+              ? 'Tổ chức của bạn hiện chưa được phân bổ gian hàng chính thức. Sau khi hồ sơ tham gia sự kiện được Ban Quản Lý xét duyệt, vị trí gian hàng sẽ được cập nhật tự động tại đây.'
+              : 'Your organization does not have an assigned booth for this event yet. Once your event application is approved, booth details will appear here.'}
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem',
+            textAlign: 'left',
+            marginBottom: '2rem'
+          }}>
+            <div style={{ background: '#FAF8F5', border: '1px solid #EAE5DC', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#8C6519', marginBottom: '0.25rem' }}>BƯỚC 1</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#172421', marginBottom: '0.25rem' }}>Nộp hồ sơ sự kiện</div>
+              <div style={{ fontSize: '0.8rem', color: '#637771' }}>Đăng ký tham gia sự kiện văn hóa đang mở.</div>
+            </div>
+
+            <div style={{ background: '#FAF8F5', border: '1px solid #EAE5DC', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#8C6519', marginBottom: '0.25rem' }}>BƯỚC 2</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#172421', marginBottom: '0.25rem' }}>Phê duyệt & Phân bổ</div>
+              <div style={{ fontSize: '0.8rem', color: '#637771' }}>Ban Quản Lý xét duyệt và chỉ định vị trí.</div>
+            </div>
+
+            <div style={{ background: '#FAF8F5', border: '1px solid #EAE5DC', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#8C6519', marginBottom: '0.25rem' }}>BƯỚC 3</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#172421', marginBottom: '0.25rem' }}>Quản lý gian hàng</div>
+              <div style={{ fontSize: '0.8rem', color: '#637771' }}>Cập nhật hình ảnh, tài liệu và ấn phẩm.</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/partner/booths/select" className="btn-part-primary" style={{ textDecoration: 'none' }}>
+              <Map size={16} />
+              <span>{language === 'vi' ? 'Xem sơ đồ & chọn gian hàng' : 'View Map & Select Booth'}</span>
+            </Link>
+            <Link to="/partner/events" className="btn-part-secondary" style={{ textDecoration: 'none' }}>
+              <FileText size={16} />
+              <span>{language === 'vi' ? 'Theo dõi hồ sơ sự kiện' : 'Track Event Applications'}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleStartEdit = () => {
     setEditName(booth.name);
@@ -144,7 +236,7 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
       areaName: editAreaName.trim() || booth.areaName,
       categories: editCategories.length > 0 ? editCategories : booth.categories
       });
-      setBooth(prev => ({ ...prev, name: saved.name, description: saved.description, dimensions: saved.dimensions, areaName: saved.areaName, categories: saved.categories }));
+      setBooth(prev => prev ? ({ ...prev, name: saved.name, description: saved.description, dimensions: saved.dimensions, areaName: saved.areaName, categories: saved.categories }) : null);
       setIsEditing(false);
       showToast(language === 'vi' ? 'Đã lưu thay đổi thông tin gian hàng thành công!' : 'Booth info updated successfully!');
       window.dispatchEvent(new Event('duongsach:data-changed'));

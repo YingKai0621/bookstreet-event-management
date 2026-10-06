@@ -208,48 +208,61 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
             </tr>
           </thead>
           <tbody>
-            {paginatedParticipants.map((p) => (
-              <tr key={p.id}>
-                <td>
-                  <strong style={{ color: '#172421' }}>{p.fullName}</strong>
-                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#637771' }}>{p.phone}</span>
-                </td>
-                <td>
-                  <span style={{ color: '#4B5563' }}>{p.email}</span>
-                </td>
-                <td>
-                  <code style={{ background: '#F1F5F3', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.78rem', color: '#17382E', fontWeight: 700 }}>
-                    {p.ticketCode}
-                  </code>
-                </td>
-                <td style={{ textAlign: 'center', fontWeight: 700, color: '#172421' }}>
-                  {p.registeredActivitiesCount}
-                </td>
-                <td>
-                  {getStatusChip(p.status)}
-                  {p.checkInTime && (
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#059669', marginTop: '0.2rem' }}>
-                      Check-in: {p.checkInTime}
-                    </span>
-                  )}
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    className="btn-org-secondary"
-                    style={{ padding: '0.25rem 0.6rem', fontSize: '0.76rem' }}
-                    onClick={() => {
-                      setOverrideModalParticipant(p);
-                      setOverrideStatus(p.status);
-                    }}
-                    title="Ghi đè hoặc sửa trạng thái điểm danh"
-                  >
-                    <Edit2 size={12} />
-                    <span>Sửa</span>
-                  </button>
+            {paginatedParticipants.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#637771' }}>
+                  <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#334943' }}>
+                    {language === 'vi' ? 'Chưa có người tham gia đăng ký sự kiện này' : 'No participants registered for this event yet'}
+                  </p>
+                  <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.82rem', color: '#7A8E87' }}>
+                    {language === 'vi' ? 'Dữ liệu đăng ký và điểm danh thực tế sẽ hiển thị tại đây khi độc giả đăng ký qua cổng.' : 'Real registration and attendance records will appear here as participants register.'}
+                  </p>
                 </td>
               </tr>
-            ))}
+            ) : (
+              paginatedParticipants.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <strong style={{ color: '#172421' }}>{p.fullName}</strong>
+                    <span style={{ display: 'block', fontSize: '0.72rem', color: '#637771' }}>{p.phone}</span>
+                  </td>
+                  <td>
+                    <span style={{ color: '#4B5563' }}>{p.email}</span>
+                  </td>
+                  <td>
+                    <code style={{ background: '#F1F5F3', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.78rem', color: '#17382E', fontWeight: 700 }}>
+                      {p.ticketCode}
+                    </code>
+                  </td>
+                  <td style={{ textAlign: 'center', fontWeight: 700, color: '#172421' }}>
+                    {p.registeredActivitiesCount}
+                  </td>
+                  <td>
+                    {getStatusChip(p.status)}
+                    {p.checkInTime && (
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: '#059669', marginTop: '0.2rem' }}>
+                        Check-in: {p.checkInTime}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      type="button"
+                      className="btn-org-secondary"
+                      style={{ padding: '0.25rem 0.6rem', fontSize: '0.76rem' }}
+                      onClick={() => {
+                        setOverrideModalParticipant(p);
+                        setOverrideStatus(p.status);
+                      }}
+                      title="Ghi đè hoặc sửa trạng thái điểm danh"
+                    >
+                      <Edit2 size={12} />
+                      <span>Sửa</span>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
 
@@ -265,9 +278,11 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
           color: '#637771'
         }}>
           <div>
-            {language === 'vi'
-              ? `Hiển thị ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} của ${filteredParticipants.length} độc giả`
-              : `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} of ${filteredParticipants.length} participants`}
+            {filteredParticipants.length === 0
+              ? (language === 'vi' ? 'Hiển thị 0 của 0 độc giả' : 'Showing 0 of 0 participants')
+              : (language === 'vi'
+                ? `Hiển thị ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} của ${filteredParticipants.length} độc giả`
+                : `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} of ${filteredParticipants.length} participants`)}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

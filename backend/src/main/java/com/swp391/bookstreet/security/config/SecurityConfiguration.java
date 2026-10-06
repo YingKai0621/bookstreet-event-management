@@ -154,6 +154,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
                 .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
         );
 

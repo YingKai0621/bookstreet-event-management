@@ -212,7 +212,7 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
   return (
     <div className="participant-feedback-page">
       {/* 1. Page Header */}
-      <div className="participant-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="participant-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <h1 className="participant-page-title" style={{ margin: '0 0 0.35rem 0' }}>
             {language === 'vi' ? 'Đánh giá & Góp ý của tôi' : 'My Feedback & Inquiries'}
@@ -226,12 +226,12 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
 
         <button 
           type="button" 
-          className="btn-part-primary"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '0.5rem',
-            padding: '0.65rem 1.25rem',
+            padding: '0.65rem 1.35rem',
             borderRadius: '9999px',
             background: '#14241F',
             color: '#FFFFFF',
@@ -239,7 +239,11 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
             fontSize: '0.86rem',
             fontWeight: 700,
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(20, 36, 31, 0.2)'
+            boxShadow: '0 4px 14px rgba(20, 36, 31, 0.18)',
+            flex: '0 0 auto',
+            width: 'auto',
+            whiteSpace: 'nowrap',
+            transition: 'all 180ms ease'
           }}
           onClick={() => setIsModalOpen(true)}
         >
@@ -355,11 +359,33 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
             <h3 style={{ fontSize: '1.05rem', color: '#172421', marginBottom: '0.35rem' }}>
               {language === 'vi' ? 'Chưa có góp ý nào trong mục này' : 'No feedback found'}
             </h3>
-            <p style={{ fontSize: '0.84rem', margin: 0 }}>
+            <p style={{ fontSize: '0.84rem', margin: '0 0 1.25rem 0', maxWidth: '480px', marginLeft: 'auto', marginRight: 'auto' }}>
               {language === 'vi' 
-                ? 'Hãy bấm vào nút "Gửi góp ý mới" để đóng góp ý kiến xây dựng Đường Sách ngày càng phát triển.' 
-                : 'Click "Submit New Feedback" to send your valuable thoughts.'}
+                ? 'Hãy chia sẻ trải nghiệm và đóng góp ý kiến của bạn để cùng xây dựng Đường Sách ngày càng phát triển.' 
+                : 'Share your experience and thoughts to help improve Book Street events.'}
             </p>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 1.45rem',
+                borderRadius: '9999px',
+                background: '#14241F',
+                color: '#FFFFFF',
+                border: '1px solid #E9BC63',
+                fontSize: '0.86rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(20, 36, 31, 0.15)',
+                transition: 'all 180ms ease'
+              }}
+            >
+              <Plus size={16} color="#E9BC63" />
+              <span>{language === 'vi' ? 'Gửi góp ý ngay' : 'Submit Feedback Now'}</span>
+            </button>
           </div>
         ) : (
           filteredList.map((fb) => (

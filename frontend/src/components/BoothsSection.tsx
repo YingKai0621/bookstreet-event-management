@@ -10,6 +10,7 @@ import './BoothsSection.css';
 interface BoothsSectionProps {
   language: Language;
   booths?: Booth[];
+  isLoading?: boolean;
   onSelectBoothOnMap: (boothId: string) => void;
   searchQuery?: string;
   onSearchQueryChange?: (q: string) => void;
@@ -19,6 +20,7 @@ interface BoothsSectionProps {
 export const BoothsSection: React.FC<BoothsSectionProps> = ({
   language,
   booths: initialBooths,
+  isLoading = false,
   onSelectBoothOnMap,
   searchQuery: externalSearchQuery,
   onSearchQueryChange,
@@ -247,93 +249,123 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
         >
-          <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
-          <motion.div
-            key={activeCarouselPage}
-            className="booths-carousel-page"
-            custom={carouselDirection}
-            variants={carouselMotion}
-            initial={isMobileCarousel ? false : 'enter'}
-            animate={isMobileCarousel ? false : 'center'}
-            exit={isMobileCarousel ? undefined : 'exit'}
-            transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
-          >
-          {displayedBooths.map((booth, idx) => {
-            const isFocused = focusedBoothId === booth.id;
-            return (
-              <div 
-                key={booth.id}
-                id={`booth-card-${booth.id}`}
-                className={`figma-kiosk-card ${isFocused ? 'kiosk-card-focus-once' : ''}`}
-                style={{ animationDelay: `${idx * 60}ms` }}
-              >
-                {/* Real Photography Header with Label */}
-                <div className="kiosk-card-photo-wrapper">
-                  <img 
-                    src={booth.image.url || undefined}
-                    alt={booth.image.alt} 
-                    loading="lazy" 
-                    className="kiosk-photo-img"
-                  />
-                  <div className="kiosk-photo-overlay"></div>
-                  <div className="kiosk-banner-tags">
-                    <span className="kiosk-cat-label">
-                      {language === 'vi' ? booth.categoryLabelVi : booth.categoryLabelEn}
-                    </span>
+          {isLoading || booths.length === 0 ? (
+            <div className="booths-carousel-page" style={{ opacity: 1 }}>
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
+                  <div className="kiosk-card-photo-wrapper skeleton-box" style={{ minHeight: '160px', width: '100%' }} />
+                  <div className="kiosk-card-body">
+                    <div className="skeleton-box" style={{ width: '75%', height: '22px', marginBottom: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '100%', height: '14px', marginBottom: '6px' }} />
+                    <div className="skeleton-box" style={{ width: '85%', height: '14px', marginBottom: '14px' }} />
+                    <div className="kiosk-highlights">
+                      <div className="skeleton-box" style={{ width: '45%', height: '12px', marginBottom: '8px' }} />
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <div className="skeleton-box" style={{ width: '70px', height: '22px', borderRadius: '4px' }} />
+                        <div className="skeleton-box" style={{ width: '85px', height: '22px', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+                    <div className="kiosk-card-footer" style={{ marginTop: 'auto', paddingTop: '12px' }}>
+                      <div className="skeleton-box" style={{ width: '95px', height: '32px', borderRadius: '6px' }} />
+                      <div className="skeleton-box" style={{ width: '110px', height: '32px', borderRadius: '6px' }} />
+                    </div>
                   </div>
                 </div>
-
-                <div className="kiosk-card-body">
-                  <h3 className="kiosk-title">
-                    {language === 'vi' ? booth.name : booth.nameEn}
-                  </h3>
-                  <p className="kiosk-desc">
-                    {language === 'vi' ? booth.tagline : booth.taglineEn}
-                  </p>
-
-                  <div className="kiosk-highlights">
-                    <span className="kiosk-hl-label">
-                      <IconBookmark size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                      {language === 'vi' ? 'Đầu sách đặc trưng:' : 'Notable reads:'}
-                    </span>
-                    <div className="kiosk-books-row">
-                      {booth.featuredBooks.slice(0, 2).map((bk, i) => (
-                        <span key={i} className="kiosk-book-tag">{bk}</span>
-                      ))}
+              ))}
+            </div>
+          ) : displayedBooths.length === 0 ? (
+            <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
+              <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
+            <motion.div
+              key={activeCarouselPage}
+              className="booths-carousel-page"
+              custom={carouselDirection}
+              variants={carouselMotion}
+              initial={isMobileCarousel ? false : 'enter'}
+              animate={isMobileCarousel ? false : 'center'}
+              exit={isMobileCarousel ? undefined : 'exit'}
+              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+            >
+            {displayedBooths.map((booth, idx) => {
+              const isFocused = focusedBoothId === booth.id;
+              return (
+                <div 
+                  key={booth.id}
+                  id={`booth-card-${booth.id}`}
+                  className={`figma-kiosk-card ${isFocused ? 'kiosk-card-focus-once' : ''}`}
+                  style={{ animationDelay: `${idx * 60}ms` }}
+                >
+                  {/* Real Photography Header with Label */}
+                  <div className="kiosk-card-photo-wrapper">
+                    <img 
+                      src={booth.image.url || undefined}
+                      alt={booth.image.alt} 
+                      loading="lazy" 
+                      className="kiosk-photo-img"
+                    />
+                    <div className="kiosk-photo-overlay"></div>
+                    <div className="kiosk-banner-tags">
+                      <span className="kiosk-cat-label">
+                        {language === 'vi' ? booth.categoryLabelVi : booth.categoryLabelEn}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="kiosk-card-footer">
-                    <button
-                      type="button"
-                      className="btn-kiosk-detail"
-                      onClick={(e) => handleOpenBoothModal(booth, e)}
-                    >
-                      <span>{language === 'vi' ? 'Xem chi tiết' : 'View details'}</span>
-                      <ChevronRight size={15} />
-                    </button>
+                  <div className="kiosk-card-body">
+                    <h3 className="kiosk-title">
+                      {language === 'vi' ? booth.name : booth.nameEn}
+                    </h3>
+                    <p className="kiosk-desc">
+                      {language === 'vi' ? booth.tagline : booth.taglineEn}
+                    </p>
 
-                    <button
-                      type="button"
-                      className="btn-kiosk-map"
-                      onClick={() => onSelectBoothOnMap(booth.id)}
-                    >
-                      <MapPin size={15} />
-                      <span>{language === 'vi' ? 'Xem trên bản đồ' : 'Map Pin'}</span>
-                    </button>
+                    <div className="kiosk-highlights">
+                      <span className="kiosk-hl-label">
+                        <IconBookmark size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                        {language === 'vi' ? 'Đầu sách đặc trưng:' : 'Notable reads:'}
+                      </span>
+                      <div className="kiosk-books-row">
+                        {booth.featuredBooks.slice(0, 2).map((bk, i) => (
+                          <span key={i} className="kiosk-book-tag">{bk}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="kiosk-card-footer">
+                      <button
+                        type="button"
+                        className="btn-kiosk-detail"
+                        onClick={(e) => handleOpenBoothModal(booth, e)}
+                      >
+                        <span>{language === 'vi' ? 'Xem chi tiết' : 'View details'}</span>
+                        <ChevronRight size={15} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-kiosk-map"
+                        onClick={() => onSelectBoothOnMap(booth.id)}
+                      >
+                        <MapPin size={15} />
+                        <span>{language === 'vi' ? 'Xem trên bản đồ' : 'Map Pin'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-          {showExploreCard && (
-            <Link to="/gian-hang" className="booths-explore-card">
-              <span>{language === 'vi' ? 'Khám phá thêm gian hàng' : 'Explore more bookstalls'}</span>
-              <ChevronsRight size={30} aria-hidden="true" />
-            </Link>
+              );
+            })}
+            {showExploreCard && (
+              <Link to="/gian-hang" className="booths-explore-card">
+                <span>{language === 'vi' ? 'Khám phá thêm gian hàng' : 'Explore more bookstalls'}</span>
+                <ChevronsRight size={30} aria-hidden="true" />
+              </Link>
+            )}
+            </motion.div>
+            </AnimatePresence>
           )}
-          </motion.div>
-          </AnimatePresence>
         </div>
 
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách */}

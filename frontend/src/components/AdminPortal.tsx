@@ -42,7 +42,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   language,
   onLogout
 }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('booths');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    const saved = localStorage.getItem('admin_active_tab') as AdminTab | null;
+    return saved || 'dashboard';
+  });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Core Data States
@@ -61,16 +64,50 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
   const [loadError, setLoadError] = useState('');
 
+  // Persist activeTab on changes
+  useEffect(() => {
+    localStorage.setItem('admin_active_tab', activeTab);
+  }, [activeTab]);
+
   const refreshAdminData = async () => {
-    const [loadedRoles, loadedPermissions, loadedProfile] = await Promise.all([
-      adminApi.getRoles(), adminApi.getPermissions(), adminApi.getProfile(),
-    ]);
-    setRoleConfigs(loadedRoles); setPermissions(loadedPermissions); setProfile(loadedProfile);
-    setLoadError('');
+    try {
+      const [
+        loadedRoles,
+        loadedPermissions,
+        loadedProfile,
+        loadedUsers,
+        loadedStats,
+        loadedAuditLogs,
+        loadedBadges,
+        loadedNotifications
+      ] = await Promise.all([
+        adminApi.getRoles().catch(() => ({} as Record<AdminRoleType, AdminRolePermissionConfig>)),
+        adminApi.getPermissions().catch(() => []),
+        adminApi.getProfile().catch(() => ({ id: '', name: 'Quản trị viên', role: 'ADMIN', department: '', email: '', phone: '', avatarInitials: 'AD', lastLogin: '' })),
+        adminApi.getUsers().catch(() => []),
+        adminApi.getDashboard().catch(() => ({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] })),
+        adminApi.getAuditLogs().catch(() => []),
+        adminApi.getBadgeRules().catch(() => []),
+        adminApi.getNotifications().catch(() => [])
+      ]);
+
+      setRoleConfigs(loadedRoles);
+      setPermissions(loadedPermissions);
+      setProfile(loadedProfile);
+      setUsers(loadedUsers);
+      setDashboardStats(loadedStats);
+      setAuditLogs(loadedAuditLogs);
+      setBadgeRules(loadedBadges);
+      setNotifications(loadedNotifications);
+      setLoadError('');
+    } catch (error) {
+      console.warn(error);
+      setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu quản trị');
+    }
   };
 
   useEffect(() => {
-    void refreshAdminData().catch(error => { console.warn(error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu quản trị'); });
+    void refreshAdminData();
     const refresh = () => void refreshAdminData().catch(console.warn);
     const intervalId = window.setInterval(refresh, 15000);
     window.addEventListener('focus', refresh);
@@ -78,8 +115,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   }, []);
 
   // --- Handlers: User Management ---
-  const handleAddUser = async (newUserData: Omit<AdminUserAccount, 'id' | 'code' | 'createdDate' | 'avatarInitials' | 'lastActive'>) => {
-    await adminApi.createUser(newUserData);
+  const handleAddUser = async (newUserData: any) => {
+    const rawUsername = newUserData.username || (newUserData.email ? newUserData.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') : `user${Date.now()}`);
+    const username = (rawUsername.length >= 3 ? rawUsername : `user${rawUsername}`).slice(0, 20);
+    await adminApi.createUser({
+      username,
+      fullName: newUserData.fullName,
+      email: newUserData.email,
+      phone: newUserData.phone,
+      role: newUserData.role,
+      status: newUserData.status,
+      password: newUserData.password || 'BookStreet@123'
+    });
     await refreshAdminData();
   };
 

@@ -64,9 +64,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
-  const [boothsList] = useState<OrganizerBoothItem[]>([]);
-  const [activitiesList] = useState<OrganizerActivityItem[]>([]);
-  const [participantsList] = useState<OrganizerParticipantItem[]>([]);
+  const [boothsList, setBoothsList] = useState<OrganizerBoothItem[]>([]);
+  const [activitiesList, setActivitiesList] = useState<OrganizerActivityItem[]>([]);
+  const [participantsList, setParticipantsList] = useState<OrganizerParticipantItem[]>([]);
   const [notificationsList, setNotificationsList] = useState<OrganizerNotificationItem[]>([]);
   const [profile, setProfile] = useState<OrganizerProfile>(() => {
     const fullName = user?.fullName || '';
@@ -82,13 +82,23 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
 
   const refreshOrganizerData = async (preferredEventId?: string | null) => {
-    const events = await organizerApi.getEvents();
-    setEventsList(events);
-    if (preferredEventId && !events.some(event => event.id === preferredEventId)) {
-      setSelectedEventId(null);
+    try {
+      const [events, activities] = await Promise.all([
+        organizerApi.getEvents(),
+        organizerApi.getActivities(preferredEventId || undefined),
+      ]);
+      setEventsList(events);
+      setActivitiesList(activities);
+      if (preferredEventId && !events.some(event => event.id === preferredEventId)) {
+        setSelectedEventId(null);
+      }
+      setLoadError('');
+    } catch (error) {
+      console.warn('Could not load organizer data', error);
+      setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành');
+    } finally {
+      setIsLoadingEvents(false);
     }
-    setLoadError('');
-    setIsLoadingEvents(false);
   };
 
   useEffect(() => {
@@ -101,11 +111,17 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!selectedEventId) return;
-    organizerApi.getEvent(selectedEventId).then(event => {
-      setEventsList(current => current.map(item => item.id === event.id ? event : item));
-    }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
-  }, [selectedEventId]);
+    const targetEventId = selectedEventId || eventsList[0]?.id;
+    organizerApi.getActivities(targetEventId).then(setActivitiesList).catch(() => setActivitiesList([]));
+    organizerApi.getBooths(targetEventId).then(setBoothsList).catch(() => setBoothsList([]));
+    organizerApi.getParticipants(targetEventId).then(setParticipantsList).catch(() => setParticipantsList([]));
+
+    if (selectedEventId) {
+      organizerApi.getEvent(selectedEventId).then(event => {
+        setEventsList(current => current.map(item => item.id === event.id ? event : item));
+      }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
+    }
+  }, [selectedEventId, eventsList.length]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -356,7 +372,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
-          if (tab !== 'events') setSelectedEventId(null);
+          if (tab !== 'events' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
+            setSelectedEventId(null);
+          }
         }}
         onMarkNotificationRead={(id) => { void organizerApi.markNotificationRead(id).then(() => organizerApi.getNotifications()).then(setNotificationsList); }}
         onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
@@ -370,7 +388,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           activeTab={activeTab}
           onSelectTab={(tab: OrganizerTab) => {
             setActiveTab(tab);
-            if (tab !== 'events') {
+            if (tab !== 'events' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
               setSelectedEventId(null);
             }
           }}
@@ -446,11 +464,11 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           />
         )}
 
-        {activeTab === 'booths' && currentSelectedEvent && (
+        {activeTab === 'booths' && (
           <BoothMapView 
             language={language}
             events={eventsList}
-            selectedEventId={currentSelectedEvent.id}
+            selectedEventId={currentSelectedEvent?.id || 'all'}
             onSelectEventId={(id: string) => setSelectedEventId(id)}
             booths={boothsList}
             onApproveBooth={handleApproveBooth}
@@ -471,11 +489,11 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           />
         )}
 
-        {activeTab === 'participants' && currentSelectedEvent && (
+        {activeTab === 'participants' && (
           <ParticipantManagementView 
             language={language}
             events={eventsList}
-            selectedEventId={currentSelectedEvent.id}
+            selectedEventId={currentSelectedEvent?.id || 'all'}
             onSelectEventId={(id: string) => setSelectedEventId(id)}
             participants={participantsList}
             onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
@@ -483,11 +501,11 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           />
         )}
 
-        {activeTab === 'reports' && currentSelectedEvent && (
+        {activeTab === 'reports' && (
           <OrganizerReportsView 
             language={language}
             events={eventsList}
-            selectedEventId={currentSelectedEvent.id}
+            selectedEventId={currentSelectedEvent?.id || 'all'}
             onSelectEventId={(id: string) => setSelectedEventId(id)}
           />
         )}
