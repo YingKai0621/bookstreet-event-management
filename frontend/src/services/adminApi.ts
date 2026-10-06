@@ -80,7 +80,7 @@ export const adminApi = {
         }));
   },
 
-  createUser: (data: { fullName: string; email: string; phone?: string; role: AdminRoleType; status: string; password?: string }) => apiClient.post<any>('/admin/users', data),
+  createUser: (data: { username: string; fullName: string; email: string; phone?: string; role: AdminRoleType; status: string; password?: string }) => apiClient.post<any>('/admin/users', data),
   updateUser: (id: string, data: unknown) => apiClient.patch<any>(`/admin/users/${encodeURIComponent(id)}`, data),
 
   // Khóa / Mở khóa tài khoản
