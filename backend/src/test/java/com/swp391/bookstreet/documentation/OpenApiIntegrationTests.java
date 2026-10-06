@@ -70,6 +70,13 @@ class OpenApiIntegrationTests {
     }
 
     @Test
+    void openApiDocumentIncludesCsrfEndpoint() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/csrf'].get").exists());
+    }
+
+    @Test
     void openApiDocumentDescribesApplicationPaginationAsQueryParameters() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -109,12 +116,12 @@ class OpenApiIntegrationTests {
 
     @Test
     void csrfCookieAndHeaderAllowRequestToReachValidation() throws Exception {
-        MockHttpServletResponse swaggerResponse = mockMvc.perform(get("/swagger-ui.html"))
-                .andExpect(status().isFound())
+        MockHttpServletResponse csrfResponse = mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
 
-        Cookie csrfCookie = swaggerResponse.getCookie("XSRF-TOKEN");
+        Cookie csrfCookie = csrfResponse.getCookie("XSRF-TOKEN");
         assertThat(csrfCookie).isNotNull();
         assertThat(csrfCookie.isHttpOnly()).isFalse();
 

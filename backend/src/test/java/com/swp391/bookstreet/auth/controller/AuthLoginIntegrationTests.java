@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "bookstreet.browser-security.session-cookie-secure=true")
 @AutoConfigureMockMvc
 @Transactional
 class AuthLoginIntegrationTests {
@@ -85,6 +85,7 @@ class AuthLoginIntegrationTests {
         assertThat(sessionCookie).isNotNull();
         assertThat(sessionCookie.isHttpOnly()).isTrue();
         assertThat(sessionCookie.getSecure()).isTrue();
+        assertThat(sessionCookie.getAttribute("SameSite")).isEqualTo("Lax");
 
         String sessionId = resolveSessionId(sessionCookie);
         Session storedSession = sessionRepository.findById(sessionId);

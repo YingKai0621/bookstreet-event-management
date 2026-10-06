@@ -1,6 +1,6 @@
 # Sprint 1 Backend Completion Report
 
-Date: `2026-10-05`
+Date: `2026-10-06`
 
 ## 1. Closure decision
 
@@ -41,6 +41,7 @@ This report does not close the whole Sprint. The Sprint remains in frontend inte
 - PostgreSQL is the durable source of truth and Hibernate uses `ddl-auto: validate`.
 - Flyway migrations V1 through V4 provide the Sprint 1 schema, system roles and verified demo accounts.
 - Swagger/OpenAPI supports local API exploration with CSRF handling.
+- Browser security provides the public CSRF bootstrap endpoint, an environment-driven CORS allowlist and configurable Session cookie attributes.
 - GitHub Actions checks the backend and frontend on pushes and pull requests targeting `main`.
 
 ## 3. Verification evidence
@@ -63,6 +64,11 @@ BUILD SUCCESS
 ```
 
 Flyway successfully validated all four migrations and reported schema version 4 with no pending migration.
+
+The browser-security follow-up discovered 172 tests with no failures or errors
+in local verification. The 24 Event tests that require
+`EVENT_TEST_DATABASE_URL` were skipped locally; CI configures their dedicated
+database and enables them.
 
 Manual Swagger verification covered:
 
@@ -90,7 +96,6 @@ A withdrawn application cannot currently be resubmitted for the same Partner Org
 ## 5. Remaining work before full Sprint closure
 
 - Connect the React frontend to the real Sprint 1 backend APIs.
-- Complete environment-driven CORS, Session cookie and frontend CSRF configuration.
 - Run the full demo through the frontend, Redis Session and PostgreSQL without manual database edits.
 - Confirm CI remains green for the frontend integration pull request.
 

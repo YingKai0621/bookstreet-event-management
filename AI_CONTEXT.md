@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-05`
+Last updated: `2026-10-06`
 
 ## Current implementation status
 
@@ -30,8 +30,9 @@ Last updated: `2026-10-05`
 - Role-based authorization failures use the shared `ACCESS_DENIED` response; resource ownership remains enforced inside the owning feature.
 - Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
+- Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The current Maven test suite passes with 165 tests and no failures, errors or skipped tests when the dedicated Event test database is configured.
+- The latest local Maven verification discovered 172 tests with no failures or errors; 24 dedicated Event tests were skipped locally because `EVENT_TEST_DATABASE_URL` was not configured. CI supplies the dedicated Event test database.
 - The backend completion evidence and remaining handoff work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
 
 ## Current database state
@@ -63,14 +64,12 @@ Last updated: `2026-10-05`
 
 ## Not yet implemented
 
-- Final environment-driven CORS, Session cookie and frontend CSRF integration; the browser security design is approved but only partially implemented
 - Forgot/Reset Password
 
 ## Immediate next task
 
 - Integrate the real frontend with the completed Sprint 1 backend APIs.
 - Validate the complete Sprint 1 demo flow through the real frontend, backend, Redis Session and PostgreSQL persistence.
-- Complete the environment-driven browser CORS, Session cookie and CSRF integration without changing the approved server-side Session architecture.
 - Feature modules must continue deriving the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
 - Do not modify applied migrations V1, V2, V3 or V4.
 

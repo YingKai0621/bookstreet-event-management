@@ -57,11 +57,6 @@ server:
   port: ${SERVER_PORT:8080}
   error:
     include-stacktrace: never
-  servlet:
-    session:
-      cookie:
-        http-only: true
-        same-site: lax
 
 springdoc:
   swagger-ui:
@@ -69,6 +64,10 @@ springdoc:
       enabled: true
 
 bookstreet:
+  browser-security:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    session-cookie-secure: ${SESSION_COOKIE_SECURE:false}
+    session-cookie-same-site: ${SESSION_COOKIE_SAME_SITE:Lax}
   email-verification:
     from-address: ${MAIL_FROM:no-reply@bookstreet.local}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
