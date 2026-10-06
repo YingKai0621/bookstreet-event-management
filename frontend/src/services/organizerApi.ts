@@ -14,6 +14,21 @@ import {
 import { ExtendedHeritageProfile } from '../types';
 import { toHeritageProfile } from './publicApi';
 
+interface PublicBoothResponse {
+  id: string;
+  code?: string;
+  name: string;
+  areaName?: string;
+  dimensions?: string;
+  status?: 'rented' | 'reserved' | 'available' | 'unavailable';
+  partnerName?: string;
+  category?: string;
+  price?: number;
+  description?: string;
+  mapX?: number | null;
+  mapY?: number | null;
+}
+
 export type OrganizerFeedbackStatus = 'new' | 'in_progress' | 'responded' | 'closed';
 
 export interface OrganizerFeedback {
@@ -225,7 +240,7 @@ export const organizerApi = {
       // Fallback to public booths
     }
     try {
-      const publicBooths = await apiClient.get<Booth[]>('/public/booths');
+      const publicBooths = await apiClient.get<PublicBoothResponse[]>('/public/booths');
       if (Array.isArray(publicBooths)) {
         return publicBooths.map((b, index) => ({
           id: b.id,
@@ -234,11 +249,10 @@ export const organizerApi = {
           zone: b.areaName || 'Khu A',
           dimensions: b.dimensions || '3m x 3m',
           status: (b.status === 'rented' ? 'assigned' : b.status === 'reserved' ? 'pending' : 'available') as OrganizerBoothItem['status'],
+          statusLabelVi: b.status === 'rented' ? 'Đã thuê' : b.status === 'reserved' ? 'Đang chờ' : 'Còn trống',
           orgName: b.partnerName || undefined,
           areaType: b.category || 'Gian hàng tiêu chuẩn',
-          price: b.price ? `${b.price.toLocaleString('vi-VN')} đ` : '5.000.000 đ',
-          electricityIncluded: true,
-          waterIncluded: false,
+          priceEstimate: b.price ? `${b.price.toLocaleString('vi-VN')} đ` : '5.000.000 đ',
           notes: b.description || '',
           x: b.mapX ?? (12 + (index % 12) * 6.9),
           y: b.mapY ?? (38 + Math.floor(index / 12) * 16),
@@ -362,7 +376,7 @@ export const organizerApi = {
       const eventName = event ? event.name : 'Sự kiện';
       const totalParticipants = participants.length;
       const attended = participants.filter(p => p.status === 'attended').length;
-      const pending = participants.filter(p => p.status === 'not_attended' || p.status === 'registered').length;
+      const pending = participants.filter(p => p.status === 'not_attended').length;
       const cancelled = participants.filter(p => p.status === 'cancelled').length;
       const totalBooths = booths.filter(b => b.status === 'assigned').length || applications.filter(a => a.status === 'approved').length;
       const totalActivities = activities.length;
