@@ -1,14 +1,14 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-06`
+Last updated: `2026-10-07`
 
 ## Current implementation status
 
-- Sprint 1 backend and real frontend integration are complete on `main` through merge commit `884131b`.
+- Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current baseline includes `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql`, `V3__create_sprint1_business_schema.sql` and `V4__seed_sprint1_demo_accounts.sql`.
+- The current baseline includes Flyway migrations V1 through V5. `V5__seed_all_demo_roles.sql` is retained as the immutable demo-account seed, so the Sprint 2 schema migration is V6.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway validates and applies the current schema and seed data through version 4.
+- Flyway validates and applies the merged schema and seed data through version 5. V6 is in progress on the Sprint 2 schema branch.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
 - Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
@@ -32,9 +32,9 @@ Last updated: `2026-10-06`
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The latest local Maven verification discovered 172 tests with no failures or errors; 24 dedicated Event tests were skipped locally because `EVENT_TEST_DATABASE_URL` was not configured. CI supplies the dedicated Event test database.
+- The latest local Maven verification ran 175 tests against the dedicated PostgreSQL test database with no failures, errors or skips.
 - Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
-- Sprint 2 design is complete in `docs/sprints/sprint-02.md`, `docs/use-cases/sprint-02-use-case-specifications.md` and `docs/api/sprint-02-api-contract.md`; implementation has not started.
+- Sprint 2 design is complete in `docs/sprints/sprint-02.md`, `docs/use-cases/sprint-02-use-case-specifications.md` and `docs/api/sprint-02-api-contract.md`; implementation has started with the V6 Booth schema and migration verification.
 - Sprint 2 ends at Organizer selection, price-locked BoothHold and Hold expiry. Payment gateway integration and BoothAssignment are deferred to Sprint 3.
 - Sprint 2 keeps `boothPaymentWindowMinutes` in the existing Event record, constrains it to `60..10080` minutes inclusive and defaults a new Event to `1440` minutes (24 hours).
 - Selection persists `expiresAt = selectedAt + boothPaymentWindowMinutes`; a later permitted Event setting change applies only to future selections and never rewrites an existing Hold.
@@ -68,24 +68,39 @@ Last updated: `2026-10-06`
 - `organizerdemo` with `PARTICIPANT` and `ORGANIZER`
 - `partnerdemo` with `PARTICIPANT` and `PARTNER`
 
+`V5__seed_all_demo_roles.sql`:
+
+- updates the existing Organizer and Partner demo credentials;
+- seeds `admindemo` with `PARTICIPANT` and `ADMIN`;
+- seeds `participantdemo` with `PARTICIPANT`.
+
+`V6__create_sprint2_booth_schema.sql` is the in-progress Sprint 2 migration and creates:
+
+- `locations`
+- `booths`
+- `event_booth_configs`
+- `booth_requests`
+- `booth_holds`
+
 ## Not yet implemented
 
 - Forgot/Reset Password
-- Sprint 2 Booth catalog, Event Booth configuration, BoothRequest and BoothHold persistence/APIs
+- Sprint 2 Booth catalog, Event Booth configuration, BoothRequest and BoothHold Java persistence/APIs
 - Payment gateway, BoothPayment, BoothAssignment and refund workflows
 
 ## Immediate next task
 
-- Implement Sprint 2 from the approved contract, beginning with one new Flyway migration and the Booth catalog/Event Booth configuration workstream.
+- Merge the Sprint 2 V6 documentation correction before the V6 schema pull request.
+- Complete the Booth catalog/Event Booth configuration workstream after the V6 schema is merged.
 - Keep BoothRequest submission separate from BoothHold creation: submission creates only `PENDING`; Organizer selection creates the Hold.
 - Preserve the selected price in `BoothHold.lockedRentalPrice` and implement safe, idempotent Hold expiry.
 - Enforce the approved resubmission policy: new records may follow `WITHDRAWN` or `PAYMENT_EXPIRED`; the same Event–Booth cannot be requested again after `REJECTED`.
 - Feature modules must continue deriving the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
-- Do not modify applied migrations V1, V2, V3 or V4.
+- Do not modify applied migrations V1, V2, V3, V4 or V5.
 
 ## Active Sprint
 
-Active Sprint: Sprint 02 Booth Selection and Allocation Hold. Design complete; implementation not started.
+Active Sprint: Sprint 02 Booth Selection and Allocation Hold. Design complete; implementation in progress.
 
 Included Use Cases:
 

@@ -32,7 +32,7 @@ Sprint 2 ends at Organizer selection, a price-locked BoothHold, selection email 
 Owns:
 
 - the single Sprint 2 Flyway migration;
-- migration verification from both a clean database and an existing V1–V4 database;
+- migration verification from both a clean database and an existing V1–V5 database;
 - replacement of the old non-negative Event payment-window constraint with the approved `60..10080` range and a `1440` database default;
 - backend defaulting and validation for `boothPaymentWindowMinutes` in the existing Event create/update path;
 - `Location`, `Booth` and `EventBoothConfig` Java persistence;
@@ -48,9 +48,9 @@ The migration creates:
 - `booth_requests`;
 - `booth_holds`.
 
-V5 creates exactly these five new tables. It also normalizes any legacy Event payment-window value outside `60..10080` to the nearest valid boundary, replaces the existing constraint and sets the column default to `1440`; it does not create a second Event settings table.
+V6 creates exactly these five new tables. It also normalizes any legacy Event payment-window value outside `60..10080` to the nearest valid boundary, replaces the existing constraint and sets the column default to `1440`; it does not create a second Event settings table.
 
-V5 must create a partial unique index on `booth_requests (application_id, booth_id)` for rows whose status is `PENDING` or `SELECTED`. This is the database backstop for the one-open-request rule. Because closed rows are intentionally outside that index, Workstream B must still enforce the rule that a `REJECTED` request cannot be resubmitted for the same Event–Booth.
+V6 must create a partial unique index on `booth_requests (application_id, booth_id)` for rows whose status is `PENDING` or `SELECTED`. This is the database backstop for the one-open-request rule. Because closed rows are intentionally outside that index, Workstream B must still enforce the rule that a `REJECTED` request cannot be resubmitted for the same Event–Booth.
 
 The Sprint 2 form of `booth_holds` supports only `booth_request_id`. A later additive migration may introduce `booth_change_request_id` when Booth Change enters an approved Sprint.
 
@@ -136,12 +136,12 @@ Owns:
 7. `feature/s2-booth-frontend-integration`
 8. `test/s2-booth-end-to-end`
 
-The schema PR contains V5 and schema verification only. Every later pull request must rebase or merge the latest `main`, pass CI and preserve the Sprint 1 regression suite.
+The schema PR contains V6 and schema verification only. Every later pull request must rebase or merge the latest `main`, pass CI and preserve the Sprint 1 regression suite.
 
 ## 6 Required test groups
 
-- Clean-database V1–V5 migration test
-- Existing V1–V4 to V5 upgrade test
+- Clean-database V1–V6 migration test
+- Existing V1–V5 to V6 upgrade test
 - Repository and schema constraint tests
 - Booth validation and Event ownership tests
 - Event payment-window default, inclusive bounds and invalid-value tests
@@ -168,8 +168,8 @@ All backend test groups above run in CI together with frontend lint/build. Playw
 
 Sprint 2 is complete only when:
 
-- V5 succeeds on a clean database;
-- V5 upgrades an existing V1–V4 database without manual intervention;
+- V6 succeeds on a clean database;
+- V6 upgrades an existing V1–V5 database without manual intervention;
 - backend and frontend contracts match the approved Sprint 2 API Contract;
 - Sprint 1 regression tests pass;
 - authorization, ownership and validation tests pass;

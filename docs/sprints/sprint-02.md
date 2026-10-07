@@ -35,7 +35,7 @@ UC-E03 Pay & View Booth is not implemented in this Sprint. Sprint 2 only exposes
 - `booth_requests`
 - `booth_holds`
 
-The migration must be a new Flyway version after V4. Applied migrations V1 through V4 must not be edited.
+The migration must be V6, after the applied V5 demo-role seed. Applied migrations V1 through V5 must not be edited.
 
 The Sprint 2 form of `booth_holds` supports `booth_request_id` as its only source. A future additive migration may introduce `booth_change_request_id` when the Booth-change workflow is implemented. This keeps Sprint 2 inside its approved scope while preserving the Physical ERD lifecycle.
 
@@ -46,11 +46,11 @@ The Sprint 2 form of `booth_holds` supports `booth_request_id` as its only sourc
 - `event_booth_configs` is unique on `(event_id, booth_id)`.
 - Capacity is positive; rental price and locked rental price are non-negative.
 - `booth_requests` references the approved PartnerEventApplication and target physical Booth.
-- V5 creates a partial unique index on `booth_requests (application_id, booth_id)` where status is `PENDING` or `SELECTED`, preventing more than one open request for the same Partner application and Booth.
+- V6 creates a partial unique index on `booth_requests (application_id, booth_id)` where status is `PENDING` or `SELECTED`, preventing more than one open request for the same Partner application and Booth.
 - One BoothRequest cannot own more than one Hold.
 - At most one `ACTIVE` Hold may exist for one EventBoothConfig.
 - The service additionally prevents Active Holds for the same physical Booth when their Events overlap. Selection locks the physical Booth row before checking overlapping Holds so concurrent requests cannot bypass this rule.
-- The existing `events.booth_payment_window_minutes` column is constrained to `60..10080` minutes inclusive and defaults to `1440` for a new Event. V5 replaces the earlier non-negative constraint and normalizes legacy out-of-range values to the nearest valid boundary before adding the new constraint.
+- The existing `events.booth_payment_window_minutes` column is constrained to `60..10080` minutes inclusive and defaults to `1440` for a new Event. V6 replaces the earlier non-negative constraint and normalizes legacy out-of-range values to the nearest valid boundary before adding the new constraint.
 - Hold creation uses one backend Clock instant for `selected_at` and `created_at`, then calculates `expires_at = selected_at + booth_payment_window_minutes`.
 - `expires_at` is persisted and never recalculated from the Event after Hold creation.
 - Indexes must support request lookup by Booth/status and expiry lookup by Hold status/expiry time.
@@ -85,7 +85,7 @@ Sprint 2 has no BoothAssignment table yet, but the availability service must be 
 - After `WITHDRAWN` or `PAYMENT_EXPIRED`, the Partner may create a new record if deadline, quota and availability rules still pass.
 - After `REJECTED`, the Partner cannot submit again for that same Event–Booth but may request another Booth.
 - Historical requests are never restored or reused.
-- Because closed rows are outside the V5 partial unique index, service validation remains responsible for rejecting same-Event–Booth resubmission after `REJECTED`.
+- Because closed rows are outside the V6 partial unique index, service validation remains responsible for rejecting same-Event–Booth resubmission after `REJECTED`.
 
 ### 5.4 Organizer selection creates the Hold
 

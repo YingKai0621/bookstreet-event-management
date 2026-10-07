@@ -36,7 +36,6 @@ public class UpdateEventRequest {
 
     private Instant activityCancellationCutoffAt;
 
-    @PositiveOrZero
     private Integer boothPaymentWindowMinutes;
 
     @PositiveOrZero

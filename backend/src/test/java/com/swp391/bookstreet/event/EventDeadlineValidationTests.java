@@ -92,7 +92,7 @@ class EventDeadlineValidationTests {
         event.setName("Book Street");
         event.setStartAt(START);
         event.setEndAt(START.plusSeconds(3600));
-        event.setBoothPaymentWindowMinutes(30);
+        event.setBoothPaymentWindowMinutes(60);
         event.setMaxBoothsPerPartner(1);
         event.setMaxActivitiesPerPartner(5);
         deadlines().forEach(d -> d.setter().accept(event, START));

@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class EventService {
+    private static final int DEFAULT_BOOTH_PAYMENT_WINDOW_MINUTES = 1440;
+
     private final EventRepository repository;
     private final EventCurrentUser currentUser;
     private final EventValidation validation;
@@ -41,7 +43,9 @@ public class EventService {
         event.setPartnerWithdrawalCutoffAt(request.partnerWithdrawalCutoffAt());
         event.setBoothCancellationCutoffAt(request.boothCancellationCutoffAt());
         event.setActivityCancellationCutoffAt(request.activityCancellationCutoffAt());
-        event.setBoothPaymentWindowMinutes(request.boothPaymentWindowMinutes());
+        event.setBoothPaymentWindowMinutes(request.boothPaymentWindowMinutes() == null
+                ? DEFAULT_BOOTH_PAYMENT_WINDOW_MINUTES
+                : request.boothPaymentWindowMinutes());
         event.setMaxBoothsPerPartner(request.maxBoothsPerPartner());
         event.setMaxActivitiesPerPartner(request.maxActivitiesPerPartner());
         event.setBannerUrl(request.bannerUrl());

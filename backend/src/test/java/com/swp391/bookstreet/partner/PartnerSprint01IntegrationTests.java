@@ -276,7 +276,7 @@ class PartnerSprint01IntegrationTests {
                     partner_application_deadline_at, booth_payment_window_minutes,
                     max_booths_per_partner, max_activities_per_partner, status, created_at, updated_at)
                 VALUES (?, ?, CURRENT_TIMESTAMP + INTERVAL '10 days',
-                    CURRENT_TIMESTAMP + INTERVAL '11 days', ?, 30, 2, 5, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    CURRENT_TIMESTAMP + INTERVAL '11 days', ?, 60, 2, 5, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING event_id
                 """, Long.class, organizer.getId(), "Sprint Test " + UUID.randomUUID(),
                 java.sql.Timestamp.from(deadline), eventStatus);

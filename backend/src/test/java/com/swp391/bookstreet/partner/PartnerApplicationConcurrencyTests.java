@@ -51,7 +51,7 @@ class PartnerApplicationConcurrencyTests {
                     max_booths_per_partner, max_activities_per_partner, status, created_at, updated_at)
                 VALUES (?, ?, CURRENT_TIMESTAMP + INTERVAL '10 days',
                     CURRENT_TIMESTAMP + INTERVAL '11 days', CURRENT_TIMESTAMP + INTERVAL '5 days',
-                    30, 2, 5, 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    60, 2, 5, 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING event_id
                 """, Long.class, organizerUserId, "Concurrent Test " + UUID.randomUUID());
     }

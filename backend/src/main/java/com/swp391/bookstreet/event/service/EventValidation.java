@@ -59,7 +59,10 @@ public class EventValidation {
                 "EVENT_CONFIGURATION_INVALID", "name", "Event name must not exceed 150 characters.");
         require(event.getEndAt().isAfter(event.getStartAt()), "EVENT_TIME_INVALID",
                 "endAt", "End time must be after start time.");
-        nonNegative(event.getBoothPaymentWindowMinutes(), "boothPaymentWindowMinutes");
+        require(event.getBoothPaymentWindowMinutes() >= 60
+                        && event.getBoothPaymentWindowMinutes() <= 10080,
+                "EVENT_CONFIGURATION_INVALID", "boothPaymentWindowMinutes",
+                "Payment window must be between 60 and 10080 minutes.");
         nonNegative(event.getMaxBoothsPerPartner(), "maxBoothsPerPartner");
         nonNegative(event.getMaxActivitiesPerPartner(), "maxActivitiesPerPartner");
         validateDeadlines(event);
