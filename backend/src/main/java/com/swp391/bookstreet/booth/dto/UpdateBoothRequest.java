@@ -1,0 +1,68 @@
+package com.swp391.bookstreet.booth.dto;
+
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
+
+public class UpdateBoothRequest {
+    @JsonIgnore
+    private final Set<String> suppliedFields = new HashSet<>();
+
+    @Size(max = 100)
+    private String name;
+    private String description;
+    @Positive
+    private Integer maxCapacity;
+    @Digits(integer = 8, fraction = 2)
+    private BigDecimal mapX;
+    @Digits(integer = 8, fraction = 2)
+    private BigDecimal mapY;
+    private Boolean active;
+    @Size(max = 50)
+    private String categoryCode;
+    private String note;
+
+    public boolean contains(String field) {
+        return suppliedFields.contains(field);
+    }
+
+    @JsonIgnore
+    public boolean isEmpty() {
+        return suppliedFields.isEmpty();
+    }
+
+    @JsonAnySetter
+    public void rejectUnknownField(String field, Object value) {
+        throw new IllegalArgumentException("Unsupported Booth request field: " + field);
+    }
+
+    public String getName() { return name; }
+    @JsonSetter("name") public void setName(String value) { suppliedFields.add("name"); name = value; }
+
+    public String getDescription() { return description; }
+    @JsonSetter("description") public void setDescription(String value) { suppliedFields.add("description"); description = value; }
+
+    public Integer getMaxCapacity() { return maxCapacity; }
+    @JsonSetter("maxCapacity") public void setMaxCapacity(Integer value) { suppliedFields.add("maxCapacity"); maxCapacity = value; }
+
+    public BigDecimal getMapX() { return mapX; }
+    @JsonSetter("mapX") public void setMapX(BigDecimal value) { suppliedFields.add("mapX"); mapX = value; }
+
+    public BigDecimal getMapY() { return mapY; }
+    @JsonSetter("mapY") public void setMapY(BigDecimal value) { suppliedFields.add("mapY"); mapY = value; }
+
+    public Boolean getActive() { return active; }
+    @JsonSetter("active") public void setActive(Boolean value) { suppliedFields.add("active"); active = value; }
+
+    public String getCategoryCode() { return categoryCode; }
+    @JsonSetter("categoryCode") public void setCategoryCode(String value) { suppliedFields.add("categoryCode"); categoryCode = value; }
+
+    public String getNote() { return note; }
+    @JsonSetter("note") public void setNote(String value) { suppliedFields.add("note"); note = value; }
+}
