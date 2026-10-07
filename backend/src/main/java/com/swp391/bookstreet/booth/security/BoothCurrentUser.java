@@ -11,11 +11,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class BoothCurrentUser {
     public Long requireOrganizerId() {
+        return requireRole("ROLE_ORGANIZER");
+    }
+
+    public Long requirePartnerId() {
+        return requireRole("ROLE_PARTNER");
+    }
+
+    private Long requireRole(String role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
                 || authentication.getAuthorities().stream()
-                        .noneMatch(authority -> "ROLE_ORGANIZER".equals(authority.getAuthority()))
+                        .noneMatch(authority -> role.equals(authority.getAuthority()))
                 || !(authentication.getPrincipal() instanceof AuthenticatedPrincipal principal)
                 || principal.userId() == null || principal.userId() <= 0
                 || !principal.emailVerified()) {
