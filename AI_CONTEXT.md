@@ -4,7 +4,7 @@ Last updated: `2026-10-06`
 
 ## Current implementation status
 
-- Sprint 1 Backend is complete on `main` through merge commit `7890278`; full Sprint closure still waits for real frontend integration and the end-to-end demo.
+- Sprint 1 backend and real frontend integration are complete on `main` through merge commit `884131b`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
 - The current baseline includes `V1__init_auth_schema.sql`, `V2__seed_system_roles.sql`, `V3__create_sprint1_business_schema.sql` and `V4__seed_sprint1_demo_accounts.sql`.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
@@ -33,7 +33,13 @@ Last updated: `2026-10-06`
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
 - The latest local Maven verification discovered 172 tests with no failures or errors; 24 dedicated Event tests were skipped locally because `EVENT_TEST_DATABASE_URL` was not configured. CI supplies the dedicated Event test database.
-- The backend completion evidence and remaining handoff work are recorded in `docs/development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`.
+- Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
+- Sprint 2 design is complete in `docs/sprints/sprint-02.md`, `docs/use-cases/sprint-02-use-case-specifications.md` and `docs/api/sprint-02-api-contract.md`; implementation has not started.
+- Sprint 2 ends at Organizer selection, price-locked BoothHold and Hold expiry. Payment gateway integration and BoothAssignment are deferred to Sprint 3.
+- Sprint 2 keeps `boothPaymentWindowMinutes` in the existing Event record, constrains it to `60..10080` minutes inclusive and defaults a new Event to `1440` minutes (24 hours).
+- Selection persists `expiresAt = selectedAt + boothPaymentWindowMinutes`; a later permitted Event setting change applies only to future selections and never rewrites an existing Hold.
+- Selection email is a post-commit side effect. Email failure is logged and must not roll back the selected request or Hold; Sprint 2 does not add an outbox or notification table.
+- Sprint 2 uses a simple public/Partner Booth grid. Advanced drag-and-drop map editing remains out of scope.
 
 ## Current database state
 
@@ -65,25 +71,27 @@ Last updated: `2026-10-06`
 ## Not yet implemented
 
 - Forgot/Reset Password
+- Sprint 2 Booth catalog, Event Booth configuration, BoothRequest and BoothHold persistence/APIs
+- Payment gateway, BoothPayment, BoothAssignment and refund workflows
 
 ## Immediate next task
 
-- Integrate the real frontend with the completed Sprint 1 backend APIs.
-- Validate the complete Sprint 1 demo flow through the real frontend, backend, Redis Session and PostgreSQL persistence.
+- Implement Sprint 2 from the approved contract, beginning with one new Flyway migration and the Booth catalog/Event Booth configuration workstream.
+- Keep BoothRequest submission separate from BoothHold creation: submission creates only `PENDING`; Organizer selection creates the Hold.
+- Preserve the selected price in `BoothHold.lockedRentalPrice` and implement safe, idempotent Hold expiry.
+- Enforce the approved resubmission policy: new records may follow `WITHDRAWN` or `PAYMENT_EXPIRED`; the same Event–Booth cannot be requested again after `REJECTED`.
 - Feature modules must continue deriving the current User ID and roles from the shared authenticated principal; clients must not supply ownership IDs.
 - Do not modify applied migrations V1, V2, V3 or V4.
 
 ## Active Sprint
 
-Active Sprint: Sprint 01 Account and Partner Application. Backend complete; frontend integration pending.
+Active Sprint: Sprint 02 Booth Selection and Allocation Hold. Design complete; implementation not started.
 
 Included Use Cases:
 
-- UC-G02 Create Account
-- UC-G03 Manage Account Access, Sprint 1 slice
-- UC-O01 Manage Events, create/update/publish slice
-- UC-E01 Apply to Event
-- UC-O03 Review Partner Applications
+- UC-O02 Manage Locations, physical Booth and Event configuration slice
+- UC-E02 Manage Booth Request, submit/query/Pending withdrawal slice
+- UC-O04 Review Booth Requests, reject/select/Hold-expiry slice
 
 ## Current approved baselines
 
@@ -99,20 +107,21 @@ Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation so
 ## Authentication baseline
 
 - Authentication uses a Spring Security server-side Session stored in Redis.
-- Sprint 1 does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
+- Authentication does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
 - The `user_tokens` table stores email-verification token hashes and remains reserved for the future password-reset flow.
 - The approved email-verification extension uses the existing `users.email_verified_at` and `user_tokens` schema; it requires no new migration.
 - Verification does not grant roles. Existing Sessions are not silently elevated; eligible advanced authorities take effect after re-login.
 - Email-verification endpoints, token policy and acceptance criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
 - The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
-- Forgot/Reset Password is outside Sprint 1.
+- Forgot/Reset Password remains outside the active Sprint.
 
-## Sprint 1 scope guard
+## Sprint 2 scope guard
 
-Sprint 1 excludes:
+Sprint 2 excludes:
 
-- Booth configuration, request, hold, assignment, change and cancellation
-- Payment and refund
+- Payment gateway integration, BoothPayment, BoothAssignment and refund
+- Booth change and cancellation
+- Partner withdrawal from the whole Event
 - Activity proposal, management, registration and rating
 - QR flows
 - Attendance and Booth Visit
