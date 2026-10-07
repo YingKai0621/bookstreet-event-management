@@ -107,6 +107,32 @@ class OpenApiIntegrationTests {
     }
 
     @Test
+    void openApiDocumentDescribesBoothEndpointsAndSeparatePaginationParameters() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/organizer/booths'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/organizer/events/{eventId}/booth-configs/{boothId}'].put")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/events/{eventId}/booths'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/events/{eventId}/booths/{boothId}'].get").exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/booths'].get.parameters[?(@.name == 'page')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/booths'].get.parameters[?(@.name == 'size')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/booths'].get.parameters[?(@.name == 'sort')]"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/events/{eventId}/booths'].get.parameters[?(@.name == 'pageable')]"
+                ).isEmpty())
+                .andExpect(jsonPath(
+                        "$.components.schemas.UpdateBoothRequest.properties.empty"
+                ).doesNotExist());
+    }
+
+    @Test
     void unsafeRequestWithoutCsrfTokenIsRejected() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
