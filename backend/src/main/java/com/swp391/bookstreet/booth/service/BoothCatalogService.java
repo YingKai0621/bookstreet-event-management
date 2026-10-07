@@ -25,16 +25,18 @@ public class BoothCatalogService {
     private final LocationRepository locationRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothCurrentUser currentUser;
+    private final BoothHoldExpiryService expiryService;
     private final Clock clock;
 
     public BoothCatalogService(BoothRepository boothRepository,
             LocationRepository locationRepository,
             EventBoothConfigRepository configRepository,
-            BoothCurrentUser currentUser, Clock clock) {
+            BoothCurrentUser currentUser, BoothHoldExpiryService expiryService, Clock clock) {
         this.boothRepository = boothRepository;
         this.locationRepository = locationRepository;
         this.configRepository = configRepository;
         this.currentUser = currentUser;
+        this.expiryService = expiryService;
         this.clock = clock;
     }
 
@@ -75,10 +77,15 @@ public class BoothCatalogService {
         if (request.isEmpty()) {
             throw validation("At least one field must be supplied.", null);
         }
-        Booth booth = find(boothId);
+        Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
+                .orElseThrow(() -> new BoothApiException(HttpStatus.NOT_FOUND,
+                        "BOOTH_NOT_FOUND", "Booth not found."));
         Location location = booth.getLocation();
         boolean active = request.contains("active")
                 ? requiredBoolean(request.getActive(), "active") : location.isActive();
+        if (location.isActive() && !active) {
+            expiryService.expireDueHolds();
+        }
         if (location.isActive() && !active
                 && configRepository.existsCurrentActiveHoldForBooth(boothId, clock.instant())) {
             throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",

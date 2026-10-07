@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
@@ -58,6 +59,9 @@ public class BoothRequest {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
+    @OneToOne(mappedBy = "boothRequest", fetch = FetchType.LAZY)
+    private BoothHold hold;
+
     protected BoothRequest() {
     }
 
@@ -75,6 +79,29 @@ public class BoothRequest {
     public void withdraw(Instant now) {
         this.status = BoothRequestStatus.WITHDRAWN;
         this.withdrawnAt = now;
+    }
+
+    public void reject(String reviewNote, Instant now) {
+        this.status = BoothRequestStatus.REJECTED;
+        this.reviewNote = reviewNote;
+        this.reviewedAt = now;
+    }
+
+    public void select(Instant now) {
+        this.status = BoothRequestStatus.SELECTED;
+        this.reviewedAt = now;
+        this.selectedAt = now;
+    }
+
+    void attachHold(BoothHold hold) {
+        this.hold = hold;
+    }
+
+    void paymentExpired(Instant now) {
+        if (status == BoothRequestStatus.SELECTED) {
+            status = BoothRequestStatus.PAYMENT_EXPIRED;
+            paymentExpiredAt = now;
+        }
     }
 
     public Long getBoothRequestId() {
@@ -123,5 +150,9 @@ public class BoothRequest {
 
     public Instant getWithdrawnAt() {
         return withdrawnAt;
+    }
+
+    public BoothHold getHold() {
+        return hold;
     }
 }

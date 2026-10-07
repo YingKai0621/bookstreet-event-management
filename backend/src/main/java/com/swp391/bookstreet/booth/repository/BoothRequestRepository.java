@@ -16,7 +16,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long> {
     @EntityGraph(attributePaths = {
-            "application", "application.partnerOrganization", "booth", "booth.location"
+            "application", "application.partnerOrganization", "booth", "booth.location", "hold"
     })
     @Query(value = """
             select request
@@ -40,7 +40,7 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
     );
 
     @EntityGraph(attributePaths = {
-            "application", "application.partnerOrganization", "booth", "booth.location"
+            "application", "application.partnerOrganization", "booth", "booth.location", "hold"
     })
     @Query("""
             select request
@@ -66,6 +66,59 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
     Optional<BoothRequest> findOwnedByIdForUpdate(
             @Param("requestId") Long requestId,
             @Param("userId") Long userId
+    );
+
+    @EntityGraph(attributePaths = {
+            "application", "application.partnerOrganization", "booth", "booth.location", "hold"
+    })
+    @Query(value = """
+            select request
+            from BoothRequest request
+            where request.application.eventId = :eventId
+              and (:boothId is null or request.booth.boothId = :boothId)
+              and (:status is null or request.status = :status)
+            """,
+            countQuery = """
+                    select count(request)
+                    from BoothRequest request
+                    where request.application.eventId = :eventId
+                      and (:boothId is null or request.booth.boothId = :boothId)
+                      and (:status is null or request.status = :status)
+                    """)
+    Page<BoothRequest> findForOrganizer(
+            @Param("eventId") Long eventId,
+            @Param("boothId") Long boothId,
+            @Param("status") BoothRequestStatus status,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {
+            "application", "application.partnerOrganization", "booth", "booth.location", "hold"
+    })
+    @Query("""
+            select request
+            from BoothRequest request
+            where request.boothRequestId = :requestId
+              and request.application.eventId = :eventId
+            """)
+    Optional<BoothRequest> findForOrganizerById(
+            @Param("requestId") Long requestId,
+            @Param("eventId") Long eventId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {
+            "application", "application.partnerOrganization", "booth", "booth.location"
+    })
+    @Query("""
+            select request
+            from BoothRequest request
+            where request.boothRequestId = :requestId
+              and request.application.eventId = :eventId
+            """)
+    Optional<BoothRequest> findForOrganizerByIdForUpdate(
+            @Param("requestId") Long requestId,
+            @Param("eventId") Long eventId
     );
 
     boolean existsByApplication_IdAndBooth_BoothIdAndStatusIn(

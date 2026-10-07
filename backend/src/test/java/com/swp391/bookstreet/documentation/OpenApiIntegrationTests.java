@@ -116,6 +116,15 @@ class OpenApiIntegrationTests {
                 .andExpect(jsonPath("$.paths['/api/v1/events/{eventId}/booths'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/events/{eventId}/booths/{boothId}'].get").exists())
                 .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/booth-requests'].get"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/booth-requests/{boothRequestId}/select'].post"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/events/{eventId}/booth-requests/{boothRequestId}/reject'].post"
+                ).exists())
+                .andExpect(jsonPath(
                         "$.paths['/api/v1/organizer/booths'].get.parameters[?(@.name == 'page')]"
                 ).exists())
                 .andExpect(jsonPath(
