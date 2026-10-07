@@ -367,7 +367,7 @@ An existing Pending request from another Partner is not an error.
 
 `BOOTH_REQUEST_ALREADY_OPEN` applies when the same Partner already has a `PENDING` or `SELECTED` request for the same Event and Booth.
 
-V5 backs this rule with a partial unique index on `booth_requests (application_id, booth_id)` where status is `PENDING` or `SELECTED`. The service still checks the historical `REJECTED` rule because closed requests are intentionally outside the partial index.
+V6 backs this rule with a partial unique index on `booth_requests (application_id, booth_id)` where status is `PENDING` or `SELECTED`. The service still checks the historical `REJECTED` rule because closed requests are intentionally outside the partial index.
 
 After `WITHDRAWN` or `PAYMENT_EXPIRED`, the Partner may create a new request record if deadline, quota and availability rules still pass. After `REJECTED`, the Partner cannot submit again for that same Event–Booth and receives `BOOTH_REQUEST_RESUBMISSION_NOT_ALLOWED`; another eligible Booth may still be requested. Historical records are never restored or reused.
 

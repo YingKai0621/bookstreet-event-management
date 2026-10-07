@@ -100,7 +100,7 @@ class EventApiIntegrationTests {
         assertThat(jdbc.queryForObject("select organizer_user_id from events where event_id = ?",
                 Long.class, id)).isEqualTo(owner);
         assertThat(jdbc.queryForObject("select booth_payment_window_minutes from events where event_id = ?",
-                Integer.class, id)).isEqualTo(30);
+                Integer.class, id)).isEqualTo(60);
     }
 
     @Test
@@ -408,6 +408,34 @@ class EventApiIntegrationTests {
     }
 
     @Test
+    void createDefaultsPaymentWindowAndRejectsValuesOutsideSprintTwoRange() throws Exception {
+        String withoutPaymentWindow = validEventRequestJson
+                .replace("\"boothPaymentWindowMinutes\": 60,", "");
+        String response = mvc.perform(post(ORGANIZER)
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .with(csrf()).contentType("application/json").content(withoutPaymentWindow))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.boothPaymentWindowMinutes").value(1440))
+                .andReturn().getResponse().getContentAsString();
+        long defaultedEventId = mapper.readTree(response).get("eventId").asLong();
+
+        for (int invalidWindow : List.of(59, 10081)) {
+            mvc.perform(post(ORGANIZER)
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .with(csrf()).contentType("application/json")
+                            .content(validEventRequestJson.replace(
+                                    "\"boothPaymentWindowMinutes\": 60",
+                                    "\"boothPaymentWindowMinutes\": " + invalidWindow)))
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.code").value("EVENT_CONFIGURATION_INVALID"))
+                    .andExpect(jsonPath("$.fieldErrors[0].field")
+                            .value("boothPaymentWindowMinutes"));
+        }
+
+        jdbc.update("delete from events where event_id = ?", defaultedEventId);
+    }
+
+    @Test
     void allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne() throws Exception {
         long id = createEvent();
         for (String eventStatus : List.of("ONGOING", "COMPLETED", "CANCELLED")) {
@@ -484,7 +512,7 @@ class EventApiIntegrationTests {
                   "partnerWithdrawalCutoffAt": "%s",
                   "boothCancellationCutoffAt": "%s",
                   "activityCancellationCutoffAt": "%s",
-                  "boothPaymentWindowMinutes": 30,
+                  "boothPaymentWindowMinutes": 60,
                   "maxBoothsPerPartner": 1,
                   "maxActivitiesPerPartner": 5,
                   "bannerUrl": null

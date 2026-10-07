@@ -63,7 +63,7 @@ class EventPublicationTests {
         e.setName("Publication test");
         e.setStartAt(NOW.plusSeconds(3600));
         e.setEndAt(NOW.plusSeconds(7200));
-        e.setBoothPaymentWindowMinutes(30);
+        e.setBoothPaymentWindowMinutes(60);
         e.setMaxBoothsPerPartner(1);
         e.setMaxActivitiesPerPartner(1);
         deadlines().forEach(d -> d.set().accept(e, NOW.plusSeconds(1800)));

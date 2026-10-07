@@ -289,7 +289,7 @@ Then the Partner cannot request that same Event–Booth again
 But may request another eligible Booth
 ```
 
-V5 enforces one open request with a partial unique index on `(application_id, booth_id)` for `PENDING` and `SELECTED` rows. Because `REJECTED` is not covered by that index, the service must explicitly enforce the `REJECTED` resubmission rule in AC-E02-08.
+V6 enforces one open request with a partial unique index on `(application_id, booth_id)` for `PENDING` and `SELECTED` rows. Because `REJECTED` is not covered by that index, the service must explicitly enforce the `REJECTED` resubmission rule in AC-E02-08.
 
 ---
 

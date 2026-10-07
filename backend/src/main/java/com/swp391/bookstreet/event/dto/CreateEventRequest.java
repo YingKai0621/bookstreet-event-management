@@ -16,7 +16,7 @@ public record CreateEventRequest(
         Instant partnerWithdrawalCutoffAt,
         Instant boothCancellationCutoffAt,
         Instant activityCancellationCutoffAt,
-        @NotNull @PositiveOrZero Integer boothPaymentWindowMinutes,
+        Integer boothPaymentWindowMinutes,
         @NotNull @PositiveOrZero Integer maxBoothsPerPartner,
         @NotNull @PositiveOrZero Integer maxActivitiesPerPartner,
         String bannerUrl

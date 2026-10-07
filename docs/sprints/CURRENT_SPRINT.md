@@ -2,7 +2,7 @@
 
 ## Sprint 02 Booth Selection and Allocation Hold
 
-- Status: `DESIGN COMPLETE - IMPLEMENTATION NOT STARTED`
+- Status: `IMPLEMENTATION IN PROGRESS - V6 SCHEMA`
 - Sprint file: `docs/sprints/sprint-02.md`
 - Use Case Specifications: `docs/use-cases/sprint-02-use-case-specifications.md`
 - API Contract: `docs/api/sprint-02-api-contract.md`
@@ -14,10 +14,10 @@ Deliver the Booth workflow from physical Booth configuration through Partner req
 
 ## Starting baseline
 
-- Sprint 1 backend and real frontend integration are merged into `main` through merge commit `884131b`.
+- Sprint 1 backend and real frontend integration are merged into `main` through merge commit `34a256e`.
 - Account, email verification, browser Session security, Event management, Partner Organization and Partner application flows are available.
 - Organizer and Partner Playwright flows exist for the Sprint 1 integration.
-- Flyway migrations V1 through V4 are applied; Sprint 2 must use a new migration.
+- Flyway migrations V1 through V5 are the merged baseline. V5 remains the immutable demo-role seed, and the Sprint 2 schema uses V6.
 - PostgreSQL is the source of truth for business state. Redis stores server-side login sessions.
 
 ## Included Use Case slices
