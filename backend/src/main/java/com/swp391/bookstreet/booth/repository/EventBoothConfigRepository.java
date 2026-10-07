@@ -4,8 +4,10 @@ import com.swp391.bookstreet.booth.entity.EventBoothConfig;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +17,19 @@ public interface EventBoothConfigRepository extends JpaRepository<EventBoothConf
 
     @EntityGraph(attributePaths = {"booth", "booth.location"})
     Optional<EventBoothConfig> findByEventIdAndBoothBoothId(Long eventId, Long boothId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"booth", "booth.location"})
+    @Query("""
+            select config
+            from EventBoothConfig config
+            where config.eventId = :eventId
+              and config.booth.boothId = :boothId
+            """)
+    Optional<EventBoothConfig> findByEventIdAndBoothIdForUpdate(
+            @Param("eventId") Long eventId,
+            @Param("boothId") Long boothId
+    );
 
     @Query(value = """
             select exists (

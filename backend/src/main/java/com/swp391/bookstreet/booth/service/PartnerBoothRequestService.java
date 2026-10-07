@@ -39,6 +39,7 @@ public class PartnerBoothRequestService {
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
     private final BoothCurrentUser currentUser;
+    private final BoothHoldExpiryService expiryService;
     private final Clock clock;
 
     public PartnerBoothRequestService(
@@ -47,6 +48,7 @@ public class PartnerBoothRequestService {
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
             BoothCurrentUser currentUser,
+            BoothHoldExpiryService expiryService,
             Clock clock
     ) {
         this.eventRepository = eventRepository;
@@ -54,12 +56,14 @@ public class PartnerBoothRequestService {
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
         this.currentUser = currentUser;
+        this.expiryService = expiryService;
         this.clock = clock;
     }
 
     @Transactional
     public BoothRequestResponse submit(Long eventId, SubmitBoothRequest command) {
         Long partnerUserId = currentUser.requirePartnerId();
+        expiryService.expireDueHolds();
         Event event = eventRepository.findByEventIdAndStatus(eventId, EventStatus.PUBLISHED)
                 .orElseThrow(PartnerBoothRequestService::eventNotFound);
         PartnerEventApplication application = applicationRepository

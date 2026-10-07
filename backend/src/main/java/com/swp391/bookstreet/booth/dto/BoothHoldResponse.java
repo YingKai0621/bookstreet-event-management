@@ -1,18 +1,29 @@
 package com.swp391.bookstreet.booth.dto;
 
+import com.swp391.bookstreet.booth.entity.BoothHold;
+import com.swp391.bookstreet.booth.entity.BoothHoldStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Shared response shape for Workstream C to populate after Organizer selection.
- * Partner submission deliberately returns this field as {@code null}.
- */
 public record BoothHoldResponse(
         Long boothHoldId,
-        String status,
+        BoothHoldStatus status,
         BigDecimal lockedRentalPrice,
         Instant createdAt,
         Instant expiresAt,
         Instant releasedAt
 ) {
+    public static BoothHoldResponse from(BoothHold hold) {
+        if (hold == null) {
+            return null;
+        }
+        return new BoothHoldResponse(
+                hold.getBoothHoldId(),
+                hold.getStatus(),
+                hold.getLockedRentalPrice(),
+                hold.getCreatedAt(),
+                hold.getExpiresAt(),
+                hold.getReleasedAt()
+        );
+    }
 }

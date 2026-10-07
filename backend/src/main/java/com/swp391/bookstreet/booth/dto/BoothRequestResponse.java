@@ -2,6 +2,7 @@ package com.swp391.bookstreet.booth.dto;
 
 import com.swp391.bookstreet.booth.entity.BoothRequest;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
+import com.swp391.bookstreet.booth.entity.BoothHold;
 import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import java.time.Instant;
 
@@ -41,7 +42,29 @@ public record BoothRequestResponse(
                 request.getCompletedAt(),
                 request.getPaymentExpiredAt(),
                 request.getWithdrawnAt(),
-                null
+                BoothHoldResponse.from(request.getHold())
+        );
+    }
+
+    public static BoothRequestResponse from(BoothRequest request, BoothHold hold) {
+        PartnerOrganization organization = request.getApplication().getPartnerOrganization();
+        return new BoothRequestResponse(
+                request.getBoothRequestId(),
+                request.getApplication().getEventId(),
+                request.getBooth().getBoothId(),
+                request.getBooth().getLocation().getCode(),
+                organization.getId(),
+                organization.getName(),
+                request.getStatus(),
+                request.getRequestNote(),
+                request.getReviewNote(),
+                request.getSubmittedAt(),
+                request.getReviewedAt(),
+                request.getSelectedAt(),
+                request.getCompletedAt(),
+                request.getPaymentExpiredAt(),
+                request.getWithdrawnAt(),
+                BoothHoldResponse.from(hold)
         );
     }
 }

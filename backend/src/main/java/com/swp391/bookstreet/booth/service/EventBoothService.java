@@ -35,20 +35,23 @@ public class EventBoothService {
     private final BoothRepository boothRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothCurrentUser currentUser;
+    private final BoothHoldExpiryService expiryService;
     private final Clock clock;
 
     public EventBoothService(EventRepository eventRepository, BoothRepository boothRepository,
             EventBoothConfigRepository configRepository, BoothCurrentUser currentUser,
-            Clock clock) {
+            BoothHoldExpiryService expiryService, Clock clock) {
         this.eventRepository = eventRepository;
         this.boothRepository = boothRepository;
         this.configRepository = configRepository;
         this.currentUser = currentUser;
+        this.expiryService = expiryService;
         this.clock = clock;
     }
 
     public List<EventBoothResponse> listOwnedConfigurations(Long eventId) {
         Event event = ownedEvent(eventId);
+        expiryService.expireDueHolds();
         Set<Long> blockedBoothIds = blockedBooths(event);
         return configRepository.findByEventIdOrderByBoothLocationCodeAsc(eventId).stream()
                 .map(config -> EventBoothResponse.configured(config,
@@ -60,14 +63,17 @@ public class EventBoothService {
     public EventBoothResponse configure(Long eventId, Long boothId,
             EventBoothConfigRequest request) {
         Event event = ownedEvent(eventId);
-        Booth booth = boothRepository.findByBoothId(boothId).orElseThrow(EventBoothService::boothNotFound);
+        expiryService.expireDueHolds();
+        Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
+                .orElseThrow(EventBoothService::boothNotFound);
         if (request.enabled() && !booth.getLocation().isActive()) {
             throw new BoothApiException(HttpStatus.UNPROCESSABLE_CONTENT,
                     "EVENT_BOOTH_CONFIGURATION_INVALID",
                     "An inactive physical Booth cannot be enabled for an Event.", "enabled");
         }
 
-        EventBoothConfig config = configRepository.findByEventIdAndBoothBoothId(eventId, boothId)
+        EventBoothConfig config = configRepository.findByEventIdAndBoothIdForUpdate(
+                        eventId, boothId)
                 .orElse(null);
         if (config != null && config.isEnabled() && !request.enabled()
                 && configRepository.existsCurrentActiveHoldForConfig(
@@ -91,6 +97,7 @@ public class EventBoothService {
             String sort, BoothAvailability availabilityFilter, String categoryCode) {
         BoothPagination.SortSpec sortSpec = BoothPagination.publicSort(page, size, sort);
         Event event = publicEvent(eventId);
+        expiryService.expireDueHolds();
         List<Booth> booths = boothRepository.findAllActive();
         Map<Long, EventBoothConfig> configs = configsByBooth(eventId);
         Set<Long> blockedBoothIds = blockedBooths(event);
@@ -120,6 +127,7 @@ public class EventBoothService {
 
     public EventBoothResponse publicDetail(Long eventId, Long boothId) {
         Event event = publicEvent(eventId);
+        expiryService.expireDueHolds();
         Booth booth = boothRepository.findByBoothId(boothId)
                 .filter(candidate -> candidate.getLocation().isActive())
                 .orElseThrow(EventBoothService::eventBoothNotFound);
