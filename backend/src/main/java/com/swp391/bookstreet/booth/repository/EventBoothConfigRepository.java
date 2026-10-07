@@ -57,4 +57,26 @@ public interface EventBoothConfigRepository extends JpaRepository<EventBoothConf
             @Param("targetStart") Instant targetStart,
             @Param("targetEnd") Instant targetEnd,
             @Param("now") Instant now);
+
+    @Query(value = """
+            select exists (
+                select 1
+                from booth_holds hold
+                join event_booth_configs held_config
+                  on held_config.event_booth_config_id = hold.event_booth_config_id
+                join events held_event
+                  on held_event.event_id = held_config.event_id
+                where held_config.booth_id = :boothId
+                  and hold.status = 'ACTIVE'
+                  and hold.expires_at > :now
+                  and held_event.start_at < :targetEnd
+                  and :targetStart < held_event.end_at
+            )
+            """, nativeQuery = true)
+    boolean existsCurrentOverlappingHoldForBooth(
+            @Param("boothId") Long boothId,
+            @Param("targetStart") Instant targetStart,
+            @Param("targetEnd") Instant targetEnd,
+            @Param("now") Instant now
+    );
 }

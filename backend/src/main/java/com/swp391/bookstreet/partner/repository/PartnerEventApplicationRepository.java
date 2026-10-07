@@ -10,9 +10,16 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface PartnerEventApplicationRepository
         extends JpaRepository<PartnerEventApplication, Long> {
+
+    @EntityGraph(attributePaths = "partnerOrganization")
+    Optional<PartnerEventApplication> findByEventIdAndPartnerOrganization_RepresentativeUserId(
+            Long eventId,
+            Long representativeUserId
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT application FROM PartnerEventApplication application WHERE application.id = :applicationId")
