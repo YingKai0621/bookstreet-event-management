@@ -1,15 +1,15 @@
 import {
-  LayoutDashboard,
-  Users,
-  ShieldCheck,
   Award,
-  Settings,
-  History,
   Bell,
-  User,
-  Store,
   Building2,
-  Package
+  History,
+  LayoutDashboard,
+  Package,
+  Settings,
+  ShieldCheck,
+  Store,
+  User,
+  Users
 } from 'lucide-react';
 import { Language } from '../../types';
 import { RoleSidebar } from '../ui/RoleSidebar';
@@ -44,7 +44,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   unreadNotificationsCount = 2,
   isOpenMobile = false,
   onCloseMobile,
-  onLogout
+  onLogout: _onLogout
 }) => {
   const navItems: { id: AdminTab; icon: React.ReactNode; labelVi: string; labelEn: string; badge?: number }[] = [
     { id: 'dashboard', icon: <LayoutDashboard size={18} />, labelVi: 'Tổng quan', labelEn: 'Dashboard' },

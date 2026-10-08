@@ -1,21 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Building, 
-  Shield, 
-  KeyRound, 
-  LogOut, 
-  Check, 
-  Edit3, 
-  Save, 
-  X, 
-  Clock, 
-  CheckCircle2, 
-  Camera, 
-  Upload 
+import {
+  Building,
+  Camera,
+  Check,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  KeyRound,
+  LogOut,
+  Mail,
+  Phone,
+  Save,
+  Shield,
+  X
 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { AdminProfile } from '../../types/admin';
 
 interface AdminProfileViewProps {

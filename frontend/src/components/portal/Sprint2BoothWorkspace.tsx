@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, Clock3, Edit3, Loader2, Plus, RefreshCw, Store, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ApiError } from '../../services/apiClient';
+import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
 import type { BoothRequest, CreatePhysicalBoothInput, EventBooth, PhysicalBooth } from '../../types/booth';
 import type { OrganizerEvent } from '../../types/organizer';
-import { boothApi } from '../../services/boothApi';
-import { ApiError } from '../../services/apiClient';
 import './Sprint2Booth.css';
 
 interface Props {
@@ -133,8 +133,14 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
     submitEvent.preventDefault();
     setError('');
     const maxCapacity = Number(boothForm.maxCapacity);
+    const mapX = boothForm.mapX === '' ? null : Number(boothForm.mapX);
+    const mapY = boothForm.mapY === '' ? null : Number(boothForm.mapY);
     if (!boothForm.code.trim() || !boothForm.name.trim() || !Number.isInteger(maxCapacity) || maxCapacity <= 0) {
       setError('Mã, tên và sức chứa dương là bắt buộc.');
+      return;
+    }
+    if ((mapX !== null && !Number.isFinite(mapX)) || (mapY !== null && !Number.isFinite(mapY))) {
+      setError('Tọa độ gian hàng phải là số hợp lệ.');
       return;
     }
     const input: CreatePhysicalBoothInput = {
@@ -142,8 +148,8 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
       name: boothForm.name.trim(),
       description: boothForm.description.trim() || null,
       maxCapacity,
-      mapX: boothForm.mapX === '' ? null : Number(boothForm.mapX),
-      mapY: boothForm.mapY === '' ? null : Number(boothForm.mapY),
+      mapX,
+      mapY,
       categoryCode: boothForm.categoryCode.trim() || null,
       note: boothForm.note.trim() || null,
     };
@@ -219,7 +225,7 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
   return (
     <section className="s2-booth-page" aria-labelledby="organizer-booth-title">
       <header className="s2-booth-header">
-        <div><span className="s2-eyebrow">Sprint 2 · Quản lý gian hàng</span><h1 id="organizer-booth-title">Gian hàng & yêu cầu đối tác</h1><p>Quản lý vị trí vật lý, giá theo sự kiện và giữ chỗ của đối tác.</p></div>
+        <div><h1 id="organizer-booth-title" className="organizer-view-title">Gian hàng & yêu cầu đối tác</h1><p className="organizer-view-sub">Quản lý vị trí vật lý, giá theo sự kiện và giữ chỗ của đối tác.</p></div>
         <button className="btn-org-secondary" type="button" onClick={() => void loadData()} disabled={loading}><RefreshCw size={15} />Làm mới</button>
       </header>
 

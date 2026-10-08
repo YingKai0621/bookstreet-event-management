@@ -1,22 +1,21 @@
+import {
+  AlertCircle,
+  ArrowRight,
+  Clock,
+  FileText,
+  Layers,
+  PlusCircle,
+  Store
+} from 'lucide-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Store, 
-  Layers, 
-  ArrowRight, 
-  Clock, 
-  AlertCircle, 
-  FileText,
-  PlusCircle,
-  QrCode
-} from 'lucide-react';
-import { 
-  Language, 
-  PartnerOrganization, 
-  PartnerEventApplication, 
-  PartnerBooth, 
-  PartnerActivityProposal, 
-  PartnerTodoItem 
+import {
+  Language,
+  PartnerActivityProposal,
+  PartnerBooth,
+  PartnerEventApplication,
+  PartnerOrganization,
+  PartnerTodoItem
 } from '../../types';
 import './PartnerPages.css';
 
@@ -39,7 +38,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   activities,
   todos,
   totalEngagementCount = 0,
-  onOpenAttendanceModal,
+  onOpenAttendanceModal: _onOpenAttendanceModal,
 }) => {
   const proposedActivitiesCount = activities.length;
   const applicationStatus = activeEvent ? {

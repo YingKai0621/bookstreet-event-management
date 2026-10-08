@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  X, 
-  MapPin, 
-  Users, 
-  Calendar, 
-  Clock, 
+import {
   AlertCircle,
   Building2,
+  Calendar,
+  Clock,
+  MapPin,
   Mic,
   Tag,
-  Upload
+  Upload,
+  Users,
+  X
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerEvent } from '../../types/organizer';
 

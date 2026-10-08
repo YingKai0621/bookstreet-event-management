@@ -1,7 +1,10 @@
 .s2-booth-page { display: grid; gap: 1.25rem; color: #172421; }
 .s2-booth-header, .s2-panel-heading, .s2-event-bar, .s2-request-main, .s2-actions, .s2-modal-header, .s2-modal-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.s2-booth-header h1, .s2-panel-heading h2, .s2-modal h2 { margin: .2rem 0; font-family: var(--font-serif); color: #17382e; }
-.s2-booth-header p, .s2-panel-heading p { margin: .2rem 0 0; color: #637771; }
+.s2-booth-header h1, .s2-panel-heading h2, .s2-modal h2 { margin: 0; font-family: var(--font-serif, "Cinzel", "Playfair Display", Georgia, serif); color: #172421; }
+.s2-booth-header h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.25; }
+.s2-panel-heading h2 { font-size: 1.2rem; font-weight: 700; }
+.s2-modal h2 { font-size: 1.25rem; font-weight: 700; }
+.s2-booth-header p, .s2-panel-heading p { margin: 0.25rem 0 0; color: #556b65; font-size: 0.86rem; line-height: 1.45; }
 .s2-eyebrow { color: #9b7023; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .s2-event-bar { justify-content: flex-start; padding: .9rem 1rem; background: #f7faf8; border: 1px solid #dce6e1; border-radius: 12px; }
 .s2-event-bar label { font-weight: 750; }

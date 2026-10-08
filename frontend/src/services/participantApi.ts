@@ -1,4 +1,3 @@
-import { apiClient } from './apiClient';
 import {
   ParticipantActivity,
   ParticipantBadge,
@@ -6,6 +5,7 @@ import {
   ParticipantEvent,
   ParticipantProfile,
 } from '../types';
+import { apiClient } from './apiClient';
 
 export const participantApi = {
   async getProfile(): Promise<ParticipantProfile> {

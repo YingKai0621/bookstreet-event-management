@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import gsap from "gsap";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./card-fan-carousel.css";
 
 export interface CardItem {

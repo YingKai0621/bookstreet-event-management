@@ -1,16 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
   MapPin,
-  Search,
   QrCode,
+  Search
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ExtendedHeritageProfile, Language } from "../types";
 import { HeritageProfile } from "../types/heritage";
-import { Language, ExtendedHeritageProfile } from "../types";
 import "./HeritageExperience.css";
 
 const imageInfo = (item?: HeritageProfile | ExtendedHeritageProfile) => {

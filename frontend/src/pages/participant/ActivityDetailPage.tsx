@@ -1,17 +1,17 @@
-import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  QrCode, 
-  CalendarPlus, 
-  UserCheck, 
+import {
   AlertCircle,
+  ArrowLeft,
+  Calendar,
+  CalendarPlus,
   CheckCircle2,
+  Clock,
+  MapPin,
+  QrCode,
+  UserCheck,
   XCircle
 } from 'lucide-react';
+import React from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Language, ParticipantActivity } from '../../types';
 import './ParticipantPages.css';
 
@@ -50,7 +50,6 @@ export const ActivityDetailPage: React.FC<ActivityDetailPageProps> = ({
 
   const isRegistered = activity.status === 'registered';
   const isAttended = activity.status === 'attended';
-  const isCancelled = activity.status === 'cancelled';
   const isFull = activity.status === 'full' || activity.registeredCount >= activity.capacity;
   const seatsLeft = Math.max(0, activity.capacity - activity.registeredCount);
 

@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -10,10 +9,11 @@ import {
   Send,
   Undo2,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
 import { ApiError } from '../../services/apiClient';
 import { PartnerAvailableEvent, partnerApi } from '../../services/partnerApi';
+import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
 import './PartnerPages.css';
 
 interface EventApplicationPageProps {

@@ -1,16 +1,16 @@
 import {
-  LayoutDashboard,
-  CalendarDays,
-  Store,
-  Layers,
-  Users,
   BarChart3,
-  Globe2,
   Bell,
-  User,
   Building2,
-  Package
-  ,MessageSquare
+  CalendarDays,
+  Globe2,
+  Layers,
+  LayoutDashboard,
+  MessageSquare,
+  Package,
+  Store,
+  User,
+  Users
 } from 'lucide-react';
 import { Language } from '../../types';
 import { RoleSidebar } from '../ui/RoleSidebar';
@@ -48,7 +48,7 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
   unreadNotificationsCount = 3,
   isOpenMobile = false,
   onCloseMobile,
-  onLogout
+  onLogout: _onLogout
 }) => {
   const navItems = [
     { id: 'overview' as OrganizerTab, icon: <LayoutDashboard size={18} />, labelVi: 'Dashboard', labelEn: 'Dashboard' },

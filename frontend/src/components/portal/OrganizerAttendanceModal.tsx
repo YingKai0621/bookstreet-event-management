@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  X, 
-  QrCode, 
-  CheckCircle2, 
-  AlertCircle, 
-  Camera, 
-  RotateCcw, 
-  UserCheck, 
-  Keyboard, 
+import {
+  AlertCircle,
   ArrowRight,
-  Clock
+  Camera,
+  CheckCircle2,
+  Clock,
+  Keyboard,
+  QrCode,
+  RotateCcw,
+  UserCheck,
+  X
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
 
 interface OrganizerAttendanceModalProps {
@@ -26,7 +26,7 @@ interface OrganizerAttendanceModalProps {
 }
 
 export const OrganizerAttendanceModal: React.FC<OrganizerAttendanceModalProps> = ({
-  language,
+  language: _language,
   isOpen = true,
   onClose,
   onRecordScan

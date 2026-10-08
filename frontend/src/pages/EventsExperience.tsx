@@ -1,19 +1,16 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  MapPin,
+  Search,
+  Ticket,
+  X
+} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  ArrowRight,
-  ArrowUp,
-  Search, 
-  MapPin, 
-  Clock, 
-  Calendar,
-  CheckCircle,
-  X, 
-  Sparkles,
-  Ticket
-} from 'lucide-react';
 import { EventItem, Language, ParticipantProfile } from '../types';
 import './EventsExperience.css';
 
@@ -32,7 +29,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   open,
   events,
   isParticipantAuthenticated = false,
-  participantProfile,
+  participantProfile: _participantProfile,
   onJoinEvent,
 }) => {
   const vi = language === 'vi';

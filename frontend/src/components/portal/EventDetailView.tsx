@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Edit3, 
-  Users, 
-  Store, 
-  Layers, 
-  Star, 
-  Download, 
-  Map, 
+import {
+  ArrowLeft,
+  Calendar,
   Check,
-  Send
+  Download,
+  Edit3,
+  Layers,
+  Map,
+  MapPin,
+  Send,
+  Star,
+  Store,
+  Users
 } from 'lucide-react';
-import { Language } from '../../types';
-import { OrganizerEvent, OrganizerBoothItem, OrganizerActivityItem, OrganizerParticipantItem } from '../../types/organizer';
+import React, { useState } from 'react';
 import { OrganizerPartnerApplication } from '../../services/organizerApi';
+import { Language } from '../../types';
+import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
 
 interface EventDetailViewProps {
   language: Language;

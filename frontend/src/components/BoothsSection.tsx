@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Search, MapPin, X, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
-import { IconBookSpine, IconBookmark } from './CustomIcons';
 import { Booth, Language } from '../types';
 import './BoothsSection.css';
+import { IconBookSpine, IconBookmark } from './CustomIcons';
 
 interface BoothsSectionProps {
   language: Language;
@@ -17,6 +17,8 @@ interface BoothsSectionProps {
   focusedBoothId?: string | null;
 }
 
+const EMPTY_BOOTHS: Booth[] = [];
+
 export const BoothsSection: React.FC<BoothsSectionProps> = ({
   language,
   booths: initialBooths,
@@ -26,7 +28,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
   onSearchQueryChange,
   focusedBoothId,
 }) => {
-  const booths = initialBooths || [];
+  const booths = initialBooths || EMPTY_BOOTHS;
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const setSearchQuery = onSearchQueryChange || setInternalSearchQuery;
@@ -44,7 +46,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
   );
   const stallsTrackRef = React.useRef<HTMLDivElement | null>(null);
 
-  const closeBoothModal = () => {
+  const closeBoothModal = React.useCallback(() => {
     if (!activeModalBooth || isBoothSheetClosing) return;
     if (!window.matchMedia('(max-width: 540px)').matches) {
       setActiveModalBooth(null);
@@ -56,7 +58,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       setSheetDragOffset(0);
       setIsBoothSheetClosing(false);
     }, 260);
-  };
+  }, [activeModalBooth, isBoothSheetClosing]);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
@@ -80,7 +82,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeModalBooth]);
+  }, [activeModalBooth, closeBoothModal]);
 
   // Khi người dùng bấm "Xem trong danh mục gian hàng" từ bản đồ hoặc mở chi tiết gian hàng
   React.useEffect(() => {

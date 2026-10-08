@@ -1,25 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  Layers, 
-  Award, 
-  FileText, 
-  MessageSquare, 
-  User, 
-  Search, 
-  Bell, 
-  LogOut, 
-  Menu, 
-  X, 
-  BookOpen, 
+import {
+  Award,
+  Bell,
+  CalendarDays,
   ChevronDown,
-  CalendarCheck2
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Search,
+  User,
+  X
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Language, ParticipantProfile } from '../../types';
-import { participantApi } from '../../services/participantApi';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
+import { participantApi } from '../../services/participantApi';
+import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
 
 interface ParticipantLayoutProps {
@@ -41,6 +38,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationClock, setNotificationClock] = useState(0);
 
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -63,15 +61,22 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
 
   useEffect(() => {
     const loadNotifications = () => participantApi.getNotifications()
-      .then(setNotifications)
+      .then(items => {
+        setNotifications(items);
+        setNotificationClock(Date.now());
+      })
       .catch(error => console.warn('Không thể tải thông báo', error));
     void loadNotifications();
+    const clockInterval = window.setInterval(() => setNotificationClock(Date.now()), 60_000);
     window.addEventListener('participant:data-changed', loadNotifications);
-    return () => window.removeEventListener('participant:data-changed', loadNotifications);
+    return () => {
+      window.clearInterval(clockInterval);
+      window.removeEventListener('participant:data-changed', loadNotifications);
+    };
   }, []);
 
   const notificationTime = (createdAt: string) => new Intl.RelativeTimeFormat(language === 'vi' ? 'vi' : 'en', { numeric: 'auto' })
-    .format(-Math.max(1, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000)), 'minute');
+    .format(-Math.max(1, Math.round(((notificationClock || new Date(createdAt).getTime()) - new Date(createdAt).getTime()) / 60000)), 'minute');
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

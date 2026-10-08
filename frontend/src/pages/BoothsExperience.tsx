@@ -1,19 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   ArrowRight,
-  ArrowUp,
-  Search, 
-  MapPin, 
-  Clock, 
-  BookOpen, 
-  X, 
-  Sparkles,
+  MapPin,
+  Search,
   Store,
-  QrCode
+  X
 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Booth, Language } from '../types';
 import './BoothsExperience.css';
 

@@ -1,35 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { FacilityManagementView } from './admin/FacilityManagementView';
+import React, { useEffect, useState } from 'react';
 import { Language } from '../types';
-import { 
-  AdminTab, 
-  AdminSidebar 
-} from './admin/AdminSidebar';
-import { AdminTopBar } from './admin/AdminTopBar';
-import { AdminDashboardView } from './admin/AdminDashboardView';
-import { AdminUserManagementView } from './admin/AdminUserManagementView';
-import { AdminRolesPermissionsView } from './admin/AdminRolesPermissionsView';
-import { AdminBadgeRulesView } from './admin/AdminBadgeRulesView';
-import { AdminSystemSettingsView } from './admin/AdminSystemSettingsView';
 import { AdminAuditLogsView } from './admin/AdminAuditLogsView';
+import { AdminBadgeRulesView } from './admin/AdminBadgeRulesView';
+import { AdminDashboardView } from './admin/AdminDashboardView';
 import { AdminNotificationsView } from './admin/AdminNotificationsView';
 import { AdminProfileView } from './admin/AdminProfileView';
-
+import { AdminRolesPermissionsView } from './admin/AdminRolesPermissionsView';
 import {
-  AdminUserAccount,
-  AdminRoleType,
-  AdminRolePermissionConfig,
-  AdminBadgeRule,
-  AdminSystemSettings,
-  AdminAuditLogItem,
-  AdminNotificationItem,
-  AdminProfile,
-  AdminPermissionItem
-} from '../types/admin';
+  AdminSidebar,
+  AdminTab
+} from './admin/AdminSidebar';
+import { AdminSystemSettingsView } from './admin/AdminSystemSettingsView';
+import { AdminTopBar } from './admin/AdminTopBar';
+import { AdminUserManagementView } from './admin/AdminUserManagementView';
+import { FacilityManagementView } from './admin/FacilityManagementView';
+
 import {
   adminApi,
   AdminDashboardStats,
 } from '../services/adminApi';
+import {
+  AdminAuditLogItem,
+  AdminBadgeRule,
+  AdminNotificationItem,
+  AdminPermissionItem,
+  AdminProfile,
+  AdminRolePermissionConfig,
+  AdminRoleType,
+  AdminSystemSettings,
+  AdminUserAccount
+} from '../types/admin';
 
 import './admin/AdminPortal.css';
 
@@ -200,13 +200,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const handleUpdateProfile = async (updates: Partial<AdminProfile>) => {
     await adminApi.updateProfile({ fullName: updates.name, email: updates.email, phone: updates.phone, avatarUrl: updates.avatarUrl, department: updates.department });
     setProfile(await adminApi.getProfile());
-  };
-
-  // Search input in topbar can route to user management with query or view
-  const handleGlobalSearch = (query: string) => {
-    if (query.trim()) {
-      setActiveTab('users');
-    }
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;

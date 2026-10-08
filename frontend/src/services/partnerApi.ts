@@ -1,5 +1,5 @@
-import { ApiError, apiClient } from './apiClient';
 import { PartnerActivityProposal, PartnerBooth, PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
+import { ApiError, apiClient } from './apiClient';
 
 interface PageResponse<T> {
   content: T[];

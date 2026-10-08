@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Edit3, Check, Camera, Upload } from 'lucide-react';
+import { Camera, Check, Edit3, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 

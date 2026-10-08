@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  QrCode, 
-  X, 
-  CheckCircle2, 
-  AlertCircle
+import {
+  AlertCircle,
+  CheckCircle2,
+  QrCode,
+  X
 } from 'lucide-react';
-import { Language, PartnerActivityProposal, AttendanceScanRecord } from '../../types';
+import React, { useState } from 'react';
+import { AttendanceScanRecord, Language, PartnerActivityProposal } from '../../types';
 import './PartnerPages.css';
 
 interface ActivityAttendanceModalProps {
@@ -40,7 +40,7 @@ export const ActivityAttendanceModal: React.FC<ActivityAttendanceModalProps> = (
       const result = { ...record, id: `scan-${Date.now()}` };
       setLastScanResult(result);
       onRecordScan(record);
-    } catch (error) {
+    } catch {
       const invalidRecord: AttendanceScanRecord = {
         id: `scan-${Date.now()}`, activityId: activity.id, activityTitle: activity.title,
         participantName: 'Không xác định', ticketCode: manualCode.trim(), scanTime: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }), status: 'invalid',

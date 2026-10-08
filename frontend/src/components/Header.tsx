@@ -1,30 +1,28 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { 
-  Menu, 
-  X, 
-  LogIn, 
-  UserPlus, 
-  User, 
-  CircleUser,
-  ChevronDown,
-  LayoutDashboard,
-  CalendarDays,
-  Layers,
+import {
   Award,
+  CalendarDays,
+  ChevronDown,
   FileText,
-  LogOut
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  User,
+  UserPlus,
+  X
 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { 
-  IconCanopyTree,
-  IconBookSpine, 
-  IconEventTicket, 
-  IconMapBookPin, 
-  IconHeritageSeal, 
-  IconBookmark 
-} from './CustomIcons';
 import { Language, ParticipantProfile } from '../types';
+import {
+  IconBookmark,
+  IconBookSpine,
+  IconCanopyTree,
+  IconEventTicket,
+  IconHeritageSeal,
+  IconMapBookPin
+} from './CustomIcons';
 import './Header.css';
 
 interface HeaderProps {

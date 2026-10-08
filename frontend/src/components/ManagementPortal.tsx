@@ -1,42 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Language, 
-  ExtendedHeritageProfile 
+  ExtendedHeritageProfile,
+  Language
 } from '../types';
-import { 
-  OrganizerTab, 
-  OrganizerSidebar 
+import { FacilityManagementView } from './admin/FacilityManagementView';
+import { EventDetailView } from './portal/EventDetailView';
+import { EventManagementView } from './portal/EventManagementView';
+import { OrganizerDashboard } from './portal/OrganizerDashboard';
+import {
+  OrganizerSidebar,
+  OrganizerTab
 } from './portal/OrganizerSidebar';
 import { OrganizerTopBar } from './portal/OrganizerTopBar';
-import { OrganizerDashboard } from './portal/OrganizerDashboard';
-import { FacilityManagementView } from './admin/FacilityManagementView';
-import { EventManagementView } from './portal/EventManagementView';
-import { EventDetailView } from './portal/EventDetailView';
 
 import { Sprint2BoothMapView } from './portal/Sprint2BoothMapView';
 import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 import { ActivityManagementView } from './portal/ActivityManagementView';
-import { ParticipantManagementView } from './portal/ParticipantManagementView';
+import { BoothMapView } from './portal/BoothMapView';
 import { OrganizerAttendanceModal } from './portal/OrganizerAttendanceModal';
-import { OrganizerReportsView } from './portal/OrganizerReportsView';
+import { OrganizerCreateActivityModal } from './portal/OrganizerCreateActivityModal';
+import { OrganizerCreateEventModal } from './portal/OrganizerCreateEventModal';
+import { OrganizerFeedbackView } from './portal/OrganizerFeedbackView';
 import { OrganizerNotificationsView } from './portal/OrganizerNotificationsView';
 import { OrganizerProfileView } from './portal/OrganizerProfileView';
 import { OrganizerPublicContentView } from './portal/OrganizerPublicContentView';
-import { OrganizerCreateEventModal } from './portal/OrganizerCreateEventModal';
-import { OrganizerCreateActivityModal } from './portal/OrganizerCreateActivityModal';
-import { OrganizerFeedbackView } from './portal/OrganizerFeedbackView';
+import { OrganizerReportsView } from './portal/OrganizerReportsView';
+import { ParticipantManagementView } from './portal/ParticipantManagementView';
+import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 
+import { useAuth } from '../auth/useAuth';
+import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';
 import {
+  OrganizerActivityItem,
+  OrganizerBoothItem,
   OrganizerEvent,
   OrganizerEventRequest,
-  OrganizerBoothItem,
-  OrganizerActivityItem,
-  OrganizerParticipantItem,
   OrganizerNotificationItem,
+  OrganizerParticipantItem,
   OrganizerProfile
 } from '../types/organizer';
-import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';
-import { useAuth } from '../auth/useAuth';
 
 import './portal/OrganizerPortal.css';
 
@@ -81,6 +83,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const firstEventId = eventsList[0]?.id;
 
   const refreshOrganizerData = async (preferredEventId?: string | null) => {
     try {
@@ -112,7 +115,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, []);
 
   useEffect(() => {
-    const targetEventId = selectedEventId || eventsList[0]?.id;
+    const targetEventId = selectedEventId || firstEventId;
     organizerApi.getActivities(targetEventId).then(setActivitiesList).catch(() => setActivitiesList([]));
     organizerApi.getBooths(targetEventId).then(setBoothsList).catch(() => setBoothsList([]));
     organizerApi.getParticipants(targetEventId).then(setParticipantsList).catch(() => setParticipantsList([]));
@@ -122,7 +125,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         setEventsList(current => current.map(item => item.id === event.id ? event : item));
       }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
     }
-  }, [selectedEventId, eventsList.length]);
+  }, [firstEventId, selectedEventId]);
 
   useEffect(() => {
     if (!selectedEventId) {

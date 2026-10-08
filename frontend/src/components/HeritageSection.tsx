@@ -1,10 +1,10 @@
+import gsap from 'gsap';
+import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-import gsap from 'gsap';
-import { IconHeritageSeal } from './CustomIcons';
 import { Language } from '../types';
 import { HeritageProfile } from '../types/heritage';
+import { IconHeritageSeal } from './CustomIcons';
 import './HeritageSection.css';
 
 interface HeritageSectionProps {
@@ -27,10 +27,11 @@ const FAN_SLOTS = [
 
 const imageFor = (item: HeritageProfile) => item.image?.url || '';
 const imageAlt = (item: HeritageProfile) => item.image?.alt || `Ảnh tư liệu: ${item.name}`;
+const EMPTY_HERITAGE_LIST: HeritageProfile[] = [];
 
 export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heritageList, isLoading = false }) => {
   const vi = language === 'vi';
-  const landmarks = heritageList || [];
+  const landmarks = heritageList || EMPTY_HERITAGE_LIST;
   const [centerIndex, setCenterIndex] = useState(HALF_FAN);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const cardRefs = useRef<Array<HTMLAnchorElement | null>>([]);

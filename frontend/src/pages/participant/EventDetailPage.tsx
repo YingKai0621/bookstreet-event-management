@@ -1,7 +1,7 @@
+import { ArrowLeft, Search } from 'lucide-react';
 import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Search, ArrowLeft, Check } from 'lucide-react';
-import { Language, ParticipantEvent, ParticipantActivity } from '../../types';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Language, ParticipantActivity, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 
 interface EventDetailPageProps {

@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  Lock, 
-  Mail, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
   ArrowLeft,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
   ShieldCheck
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Language } from '../types';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
-import type { AccountResponse } from '../types/auth';
 import { NotificationCallout } from '../components/ui/NotificationCallout';
+import { Language } from '../types';
+import type { AccountResponse } from '../types/auth';
 import './LoginPage.css';
 
 interface LoginPageProps {

@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  Search, 
-  Download, 
-  ChevronLeft, 
+import {
+  ChevronLeft,
   ChevronRight,
-  QrCode,
-  Edit2
+  Download,
+  Edit2,
+  Search
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
-import { OrganizerParticipantItem, OrganizerEvent } from '../../types/organizer';
+import { OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
 
 interface ParticipantManagementViewProps {
   language: Language;

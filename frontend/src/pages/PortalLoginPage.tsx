@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
-import { 
-  Shield, 
-  Lock, 
-  User, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
   ArrowLeft,
-  BookOpen
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Shield,
+  User
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Language } from '../types';
 import { useAuth } from '../auth/useAuth';
 import { NotificationCallout } from '../components/ui/NotificationCallout';
+import { Language } from '../types';
 import './PortalLoginPage.css';
 
 interface PortalLoginPageProps {

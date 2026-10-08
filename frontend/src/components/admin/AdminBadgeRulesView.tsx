@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  Award, 
-  BookOpen, 
-  Sprout, 
-  Crown, 
-  Plus, 
-  Edit2, 
-  Check, 
-  X, 
-  Gift,
+import {
+  Award,
+  BookOpen,
   CheckCircle2,
-  TrendingUp
+  Crown,
+  Edit2,
+  Gift,
+  Plus,
+  Sprout,
+  TrendingUp,
+  X
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { AdminBadgeRule } from '../../types/admin';
 
 interface AdminBadgeRulesViewProps {

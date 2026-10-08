@@ -1,33 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowLeft, 
-  Store, 
-  MapPin, 
-  Plus, 
-  Minus, 
-  RotateCcw,
-  CheckCircle,
-  Eye,
-  Building2,
-  Users,
-  X,
-  Upload,
-  Trash2,
-  Save,
-  Search,
+import {
   Check,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Minus,
+  Plus,
+  RotateCcw,
+  Save,
+  Search,
+  Store,
+  Trash2,
+  Upload,
+  X
 } from 'lucide-react';
-import { Language } from '../../types';
-import { OrganizerBoothItem, OrganizerEvent } from '../../types/organizer';
-import { MapLocationPoint } from '../../types/map';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  getSharedMapImage, 
   fetchMapHotspotsFromApi,
+  getSharedMapImage,
 } from '../../services/mapService';
 import { organizerApi } from '../../services/organizerApi';
+import { Language } from '../../types';
+import { OrganizerBoothItem, OrganizerEvent } from '../../types/organizer';
 
 interface BoothMapViewProps {
   language: Language;
@@ -51,11 +44,11 @@ interface SelectedBoothState {
 
 export const BoothMapView: React.FC<BoothMapViewProps> = ({
   language,
-  events,
+  events: _events,
   selectedEventId,
-  onSelectEventId,
+  onSelectEventId: _onSelectEventId,
   booths,
-  onBackToList,
+  onBackToList: _onBackToList,
   onApproveBooth,
   onRejectBooth
 }) => {

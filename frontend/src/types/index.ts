@@ -388,9 +388,9 @@ export interface AttendanceScanRecord {
 }
 
 export * from './admin';
-export * from './organizer';
-export * from './map';
-export * from './heritage';
 export * from './booth';
+export * from './heritage';
+export * from './map';
+export * from './organizer';
 
 

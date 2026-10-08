@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Shield, 
-  Check, 
-  RotateCcw, 
-  Save, 
-  Info,
-  Users,
+import {
   Briefcase,
   Calendar,
-  Lock
+  Check,
+  Info,
+  Lock,
+  RotateCcw,
+  Save,
+  Shield,
+  Users
 } from 'lucide-react';
-import { 
-  AdminRoleType, 
-  AdminRolePermissionConfig, 
-  AdminPermissionItem
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AdminPermissionItem,
+  AdminRolePermissionConfig,
+  AdminRoleType
 } from '../../types/admin';
 
 interface AdminRolesPermissionsViewProps {

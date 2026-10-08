@@ -1,5 +1,5 @@
+import { ArrowRight, Calendar, CheckCircle2, Download, MapPin, QrCode, Tag, User, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Calendar, MapPin, ArrowRight, X, Clock, User, Tag, CheckCircle2, QrCode, Download } from 'lucide-react';
 import { Language, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 

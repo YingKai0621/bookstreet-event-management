@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, QrCode, RefreshCw, Star } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Star, CheckCircle2, QrCode, RefreshCw, AlertCircle } from 'lucide-react';
-import { ExtendedHeritageProfile, Language } from '../types';
+import React, { useEffect, useState } from 'react';
 import { publicApi } from '../services/publicApi';
+import { ExtendedHeritageProfile, Language } from '../types';
 import './FeedbackSection.css';
 
 interface FeedbackSectionProps {

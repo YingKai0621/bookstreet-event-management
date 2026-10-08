@@ -1,14 +1,9 @@
-import React, { useState } from 'react';
-import { 
-  BarChart3, 
-  Users, 
-  Layers, 
-  Percent, 
-  Star, 
-  Download, 
-  Calendar, 
-  ChevronDown 
+import {
+  BarChart3,
+  Download,
+  Star
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Language, PartnerReportStats } from '../../types';
 import './PartnerPages.css';
 

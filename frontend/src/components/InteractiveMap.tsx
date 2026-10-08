@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronRight,
-  Phone,
   Clock,
+  Phone,
   ZoomIn,
   ZoomOut
 } from 'lucide-react';
@@ -12,6 +11,10 @@ import type { EventBooth } from '../types/booth';
 import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../services/mapService';
 import { boothApi } from '../services/boothApi';
 import { eventBoothToMarker } from './booth-map/boothMapModel';
+import React, { useEffect, useRef, useState } from 'react';
+import { DEFAULT_MAP_IMAGE, fetchMapHotspotsFromApi, MapLocationPoint } from '../services/mapService';
+import { Booth, Language } from '../types';
+import { IconMapBookPin } from './CustomIcons';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
@@ -23,6 +26,8 @@ interface InteractiveMapProps {
   onNavigateToBoothDetail: (boothId: string) => void;
 }
 
+const EMPTY_BOOTHS: Booth[] = [];
+
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   events = [],
@@ -31,7 +36,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   highlightedBoothId,
   onNavigateToBoothDetail,
 }) => {
-  const allBooths = booths || [];
+  const allBooths = booths || EMPTY_BOOTHS;
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
   const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
   const [selectedEventId, setSelectedEventId] = useState('');
