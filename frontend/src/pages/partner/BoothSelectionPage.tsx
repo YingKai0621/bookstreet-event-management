@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  Info, 
+import {
   ArrowRight,
-  X,
-  ZoomIn,
-  ZoomOut,
+  CheckCircle2,
+  Info,
   RotateCcw,
   Send,
-  AlertCircle
+  X,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getSharedMapImage, getSharedMapPoints } from '../../services/mapService';
 import { Language, PartnerBooth } from '../../types';
-import { getSharedMapPoints, getSharedMapImage } from '../../services/mapService';
 import { MapLocationPoint } from '../../types/map';
 import './PartnerPages.css';
 
@@ -25,8 +24,8 @@ interface BoothSelectionPageProps {
 
 export const BoothSelectionPage: React.FC<BoothSelectionPageProps> = ({
   language,
-  booths: initialBooths,
-  currentAssignedBoothId,
+  booths: _initialBooths,
+  currentAssignedBoothId: _currentAssignedBoothId,
   onSelectBooth,
 }) => {
   const navigate = useNavigate();

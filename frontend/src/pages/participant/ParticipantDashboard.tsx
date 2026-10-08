@@ -1,25 +1,23 @@
+import {
+  AlertCircle,
+  ArrowRight,
+  Award,
+  CalendarCheck,
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  MapPin,
+  Star,
+  Tag,
+  X
+} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Star, 
-  Award, 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  ArrowRight, 
-  ChevronLeft, 
-  ChevronRight, 
-  Clock, 
-  Tag, 
-  Eye,
-  X,
-  Sparkles,
-  CheckCircle2,
-  CalendarCheck,
-  AlertCircle
-} from 'lucide-react';
-import { Language, ParticipantProfile, ParticipantEvent, ParticipantActivity } from '../../types';
-import { QRCodeSVG } from 'qrcode.react';
 import { NotificationCallout } from '../../components/ui/NotificationCallout';
+import { Language, ParticipantActivity, ParticipantEvent, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 
 interface ParticipantDashboardProps {
@@ -57,8 +55,6 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
   onJoinEvent,
   onRegisterActivity,
 }) => {
-  // Chỉ lấy những sự kiện người dùng thực sự đã bấm tham gia (isJoined === true)
-  const joinedEvents = events.filter(e => e.isJoined === true);
   // Chỉ lấy những hoạt động người dùng thực sự đã đăng ký (status === 'registered' hoặc 'attended')
   const registeredActivities = activities.filter(a => a.status === 'registered' || a.status === 'attended');
 

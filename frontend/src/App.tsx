@@ -1,70 +1,70 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { Hero } from './components/Hero';
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import './App.css';
+import { useAuth } from './auth/useAuth';
 import { AboutSection } from './components/AboutSection';
+import { AdminPortal } from './components/AdminPortal';
 import { BoothsSection } from './components/BoothsSection';
 import { EventsSection } from './components/EventsSection';
-import { HeritageSection } from './components/HeritageSection';
-import { InteractiveMap } from './components/InteractiveMap';
-import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
-import { HeritageExperience } from './pages/HeritageExperience';
-import { BoothsExperience } from './pages/BoothsExperience';
-import { EventsExperience } from './pages/EventsExperience';
 import { FeedbackSection } from './components/FeedbackSection';
 import { Footer } from './components/Footer';
+import { Header } from './components/Header';
+import { HeritageSection } from './components/HeritageSection';
+import { Hero } from './components/Hero';
+import { InteractiveMap } from './components/InteractiveMap';
 import { ManagementPortal } from './components/ManagementPortal';
-import { PortalLoginPage } from './pages/PortalLoginPage';
+import { BoothsExperience } from './pages/BoothsExperience';
+import { EventsExperience } from './pages/EventsExperience';
+import { HeritageExperience } from './pages/HeritageExperience';
 import { LoginPage } from './pages/LoginPage';
+import { PortalLoginPage } from './pages/PortalLoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { ParticipantLayout } from './pages/participant/ParticipantLayout';
-import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
-import { EventDetailPage } from './pages/participant/EventDetailPage';
+import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
-import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
 import { ActivityQrPage } from './pages/participant/ActivityQrPage';
-import { RewardsPage } from './pages/participant/RewardsPage';
+import { EventDetailPage } from './pages/participant/EventDetailPage';
+import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
 import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
-import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
+import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
 import { ParticipantFeedbackPage } from './pages/participant/ParticipantFeedbackPage';
+import { ParticipantLayout } from './pages/participant/ParticipantLayout';
+import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
+import { RewardsPage } from './pages/participant/RewardsPage';
+import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
+import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
+import { BoothManagementPage } from './pages/partner/BoothManagementPage';
+import { BoothSelectionPage } from './pages/partner/BoothSelectionPage';
+import { EventApplicationPage } from './pages/partner/EventApplicationPage';
+import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
+import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
-import { PartnerDashboard } from './pages/partner/PartnerDashboard';
-import { EventApplicationPage } from './pages/partner/EventApplicationPage';
-import { BoothSelectionPage } from './pages/partner/BoothSelectionPage';
-import { BoothManagementPage } from './pages/partner/BoothManagementPage';
-import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
-import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
-import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
-import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPage';
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
-import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
-import { AdminPortal } from './components/AdminPortal';
-import { AdminLoginPage } from './pages/admin/AdminLoginPage';
-import { 
-  Language, 
-  EventItem, 
-  Booth, 
-  ExtendedHeritageProfile,
-  ParticipantProfile,
-  ParticipantEvent,
-  ParticipantActivity,
-  ParticipantBadge,
-  ParticipantCertificate,
-  PartnerOrganization,
-  PartnerEventApplication,
-  PartnerBooth,
-  PartnerActivityProposal,
-  PartnerTodoItem,
-  PartnerNotification,
-  PartnerReportStats,
-  AttendanceScanRecord
-} from './types';
+import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
+import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
-import { useAuth } from './auth/useAuth';
-import './App.css';
+import {
+  AttendanceScanRecord,
+  Booth,
+  EventItem,
+  ExtendedHeritageProfile,
+  Language,
+  ParticipantActivity,
+  ParticipantBadge,
+  ParticipantCertificate,
+  ParticipantEvent,
+  ParticipantProfile,
+  PartnerActivityProposal,
+  PartnerBooth,
+  PartnerEventApplication,
+  PartnerNotification,
+  PartnerOrganization,
+  PartnerReportStats,
+  PartnerTodoItem
+} from './types';
 
 const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,

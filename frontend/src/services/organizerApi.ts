@@ -1,17 +1,18 @@
-import { apiClient } from './apiClient';
+import { ExtendedHeritageProfile } from '../types';
 import {
-  OrganizerProfile,
+  OrganizerActivityItem,
+  OrganizerBoothItem,
   OrganizerEvent,
   OrganizerEventPageResponse,
   OrganizerEventRequest,
   OrganizerEventResponse,
   OrganizerEventStatus,
-  OrganizerBoothItem,
-  OrganizerActivityItem,
+  OrganizerNotificationItem,
   OrganizerParticipantItem,
-  OrganizerNotificationItem
+  OrganizerProfile,
+  OrganizerReport,
 } from '../types/organizer';
-import { ExtendedHeritageProfile } from '../types';
+import { apiClient } from './apiClient';
 import { toHeritageProfile } from './publicApi';
 
 interface PublicBoothResponse {
@@ -356,7 +357,7 @@ export const organizerApi = {
   },
   overrideAttendance: (registrationId: string, status: string, reason: string, durationMinutes = 30) =>
     apiClient.post(`/organizer/participants/${encodeURIComponent(registrationId)}/override-attendance`, { status, reason, durationMinutes }),
-  async getReport(eventId: string): Promise<any> {
+  async getReport(eventId: string): Promise<OrganizerReport> {
     try {
       const res = await apiClient.get<any>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
       if (res && typeof res === 'object' && res.totalParticipants !== undefined) return res;
@@ -382,7 +383,13 @@ export const organizerApi = {
       const totalActivities = activities.length;
       const attendanceRate = totalParticipants > 0 ? Math.round((attended / totalParticipants) * 100) : 0;
       const ratingCount = feedbacks.length;
-      const averageRating = ratingCount > 0 ? Number((feedbacks.reduce((sum, f) => sum + f.rating, 0) / ratingCount).toFixed(1)) : 0;
+      let totalRating = 0;
+      for (const feedback of feedbacks) {
+        totalRating += Number(feedback?.rating) || 0;
+      }
+      const averageRating = ratingCount > 0
+        ? Number((totalRating / ratingCount).toFixed(1))
+        : 0;
 
       const activityStats = activities.map(act => ({
         name: act.title,
@@ -391,7 +398,7 @@ export const organizerApi = {
 
       const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
         stars,
-        count: feedbacks.filter(f => Math.round(f.rating) === stars).length,
+        count: feedbacks.filter(f => Math.round(Number(f.rating) || 0) === stars).length,
       }));
 
       return {

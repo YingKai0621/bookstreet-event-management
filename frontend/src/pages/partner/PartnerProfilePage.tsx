@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { AlertCircle, Building2, CheckCircle2, Save, UserRound, Upload, X } from 'lucide-react';
-import { Language, PartnerOrganization } from '../../types';
+import { AlertCircle, Building2, CheckCircle2, Save, Upload, UserRound, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
+import { Language, PartnerOrganization } from '../../types';
 import './PartnerPages.css';
 
 interface PartnerProfilePageProps {

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ApiError } from '../../services/apiClient';
 import { Language } from '../../types';
 import { OrganizerEvent, OrganizerEventRequest } from '../../types/organizer';
-import { ApiError } from '../../services/apiClient';
 
 interface OrganizerCreateEventModalProps {
   language: Language;

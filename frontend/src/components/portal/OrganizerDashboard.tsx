@@ -1,19 +1,15 @@
-import React from 'react';
-import { 
-  Calendar, 
-  MapPin, 
-  ArrowRight, 
-  Store, 
-  Layers, 
-  Users, 
-  AlertCircle, 
-  Clock, 
-  MessageSquare,
-  QrCode,
+import {
+  ArrowRight,
+  Calendar,
   FileText,
-  CheckCircle2,
-  Plus
+  Layers,
+  MapPin,
+  MessageSquare,
+  Plus,
+  Store,
+  Users
 } from 'lucide-react';
+import React from 'react';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerProfile, OrganizerTab } from '../../types/organizer';
 
@@ -38,7 +34,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   activities,
   onNavigateTab,
   onOpenCreateEvent,
-  onOpenAttendanceModal
+  onOpenAttendanceModal: _onOpenAttendanceModal
 }) => {
   const pendingBooths = booths.filter(item => item.status === 'pending');
   const pendingActivities = activities.filter(item => item.status === 'pending' || item.status === 'need_revision');

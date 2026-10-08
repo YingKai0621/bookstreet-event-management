@@ -1,22 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Search, 
-  Bell, 
-  Menu, 
-  ChevronDown, 
-  User, 
-  LogOut, 
-  BookOpen,
-  CheckCheck,
-  Store,
+import {
+  Bell,
   Calendar,
-  Users,
+  CheckCheck,
+  ChevronDown,
+  ChevronRight,
+  LogOut,
+  Menu,
   MessageSquare,
+  Search,
   Settings,
-  ChevronRight
+  Store,
+  User,
+  Users
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
-import { OrganizerProfile, OrganizerNotificationItem, OrganizerTab } from '../../types/organizer';
+import { OrganizerNotificationItem, OrganizerProfile, OrganizerTab } from '../../types/organizer';
 
 interface OrganizerTopBarProps {
   language: Language;

@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  Bell, 
-  CheckCheck, 
-  Store, 
-  Layers, 
-  Users, 
-  MessageSquare, 
-  ChevronRight
+import {
+  Bell,
+  CheckCheck,
+  ChevronRight,
+  Layers,
+  MessageSquare,
+  Store,
+  Users
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerNotificationItem, OrganizerTab } from '../../types/organizer';
 

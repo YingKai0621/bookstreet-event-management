@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
-import { 
-  Globe2, 
-  Plus, 
-  Search, 
-  MapPin, 
-  Eye, 
-  Trash2, 
-  Edit3, 
-  CheckCircle2,
-  ExternalLink,
-  X,
-  Check,
+import {
   Calendar,
-  Layers,
-  Sparkles,
-  QrCode,
+  Check,
+  Edit3,
+  ExternalLink,
+  Eye,
   Image as ImageIcon,
-  Upload
+  Layers,
+  MapPin,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X
 } from 'lucide-react';
-import { Language, ExtendedHeritageProfile, HeritagePublishStatus } from '../../types';
+import React, { useState } from 'react';
+import { ExtendedHeritageProfile, HeritagePublishStatus, Language } from '../../types';
 
 interface OrganizerPublicContentViewProps {
   language: Language;

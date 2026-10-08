@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  Bell, 
-  CheckCheck, 
-  ShieldAlert, 
-  UserCheck, 
-  Database, 
-  KeyRound, 
-  Clock, 
-  ArrowRight 
+import {
+  ArrowRight,
+  Bell,
+  CheckCheck,
+  Clock,
+  Database,
+  ShieldAlert,
+  UserCheck
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { AdminNotificationItem } from '../../types/admin';
 
 interface AdminNotificationsViewProps {

@@ -1,19 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Building2, 
-  ShieldCheck, 
-  Bell, 
-  LogOut, 
-  Check, 
-  Edit3, 
-  X, 
-  Calendar,
-  AlertCircle,
-  Upload
+import {
+  Bell,
+  Building2,
+  Check,
+  Edit3,
+  LogOut,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Upload,
+  User,
+  X
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerProfile } from '../../types/organizer';
 

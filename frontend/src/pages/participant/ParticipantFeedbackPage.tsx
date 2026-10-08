@@ -1,22 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  MessageSquare, 
-  Star, 
-  Send, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
-  Plus, 
-  Calendar, 
-  Building2, 
-  MapPin, 
+import {
+  Building2,
+  CheckCircle2,
+  Clock,
+  Filter,
+  MapPin,
+  MessageSquare,
+  Plus,
+  Send,
   ShieldCheck,
-  ChevronRight,
-  Filter
+  Star
 } from 'lucide-react';
-import { Language, FeedbackRecord } from '../../types';
-import { participantApi } from '../../services/participantApi';
+import React, { useEffect, useState } from 'react';
 import { NotificationCallout } from '../../components/ui/NotificationCallout';
+import { participantApi } from '../../services/participantApi';
+import { FeedbackRecord, Language } from '../../types';
 import './ParticipantPages.css';
 
 export interface ParticipantFeedbackPageProps {
@@ -30,7 +27,7 @@ export interface ParticipantFeedbackPageProps {
 export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = ({
   language,
   userEmail = '',
-  userName = '',
+  userName: _userName = '',
   feedbacks,
   onSubmitFeedback
 }) => {
@@ -65,7 +62,6 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
   const [targetName, setTargetName] = useState('Toàn Đường Sách TP.HCM');
   const [rating, setRating] = useState(5);
   const [comments, setComments] = useState('');
-  const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 

@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, Clock3, Loader2, RefreshCw, Store, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import '../../components/portal/Sprint2Booth.css';
+import { ApiError } from '../../services/apiClient';
+import { boothApi } from '../../services/boothApi';
 import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, EventBooth } from '../../types/booth';
-import { boothApi } from '../../services/boothApi';
-import { ApiError } from '../../services/apiClient';
-import '../../components/portal/Sprint2Booth.css';
 import './PartnerPages.css';
 
 interface Props {
@@ -175,7 +175,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   }
 
   return <section className="partner-page s2-booth-page" aria-labelledby="partner-booth-title">
-    <header className="s2-booth-header"><div><span className="s2-eyebrow">Sprint 2 · Yêu cầu gian hàng</span><h1 id="partner-booth-title">Chọn gian hàng cho sự kiện</h1><p>Xem giá và tình trạng thực tế trước khi gửi yêu cầu.</p></div><button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}><RefreshCw size={15} />Làm mới</button></header>
+    <header className="s2-booth-header"><div><h1 id="partner-booth-title" className="partner-page-title" style={{ fontSize: '1.5rem', margin: 0 }}>Chọn gian hàng cho sự kiện</h1><p className="partner-page-sub">Xem giá và tình trạng thực tế trước khi gửi yêu cầu.</p></div><button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}><RefreshCw size={15} />Làm mới</button></header>
 
     <div className="s2-event-bar"><label htmlFor="s2-partner-event">Sự kiện đã được duyệt</label><select id="s2-partner-event" value={eventId} onChange={event => { setSelectedEventId(event.target.value); setSelectedBooth(null); }}>
       {approvedApplications.map(application => <option key={application.id} value={application.eventId}>{application.eventTitle}</option>)}

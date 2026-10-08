@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import './scroll-expansion-hero.css';
 
 interface ScrollExpandMediaProps {

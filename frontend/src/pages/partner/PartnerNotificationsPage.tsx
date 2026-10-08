@@ -1,15 +1,14 @@
+import {
+  Bell,
+  Calendar,
+  CheckCheck,
+  Clock,
+  ExternalLink,
+  Layers,
+  Store
+} from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Bell, 
-  CheckCheck, 
-  Layers, 
-  Store, 
-  Calendar, 
-  Clock, 
-  AlertCircle,
-  ExternalLink 
-} from 'lucide-react';
 import { Language, PartnerNotification } from '../../types';
 import './PartnerPages.css';
 

@@ -1,6 +1,6 @@
+import { Mail, MapPin, Phone } from 'lucide-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, MapPin, Mail, Phone } from 'lucide-react';
 import { Language } from '../types';
 import './Footer.css';
 

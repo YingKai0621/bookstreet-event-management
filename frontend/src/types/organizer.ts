@@ -186,3 +186,19 @@ export interface OrganizerNotificationItem {
   targetTab?: string;
   relatedId?: string;
 }
+
+export interface OrganizerReport {
+  eventId: string;
+  eventName: string;
+  totalParticipants: number;
+  attended: number;
+  pending: number;
+  cancelled: number;
+  totalBooths: number;
+  totalActivities: number;
+  attendanceRate: number;
+  averageRating: number;
+  ratingCount: number;
+  activityStats: Array<{ name: string; count: number }>;
+  ratingDistribution: Array<{ stars: number; count: number }>;
+}

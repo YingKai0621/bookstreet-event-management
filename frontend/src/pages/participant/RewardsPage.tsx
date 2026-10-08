@@ -1,6 +1,6 @@
+import { Award, Bookmark, BookOpen, Clock, Compass, Crown, Gift, HelpCircle, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import React from 'react';
-import { Star, Award, BookOpen, Compass, ShieldCheck, HelpCircle, Gift, Bookmark, Crown, Clock, Sparkles } from 'lucide-react';
-import { Language, ParticipantProfile, ParticipantBadge } from '../../types';
+import { Language, ParticipantBadge, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 
 interface RewardsPageProps {

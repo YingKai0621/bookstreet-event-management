@@ -1,11 +1,11 @@
+import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Clock, MapPin, X, AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react';
-import { IconEventTicket } from './CustomIcons';
-import { EventCoverflow } from './ui/EventCoverflow';
+import { Link } from 'react-router-dom';
 import { EventItem, Language, ParticipantProfile } from '../types';
+import { IconEventTicket } from './CustomIcons';
 import './EventsSection.css';
+import { EventCoverflow } from './ui/EventCoverflow';
 
 const parseEventDate = (value: string) => {
   const parts = value.includes('/') ? value.split('/') : value.split('-');
@@ -53,7 +53,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   const [sheetDragOffset, setSheetDragOffset] = useState(0);
   const [isSheetDragging, setIsSheetDragging] = useState(false);
 
-  const closeEventSheet = (sheet: 'detail' | 'register') => {
+  const closeEventSheet = React.useCallback((sheet: 'detail' | 'register') => {
     if (closingSheet) return;
     const finishClose = () => {
       if (sheet === 'detail') setActiveEventDetail(null);
@@ -72,7 +72,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
 
     setClosingSheet(sheet);
     window.setTimeout(finishClose, 260);
-  };
+  }, [closingSheet]);
 
   React.useEffect(() => {
     const hasOpenDialog = Boolean(activeEventDetail || showRegisterModal);
@@ -92,7 +92,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeEventDetail, showRegisterModal]);
+  }, [activeEventDetail, closeEventSheet, showRegisterModal]);
 
   const { displayedEvents, weekEventIds } = React.useMemo(() => {
     const today = new Date();

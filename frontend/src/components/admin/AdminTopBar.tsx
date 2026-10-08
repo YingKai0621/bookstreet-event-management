@@ -1,19 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Search, 
-  Bell, 
-  Menu, 
-  ChevronDown, 
-  User, 
-  LogOut, 
-  BookOpen, 
-  ShieldCheck,
-  CheckCheck,
-  Shield,
-  Clock
+import {
+  Bell,
+  ChevronDown,
+  LogOut,
+  Menu,
+  Search,
+  User
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
-import { AdminProfile, AdminNotificationItem } from '../../types/admin';
+import { AdminNotificationItem, AdminProfile } from '../../types/admin';
 
 interface AdminTopBarProps {
   language: Language;

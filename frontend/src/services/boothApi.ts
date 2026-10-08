@@ -1,4 +1,3 @@
-import { apiClient } from './apiClient';
 import type {
   BoothAvailability,
   BoothRequest,
@@ -9,6 +8,7 @@ import type {
   PhysicalBooth,
   UpdatePhysicalBoothInput,
 } from '../types/booth';
+import { apiClient } from './apiClient';
 
 function withQuery(path: string, values: Record<string, string | number | boolean | undefined>): string {
   const query = new URLSearchParams();
@@ -73,7 +73,7 @@ export const boothApi = {
     apiClient.get<BoothRequest>(`/partner/booth-requests/${boothRequestId}`),
 
   withdrawRequest: (boothRequestId: number) =>
-    apiClient.post<BoothRequest>(`/partner/booth-requests/${boothRequestId}/withdraw`, {}),
+    apiClient.post<BoothRequest>(`/partner/booth-requests/${boothRequestId}/withdraw`),
 
   listOrganizerRequests: (eventId: string, boothId?: number, status?: BoothRequestStatus) =>
     apiClient.get<PageResponse<BoothRequest>>(
@@ -89,7 +89,6 @@ export const boothApi = {
   selectRequest: (eventId: string, boothRequestId: number) =>
     apiClient.post<BoothRequest>(
       `/organizer/events/${encodeURIComponent(eventId)}/booth-requests/${boothRequestId}/select`,
-      {},
     ),
 
   rejectRequest: (eventId: string, boothRequestId: number, reviewNote: string) =>

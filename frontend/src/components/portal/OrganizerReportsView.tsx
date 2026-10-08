@@ -1,8 +1,8 @@
+import { BarChart3, Download, MessageSquare, QrCode, Star, TrendingUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { Download, Star, BarChart3, Users, Store, Layers, QrCode, MessageSquare, TrendingUp } from 'lucide-react';
+import { organizerApi } from '../../services/organizerApi';
 import { Language } from '../../types';
 import { OrganizerEvent } from '../../types/organizer';
-import { organizerApi } from '../../services/organizerApi';
 
 interface OrganizerReportsViewProps {
   language: Language;

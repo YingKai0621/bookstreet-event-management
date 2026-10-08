@@ -1,17 +1,12 @@
-import React, { useState } from 'react';
-import { 
-  Settings, 
-  ShieldCheck, 
-  Bell, 
-  Save, 
-  RotateCcw, 
-  Check, 
-  Building, 
-  Lock, 
-  Mail, 
-  Phone,
-  Info
+import {
+  Bell,
+  Building,
+  Check,
+  RotateCcw,
+  Save,
+  ShieldCheck
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { AdminSystemSettings } from '../../types/admin';
 
 interface AdminSystemSettingsViewProps {

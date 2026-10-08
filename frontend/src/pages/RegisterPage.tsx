@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle, 
-  ShieldCheck, 
-  Check, 
-  X 
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ShieldCheck,
+  User,
+  X
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Language } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { Language } from '../types';
 import './RegisterPage.css';
 
 interface RegisterPageProps {

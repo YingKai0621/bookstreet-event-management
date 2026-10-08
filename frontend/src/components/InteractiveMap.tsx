@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronRight,
-  Phone,
   Clock,
+  Phone,
   ZoomIn,
   ZoomOut
 } from 'lucide-react';
-import { IconMapBookPin } from './CustomIcons';
-import { Booth, Language } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MAP_IMAGE, fetchMapHotspotsFromApi, MapLocationPoint } from '../services/mapService';
+import { Booth, Language } from '../types';
+import { IconMapBookPin } from './CustomIcons';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
@@ -19,6 +19,8 @@ interface InteractiveMapProps {
   onNavigateToBoothDetail: (boothId: string) => void;
 }
 
+const EMPTY_BOOTHS: Booth[] = [];
+
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   booths,
@@ -26,7 +28,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   highlightedBoothId,
   onNavigateToBoothDetail,
 }) => {
-  const allBooths = booths || [];
+  const allBooths = booths || EMPTY_BOOTHS;
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapImageUrl, setMapImageUrl] = useState<string>(DEFAULT_MAP_IMAGE);

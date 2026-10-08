@@ -1,28 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Store, 
-  MapPin, 
-  Layers, 
-  CheckCircle2, 
-  AlertCircle, 
-  Map, 
-  RefreshCw, 
-  XCircle, 
-  FileText, 
-  Image as ImageIcon, 
-  X,
-  Send,
-  Edit3,
+import {
   Check,
+  CheckCircle2,
+  Edit3,
+  FileText,
+  Image as ImageIcon,
+  Map,
   Plus,
+  RefreshCw,
+  Send,
+  Store,
   Trash2,
-  Upload,
   UploadCloud,
-  Paperclip
+  X,
+  XCircle
 } from 'lucide-react';
-import { Language, PartnerBooth } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { partnerApi } from '../../services/partnerApi';
+import { Language, PartnerBooth } from '../../types';
 import './PartnerPages.css';
 
 interface BoothImageItem {
@@ -49,7 +44,7 @@ export interface BoothManagementPageProps {
 export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
   language,
   booth: initialBooth,
-  onOpenAttendanceModal,
+  onOpenAttendanceModal: _onOpenAttendanceModal,
   onRequestChange,
   onRequestCancel,
 }) => {
@@ -104,7 +99,7 @@ export const BoothManagementPage: React.FC<BoothManagementPageProps> = ({
       setBoothImages(content.images || []);
       setBoothDocs(content.documents || []);
     }).catch(error => showToast(error instanceof Error ? error.message : 'Không tải được nội dung gian hàng'));
-  }, [initialBooth?.id]);
+  }, [initialBooth]);
 
   if (!booth) {
     return (
