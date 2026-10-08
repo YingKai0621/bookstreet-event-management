@@ -24,7 +24,8 @@ interface EventFormState {
   partnerWithdrawalCutoffAt: string;
   boothCancellationCutoffAt: string;
   activityCancellationCutoffAt: string;
-  boothPaymentWindowMinutes: string;
+  boothPaymentWindowValue: string;
+  boothPaymentWindowUnit: 'HOURS' | 'DAYS';
   maxBoothsPerPartner: string;
   maxActivitiesPerPartner: string;
   bannerUrl: string;
@@ -42,7 +43,8 @@ const EMPTY_FORM: EventFormState = {
   partnerWithdrawalCutoffAt: '',
   boothCancellationCutoffAt: '',
   activityCancellationCutoffAt: '',
-  boothPaymentWindowMinutes: '30',
+  boothPaymentWindowValue: '24',
+  boothPaymentWindowUnit: 'HOURS',
   maxBoothsPerPartner: '1',
   maxActivitiesPerPartner: '1',
   bannerUrl: '',
@@ -67,6 +69,8 @@ function toDateTimeLocal(value: string | null | undefined): string {
 
 function formFromEvent(event?: OrganizerEvent | null): EventFormState {
   if (!event) return { ...EMPTY_FORM };
+  const useDays = event.boothPaymentWindowMinutes > 1440
+    && event.boothPaymentWindowMinutes % 1440 === 0;
   return {
     name: event.title,
     description: event.description,
@@ -79,7 +83,10 @@ function formFromEvent(event?: OrganizerEvent | null): EventFormState {
     partnerWithdrawalCutoffAt: toDateTimeLocal(event.partnerWithdrawalCutoffAt),
     boothCancellationCutoffAt: toDateTimeLocal(event.boothCancellationCutoffAt),
     activityCancellationCutoffAt: toDateTimeLocal(event.activityCancellationCutoffAt),
-    boothPaymentWindowMinutes: String(event.boothPaymentWindowMinutes),
+    boothPaymentWindowValue: String(
+      event.boothPaymentWindowMinutes / (useDays ? 1440 : 60),
+    ),
+    boothPaymentWindowUnit: useDays ? 'DAYS' : 'HOURS',
     maxBoothsPerPartner: String(event.maxBoothsPerPartner),
     maxActivitiesPerPartner: String(event.maxActivitiesPerPartner),
     bannerUrl: event.bannerUrl || '',
@@ -107,6 +114,21 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     setForm(current => ({ ...current, [field]: value }));
   };
 
+  const updatePaymentWindowUnit = (unit: EventFormState['boothPaymentWindowUnit']) => {
+    setForm(current => {
+      const currentFactor = current.boothPaymentWindowUnit === 'DAYS' ? 1440 : 60;
+      const nextFactor = unit === 'DAYS' ? 1440 : 60;
+      const minutes = Number(current.boothPaymentWindowValue) * currentFactor;
+      return {
+        ...current,
+        boothPaymentWindowUnit: unit,
+        boothPaymentWindowValue: Number.isFinite(minutes)
+          ? String(minutes / nextFactor)
+          : current.boothPaymentWindowValue,
+      };
+    });
+  };
+
   const validate = (): string | null => {
     if (!form.name.trim()) return language === 'vi' ? 'Vui lòng nhập tên sự kiện.' : 'Event name is required.';
     if (form.name.trim().length > 150) return language === 'vi' ? 'Tên sự kiện không được vượt quá 150 ký tự.' : 'Event name must not exceed 150 characters.';
@@ -131,11 +153,17 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       return language === 'vi' ? 'Hạn đề xuất hoạt động không được trước hạn đối tác đăng ký.' : 'Activity proposal deadline must not be before partner application deadline.';
     }
 
-    const numericValues = [
-      Number(form.boothPaymentWindowMinutes),
-      Number(form.maxBoothsPerPartner),
-      Number(form.maxActivitiesPerPartner),
-    ];
+    const paymentWindowValue = Number(form.boothPaymentWindowValue);
+    const paymentWindowMinutes = Math.round(paymentWindowValue
+      * (form.boothPaymentWindowUnit === 'DAYS' ? 1440 : 60));
+    if (!Number.isFinite(paymentWindowValue) || paymentWindowValue <= 0
+      || !Number.isInteger(paymentWindowMinutes)
+      || paymentWindowMinutes < 60 || paymentWindowMinutes > 10080) {
+      return language === 'vi'
+        ? 'Thời hạn giữ chỗ phải từ 1 giờ đến 7 ngày.'
+        : 'The Booth hold window must be between 1 hour and 7 days.';
+    }
+    const numericValues = [Number(form.maxBoothsPerPartner), Number(form.maxActivitiesPerPartner)];
     if (numericValues.some(value => !Number.isInteger(value) || value < 0)) {
       return language === 'vi' ? 'Các giới hạn số phải là số nguyên không âm.' : 'Numeric limits must be non-negative integers.';
     }
@@ -162,7 +190,8 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       partnerWithdrawalCutoffAt: optionalInstant(form.partnerWithdrawalCutoffAt),
       boothCancellationCutoffAt: optionalInstant(form.boothCancellationCutoffAt),
       activityCancellationCutoffAt: optionalInstant(form.activityCancellationCutoffAt),
-      boothPaymentWindowMinutes: Number(form.boothPaymentWindowMinutes),
+      boothPaymentWindowMinutes: Math.round(Number(form.boothPaymentWindowValue)
+        * (form.boothPaymentWindowUnit === 'DAYS' ? 1440 : 60)),
       maxBoothsPerPartner: Number(form.maxBoothsPerPartner),
       maxActivitiesPerPartner: Number(form.maxActivitiesPerPartner),
       bannerUrl: form.bannerUrl.trim() || null,
@@ -223,7 +252,34 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
 
             <h4 style={{ margin: '1.25rem 0 0.75rem' }}>Giới hạn vận hành *</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
-              <div><label htmlFor="event-payment-window" style={labelStyle}>Thời hạn thanh toán gian hàng (phút)</label><input id="event-payment-window" style={inputStyle} type="number" min="0" step="1" value={form.boothPaymentWindowMinutes} onChange={changeEvent => updateField('boothPaymentWindowMinutes', changeEvent.target.value)} required /></div>
+              <div>
+                <label htmlFor="event-payment-window" style={labelStyle}>Thời hạn giữ chỗ gian hàng</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 110px', gap: '.5rem' }}>
+                  <input
+                    id="event-payment-window"
+                    style={inputStyle}
+                    type="number"
+                    min="1"
+                    max={form.boothPaymentWindowUnit === 'DAYS' ? 7 : 168}
+                    step="any"
+                    value={form.boothPaymentWindowValue}
+                    onChange={changeEvent => updateField('boothPaymentWindowValue', changeEvent.target.value)}
+                    required
+                  />
+                  <select
+                    aria-label="Đơn vị thời hạn giữ chỗ"
+                    style={inputStyle}
+                    value={form.boothPaymentWindowUnit}
+                    onChange={changeEvent => updatePaymentWindowUnit(
+                      changeEvent.target.value as EventFormState['boothPaymentWindowUnit'],
+                    )}
+                  >
+                    <option value="HOURS">Giờ</option>
+                    <option value="DAYS">Ngày</option>
+                  </select>
+                </div>
+                <small style={{ color: '#637771' }}>Cho phép từ 1 giờ đến 7 ngày.</small>
+              </div>
               <div><label htmlFor="event-max-booths" style={labelStyle}>Số gian hàng tối đa / đối tác</label><input id="event-max-booths" style={inputStyle} type="number" min="0" step="1" value={form.maxBoothsPerPartner} onChange={changeEvent => updateField('maxBoothsPerPartner', changeEvent.target.value)} required /></div>
               <div><label htmlFor="event-max-activities" style={labelStyle}>Số hoạt động tối đa / đối tác</label><input id="event-max-activities" style={inputStyle} type="number" min="0" step="1" value={form.maxActivitiesPerPartner} onChange={changeEvent => updateField('maxActivitiesPerPartner', changeEvent.target.value)} required /></div>
             </div>

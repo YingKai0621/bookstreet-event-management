@@ -32,6 +32,7 @@ import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { EventApplicationPage } from './pages/partner/EventApplicationPage';
 import { BoothSelectionPage } from './pages/partner/BoothSelectionPage';
 import { BoothManagementPage } from './pages/partner/BoothManagementPage';
+import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
 import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
 import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
@@ -93,6 +94,7 @@ export function App() {
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
   const [partnerApp, setPartnerApp] = useState<PartnerEventApplication | null>(null);
   const [partnerBooths, setPartnerBooths] = useState<PartnerBooth[]>([]);
+  const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerEventLocations, setPartnerEventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [partnerAssets, setPartnerAssets] = useState<Array<{ id: string; name: string; totalQuantity: number }>>([]);
   const [partnerActivities, setPartnerActivities] = useState<PartnerActivityProposal[]>([]);
@@ -239,6 +241,7 @@ export function App() {
           ...organization,
           representativeName: authenticatedUser?.fullName || '',
         } : null);
+        setPartnerApplications(applications);
         setPartnerApp(applications[0] || null);
         setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
         setPartnerBooths([]); _setPartnerReports(null); setPartnerEventLocations([]);
@@ -630,6 +633,12 @@ export function App() {
               booths={partnerBooths}
               currentAssignedBoothId={assignedBooth?.id}
               onSelectBooth={handleSelectPartnerBooth}
+            />
+          } />
+          <Route path="/partner/booth-requests" element={
+            <Sprint2PartnerBoothsPage
+              language={language}
+              applications={partnerApplications}
             />
           } />
           <Route path="/partner/activities" element={

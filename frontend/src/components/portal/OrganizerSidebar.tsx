@@ -21,6 +21,7 @@ export type OrganizerTab =
   | 'overview'
   | 'events'
   | 'event_detail'
+  | 'booth_requests'
   | 'booths'
   | 'activities'
   | 'participants'
@@ -52,6 +53,7 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
   const navItems = [
     { id: 'overview' as OrganizerTab, icon: <LayoutDashboard size={18} />, labelVi: 'Dashboard', labelEn: 'Dashboard' },
     { id: 'events' as OrganizerTab, icon: <CalendarDays size={18} />, labelVi: 'Sự kiện', labelEn: 'Events' },
+    { id: 'booth_requests' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Yêu cầu gian hàng', labelEn: 'Booth Requests' },
     { id: 'booths' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Gian hàng', labelEn: 'Booths' },
     { id: 'venues' as OrganizerTab, icon: <Building2 size={18} />, labelVi: 'Địa điểm tổ chức', labelEn: 'Venues' },
     { id: 'assets' as OrganizerTab, icon: <Package size={18} />, labelVi: 'Thiết bị', labelEn: 'Assets' },

@@ -391,5 +391,6 @@ export * from './admin';
 export * from './organizer';
 export * from './map';
 export * from './heritage';
+export * from './booth';
 
 

@@ -14,6 +14,7 @@ import { EventManagementView } from './portal/EventManagementView';
 import { EventDetailView } from './portal/EventDetailView';
 
 import { BoothMapView } from './portal/BoothMapView';
+import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 import { ActivityManagementView } from './portal/ActivityManagementView';
 import { ParticipantManagementView } from './portal/ParticipantManagementView';
 import { OrganizerAttendanceModal } from './portal/OrganizerAttendanceModal';
@@ -372,7 +373,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
-          if (tab !== 'events' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
+          if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
             setSelectedEventId(null);
           }
         }}
@@ -388,7 +389,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           activeTab={activeTab}
           onSelectTab={(tab: OrganizerTab) => {
             setActiveTab(tab);
-            if (tab !== 'events' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
+            if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
               setSelectedEventId(null);
             }
           }}
@@ -464,8 +465,17 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           />
         )}
 
+        {activeTab === 'booth_requests' && (
+          <Sprint2BoothWorkspace
+            language={language}
+            events={eventsList}
+            selectedEventId={currentSelectedEvent?.id || 'all'}
+            onSelectEventId={(id: string) => setSelectedEventId(id)}
+          />
+        )}
+
         {activeTab === 'booths' && (
-          <BoothMapView 
+          <BoothMapView
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}

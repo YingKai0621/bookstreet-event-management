@@ -2,6 +2,7 @@ export type OrganizerTab =
   | 'overview'
   | 'events'
   | 'event_detail'
+  | 'booth_requests'
   | 'booths'
   | 'activities'
   | 'participants'
