@@ -86,6 +86,13 @@ async function mockOrganizer(page: Page): Promise<void> {
       physicalBooths = [...physicalBooths, created];
       return json(route, created, 201);
     }
+    if (path.endsWith('/organizer/booths/12') && method === 'PATCH') {
+      const body = route.request().postDataJSON();
+      expect(body).toEqual({ mapX: 62.5, mapY: 48 });
+      const updated = { ...physicalBooths.find(booth => booth.boothId === 12), ...body };
+      physicalBooths = physicalBooths.map(booth => booth.boothId === 12 ? updated : booth);
+      return json(route, updated);
+    }
     if (path.endsWith('/organizer/events/101/booth-configs') && method === 'GET') return json(route, [eventBooth]);
     if (path.endsWith('/organizer/events/101/booth-configs/11') && method === 'PUT') {
       expect(route.request().postDataJSON()).toEqual({ rentalPrice: 5_500_000, enabled: true });
@@ -132,7 +139,7 @@ async function mockPartner(page: Page): Promise<void> {
   const availableBooth = {
     ...eventBooth,
     eventBoothConfigId: 72,
-    booth: { ...physicalBooth, boothId: 12, code: 'B02', name: 'Gian văn học' },
+    booth: { ...physicalBooth, boothId: 12, code: 'B02', name: 'Gian văn học', mapX: 65, mapY: 45 },
     rentalPrice: 4_000_000,
   };
   await page.route('**/api/v1/**', async route => {
@@ -154,6 +161,35 @@ async function mockPartner(page: Page): Promise<void> {
       return json(route, request, 201);
     }
     if (path.includes('/public/')) return json(route, []);
+    return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
+  });
+}
+
+async function mockPublicMap(page: Page): Promise<void> {
+  const eventWithoutPositions = { ...event, eventId: 102, name: 'Sự kiện chưa định vị' };
+  const booths = [
+    eventBooth,
+    {
+      ...eventBooth,
+      eventBoothConfigId: 73,
+      booth: { ...physicalBooth, boothId: 13, code: 'C03', name: 'Gian chưa định vị', mapX: null, mapY: null },
+    },
+    {
+      ...eventBooth,
+      eventBoothConfigId: 74,
+      booth: { ...physicalBooth, boothId: 14, code: 'D04', name: 'Gian ngoài phạm vi', mapX: 101, mapY: 20 },
+    },
+  ];
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    const method = route.request().method();
+    if (path.endsWith('/auth/me')) return json(route, { code: 'UNAUTHENTICATED', message: 'Anonymous' }, 401);
+    if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, eventWithoutPositions], page: 0, size: 100, totalElements: 2, totalPages: 1 });
+    if (path.endsWith('/events/101/booths') && method === 'GET') return json(route, { content: booths, page: 0, size: 100, totalElements: booths.length, totalPages: 1 });
+    if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: booths.slice(1), page: 0, size: 100, totalElements: 2, totalPages: 1 });
+    if (path.endsWith('/public/booths')) return json(route, []);
+    if (path.endsWith('/public/heritages')) return json(route, []);
     return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
   });
 }
@@ -186,7 +222,19 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByText(/5.000.000/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sơ đồ & Danh sách gian hàng' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vị trí gian hàng trên Đường Sách' })).toBeVisible();
+  await expect(page.locator('.booth-map-marker').filter({ hasText: 'A05' })).toBeVisible();
+  const unpositionedBooth = page.locator('.s2-map-booth-list > button').filter({ hasText: 'B01' });
+  await expect(unpositionedBooth).toContainText('Chưa định vị');
+  await unpositionedBooth.click();
+  await page.getByLabel('Tọa độ X (%)').fill('62.5');
+  await page.getByLabel('Tọa độ Y (%)').fill('48');
+  await page.getByRole('button', { name: 'Lưu vị trí' }).click();
+  await expect(page.getByText('Đã lưu vị trí B01 trên bản đồ.')).toBeVisible();
+  await expect(page.locator('.booth-map-marker').filter({ hasText: 'B01' })).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await expect(page.locator('.booth-map-marker').filter({ hasText: 'B01' })).toBeVisible();
 });
 
 test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request', async ({ page }) => {
@@ -200,8 +248,16 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByText(/Giá đã khóa/)).toBeVisible();
   await page.getByRole('button', { name: /Danh sách gian hàng/ }).click();
   await expect(page.getByText('Gian văn học')).toBeVisible();
-  const availableCard = page.locator('article').filter({ hasText: 'B02' });
-  await availableCard.getByRole('button', { name: 'Xem & gửi yêu cầu' }).click();
+  const availableMarker = page.getByRole('button', { name: /B02.*Còn trống/ });
+  await expect(availableMarker).toBeVisible();
+  await expect(availableMarker).toHaveCSS('left', /.+/);
+  const markerLeft = await availableMarker.evaluate(element => (element as HTMLElement).style.left);
+  const markerTop = await availableMarker.evaluate(element => (element as HTMLElement).style.top);
+  await page.locator('.s2-partner-map').getByRole('button', { name: 'Phóng to bản đồ' }).click();
+  await expect(availableMarker).toHaveAttribute('style', new RegExp(`left: ${markerLeft.replace('.', '\\.')}.*top: ${markerTop.replace('.', '\\.')}`));
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(availableMarker).toHaveAttribute('style', new RegExp(`left: ${markerLeft.replace('.', '\\.')}.*top: ${markerTop.replace('.', '\\.')}`));
+  await availableMarker.click();
   await page.getByLabel('Ghi chú cho Organizer (không bắt buộc)').fill('Ưu tiên trưng bày sách văn học.');
   await page.getByRole('button', { name: 'Gửi yêu cầu gian hàng' }).click();
   await expect(page.getByRole('status')).toContainText('Đã gửi yêu cầu');
@@ -212,4 +268,26 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByRole('heading', { name: 'Quản lý gian hàng', exact: true })).toBeVisible();
   await page.goto('/partner/booths/select');
   await expect(page.getByRole('heading', { name: 'Sơ đồ & Chọn đổi gian hàng' })).toBeVisible();
+});
+
+test('Public visitor selects a published Event and sees only Booths with valid coordinates', async ({ page }) => {
+  await mockPublicMap(page);
+  await page.goto('/');
+  const eventSelector = page.getByLabel('Sự kiện công khai');
+  await expect(eventSelector).toBeVisible();
+  await expect(page.getByRole('button', { name: /A05.*Còn trống/ })).toHaveCount(0);
+  await eventSelector.selectOption('101');
+  const marker = page.getByRole('button', { name: /A05.*Còn trống/ });
+  await expect(marker).toBeVisible();
+  await expect(page.getByRole('button', { name: /C03/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /D04/ })).toHaveCount(0);
+  await marker.click();
+  await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('5.000.000');
+  await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('Còn trống');
+  await expect(page.getByRole('button', { name: /Gửi yêu cầu gian hàng/ })).toHaveCount(0);
+  await eventSelector.selectOption('102');
+  await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
+  await expect(page.getByText('Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.')).toBeVisible();
+  await eventSelector.selectOption('101');
+  await expect(page.getByRole('button', { name: /A05.*Còn trống/ })).toBeVisible();
 });

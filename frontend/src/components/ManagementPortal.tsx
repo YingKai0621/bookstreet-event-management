@@ -13,7 +13,7 @@ import { FacilityManagementView } from './admin/FacilityManagementView';
 import { EventManagementView } from './portal/EventManagementView';
 import { EventDetailView } from './portal/EventDetailView';
 
-import { BoothMapView } from './portal/BoothMapView';
+import { Sprint2BoothMapView } from './portal/Sprint2BoothMapView';
 import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 import { ActivityManagementView } from './portal/ActivityManagementView';
 import { ParticipantManagementView } from './portal/ParticipantManagementView';
@@ -475,14 +475,12 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
 
         {activeTab === 'booths' && (
-          <BoothMapView
+          <Sprint2BoothMapView
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}
             onSelectEventId={(id: string) => setSelectedEventId(id)}
-            booths={boothsList}
-            onApproveBooth={handleApproveBooth}
-            onRejectBooth={handleRejectBooth}
+            onOpenRequests={() => setActiveTab('booth_requests')}
           />
         )}
 

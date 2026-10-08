@@ -4,6 +4,8 @@ import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, EventBooth } from '../../types/booth';
 import { boothApi } from '../../services/boothApi';
 import { ApiError } from '../../services/apiClient';
+import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
+import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
 import '../../components/portal/Sprint2Booth.css';
 import './PartnerPages.css';
 
@@ -122,6 +124,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     [booths],
   );
   const filteredBooths = category === 'ALL' ? booths : booths.filter(row => row.booth.categoryCode === category);
+  const mapMarkers = useMemo(
+    () => filteredBooths.flatMap(row => {
+      const marker = eventBoothToMarker(row);
+      return marker ? [marker] : [];
+    }),
+    [filteredBooths],
+  );
   const requestByBooth = useMemo(() => {
     const map = new Map<number, BoothRequest[]>();
     requests.forEach(request => map.set(request.boothId, [...(map.get(request.boothId) || []), request]));
@@ -188,6 +197,21 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
 
     {loading ? <div className="s2-loading"><Loader2 className="s2-spin" size={22} />Đang tải gian hàng...</div> : tab === 'browse' ? <div className="s2-panel">
       <div className="s2-panel-heading"><div><h2>Gian hàng đang mở</h2><p>Yêu cầu đang chờ không khóa gian hàng; tình trạng do backend xác định.</p></div><label className="s2-category-filter">Danh mục<select value={category} onChange={event => setCategory(event.target.value)}><option value="ALL">Tất cả</option>{categories.map(item => <option key={item}>{item}</option>)}</select></label></div>
+      <div className="s2-partner-map">
+        <BoothMapCanvas
+          markers={mapMarkers}
+          selectedMarkerId={selectedBooth ? `booth-${selectedBooth.booth.boothId}` : null}
+          onSelectMarker={marker => {
+            const row = filteredBooths.find(item => item.booth.boothId === marker.boothId);
+            if (row) { setSelectedBooth(row); setRequestNote(''); }
+          }}
+          ariaLabel="Bản đồ chọn gian hàng dành cho Partner"
+          emptyMessage="Chưa có gian hàng nào trong bộ lọc được định vị trên bản đồ. Hãy dùng danh sách bên dưới."
+        />
+        {mapMarkers.length < filteredBooths.length && <p className="s2-map-note" role="note">
+          {filteredBooths.length - mapMarkers.length} gian hàng chưa có đủ tọa độ nên chỉ hiển thị trong danh sách.
+        </p>}
+      </div>
       <div className="s2-card-grid">{filteredBooths.map(row => {
         const blockedReason = requestBlockedReason(row);
         return <article className="s2-booth-card" key={row.booth.boothId}>

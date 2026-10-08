@@ -13,6 +13,26 @@
   flex-wrap: wrap;
 }
 
+.public-map-event-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 auto 1.25rem;
+  color: #40564f;
+}
+
+.public-map-event-picker label { font-size: 0.8rem; font-weight: 800; }
+.public-map-event-picker select { min-width: min(420px, 100%); padding: 0.68rem 0.8rem; border: 1px solid #cbbbaa; border-radius: 9px; background: #fff; color: #172421; font: inherit; }
+.public-map-event-picker > span { width: 100%; color: #8a5e13; font-size: 0.78rem; text-align: center; }
+.public-map-booth-facts { display: grid; gap: 0.45rem; margin: 0.9rem 0; padding: 0.75rem; border: 1px solid #ded4c8; border-radius: 8px; background: #faf7f2; color: #40564f; font-size: 0.8rem; }
+.public-map-status { width: fit-content; padding: 0.24rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
+.public-map-status.status-available { background: #e7f7ee; color: #187047; }
+.public-map-status.status-on_hold { background: #fff1c7; color: #8b5d05; }
+.public-map-status.status-assigned { background: #e4ecfa; color: #345b99; }
+.public-map-status.status-unavailable { background: #e9eeeb; color: #68756f; }
+
 .map-pill-btn {
   padding: 0.45rem 1.25rem;
   border-radius: var(--radius-pill);

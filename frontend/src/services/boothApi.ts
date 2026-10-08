@@ -19,9 +19,29 @@ function withQuery(path: string, values: Record<string, string | number | boolea
   return suffix ? `${path}?${suffix}` : path;
 }
 
+async function loadAllPages<T>(
+  pathForPage: (page: number) => string,
+): Promise<T[]> {
+  const firstPage = await apiClient.get<PageResponse<T>>(pathForPage(0));
+  if (firstPage.totalPages <= 1) return firstPage.content;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      apiClient.get<PageResponse<T>>(pathForPage(index + 1)),
+    ),
+  );
+  return [firstPage, ...remainingPages]
+    .sort((left, right) => left.page - right.page)
+    .flatMap(page => page.content);
+}
+
 export const boothApi = {
   listPhysicalBooths: (active?: boolean) => apiClient.get<PageResponse<PhysicalBooth>>(
     withQuery('/organizer/booths', { page: 0, size: 100, sort: 'code,asc', active }),
+  ),
+
+  listAllPhysicalBooths: (active?: boolean) => loadAllPages<PhysicalBooth>(page =>
+    withQuery('/organizer/booths', { page, size: 100, sort: 'code,asc', active }),
   ),
 
   createPhysicalBooth: (input: CreatePhysicalBoothInput) =>
@@ -45,6 +65,19 @@ export const boothApi = {
   ) => apiClient.get<PageResponse<EventBooth>>(
     withQuery(`/events/${encodeURIComponent(eventId)}/booths`, {
       page: 0,
+      size: 100,
+      sort: 'code,asc',
+      availability: filters.availability,
+      categoryCode: filters.categoryCode,
+    }),
+  ),
+
+  listAllPublicEventBooths: (
+    eventId: string,
+    filters: { availability?: BoothAvailability; categoryCode?: string } = {},
+  ) => loadAllPages<EventBooth>(page =>
+    withQuery(`/events/${encodeURIComponent(eventId)}/booths`, {
+      page,
       size: 100,
       sort: 'code,asc',
       availability: filters.availability,

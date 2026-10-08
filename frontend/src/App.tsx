@@ -800,6 +800,7 @@ export function App() {
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
           <InteractiveMap 
             language={language}
+            events={events}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}

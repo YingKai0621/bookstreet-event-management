@@ -1,0 +1,54 @@
+import type { BoothAvailability, EventBooth, PhysicalBooth } from '../../types/booth';
+
+export type BoothMapMarkerStatus = BoothAvailability | 'PHYSICAL';
+
+export interface BoothMapMarker {
+  id: string;
+  boothId: number;
+  code: string;
+  name: string;
+  x: number;
+  y: number;
+  status: BoothMapMarkerStatus;
+}
+
+export const BOOTH_MAP_COORDINATE_HELP =
+  'Tọa độ dùng phần trăm trên ảnh: X từ trái sang phải, Y từ trên xuống dưới (0–100).';
+
+export function isValidMapCoordinate(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+export function hasValidMapCoordinates(
+  booth: Pick<PhysicalBooth, 'mapX' | 'mapY'>,
+): booth is Pick<PhysicalBooth, 'mapX' | 'mapY'> & { mapX: number; mapY: number } {
+  return isValidMapCoordinate(booth.mapX) && isValidMapCoordinate(booth.mapY);
+}
+
+export function physicalBoothToMarker(booth: PhysicalBooth): BoothMapMarker | null {
+  if (!hasValidMapCoordinates(booth)) return null;
+  return {
+    id: `booth-${booth.boothId}`,
+    boothId: booth.boothId,
+    code: booth.code,
+    name: booth.name,
+    x: booth.mapX,
+    y: booth.mapY,
+    status: 'PHYSICAL',
+  };
+}
+
+export function eventBoothToMarker(row: EventBooth): BoothMapMarker | null {
+  const marker = physicalBoothToMarker(row.booth);
+  return marker ? { ...marker, status: row.availability } : null;
+}
+
+export function markerStatusLabel(status: BoothMapMarkerStatus): string {
+  switch (status) {
+    case 'AVAILABLE': return 'Còn trống';
+    case 'ON_HOLD': return 'Đang giữ chỗ';
+    case 'ASSIGNED': return 'Đã phân bổ';
+    case 'UNAVAILABLE': return 'Chưa mở';
+    default: return 'Gian hàng vật lý';
+  }
+}
