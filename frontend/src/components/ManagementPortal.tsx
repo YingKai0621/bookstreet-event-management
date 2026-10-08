@@ -16,7 +16,6 @@ import { OrganizerTopBar } from './portal/OrganizerTopBar';
 import { Sprint2BoothMapView } from './portal/Sprint2BoothMapView';
 import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 import { ActivityManagementView } from './portal/ActivityManagementView';
-import { BoothMapView } from './portal/BoothMapView';
 import { OrganizerAttendanceModal } from './portal/OrganizerAttendanceModal';
 import { OrganizerCreateActivityModal } from './portal/OrganizerCreateActivityModal';
 import { OrganizerCreateEventModal } from './portal/OrganizerCreateEventModal';
@@ -26,7 +25,6 @@ import { OrganizerProfileView } from './portal/OrganizerProfileView';
 import { OrganizerPublicContentView } from './portal/OrganizerPublicContentView';
 import { OrganizerReportsView } from './portal/OrganizerReportsView';
 import { ParticipantManagementView } from './portal/ParticipantManagementView';
-import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 
 import { useAuth } from '../auth/useAuth';
 import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';

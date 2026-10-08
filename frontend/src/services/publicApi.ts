@@ -2,57 +2,11 @@ import { Booth, EventItem } from '../types';
 import { HeritageProfile } from '../types/heritage';
 import { apiClient } from './apiClient';
 
-interface PublicEventResponse {
-  eventId: number;
-  name: string;
-  description: string;
-  startAt: string;
-  endAt: string;
-  bannerUrl: string | null;
-  status: string;
-}
-
-interface PublicEventPage {
-  content: PublicEventResponse[];
-  page: number;
-  totalPages: number;
-}
-
-function toEventItem(event: PublicEventResponse): EventItem {
-  const start = new Date(event.startAt);
-  const end = new Date(event.endAt);
-  const now = Date.now();
-  return {
-    id: String(event.eventId),
-    title: event.name,
-    titleEn: event.name,
-    type: 'exhibition',
-    typeLabelVi: 'Sự kiện',
-    typeLabelEn: 'Event',
-    dateStr: start.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-    timeStr: `${start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
-    location: 'Đường Sách Nguyễn Văn Bình',
-    locationEn: 'Nguyen Van Binh Book Street',
-    priorityLevel: 'regular',
-    summary: event.description || '',
-    summaryEn: event.description || '',
-    speaker: '',
-    image: {
-      url: event.bannerUrl || '',
-      alt: event.name,
-      source: '',
-      license: '',
-      isIllustrationOnly: false,
-    },
-    status: now >= start.getTime() && now <= end.getTime() ? 'happening' : 'upcoming',
-  };
-}
-
 async function getPublishedEvents(): Promise<EventItem[]> {
-  const first = await apiClient.get<PublicEventPage>('/events?page=0&size=100&sort=startAt,asc');
+  const first = await apiClient.get<PageResponse<PublicEventResponse>>('/events?page=0&size=100&sort=startAt,asc');
   const remaining = first.totalPages > 1
     ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
-      apiClient.get<PublicEventPage>(`/events?page=${index + 1}&size=100&sort=startAt,asc`)))
+      apiClient.get<PageResponse<PublicEventResponse>>(`/events?page=${index + 1}&size=100&sort=startAt,asc`)))
     : [];
   return [first, ...remaining]
     .sort((left, right) => left.page - right.page)
@@ -193,11 +147,6 @@ export function toHeritageProfile(heritage: Record<string, unknown>): HeritagePr
 
 export const publicApi = {
   getEvents: getPublishedEvents,
-  async getEvents(): Promise<EventItem[]> {
-    const query = new URLSearchParams({ page: '0', size: '100', sort: 'startAt,asc' });
-    const response = await apiClient.get<PageResponse<PublicEventResponse>>(`/events?${query.toString()}`);
-    return response.content.map(toEventItem);
-  },
   getBooths: () => apiClient.get<Booth[]>('/public/booths'),
   async getHeritages(): Promise<HeritageProfile[]> {
     const heritages = await apiClient.get<Record<string, unknown>[]>('/public/heritages');

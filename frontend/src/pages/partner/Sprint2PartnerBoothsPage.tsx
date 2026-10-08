@@ -5,11 +5,8 @@ import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, EventBooth } from '../../types/booth';
-import { boothApi } from '../../services/boothApi';
-import { ApiError } from '../../services/apiClient';
 import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
 import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
-import '../../components/portal/Sprint2Booth.css';
 import './PartnerPages.css';
 
 interface Props {

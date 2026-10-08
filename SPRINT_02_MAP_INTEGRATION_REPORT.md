@@ -1,190 +1,190 @@
-# Sprint 2 Interactive Booth Map Integration Report
+# Sprint 2 Booth Map FE–BE Verification Report
 
 Date: 2026-10-08  
 Branch: `frontend`  
-Implementation state: frontend changes are present and uncommitted. No commit, push, merge, rebase, or reset was performed.
+Final assessment: **FE–BE Map workflow verified; release readiness remains conditional because the full Backend suite is not green on the contaminated shared test database.**
 
-## 1. Summary
+## 1. Executive summary
 
-The approved illustrated Nguyen Van Binh Book Street map is preserved and now consumes real Sprint 2 Booth contracts.
+The real Organizer → Partner → Public Booth Map workflow passed against the current workspace Backend and Frontend using an isolated runtime:
 
-- Organizer `Gian hàng` now loads paginated physical Booths plus the selected Event's `EventBoothConfig` data, renders real markers, identifies unpositioned Booths, and supports minimal X/Y editing through the existing Booth PATCH endpoint.
-- Partner `/partner/booth-requests` now renders Event Booths on the illustrated map. Selecting a marker opens the existing request modal and submits through the existing BoothRequest API.
-- Public map now has an explicit Published Event selector and loads read-only Event Booth data from the actual public endpoints.
-- Organizer and Partner share one map canvas and one set of Booth-to-marker adapters. The public page retains its approved map layout/zoom implementation and reuses the same EventBooth coordinate adapter.
-- A marker is rendered only when both `mapX` and `mapY` are finite values in the inclusive range 0–100. There are no generated, random, index-based, or fallback positions.
+- Frontend: `http://localhost:15173`
+- Backend: `http://localhost:18080`
+- PostgreSQL: `bookstreet_event_test`
+- Redis: database `1`, separate from the development Backend's Redis database `0`
 
-## 2. Verified business requirements
+The test persisted physical Booth coordinates, reloaded them, submitted a real Partner BoothRequest from a map marker, proved that `PENDING` remained `AVAILABLE`, selected the request as Organizer, verified an `ACTIVE` BoothHold and then observed `ON_HOLD` on both Partner and Public maps.
 
-- BR-14: the Partner map is available inside the existing approved-application workflow; submission eligibility remains enforced by the existing UI and Backend.
-- BR-17: coordinate edits PATCH the existing physical Booth and never create an Event-specific duplicate.
-- BR-18: marker submission uses the existing BoothRequest endpoint. A successful request becomes PENDING and the test fixture keeps the Booth AVAILABLE.
-- BR-19/BR-70: availability displayed by Partner/Public/Organizer comes from `EventBooth.availability`; the Frontend does not calculate assignment/hold availability.
-- BR-20: Organizer selection remains in `Sprint2BoothWorkspace`; the map links to it rather than duplicating selection logic. Existing SELECTED/Hold displays remain intact.
-- BR-21: no Frontend quota was introduced.
-- BR-22: PENDING withdrawal remains unchanged. Future Booth change/cancellation routes remain present and separate.
-- BR-56: category is displayed and can filter Partner Booths, but does not block requests.
-- BR-57: displayed price comes from `EventBoothConfig.rentalPrice`, never from the physical Booth.
+No Backend Java, Spring Security configuration, Flyway migration, schema, Docker volume, or development-database record was changed.
 
-## 3. Root causes fixed
+## 2. HTTP 403 diagnosis
 
-1. Legacy Organizer `BoothMapView` expected a raw array although `GET /organizer/booths` returns a page. Its fallback `/public/booths` endpoint does not exist, so it commonly ended with zero Booths.
-2. The legacy Organizer map also generated index-based marker positions, which were not Backend coordinates.
-3. `Sprint2BoothWorkspace` already used real Sprint 2 APIs, but only rendered cards/lists.
-4. `BoothSelectionPage` initializes its shared map points from an intentionally empty placeholder service and belongs to future Booth-change workflows.
-5. `Sprint2PartnerBoothsPage` loaded real Event Booths but did not pass them into any map renderer.
-6. Public `InteractiveMap` loaded `/public/map-hotspots`, while the implemented contract is `GET /events/{eventId}/booths`. Its `booths` prop enriched legacy marker details but could not create markers.
-7. Local physical Booth records had null coordinates. Passing FE-BE card/request tests therefore did not prove that any marker could render.
+### Observed request behavior
 
-The marker renderer was not wholly absent. It was disconnected from Sprint 2 data, used obsolete endpoints on some screens, and had no renderable data in the local database.
+The running Backend was probed with the exact authentication sequence required by the browser security contract:
 
-## 4. Data flow after integration
+1. `GET /api/v1/auth/csrf` returned `200`, JSON, `X-XSRF-TOKEN`, an `XSRF-TOKEN` cookie, and `Access-Control-Allow-Origin: http://localhost:5173`.
+2. `POST /api/v1/auth/login` without the CSRF header returned `403 ACCESS_DENIED`.
+3. The same request with the current CSRF cookie/header reached authentication and returned `401 INVALID_CREDENTIALS` for a deliberately incorrect diagnostic password.
+4. `GET /api/v1/auth/csrf` through the Vite `/api` proxy also returned `200` JSON.
 
-1. Organizer creates/edits a reusable physical Booth in the existing Sprint 2 workspace.
-2. Organizer configures that Booth for an Event with `rentalPrice` and `enabled` in the existing workspace.
-3. Organizer map combines the physical Booth with the selected Event configuration and Backend-derived availability.
-4. Approved Partner selects the Event, loads `/events/{eventId}/booths`, selects a positioned marker, and uses the existing request modal/API.
-5. PENDING remains AVAILABLE until the Backend changes authoritative availability.
-6. Organizer uses the existing candidate-review actions. Selection creates SELECTED + ACTIVE Hold in the Backend; subsequent Event Booth reads return ON_HOLD.
-7. Partner/Public maps display that returned Event-specific state. No Frontend Hold or Assignment state is synthesized.
+This proves that:
 
-## 5. Organizer changes
+- `/api/v1/auth/login` is the correct endpoint.
+- The login endpoint is public but intentionally CSRF-protected.
+- The observed 403 signature is generated by Spring Security CSRF rejection before the Auth controller.
+- CORS and the Vite proxy were not the cause.
+- Session authorization was not reached by the missing-CSRF request.
 
-- Replaced the active `booths` tab's legacy view with `Sprint2BoothMapView` while leaving the legacy component file intact.
-- Loads every physical-Booth page instead of silently truncating at 100.
-- Loads Event configurations for the selected Event and shows category, enabled state, Event price, and runtime availability.
-- Uses a status legend and accessible marker labels.
-- Lists unpositioned Booths as `Chưa định vị`.
-- Provides validated 0–100 X/Y inputs and a live marker preview.
-- Saves only the selected existing Booth's coordinates via PATCH and confirms that the returned values render after reload.
-- Links to the existing configuration/candidate workspace. It does not duplicate request selection/rejection.
-- If there is no Event, valid physical locations use a neutral `PHYSICAL` state rather than inventing Event availability.
+### Runtime mismatch that caused the blocker
 
-## 6. Partner changes
+Ports `5173` and `8080` were serving a different extracted checkout under:
 
-- Added the shared illustrated map to `Sprint2PartnerBoothsPage` without removing its card/list alternative.
-- Uses the selected approved `PartnerEventApplication` and existing Event Booth API.
-- Category filtering applies consistently to list and markers.
-- Marker selection opens the existing details/request modal with Backend availability and Event price.
-- Non-AVAILABLE Booths keep the existing concise blocked reason and disabled request action.
-- Request history, PENDING withdrawal, SELECTED Hold price/expiry, countdown, and future Booth-management routes remain unchanged.
+`C:\Users\ASUS\Downloads\swp391-bookstreet-event-management-frontend\...`
 
-## 7. Public changes
+They were not serving this workspace. Playwright has `reuseExistingServer: true`, so it silently reused that unrelated Vite process. That Vite process proxied to an unrelated JAR on port `8080`. The running JAR and this workspace JAR had different sizes and SHA-256 hashes.
 
-- Public Event loading now unwraps the actual paginated `GET /events` response rather than calling `/public/events` as if it returned an array.
-- Added a small explicit Published Event selector next to the existing map experience. No Event is randomly selected.
-- The normal illustration remains visible before Event selection.
-- Selecting an Event loads all pages from `GET /events/{eventId}/booths`.
-- Public details show only Booth identity/description/category/capacity, Event price, and availability.
-- No request, application, Hold detail, review note, or management action is exposed.
-- Switching Events clears stale markers. An Event without valid positioned Booths shows an empty explanation.
-- Existing public zoom, pan, image, page layout, Heritage, and other public sections are preserved.
+The remaining login blocker was therefore an environment/runtime parity problem. The 403 itself was a CSRF-class response; the stale runtime made the original browser attempt unsuitable evidence for the current source. The original failed network artifact had already been removed by a later Playwright run, so the exact missing/invalid cookie or header from that historical request cannot be recovered. A fresh current-workspace stack completed Organizer and Partner login successfully.
 
-## 8. Verified Backend contracts
+### Credentials and account state
 
-Verified against controllers, DTOs, services/tests, and the active API contract:
+Without logging or exposing any password/hash:
 
-| Purpose | Contract used |
+- The configured Organizer and Partner E2E passwords both matched the stored BCrypt hashes offline.
+- `organizerdemo` is `ACTIVE`, email verified, with `ORGANIZER,PARTICIPANT`.
+- `partnerdemo` is `ACTIVE`, email verified, with `PARTNER,PARTICIPANT`.
+
+Credentials were not the cause of the 403.
+
+### Restart decision
+
+The processes originally occupying ports `5173` and `8080` must be stopped/restarted from this workspace before they can be treated as the current application. Restarting only the old JAR is insufficient because both the Backend and Vite processes came from the other checkout.
+
+## 3. Verified runtime configuration
+
+| Concern | Verified value |
 |---|---|
-| Published Events | `GET /api/v1/events` → paginated `EventSummaryResponse` |
-| Public/Partner Event Booths | `GET /api/v1/events/{eventId}/booths` → paginated `EventBooth` data |
-| Physical Booth list | `GET /api/v1/organizer/booths` → paginated `PhysicalBooth` data |
-| Update physical coordinates | `PATCH /api/v1/organizer/booths/{boothId}` |
-| Event Booth configuration | `GET /api/v1/organizer/events/{eventId}/booth-configs` |
-| Price/enabled update | `PUT /api/v1/organizer/events/{eventId}/booth-configs/{boothId}` |
-| Partner request submission | `POST /api/v1/events/{eventId}/booth-requests` |
-| Partner request history | `GET /api/v1/partner/booth-requests` |
-| Organizer candidates/actions | Existing `/organizer/events/{eventId}/booth-requests` query/select/reject endpoints |
+| Current source Backend default port | `8080` |
+| Current source Vite default port | `5173` |
+| Vite proxy | `/api` → `http://localhost:8080` |
+| Playwright default frontend | `E2E_BASE_URL` or `http://localhost:5173` |
+| Sprint 2 integration API | `E2E_API_BASE_URL` or `http://localhost:8080/api/v1` |
+| Auth | Spring Security server-side Session; no JWT |
+| CSRF | Cookie token plus `X-XSRF-TOKEN` header for mutations, including login |
+| Development datasource | `jdbc:postgresql://localhost:55432/bookstreet_db` |
+| Hibernate | `ddl-auto: validate` |
+| Flyway | V1 through V6 applied successfully |
+| Development Redis | `localhost:6379`, database `0` |
+| Isolated E2E Redis | `localhost:6379`, database `1` |
 
-Spring Security source permits anonymous GET access to `/api/v1/events` and `/api/v1/events/**`. Anonymous behavior passed the mocked browser contract test. The already-running local Backend returned authentication/authorization failures in live checks, so deployment/runtime parity with the inspected source still needs confirmation.
+PostgreSQL and Redis Compose services were healthy. JDBC connections from the normal Backend were observed against `bookstreet_db`; the isolated Backend had its own JDBC pool against `bookstreet_event_test`. Redis database `1` contained Spring Session records after the isolated browser logins, proving that authentication persisted through Spring Session/Redis rather than an in-memory or token fallback.
 
-## 9. Coordinate convention and limitations
+## 4. Database isolation
 
-Chosen convention for the single approved illustration:
+### Database ownership
 
-- `mapX`: 0–100 percent, left to right.
-- `mapY`: 0–100 percent, top to bottom.
-- Origin: top-left of the rendered map image.
-- Marker container and image have the same responsive width and aspect ratio; percentage positions therefore remain attached during resize and zoom.
-- Marker size is inversely scaled during zoom so it remains usable without changing its anchor.
+| Consumer | Database |
+|---|---|
+| Normal development Backend on port `8080` | `bookstreet_db` |
+| Backend integration tests | `bookstreet_event_test` through `EVENT_TEST_DATABASE_URL` |
+| Default real Playwright configuration | Whatever Backend is on port `8080`; in the observed environment this was `bookstreet_db` |
+| This verification run | Dedicated Backend on `18080` using `bookstreet_event_test` |
 
-The Backend can persist optional decimal `mapX`/`mapY`, but its DTO currently does not formally declare the image reference system or enforce the 0–100 range. The Frontend therefore validates edits and safely suppresses invalid/missing coordinates. Existing values outside this convention are not silently reinterpreted.
+Both databases existed and had V6. Backend integration tests contain guards requiring a datasource name ending in `_event_test` for the Event/Booth integration suites.
 
-Audit-time local database snapshot (read-only): 2 physical Booths, 2 enabled EventBoothConfigs, and both physical Booths had `map_x = NULL`, `map_y = NULL`. The same snapshot contained selected requests/active Holds, demonstrating that Booth workflow data can exist while maps remain empty.
+### Isolation status
 
-## 10. Automated test results
+**PASS for the executed map workflow.** Before mutation, the isolated Backend was proven to be the only application JDBC consumer of `bookstreet_event_test`, while the normal Backend remained connected to `bookstreet_db`. The isolated Frontend used `VITE_API_BASE_URL=http://localhost:18080/api/v1`; Playwright used `E2E_BASE_URL=http://localhost:15173` and the same isolated API base.
 
-| Check | Result | Notes |
+No mutation or cleanup was executed against `bookstreet_db`. Neither database nor any Docker volume was reset, recreated, dropped, or deleted.
+
+`bookstreet_event_test` is isolated from development but is not clean/disposable: it already contained data from earlier E2E runs. This affected Backend tests whose assertions assume global table counts.
+
+## 5. Real FE–BE Map verification
+
+Result: **PASS** — Chromium, 1/1, 15.6 seconds on the final focused run.
+
+| Step | Result | Evidence |
 |---|---|---|
-| TypeScript + production build | PASS | `npm.cmd run build`; 2,403 modules transformed. Existing bundle-size warning only. |
-| Frontend lint | PASS WITH WARNINGS | `npm.cmd run lint`; exit 0. Repository-wide pre-existing warnings remain. |
-| Sprint 2 Organizer/Partner/Public map UI | PASS | 3/3 Chromium tests on isolated Vite port 5174. |
-| Valid marker coordinates | PASS | Organizer, Partner, and Public fixtures render expected Booths. |
-| Null/invalid coordinates | PASS | Public test suppresses null C03 and out-of-range D04; Organizer list retains unpositioned B01. |
-| Zoom alignment | PASS | Partner marker retains exact percentage `left/top` after zoom. |
-| Responsive alignment | PASS | Same marker anchor retained after mobile-to-desktop viewport resize. |
-| Coordinate save/reload | PASS | Organizer PATCH fixture persists 62.5/48 and marker remains after page reload. |
-| Marker selection/details | PASS | Partner opens existing request modal; Public opens read-only details. |
-| Event switching/stale markers | PASS | Public switches to an Event with only invalid coordinates, clears markers, then reloads Event 101. |
-| Existing Sprint 2 UI CRUD/request flow | PASS | Physical create, Event price update, candidate selection/Hold display, Partner PENDING submission/history. |
-| Sprint 1 Organizer E2E | BLOCKED | Existing live-Backend test stopped at login because the local Backend returned HTTP 403. No Event was created. |
-| Sprint 1 Partner Application E2E | BLOCKED | Same Organizer login HTTP 403 before test mutations. |
-| Existing live Sprint 2 FE-BE suite | NOT RUN | It creates permanent Booth/request data. It was intentionally not rerun against the shared development database. The task context states it passed before this integration. |
+| Organizer login | PASS | Current Backend session login succeeded |
+| Load physical Booths | PASS | Real paginated Organizer API data rendered |
+| Select existing physical Booth | PASS | Organizer selected the newly created isolated fixture |
+| Update `mapX`/`mapY` | PASS | Real `PATCH /organizer/booths/{id}` succeeded |
+| Reload and persist coordinates | PASS | Marker retained exact percentage style; API and DB returned persisted decimals |
+| Configure Booth for Published Event | PASS | Enabled config with VND 2,750,000 |
+| Approved Partner login/Event selection | PASS | Approved real application used |
+| Partner marker/details | PASS | Partner opened the existing request dialog directly from the marker |
+| Submit real BoothRequest | PASS | Backend created `PENDING` |
+| PENDING availability | PASS | Public Event Booth API and Partner marker remained `AVAILABLE` |
+| Organizer selection | PASS | Existing Sprint 2 selection action used |
+| BoothHold | PASS | Backend persisted `ACTIVE`, locked price 2,750,000, future expiry |
+| Partner ON_HOLD map | PASS | Real marker rendered with `status-on_hold` |
+| Public ON_HOLD map | PASS | Public marker and detail panel showed `Đang giữ chỗ` and 2,750,000 |
 
-Playwright is configured with screenshot/video/trace retention on failure. The isolated successful map run produced the HTML report at `frontend/playwright-report/index.html`; passing tests do not retain trace files under the current configuration. The failed Sprint 1 login runs visibly showed the 403 alert and produced failure artifacts during diagnosis, but Playwright cleans `test-results` at the start of the subsequent successful run.
+Latest read-only database evidence after the passing run showed a Published Event, a positioned Booth, enabled EventBoothConfig, `SELECTED` BoothRequest, `ACTIVE` BoothHold, matching locked rental price, and an unexpired hold.
 
-## 11. Files created/modified
+Repeated E2E runs initially placed multiple test Booths at the same coordinates, causing an older marker to intercept clicks on the Public map. The live test now generates unique valid coordinates per run; no production map behavior was changed for this test-data collision.
 
-Created:
+## 6. Regression results
 
-- `frontend/src/components/booth-map/BoothMapCanvas.tsx`
-- `frontend/src/components/booth-map/BoothMapCanvas.css`
-- `frontend/src/components/booth-map/boothMapModel.ts`
-- `frontend/src/components/portal/Sprint2BoothMapView.tsx`
-- `SPRINT_02_MAP_INTEGRATION_REPORT.md`
+### Frontend and browser suites
 
-Modified:
+| Suite/check | Result | Actual result |
+|---|---|---|
+| Sprint 1 Organizer Playwright | PASS | 1/1 |
+| Sprint 1 Partner application Playwright | PASS | 1/1 |
+| Sprint 2 real FE–BE Map Playwright | PASS | 1/1 |
+| Sprint 2 mocked Organizer/Partner/Public UI | PASS | 3/3 |
+| Full Playwright run | PASS | 6/6 in 41.2 seconds |
+| Frontend production build | PASS | 2,403 modules transformed; bundle-size warning only |
+| Frontend lint | PASS WITH WARNINGS | Exit 0; existing React effect/unused-code warnings remain |
 
-- `frontend/src/App.tsx`
-- `frontend/src/components/InteractiveMap.tsx`
-- `frontend/src/components/InteractiveMap.css`
-- `frontend/src/components/ManagementPortal.tsx`
-- `frontend/src/components/portal/Sprint2Booth.css`
-- `frontend/src/pages/partner/Sprint2PartnerBoothsPage.tsx`
-- `frontend/src/services/boothApi.ts`
-- `frontend/src/services/publicApi.ts`
-- `frontend/tests/e2e/sprint2-booths-ui.spec.ts`
+### Backend suite
 
-No Backend Java, Flyway migration, schema, seed, environment, or illustrated-map asset was modified.
+Result: **FAIL** — 200 tests run, 196 passed, 4 failed, 0 errors after stopping the isolated Backend to remove connection-pool pressure.
 
-## 12. Effects on future Sprints
+Failures:
 
-- `BoothMapView`, `BoothSelectionPage`, and `BoothManagementPage` remain in the repository.
-- `/partner/booths` and `/partner/booths/select` routes remain unchanged for future Assignment/change/cancellation work.
-- No Payment, Assignment creation, cancellation, refund, or advanced editor behavior was added.
-- Shared adapters can be reused later, but future workflows must continue to use Backend-authoritative states.
+- `BoothCatalogIntegrationTests.organizerCreatesListsReadsAndUpdatesPhysicalBooth`: expected total `1`, found `13`.
+- `BoothCatalogIntegrationTests.publishedEventExposesCompleteBoothGridAndFiltersAvailability`: expected total `2`, found `14`.
+- `EventApiIntegrationTests.publicCannotReadDraft`: expected total `0`, found `28`.
+- `EventApiIntegrationTests.allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne`: expected total `0`, found `28`.
 
-## 13. Missing Backend/environment dependencies
+All other Backend tests passed, including Auth login/session, browser security/CORS/CSRF, database authentication, authorization, Sprint 2 migration, Partner BoothRequest, Organizer selection/concurrency, Partner Sprint 1 integration, and OpenAPI tests.
 
-1. The coordinate reference system and 0–100 range should eventually be documented and validated in the Backend/API contract. No Backend change was made in this task.
-2. Existing physical Booths require Organizer-entered coordinates before any real local markers can appear; the task deliberately did not invent them.
-3. The local running Backend must be brought into parity with the inspected source/security configuration so anonymous Event Booth reads and configured E2E accounts work without 401/403.
-4. A dedicated disposable E2E database/fixture cleanup is needed before safely rerunning all mutating FE-BE suites.
+The four failures are test-isolation/count-assumption failures caused by accumulated E2E records in `bookstreet_event_test`, not failures of the tested Map transaction. No destructive cleanup was run to force a green result.
 
-## 14. Git and database safety
+## 7. Frontend compile blocker found and repaired
 
-- Branch: `frontend`.
-- Changes: uncommitted.
-- Pre-existing untracked root `package-lock.json` was preserved and not edited by this task.
-- No database record was inserted, updated, or deleted by this task's executed tests. All passing map tests used browser route fixtures. The live regression tests failed before mutation.
-- No Backend, migration, Docker volume, or database command changed state.
+The first isolated run exposed duplicate imports/declarations in the current branch, and a fresh build failed. Minimal Frontend-only repairs removed duplicate declarations from:
 
-## 15. Remaining manual verification
+- `InteractiveMap.tsx`
+- `ManagementPortal.tsx`
+- `Sprint2PartnerBoothsPage.tsx`
+- `publicApi.ts`
 
-- Restart/deploy the current Backend build, verify anonymous `GET /events` and `GET /events/{id}/booths`, and resolve the local login 403.
-- In a dedicated test database, assign coordinates to test Booths through the Organizer UI and rerun the existing live Sprint 1/Sprint 2 suites.
-- Confirm the chosen percentage positions visually with the product owner against the approved illustration; the system cannot infer physical positions from Booth codes.
+The repair did not redesign the map or alter Backend contracts. The build then passed. The real E2E test was extended to cover coordinate persistence and Partner/Public map states.
 
-## 16. Final diff summary
+## 8. Remaining blockers
 
-The change is isolated to Frontend source, one Frontend E2E spec, and this report. It adds a shared map canvas/model, a Sprint 2 Organizer map view, real Partner/Public marker data flow, public Event pagination, and all-page Booth loaders. Legacy future-Sprint screens and routes remain intact. There are no Backend or database diffs.
+1. `bookstreet_event_test` is not a clean per-run database. Full Backend regression cannot be declared green while tests assert global counts against accumulated E2E data.
+2. The normal ports `5173/8080` must be relaunched from this workspace; the observed processes came from a separate Downloads checkout.
+3. Playwright's default `reuseExistingServer: true` can silently bind tests to an unrelated Vite checkout. A dedicated E2E launcher/config should own explicit ports and datasource settings.
+4. The Backend/API contract still treats coordinates as optional decimals and does not formally enforce/document the Frontend's `0..100` percentage convention.
+5. The shared test database contains repeated historical E2E fixtures, including overlapping coordinates from earlier runs. They should be managed by an approved, test-only fixture lifecycle—not by deleting development data.
+
+## 9. Release readiness
+
+**Map integration: VERIFIED.** The real cross-role FE–BE workflow passed, including persistence and Backend-authoritative availability transitions.
+
+**Overall release: NOT YET FULLY READY.** The full browser regression is green, but the full Backend suite remains red because the shared test database is not cleanly isolated per run. Release readiness requires an approved repeatable test-database lifecycle and a green Backend run, plus restarting the normal development services from the correct workspace.
+
+## 10. Safety and repository status
+
+- No Backend source or security configuration changed.
+- No Flyway migration or schema changed.
+- No Docker volume was reset.
+- No development data was modified.
+- No credential or password hash was exposed or committed.
+- No commit, push, merge, rebase, or reset was performed.
+- The temporary isolated Backend and Frontend processes were stopped after verification.

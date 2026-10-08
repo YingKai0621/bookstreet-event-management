@@ -5,16 +5,13 @@ import {
   ZoomIn,
   ZoomOut
 } from 'lucide-react';
-import { IconMapBookPin } from './CustomIcons';
-import { Booth, EventItem, Language } from '../types';
-import type { EventBooth } from '../types/booth';
+import React, { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../services/mapService';
 import { boothApi } from '../services/boothApi';
-import { eventBoothToMarker } from './booth-map/boothMapModel';
-import React, { useEffect, useRef, useState } from 'react';
-import { DEFAULT_MAP_IMAGE, fetchMapHotspotsFromApi, MapLocationPoint } from '../services/mapService';
-import { Booth, Language } from '../types';
+import { Booth, EventItem, Language } from '../types';
+import type { EventBooth } from '../types/booth';
 import { IconMapBookPin } from './CustomIcons';
+import { eventBoothToMarker } from './booth-map/boothMapModel';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
