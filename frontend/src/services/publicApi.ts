@@ -1,6 +1,7 @@
 import { Booth, EventItem } from '../types';
 import { HeritageProfile } from '../types/heritage';
 import { apiClient } from './apiClient';
+import { boothApi } from './boothApi';
 
 async function getPublishedEvents(): Promise<EventItem[]> {
   const first = await apiClient.get<PageResponse<PublicEventResponse>>('/events?page=0&size=100&sort=startAt,asc');
@@ -52,7 +53,6 @@ interface PageResponse<T> {
 }
 
 const EVENT_TIME_ZONE = 'Asia/Ho_Chi_Minh';
-const DEFAULT_EVENT_IMAGE = '/duong_sach_hero_bg.jpg';
 
 function formatEventDate(value: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -92,20 +92,60 @@ function toEventItem(event: PublicEventResponse): EventItem {
       weekday: 'long',
     }).format(new Date(event.startAt)),
     timeStr: `${formatEventTime(event.startAt)} - ${formatEventTime(event.endAt)}`,
-    location: 'Đường Sách TP.HCM',
-    locationEn: 'Ho Chi Minh City Book Street',
+    location: '',
+    locationEn: '',
     priorityLevel: 'regular',
     summary: event.description || '',
     summaryEn: event.description || '',
     speaker: '',
     image: {
-      url: event.bannerUrl || DEFAULT_EVENT_IMAGE,
+      url: event.bannerUrl || '',
       alt: event.name,
       source: '',
       license: '',
       isIllustrationOnly: !event.bannerUrl,
     },
     status: now < startAt ? 'upcoming' : now <= endAt ? 'happening' : 'approved',
+  };
+}
+
+function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEventBooths>>[number]): Booth {
+  const categoryCode = row.booth.categoryCode?.toLowerCase() || '';
+  const category: Booth['category'] = categoryCode.includes('child') || categoryCode.includes('manga') || categoryCode.includes('comic') ? 'children'
+    : categoryCode.includes('history') ? 'history'
+      : categoryCode.includes('cafe') ? 'cafe'
+        : categoryCode.includes('life') ? 'lifestyle'
+          : categoryCode.includes('literature') ? 'literature' : 'other';
+  const description = row.booth.description || row.booth.note || '';
+
+  return {
+    id: String(row.booth.boothId),
+    code: row.booth.code,
+    name: row.booth.name,
+    nameEn: row.booth.name,
+    publisher: '',
+    category,
+    categoryLabelVi: row.booth.categoryCode || 'Gian hàng',
+    categoryLabelEn: row.booth.categoryCode || 'Booth',
+    tagline: description,
+    taglineEn: description,
+    description,
+    descriptionEn: description,
+    featuredBooks: [],
+    featuredBooksEn: [],
+    mapLocationId: `booth-${row.booth.boothId}`,
+    eventId: String(row.eventId),
+    rentalPrice: row.rentalPrice,
+    availability: row.availability,
+    maxCapacity: row.booth.maxCapacity,
+    openHours: '',
+    image: {
+      url: '',
+      alt: row.booth.name,
+      source: '',
+      license: '',
+      isIllustrationOnly: false,
+    },
   };
 }
 
@@ -147,7 +187,11 @@ export function toHeritageProfile(heritage: Record<string, unknown>): HeritagePr
 
 export const publicApi = {
   getEvents: getPublishedEvents,
-  getBooths: () => apiClient.get<Booth[]>('/public/booths'),
+  async getBooths(eventId: string): Promise<Booth[]> {
+    if (!eventId) return [];
+    const rows = await boothApi.listAllPublicEventBooths(eventId);
+    return rows.map(toPublicBooth);
+  },
   async getHeritages(): Promise<HeritageProfile[]> {
     const heritages = await apiClient.get<Record<string, unknown>[]>('/public/heritages');
     return heritages.map(toHeritageProfile);

@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Clock,
   FileText,
-  Layers,
   PlusCircle,
   Store
 } from 'lucide-react';
@@ -11,22 +10,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Language,
-  PartnerActivityProposal,
-  PartnerBooth,
   PartnerEventApplication,
   PartnerOrganization,
   PartnerTodoItem
 } from '../../types';
+import type { BoothRequest } from '../../types/booth';
 import './PartnerPages.css';
 
 interface PartnerDashboardProps {
   language: Language;
   organization: PartnerOrganization;
   activeEvent?: PartnerEventApplication | null;
-  assignedBooth?: PartnerBooth | null;
-  activities: PartnerActivityProposal[];
+  applications: PartnerEventApplication[];
+  boothRequests: BoothRequest[] | null;
   todos: PartnerTodoItem[];
-  totalEngagementCount?: number;
   onOpenAttendanceModal?: () => void;
 }
 
@@ -34,13 +31,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   language,
   organization,
   activeEvent,
-  assignedBooth,
-  activities,
+  applications,
+  boothRequests,
   todos,
-  totalEngagementCount = 0,
   onOpenAttendanceModal: _onOpenAttendanceModal,
 }) => {
-  const proposedActivitiesCount = activities.length;
   const applicationStatus = activeEvent ? {
     pending: {
       className: 'pending',
@@ -82,16 +77,16 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       {activeEvent && applicationStatus ? (
         <div className="partner-active-event-card">
           <div className="event-card-left">
-            <img 
+            {activeEvent.imageUrl && <img
               src={activeEvent.imageUrl} 
               alt={activeEvent.eventTitle} 
               className="event-thumb-img"
-            />
+            />}
             <div className="event-info-main">
               <h2>{activeEvent.eventTitle}</h2>
               <div className="event-meta-line">
                 <span>📅 {activeEvent.dateRange}</span>
-                <span>📍 {activeEvent.location}</span>
+                {activeEvent.location && <span>📍 {activeEvent.location}</span>}
               </div>
               <div>
                 <span className={`status-badge ${applicationStatus.className}`}>
@@ -140,40 +135,40 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
         {/* Card 1: Joined Events */}
         <Link to="/partner/events" className="partner-stat-card">
           <div className="stat-num-box">
-            1
+            {applications.length}
           </div>
           <div className="stat-label-muted">
-            {language === 'vi' ? 'Sự kiện tham gia' : 'Joined Events'}
+            {language === 'vi' ? 'Hồ sơ sự kiện' : 'Event Applications'}
           </div>
         </Link>
 
         {/* Card 2: Assigned Booths */}
-        <Link to="/partner/booths" className="partner-stat-card">
+        <Link to="/partner/booth-requests" className="partner-stat-card">
           <div className="stat-num-box green">
-            {assignedBooth ? 1 : 0}
+            {boothRequests?.length ?? '—'}
           </div>
           <div className="stat-label-muted">
-            {language === 'vi' ? 'Gian hàng được phân' : 'Assigned Booths'}
+            {language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth Requests'}
           </div>
         </Link>
 
-        {/* Card 3: Proposed Activities */}
-        <Link to="/partner/activities" className="partner-stat-card">
+        {/* Card 3: Pending booth requests */}
+        <Link to="/partner/booth-requests" className="partner-stat-card">
           <div className="stat-num-box gold">
-            {proposedActivitiesCount}
+            {boothRequests?.filter(request => request.status === 'PENDING').length ?? '—'}
           </div>
           <div className="stat-label-muted">
-            {language === 'vi' ? 'Hoạt động đề xuất' : 'Proposed Activities'}
+            {language === 'vi' ? 'Yêu cầu chờ duyệt' : 'Pending Booth Requests'}
           </div>
         </Link>
 
-        {/* Card 4: Total Participants / Engagement */}
-        <Link to="/partner/reports" className="partner-stat-card">
+        {/* Card 4: Active holds */}
+        <Link to="/partner/booth-requests" className="partner-stat-card">
           <div className="stat-num-box">
-            {totalEngagementCount}
+            {boothRequests?.filter(request => request.hold?.status === 'ACTIVE').length ?? '—'}
           </div>
           <div className="stat-label-muted">
-            {language === 'vi' ? 'Tổng lượt tham gia' : 'Total Participants'}
+            {language === 'vi' ? 'Giữ chỗ còn hiệu lực' : 'Active Booth Holds'}
           </div>
         </Link>
       </div>
@@ -184,7 +179,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           <h2 className="todo-title">
             {language === 'vi' ? 'Việc cần làm' : 'Tasks & To-Dos'}
           </h2>
-          <Link to="/partner/activities" style={{ fontSize: '0.82rem', color: '#17382E', fontWeight: 700, textDecoration: 'none' }}>
+          <Link to="/partner/booth-requests" style={{ fontSize: '0.82rem', color: '#17382E', fontWeight: 700, textDecoration: 'none' }}>
             {language === 'vi' ? 'Xem tất cả →' : 'View All →'}
           </Link>
         </div>
@@ -193,10 +188,10 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           {todos.length === 0 ? (
             <div style={{ padding: '1.5rem', background: '#FAF8F5', borderRadius: '10px', border: '1px solid #EAE5DC', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#172421' }}>
-                {language === 'vi' ? 'Các bước bắt đầu dành cho đối tác mới:' : 'Getting started steps for new partners:'}
+                {language === 'vi' ? 'Bước tiếp theo theo dữ liệu hiện có:' : 'Next steps based on current data:'}
               </div>
               <div style={{ display: 'grid', gap: '0.65rem' }}>
-                <Link to="/partner/profile" className="todo-item-row" style={{ background: '#FFFFFF', padding: '0.75rem 1rem' }}>
+                {!organization.id && <Link to="/partner/profile" className="todo-item-row" style={{ background: '#FFFFFF', padding: '0.75rem 1rem' }}>
                   <div className="todo-item-left">
                     <FileText size={18} color="#17382E" />
                     <div>
@@ -205,9 +200,9 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
                     </div>
                   </div>
                   <span className="status-badge pending">{language === 'vi' ? 'Cần thực hiện' : 'Action needed'}</span>
-                </Link>
+                </Link>}
 
-                <Link to="/partner/events" className="todo-item-row" style={{ background: '#FFFFFF', padding: '0.75rem 1rem' }}>
+                {applications.length === 0 && <Link to="/partner/events" className="todo-item-row" style={{ background: '#FFFFFF', padding: '0.75rem 1rem' }}>
                   <div className="todo-item-left">
                     <Clock size={18} color="#D97706" />
                     <div>
@@ -216,7 +211,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
                     </div>
                   </div>
                   <span className="status-badge" style={{ background: '#F0F4F2', color: '#495D57' }}>{language === 'vi' ? 'Bước kế tiếp' : 'Next step'}</span>
-                </Link>
+                </Link>}
+                {applications.some(application => application.status === 'approved') && boothRequests?.length === 0 && <Link to="/partner/booth-requests" className="todo-item-row" style={{ background: '#FFFFFF', padding: '0.75rem 1rem' }}>
+                  <div className="todo-item-left"><Store size={18} color="#17382E" /><div><div className="todo-item-name">Xem gian hàng và gửi yêu cầu</div><div className="todo-deadline">Áp dụng cho sự kiện đã được duyệt</div></div></div>
+                </Link>}
+                {organization.id && applications.length > 0 && (boothRequests?.length || 0) > 0 && <p>Không có việc cần làm mới từ các luồng hiện tại.</p>}
               </div>
             </div>
           ) : (
@@ -260,13 +259,9 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           <PlusCircle size={15} />
           <span>{language === 'vi' ? 'Đăng ký tham gia sự kiện' : 'Apply for Event'}</span>
         </Link>
-        <Link to="/partner/booths/select" className="btn-part-secondary partner-quick-action-btn">
+        <Link to="/partner/booth-requests" className="btn-part-secondary partner-quick-action-btn">
           <Store size={15} />
           <span>{language === 'vi' ? 'Chọn gian hàng trên bản đồ' : 'Select Booth on Map'}</span>
-        </Link>
-        <Link to="/partner/activities" className="btn-part-secondary partner-quick-action-btn">
-          <Layers size={15} />
-          <span>{language === 'vi' ? 'Đề xuất hoạt động mới' : 'Propose Activity'}</span>
         </Link>
       </div>
     </div>

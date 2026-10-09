@@ -17,6 +17,8 @@ import './InteractiveMap.css';
 interface InteractiveMapProps {
   language: Language;
   events?: EventItem[];
+  selectedEventId: string;
+  onSelectEventId: (eventId: string) => void;
   booths?: Booth[];
   isLoading?: boolean;
   highlightedBoothId: string | null;
@@ -28,6 +30,8 @@ const EMPTY_BOOTHS: Booth[] = [];
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   events = [],
+  selectedEventId,
+  onSelectEventId,
   booths,
   isLoading = false,
   highlightedBoothId,
@@ -36,7 +40,6 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const allBooths = booths || EMPTY_BOOTHS;
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
   const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState('');
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [mapError, setMapError] = useState('');
   const [mapImageUrl, setMapImageUrl] = useState<string>(DEFAULT_MAP_IMAGE);
@@ -248,23 +251,16 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         </div>
 
         <div className="public-map-event-picker">
-          <label htmlFor="public-map-event">
-            {language === 'vi' ? 'Sự kiện công khai' : 'Published event'}
-          </label>
+          <label htmlFor="public-map-event">{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</label>
           <select
             id="public-map-event"
             value={selectedEventId}
-            onChange={event => {
-              setSelectedEventId(event.target.value);
-              setSelectedPointId('');
-              handleResetZoom();
-            }}
+            onChange={event => onSelectEventId(event.target.value)}
           >
             <option value="">{language === 'vi' ? 'Chọn sự kiện để xem gian hàng' : 'Select an event to view booths'}</option>
             {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
           </select>
-          {mapError && <span role="alert">{mapError}</span>}
-          {!events.length && !isLoading && <span>{language === 'vi' ? 'Chưa có sự kiện đã công bố.' : 'No published events yet.'}</span>}
+          {!events.length && <span>{language === 'vi' ? 'Chưa có sự kiện đã công bố.' : 'No published events yet.'}</span>}
         </div>
 
         {/* Map Blueprint & Detail Column Layout */}
@@ -503,7 +499,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 <div className="panel-contact-list">
                   <div className="contact-item">
                     <Clock size={15} />
-                    <span>{selectedPoint.openHours || '08:00 - 22:00'}</span>
+                    <span>{selectedPoint.openHours || (language === 'vi' ? 'Chưa có dữ liệu' : 'No data')}</span>
                   </div>
                   {selectedPoint.phone && (
                     <div className="contact-item">
@@ -529,7 +525,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         : (language === 'vi' ? 'QUẢN LÝ KHÔNG GIAN' : 'SPACE MANAGEMENT')}
                     </span>
                     <p className="preview-name">
-                      {selectedPoint.orgName || (activeBooth ? activeBooth.name : (language === 'vi' ? 'Ban Quản Lý Đường Sách TP.HCM' : 'Ho Chi Minh City Book Street Board'))}
+                      {selectedPoint.orgName || activeBooth?.name || (language === 'vi' ? 'Chưa có dữ liệu' : 'No data')}
                     </p>
                     {activeBooth && (
                       <button
@@ -585,7 +581,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                       {language === 'vi' ? 'QUẢN LÝ VẬN HÀNH' : 'MANAGEMENT'}
                     </span>
                     <p className="preview-name">
-                      {language === 'vi' ? 'Ban Quản Lý Đường Sách TP.HCM' : 'Ho Chi Minh City Book Street Board'}
+                      {language === 'vi' ? 'Chưa có dữ liệu đơn vị quản lý' : 'Management data unavailable'}
                     </p>
                   </div>
                 </div>

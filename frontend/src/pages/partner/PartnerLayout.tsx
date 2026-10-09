@@ -93,13 +93,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       icon: <Store size={18} />,
     },
     {
-      id: 'booths',
-      path: '/partner/booths',
-      labelVi: 'Quản lý gian hàng',
-      labelEn: 'Booth Management',
-      icon: <Store size={18} />,
-    },
-    {
       id: 'activities',
       path: '/partner/activities',
       labelVi: 'Quản lý hoạt động',

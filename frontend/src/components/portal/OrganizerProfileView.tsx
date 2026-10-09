@@ -236,7 +236,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 paddingBottom: '0.85rem',
                 borderBottom: '1px solid #E5E7EB'
               }}>
-                {profile.organization || 'Ban Quản Lý & Vận Hành Đường Sách TP.HCM'}
+                {profile.organization || '—'}
               </p>
 
               {/* Status and metadata */}
@@ -445,7 +445,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                       <Building2 size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="text"
-                        value={profile.organization || 'Ban Quản Lý & Vận Hành Đường Sách TP.HCM'}
+                        value={profile.organization || ''}
                         disabled
                         style={{
                           width: '100%',

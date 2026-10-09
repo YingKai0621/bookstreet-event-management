@@ -32,8 +32,6 @@ import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
 import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
 import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
-import { BoothManagementPage } from './pages/partner/BoothManagementPage';
-import { BoothSelectionPage } from './pages/partner/BoothSelectionPage';
 import { EventApplicationPage } from './pages/partner/EventApplicationPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
@@ -46,6 +44,8 @@ import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPa
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
+import { boothApi } from './services/boothApi';
+import type { BoothRequest } from './types/booth';
 import {
   AttendanceScanRecord,
   Booth,
@@ -58,7 +58,6 @@ import {
   ParticipantEvent,
   ParticipantProfile,
   PartnerActivityProposal,
-  PartnerBooth,
   PartnerEventApplication,
   PartnerNotification,
   PartnerOrganization,
@@ -93,7 +92,6 @@ export function App() {
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
   const [partnerApp, setPartnerApp] = useState<PartnerEventApplication | null>(null);
-  const [partnerBooths, setPartnerBooths] = useState<PartnerBooth[]>([]);
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerEventLocations, setPartnerEventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [partnerAssets, setPartnerAssets] = useState<Array<{ id: string; name: string; totalQuantity: number }>>([]);
@@ -101,6 +99,7 @@ export function App() {
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
   const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
+  const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
   const [attendanceScans, setAttendanceScans] = useState<AttendanceScanRecord[]>([]);
   const [activeAttendanceActivityId, setActiveAttendanceActivityId] = useState<string | null>(null);
 
@@ -159,50 +158,72 @@ export function App() {
   const [booths, setBooths] = useState<Booth[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
+  const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
+  const [publicBoothsError, setPublicBoothsError] = useState('');
+  const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
+  const publicEventId = events.some(event => event.id === selectedPublicEventId)
+    ? selectedPublicEventId
+    : events[0]?.id || '';
 
   // Load real data from Backend REST API
   useEffect(() => {
     let isMounted = true;
-    const refreshPublicData = () => {
+    const refreshPublicData = async () => {
       setIsPublicDataLoading(true);
-      Promise.allSettled([
+      const [eventsRes, heritagesRes] = await Promise.allSettled([
         publicApi.getEvents(),
-        publicApi.getBooths(),
         publicApi.getHeritages(),
-        new Promise(resolve => setTimeout(resolve, 600)),
-      ]).then(([eventsRes, boothsRes, heritagesRes]) => {
-        if (!isMounted) return;
-        if (eventsRes.status === 'fulfilled') {
-          setEvents(eventsRes.value);
-        } else {
-          console.warn('Could not fetch public events', eventsRes.reason);
-        }
-        if (boothsRes.status === 'fulfilled') {
-          setBooths(boothsRes.value);
-        } else {
-          console.warn('Could not fetch public booths', boothsRes.reason);
-        }
-        if (heritagesRes.status === 'fulfilled') {
-          setHeritageList(heritagesRes.value.map(h => ({
-            ...h,
-            status: 'published' as const,
-            qrStatus: 'active' as const,
-          })));
-        } else {
-          console.warn('Could not fetch public heritages', heritagesRes.reason);
-        }
-        setIsPublicDataLoading(false);
-      });
+      ]);
+      if (!isMounted) return;
+
+      if (eventsRes.status === 'fulfilled') {
+        setEvents(eventsRes.value);
+      } else {
+        console.warn('Could not fetch public events', eventsRes.reason);
+        setEvents([]);
+        setBooths([]);
+      }
+
+      if (heritagesRes.status === 'fulfilled') {
+        setHeritageList(heritagesRes.value.map(h => ({
+          ...h,
+          status: 'published' as const,
+          qrStatus: 'active' as const,
+        })));
+      } else {
+        console.warn('Could not fetch public heritages', heritagesRes.reason);
+      }
+      setIsPublicDataLoading(false);
     };
-    refreshPublicData();
-    window.addEventListener('focus', refreshPublicData);
-    window.addEventListener('duongsach:data-changed', refreshPublicData);
+    const handleRefresh = () => { void refreshPublicData(); };
+    handleRefresh();
+    window.addEventListener('focus', handleRefresh);
+    window.addEventListener('duongsach:data-changed', handleRefresh);
     return () => {
       isMounted = false;
-      window.removeEventListener('focus', refreshPublicData);
-      window.removeEventListener('duongsach:data-changed', refreshPublicData);
+      window.removeEventListener('focus', handleRefresh);
+      window.removeEventListener('duongsach:data-changed', handleRefresh);
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!publicEventId) {
+      setBooths([]);
+      return () => { active = false; };
+    }
+    setIsPublicBoothsLoading(true);
+    setPublicBoothsError('');
+    publicApi.getBooths(publicEventId)
+      .then(rows => { if (active) setBooths(rows); })
+      .catch(error => {
+        if (!active) return;
+        setBooths([]);
+        setPublicBoothsError(error instanceof Error ? error.message : 'Không tải được gian hàng.');
+      })
+      .finally(() => { if (active) setIsPublicBoothsLoading(false); });
+    return () => { active = false; };
+  }, [publicEventId, dataRevision]);
 
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(() => {
     try {
@@ -242,11 +263,20 @@ export function App() {
           representativeName: authenticatedUser?.fullName || '',
         } : null);
         setPartnerApplications(applications);
-        setPartnerApp(applications[0] || null);
+        setPartnerApp(applications.find(application => application.status === 'approved') || applications[0] || null);
         setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
-        setPartnerBooths([]); _setPartnerReports(null); setPartnerEventLocations([]);
+        _setPartnerReports(null); setPartnerEventLocations([]);
+        void boothApi.listAllPartnerRequests()
+          .then(setPartnerBoothRequests)
+          .catch(error => { console.warn('Could not fetch partner booth requests', error); setPartnerBoothRequests(null); });
       })
-      .catch(error => console.warn('Could not fetch partner data', error));
+      .catch(error => {
+        console.warn('Could not fetch partner data', error);
+        setPartnerOrg(null);
+        setPartnerApplications([]);
+        setPartnerApp(null);
+        setPartnerBoothRequests(null);
+      });
   }, [authenticatedUser?.fullName, isPartnerAuthenticated, dataRevision]);
 
   // Participant Action Handlers
@@ -484,12 +514,6 @@ export function App() {
   }
 
   // --- Partner Handlers ---
-  const handleSelectPartnerBooth = async (boothId: string) => {
-    if (!partnerOrg || !partnerApp) return;
-    await partnerApi.requestBooth({ eventId: partnerApp.eventId, boothId });
-    setPartnerBooths(await partnerApi.getBooths(partnerApp.eventId));
-  };
-
   const handleAddPartnerActivity = async (newAct: Omit<PartnerActivityProposal, 'id'>) => {
     if (!partnerApp) throw new Error('Chưa có sự kiện đối tác đang tham gia');
     const [day, month, year] = newAct.date.split('/');
@@ -580,7 +604,6 @@ export function App() {
       phone: '', address: '', website: '', categories: [], status: '',
     };
 
-    const assignedBooth = partnerBooths.find(b => b.assignedOrgId === visiblePartnerOrg.id);
     const attendanceModalActivity = partnerActivities.find(a => a.id === activeAttendanceActivityId) || partnerActivities[0];
 
     return (
@@ -599,10 +622,9 @@ export function App() {
               language={language}
               organization={visiblePartnerOrg}
               activeEvent={partnerApp}
-              assignedBooth={assignedBooth}
-              activities={partnerActivities}
+              applications={partnerApplications}
+              boothRequests={partnerBoothRequests}
               todos={partnerTodos}
-              totalEngagementCount={partnerReports?.totalParticipants || 0}
               onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
             />
           } />
@@ -618,23 +640,8 @@ export function App() {
               organization={partnerOrg}
             />
           } />
-          <Route path="/partner/booths" element={
-            <BoothManagementPage
-              language={language}
-              booth={assignedBooth}
-              onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
-              onRequestChange={(reason) => assignedBooth && partnerApi.requestBoothChange(assignedBooth.id, reason || '')}
-              onRequestCancel={(reason) => assignedBooth && partnerApi.requestBoothCancellation(assignedBooth.id, reason || '')}
-            />
-          } />
-          <Route path="/partner/booths/select" element={
-            <BoothSelectionPage
-              language={language}
-              booths={partnerBooths}
-              currentAssignedBoothId={assignedBooth?.id}
-              onSelectBooth={handleSelectPartnerBooth}
-            />
-          } />
+          <Route path="/partner/booths" element={<Navigate to="/partner/booth-requests" replace />} />
+          <Route path="/partner/booths/select" element={<Navigate to="/partner/booth-requests" replace />} />
           <Route path="/partner/booth-requests" element={
             <Sprint2PartnerBoothsPage
               language={language}
@@ -660,10 +667,9 @@ export function App() {
             />
           } />
           <Route path="/partner/reports" element={
-            <PartnerReportsPage
-              language={language}
-              reportStats={partnerReports || { eventId: partnerApp?.eventId || '', eventName: partnerApp?.eventTitle || '', totalParticipants: 0, totalActivities: 0, attendanceRate: 0, averageRating: 0, activityStats: [], ratingDistribution: [] }}
-            />
+            partnerReports
+              ? <PartnerReportsPage language={language} reportStats={partnerReports} />
+              : <p className="app-loading-state">Chưa có API báo cáo để tải dữ liệu từ hệ thống.</p>
           } />
           <Route path="/partner/notifications" element={
             <PartnerNotificationsPage
@@ -772,7 +778,11 @@ export function App() {
           <BoothsSection 
             language={language}
             booths={booths}
-            isLoading={isPublicDataLoading}
+            isLoading={isPublicDataLoading || isPublicBoothsLoading}
+            error={publicBoothsError}
+            events={events}
+            selectedEventId={publicEventId}
+            onSelectEventId={setSelectedPublicEventId}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
             onSearchQueryChange={setBoothSearchQuery}
@@ -801,6 +811,8 @@ export function App() {
           <InteractiveMap 
             language={language}
             events={events}
+            selectedEventId={publicEventId}
+            onSelectEventId={setSelectedPublicEventId}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
@@ -824,6 +836,10 @@ export function App() {
         language={language} 
         open={isBooths} 
         booths={booths} 
+        events={events}
+        selectedEventId={publicEventId}
+        onSelectEventId={setSelectedPublicEventId}
+        error={publicBoothsError}
         onSelectBoothOnMap={handleSelectBoothOnMap} 
       />
       <EventsExperience 

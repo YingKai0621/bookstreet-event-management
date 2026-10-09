@@ -1,10 +1,37 @@
-import { AlertCircle, Check, Clock3, Edit3, Loader2, Plus, RefreshCw, Store, X } from 'lucide-react';
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Clock3,
+  DollarSign,
+  Edit3,
+  Layers,
+  Loader2,
+  MapPin,
+  Move,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Store,
+  X,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
 import type { BoothRequest, CreatePhysicalBoothInput, EventBooth, PhysicalBooth } from '../../types/booth';
 import type { OrganizerEvent } from '../../types/organizer';
+import { BoothMapCanvas } from '../booth-map/BoothMapCanvas';
+import {
+  BOOTH_MAP_COORDINATE_HELP,
+  eventBoothToMarker,
+  hasValidMapCoordinates,
+  markerStatusLabel,
+  physicalBoothToMarker,
+  type BoothMapMarker,
+} from '../booth-map/boothMapModel';
 import './Sprint2Booth.css';
 
 interface Props {
@@ -32,7 +59,7 @@ const EMPTY_FORM: BoothFormState = {
 };
 
 const availabilityLabel: Record<EventBooth['availability'], string> = {
-  AVAILABLE: 'Còn trống', ON_HOLD: 'Đang giữ chỗ', ASSIGNED: 'Đã phân bổ', UNAVAILABLE: 'Chưa mở',
+  AVAILABLE: 'Còn trống', ON_HOLD: 'Đang giữ chỗ', ASSIGNED: 'Đã thuê / Phân bổ', UNAVAILABLE: 'Chưa mở',
 };
 
 const requestStatusLabel: Record<BoothRequest['status'], string> = {
@@ -76,7 +103,7 @@ function formFromBooth(booth: PhysicalBooth | null): BoothFormState {
 }
 
 export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId, onSelectEventId }) => {
-  const [tab, setTab] = useState<'catalog' | 'configuration' | 'requests'>('catalog');
+  const [tab, setTab] = useState<'map' | 'catalog' | 'configuration' | 'requests'>('map');
   const [physicalBooths, setPhysicalBooths] = useState<PhysicalBooth[]>([]);
   const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
@@ -84,9 +111,18 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyKey, setBusyKey] = useState('');
+
+  // Map Positioning States
+  const [selectedBoothId, setSelectedBoothId] = useState<number | null>(null);
+  const [draftCoords, setDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
+  const [savingPosition, setSavingPosition] = useState(false);
+
+  // Booth Modal Form States
   const [editingBooth, setEditingBooth] = useState<PhysicalBooth | null>(null);
   const [boothForm, setBoothForm] = useState<BoothFormState>({ ...EMPTY_FORM });
   const [showBoothForm, setShowBoothForm] = useState(false);
+
+  // Request Reject Modal
   const [rejectingRequest, setRejectingRequest] = useState<BoothRequest | null>(null);
   const [reviewNote, setReviewNote] = useState('');
 
@@ -97,17 +133,17 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
     setLoading(true);
     setError('');
     try {
-      const physicalPage = await boothApi.listPhysicalBooths();
-      setPhysicalBooths(physicalPage.content);
+      const physicalBooths = await boothApi.listAllPhysicalBooths();
+      setPhysicalBooths(physicalBooths);
       if (eventId) {
-        const [configurations, requestPage] = await Promise.all([
+        const [configurations, eventRequests] = await Promise.all([
           boothApi.listEventBoothConfigurations(eventId),
-          boothApi.listOrganizerRequests(eventId),
+          boothApi.listAllOrganizerRequests(eventId),
         ]);
         const configurationByBoothId = new Map(
           configurations.map(configuration => [configuration.booth.boothId, configuration]),
         );
-        setEventBooths(physicalPage.content.map(booth => configurationByBoothId.get(booth.boothId) || {
+        setEventBooths(physicalBooths.map(booth => configurationByBoothId.get(booth.boothId) || {
           eventBoothConfigId: null,
           eventId: Number(eventId),
           booth,
@@ -115,12 +151,16 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
           enabled: false,
           availability: 'UNAVAILABLE' as const,
         }));
-        setRequests(requestPage.content);
+        setRequests(eventRequests);
       } else {
         setEventBooths([]);
         setRequests([]);
       }
+      setSelectedBoothId(curr => (physicalBooths.some(b => b.boothId === curr) ? curr : physicalBooths[0]?.boothId ?? null));
     } catch (caughtError) {
+      setPhysicalBooths([]);
+      setEventBooths([]);
+      setRequests([]);
       setError(apiMessage(caughtError));
     } finally {
       setLoading(false);
@@ -129,14 +169,113 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
 
   useEffect(() => { void loadData(); }, [loadData]);
 
+  // Auto dismiss success toast
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  const configurationByBooth = useMemo(
+    () => new Map(eventBooths.map(row => [row.booth.boothId, row])),
+    [eventBooths],
+  );
+
+  const selectedBooth = physicalBooths.find(b => b.boothId === selectedBoothId) || null;
+  const currentDraft = selectedBoothId ? draftCoords[selectedBoothId] : undefined;
+
+  // Selected booth coordinate inputs
+  const currentX = currentDraft ? currentDraft.x : selectedBooth?.mapX ?? '';
+  const currentY = currentDraft ? currentDraft.y : selectedBooth?.mapY ?? '';
+
+  // Markers with draft position override
+  const markers = useMemo<BoothMapMarker[]>(() => {
+    return physicalBooths.flatMap(booth => {
+      const configured = configurationByBooth.get(booth.boothId);
+      const draft = draftCoords[booth.boothId];
+
+      const x = draft ? draft.x : booth.mapX;
+      const y = draft ? draft.y : booth.mapY;
+
+      if (x === null || y === null || !Number.isFinite(x) || !Number.isFinite(y)) {
+        return [];
+      }
+
+      const status = configured ? configured.availability : (eventId ? 'UNAVAILABLE' : 'PHYSICAL');
+
+      return [{
+        id: `booth-${booth.boothId}`,
+        boothId: booth.boothId,
+        code: booth.code,
+        name: booth.name,
+        x,
+        y,
+        status,
+      }];
+    });
+  }, [physicalBooths, configurationByBooth, draftCoords, eventId]);
+
+  // Handle position change on drag or map click
+  const handlePositionChange = (markerOrBoothId: string | number, newX: number, newY: number) => {
+    const boothId = typeof markerOrBoothId === 'number'
+      ? markerOrBoothId
+      : Number(markerOrBoothId.replace('booth-', ''));
+
+    if (isNaN(boothId)) return;
+
+    setDraftCoords(prev => ({
+      ...prev,
+      [boothId]: { x: newX, y: newY },
+    }));
+    setSelectedBoothId(boothId);
+  };
+
+  // Save coordinates to backend
+  const handleSaveCoordinates = async (boothId: number) => {
+    const targetBooth = physicalBooths.find(b => b.boothId === boothId);
+    const coords = draftCoords[boothId];
+    if (!targetBooth || !coords) return;
+
+    setSavingPosition(true);
+    setError('');
+    setSuccess('');
+    try {
+      const updated = await boothApi.updatePhysicalBooth(boothId, {
+        mapX: coords.x,
+        mapY: coords.y,
+      });
+      setPhysicalBooths(prev => prev.map(b => (b.boothId === updated.boothId ? updated : b)));
+      setDraftCoords(prev => {
+        const next = { ...prev };
+        delete next[boothId];
+        return next;
+      });
+      setSuccess(`Đã lưu thành công tọa độ cho gian hàng "${updated.code}" (X: ${updated.mapX}%, Y: ${updated.mapY}%).`);
+    } catch (err) {
+      setError(apiMessage(err));
+    } finally {
+      setSavingPosition(false);
+    }
+  };
+
+  // Reset drafted coordinates
+  const handleResetDraft = (boothId: number) => {
+    setDraftCoords(prev => {
+      const next = { ...prev };
+      delete next[boothId];
+      return next;
+    });
+  };
+
+  // Submit create/edit booth
   const submitBooth = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
     setError('');
-    const maxCapacity = Number(boothForm.maxCapacity);
     const mapX = boothForm.mapX === '' ? null : Number(boothForm.mapX);
     const mapY = boothForm.mapY === '' ? null : Number(boothForm.mapY);
-    if (!boothForm.code.trim() || !boothForm.name.trim() || !Number.isInteger(maxCapacity) || maxCapacity <= 0) {
-      setError('Mã, tên và sức chứa dương là bắt buộc.');
+
+    if (!boothForm.code.trim() || !boothForm.name.trim()) {
+      setError('Mã và tên gian hàng là bắt buộc.');
       return;
     }
     if ((mapX !== null && !Number.isFinite(mapX)) || (mapY !== null && !Number.isFinite(mapY))) {
@@ -147,7 +286,7 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
       code: boothForm.code.trim(),
       name: boothForm.name.trim(),
       description: boothForm.description.trim() || null,
-      maxCapacity,
+      maxCapacity: 1,
       mapX,
       mapY,
       categoryCode: boothForm.categoryCode.trim() || null,
@@ -158,10 +297,10 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
       if (editingBooth) {
         const { code: _code, ...updateInput } = input;
         await boothApi.updatePhysicalBooth(editingBooth.boothId, { ...updateInput, active: boothForm.active });
-        setSuccess('Đã cập nhật gian hàng vật lý.');
+        setSuccess('Đã cập nhật gian hàng vật lý thành công.');
       } else {
         await boothApi.createPhysicalBooth(input);
-        setSuccess('Đã tạo gian hàng vật lý.');
+        setSuccess('Đã thêm gian hàng mới vào danh mục.');
       }
       setShowBoothForm(false);
       await loadData();
@@ -222,13 +361,26 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
     }
   };
 
+  // Status counts
+  const availableCount = eventBooths.filter(r => r.availability === 'AVAILABLE').length;
+  const onHoldCount = eventBooths.filter(r => r.availability === 'ON_HOLD').length;
+  const assignedCount = eventBooths.filter(r => r.availability === 'ASSIGNED').length;
+  const unavailableCount = eventBooths.filter(r => r.availability === 'UNAVAILABLE').length;
+
   return (
     <section className="s2-booth-page" aria-labelledby="organizer-booth-title">
       <header className="s2-booth-header">
-        <div><h1 id="organizer-booth-title" className="organizer-view-title">Gian hàng & yêu cầu đối tác</h1><p className="organizer-view-sub">Quản lý vị trí vật lý, giá theo sự kiện và giữ chỗ của đối tác.</p></div>
-        <button className="btn-org-secondary" type="button" onClick={() => void loadData()} disabled={loading}><RefreshCw size={15} />Làm mới</button>
+        <div>
+          <h1 id="organizer-booth-title" className="organizer-view-title">Sơ đồ & Yêu cầu gian hàng</h1>
+          <p className="organizer-view-sub">Định vị trực quan trên bản đồ, quản lý giá theo sự kiện và phê duyệt giữ chỗ của đối tác.</p>
+        </div>
+        <button className="btn-org-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
+          <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
+          <span>Làm mới</span>
+        </button>
       </header>
 
+      {/* Event Selector */}
       <div className="s2-event-bar">
         <label htmlFor="s2-organizer-event">Sự kiện đang quản lý</label>
         <select id="s2-organizer-event" value={eventId} onChange={event => onSelectEventId(event.target.value)}>
@@ -240,74 +392,427 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
       {success && <div className="s2-alert s2-alert-success" role="status"><Check size={18} />{success}</div>}
 
+      {/* Workspace Tabs */}
       <nav className="s2-tabs" aria-label="Quản lý gian hàng">
-        <button type="button" className={tab === 'catalog' ? 'is-active' : ''} onClick={() => setTab('catalog')}>Gian hàng vật lý <span>{physicalBooths.length}</span></button>
-        <button type="button" className={tab === 'configuration' ? 'is-active' : ''} onClick={() => setTab('configuration')}>Cấu hình sự kiện <span>{eventBooths.filter(row => row.enabled).length}</span></button>
-        <button type="button" className={tab === 'requests' ? 'is-active' : ''} onClick={() => setTab('requests')}>Yêu cầu đối tác <span>{requests.filter(row => row.status === 'PENDING').length}</span></button>
+        <button type="button" className={tab === 'map' ? 'is-active' : ''} onClick={() => setTab('map')}>
+          <MapPin size={16} />
+          <span>Sơ đồ & Định vị bản đồ</span>
+          <span>{markers.length}/{physicalBooths.length}</span>
+        </button>
+        <button type="button" className={tab === 'configuration' ? 'is-active' : ''} onClick={() => setTab('configuration')}>
+          <DollarSign size={16} />
+          <span>Cấu hình sự kiện</span>
+          <span>{eventBooths.filter(row => row.enabled).length}</span>
+        </button>
+        <button type="button" className={tab === 'requests' ? 'is-active' : ''} onClick={() => setTab('requests')}>
+          <Clock3 size={16} />
+          <span>Yêu cầu đối tác</span>
+          <span>{requests.filter(row => row.status === 'PENDING').length}</span>
+        </button>
+        <button type="button" className={tab === 'catalog' ? 'is-active' : ''} onClick={() => setTab('catalog')}>
+          <Store size={16} />
+          <span>Danh mục gian hàng</span>
+          <span>{physicalBooths.length}</span>
+        </button>
       </nav>
 
-      {loading ? <div className="s2-loading"><Loader2 className="s2-spin" size={22} />Đang tải dữ liệu...</div> : tab === 'catalog' ? (
-        <div className="s2-panel">
-          <div className="s2-panel-heading"><div><h2>Danh mục gian hàng vật lý</h2><p>Một vị trí có thể dùng cho các sự kiện không trùng thời gian.</p></div><button className="btn-org-primary" type="button" onClick={() => { setEditingBooth(null); setBoothForm({ ...EMPTY_FORM }); setShowBoothForm(true); }}><Plus size={16} />Thêm gian hàng</button></div>
-          <div className="s2-card-grid">
-            {physicalBooths.map(booth => <article className="s2-booth-card" key={booth.boothId}>
-              <div className="s2-booth-card-top"><strong>{booth.code}</strong><span className={`s2-status ${booth.active ? 'available' : 'unavailable'}`}>{booth.active ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></div>
-              <h3>{booth.name}</h3><p>{booth.description || 'Chưa có mô tả.'}</p>
-              <dl><div><dt>Danh mục</dt><dd>{booth.categoryCode || '—'}</dd></div><div><dt>Sức chứa</dt><dd>{booth.maxCapacity}</dd></div></dl>
-              <button type="button" className="s2-link-button" onClick={() => { setEditingBooth(booth); setBoothForm(formFromBooth(booth)); setShowBoothForm(true); }}><Edit3 size={14} />Chỉnh sửa</button>
-            </article>)}
-            {!physicalBooths.length && <div className="s2-empty"><Store size={30} /><strong>Chưa có gian hàng vật lý</strong></div>}
-          </div>
-        </div>
-      ) : tab === 'configuration' ? (
-        <div className="s2-panel">
-          <div className="s2-panel-heading"><div><h2>Cấu hình theo sự kiện</h2><p>Giá thuê và trạng thái mở chỉ áp dụng cho sự kiện đang chọn.</p></div></div>
-          <div className="s2-config-list">{eventBooths.map(row => <ConfigurationRow key={`${row.booth.boothId}-${row.rentalPrice}-${row.enabled}`} row={row} busy={busyKey === `config-${row.booth.boothId}`} onSave={saveConfiguration} />)}{!eventBooths.length && <div className="s2-empty">Chưa có gian hàng để cấu hình.</div>}</div>
-        </div>
+      {loading ? (
+        <div className="s2-loading"><Loader2 className="s2-spin" size={24} />Đang tải dữ liệu gian hàng...</div>
       ) : (
-        <div className="s2-panel">
-          <div className="s2-panel-heading"><div><h2>Ứng viên gian hàng</h2><p>Chọn một yêu cầu sẽ tạo Hold; các ứng viên khác vẫn chờ duyệt.</p></div></div>
-          <div className="s2-request-list">{requests.map(request => <article className="s2-request-card" key={request.boothRequestId}>
-            <div className="s2-request-main"><div><span className={`s2-status request-${request.status.toLowerCase()}`}>{requestStatusLabel[request.status]}</span><h3>{request.partnerOrganizationName}</h3><p>Gian <strong>{request.boothCode}</strong> · {dateTime(request.submittedAt)}</p></div><p className="s2-request-note">{request.requestNote || 'Không có ghi chú từ đối tác.'}</p></div>
-            {request.hold && <div className="s2-hold-summary"><Clock3 size={17} /><div><strong>{money(request.hold.lockedRentalPrice)}</strong><span>Giữ đến {dateTime(request.hold.expiresAt)}</span></div></div>}
-            {request.reviewNote && <p className="s2-review-note"><strong>Phản hồi:</strong> {request.reviewNote}</p>}
-            {request.status === 'PENDING' && <div className="s2-actions"><button className="btn-org-secondary" type="button" onClick={() => { setRejectingRequest(request); setReviewNote(''); }}>Từ chối</button><button className="btn-org-primary" type="button" disabled={busyKey === `request-${request.boothRequestId}`} onClick={() => void selectRequest(request)}>Chọn & giữ chỗ</button></div>}
-          </article>)}{!requests.length && <div className="s2-empty">Chưa có yêu cầu gian hàng cho sự kiện này.</div>}</div>
+        <>
+          {/* TAB 1: SƠ ĐỒ & ĐỊNH VỊ BẢN ĐỒ (INTERACTIVE MAP) */}
+          {tab === 'map' && (
+            <div className="s2-map-management-grid">
+              {/* Left Column: Interactive Map */}
+              <div className="s2-panel s2-map-panel">
+                <div className="s2-panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h2>Bản đồ vị trí gian hàng</h2>
+                    <p>💡 <strong>Kéo thả</strong> chấm gian hàng hoặc <strong>click trực tiếp</strong> lên sơ đồ để đặt vị trí, sau đó bấm <strong>Lưu vị trí</strong>.</p>
+                  </div>
+
+                  {/* Summary Status Badges */}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span className="s2-status available">🟢 Còn trống: {availableCount}</span>
+                    <span className="s2-status on_hold">🟠 Chờ duyệt / Giữ chỗ: {onHoldCount}</span>
+                    <span className="s2-status assigned">🟣 Đã thuê / Phân bổ: {assignedCount}</span>
+                    <span className="s2-status unavailable">⚪ Chưa mở: {unavailableCount}</span>
+                  </div>
+                </div>
+
+                <BoothMapCanvas
+                  markers={markers}
+                  selectedMarkerId={selectedBoothId ? `booth-${selectedBoothId}` : null}
+                  onSelectMarker={marker => setSelectedBoothId(marker.boothId)}
+                  onPositionChange={handlePositionChange}
+                  editable={true}
+                  ariaLabel="Sơ đồ mặt bằng Đường Sách tương tác"
+                  emptyMessage="Chưa có gian hàng nào được định vị trên bản đồ."
+                />
+              </div>
+
+              {/* Right Column: Coordinate Editor & Booth Selector */}
+              <aside className="s2-panel s2-map-sidebar" aria-label="Định vị tọa độ gian hàng">
+                <h2>Chọn & Lưu vị trí</h2>
+
+                {selectedBooth ? (
+                  <div className="s2-coordinate-form" style={{ borderTop: 'none', paddingTop: 0 }}>
+                    <div style={{ background: '#F8FAF9', padding: '0.75rem', borderRadius: '10px', border: '1px solid #E2EAE5' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <strong style={{ color: '#17382E', fontSize: '1.1rem' }}>{selectedBooth.code}</strong>
+                        {configurationByBooth.get(selectedBooth.boothId) && (
+                          <span className={`s2-status ${configurationByBooth.get(selectedBooth.boothId)?.availability.toLowerCase()}`}>
+                            {availabilityLabel[configurationByBooth.get(selectedBooth.boothId)!.availability]}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '0.88rem', color: '#4B5563', display: 'block' }}>{selectedBooth.name}</span>
+                      {selectedBooth.description && (
+                        <small style={{ color: '#6B7280', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>
+                          {selectedBooth.description}
+                        </small>
+                      )}
+                    </div>
+
+                    <div className="s2-coordinate-inputs">
+                      <label>
+                        Tọa độ X (%)
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={currentX}
+                          onChange={e => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value);
+                            handlePositionChange(selectedBooth.boothId, val, Number(currentY) || 0);
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Tọa độ Y (%)
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={currentY}
+                          onChange={e => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value);
+                            handlePositionChange(selectedBooth.boothId, Number(currentX) || 0, val);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {currentDraft && (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn-org-primary"
+                          style={{ flex: 1 }}
+                          disabled={savingPosition}
+                          onClick={() => handleSaveCoordinates(selectedBooth.boothId)}
+                        >
+                          <Save size={15} />
+                          <span>{savingPosition ? 'Đang lưu...' : 'Lưu vị trí'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-org-secondary"
+                          onClick={() => handleResetDraft(selectedBooth.boothId)}
+                          disabled={savingPosition}
+                          title="Hủy thay đổi chưa lưu"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      </div>
+                    )}
+
+                    {!currentDraft && (
+                      <div style={{ fontSize: '0.78rem', color: '#6B7280', fontStyle: 'italic', textAlign: 'center', padding: '0.35rem' }}>
+                        {hasValidMapCoordinates(selectedBooth)
+                          ? `✓ Đã định vị tại X: ${selectedBooth.mapX}%, Y: ${selectedBooth.mapY}%`
+                          : '⚠️ Gian hàng chưa có tọa độ. Hãy click lên bản đồ để đặt vị trí.'}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="s2-empty" style={{ minHeight: '100px' }}>
+                    <MapPin size={24} />
+                    <p>Chọn một gian hàng bên dưới để định vị</p>
+                  </div>
+                )}
+
+                {/* Booth List Selector */}
+                <div style={{ marginTop: '0.5rem', borderTop: '1px solid #E2EAE5', paddingTop: '0.75rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#17382E', display: 'block', marginBottom: '0.5rem' }}>
+                    Danh sách gian hàng ({physicalBooths.length})
+                  </span>
+                  <div className="s2-map-booth-list" style={{ maxHeight: '280px' }}>
+                    {physicalBooths.map(booth => {
+                      const configured = configurationByBooth.get(booth.boothId);
+                      const isSelected = selectedBoothId === booth.boothId;
+                      const hasDraft = !!draftCoords[booth.boothId];
+                      const isMapped = hasValidMapCoordinates(booth);
+
+                      return (
+                        <button
+                          type="button"
+                          key={booth.boothId}
+                          className={`${isSelected ? 'is-selected' : ''}`}
+                          onClick={() => setSelectedBoothId(booth.boothId)}
+                          style={{ position: 'relative' }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 700, color: '#17382E' }}>{booth.code}</span>
+                            {configured && (
+                              <span className={`s2-status ${configured.availability.toLowerCase()}`} style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                                {availabilityLabel[configured.availability]}
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '0.82rem', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {booth.name}
+                          </span>
+                          <small style={{ color: hasDraft ? '#B45309' : isMapped ? '#059669' : '#9CA3AF', fontWeight: hasDraft ? 700 : 500 }}>
+                            {hasDraft
+                              ? `● Đang chỉnh sửa (X:${draftCoords[booth.boothId].x}, Y:${draftCoords[booth.boothId].y})`
+                              : isMapped
+                              ? `✓ X:${booth.mapX}%, Y:${booth.mapY}%`
+                              : '○ Chưa định vị'}
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {/* TAB 2: GIAN HÀNG VẬT LÝ */}
+          {tab === 'catalog' && (
+            <div className="s2-panel">
+              <div className="s2-panel-heading">
+                <div><h2>Danh mục gian hàng vật lý</h2><p>Một vị trí có thể dùng cho các sự kiện không trùng thời gian.</p></div>
+                <button type="button" className="btn-org-primary" onClick={() => { setEditingBooth(null); setBoothForm({ ...EMPTY_FORM }); setShowBoothForm(true); }}>
+                  <Plus size={16} />Thêm gian hàng
+                </button>
+              </div>
+              <div className="s2-card-grid">
+                {physicalBooths.map(booth => (
+                  <article className="s2-booth-card" key={booth.boothId}>
+                    <div className="s2-booth-card-top">
+                      <strong>{booth.code}</strong>
+                      <span className={`s2-status ${booth.active ? 'available' : 'unavailable'}`}>
+                        {booth.active ? 'Đang hoạt động' : 'Tạm ngưng'}
+                      </span>
+                    </div>
+                    <h3>{booth.name}</h3>
+                    <p>{booth.description || 'Chưa có mô tả vị trí.'}</p>
+                    <dl>
+                      <div><dt>Thể loại</dt><dd>{booth.categoryCode || 'Chưa phân loại'}</dd></div>
+                      <div><dt>Tọa độ</dt><dd>{hasValidMapCoordinates(booth) ? `${booth.mapX}%, ${booth.mapY}%` : 'Chưa định vị'}</dd></div>
+                    </dl>
+                    <div className="s2-actions">
+                      <button type="button" className="s2-link-button" onClick={() => { setEditingBooth(booth); setBoothForm(formFromBooth(booth)); setShowBoothForm(true); }}>
+                        <Edit3 size={15} />Chỉnh sửa
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: CẤU HÌNH SỰ KIỆN */}
+          {tab === 'configuration' && (
+            <div className="s2-panel">
+              <div className="s2-panel-heading">
+                <div><h2>Cấu hình gian hàng cho sự kiện</h2><p>Thiết lập giá thuê và mở đăng ký cho từng gian hàng trong sự kiện.</p></div>
+              </div>
+              <div className="s2-config-list">
+                {eventBooths.map(row => (
+                  <div className="s2-config-row" key={row.booth.boothId}>
+                    <div className="s2-config-identity">
+                      <strong>{row.booth.code}</strong>
+                      <div>
+                        <h3>{row.booth.name}</h3>
+                        <p>{row.booth.categoryCode || 'Chưa phân loại'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className={`s2-status ${row.availability.toLowerCase()}`}>
+                        {availabilityLabel[row.availability]}
+                      </span>
+                    </div>
+                    <label>
+                      Giá thuê (VNĐ)
+                      <input
+                        type="number"
+                        min="0"
+                        step="10000"
+                        defaultValue={row.rentalPrice ?? ''}
+                        onBlur={e => {
+                          const val = Number(e.target.value);
+                          if (!isNaN(val) && val >= 0) saveConfiguration(row, val, row.enabled);
+                        }}
+                      />
+                    </label>
+                    <label className="s2-toggle">
+                      <input
+                        type="checkbox"
+                        checked={row.enabled}
+                        disabled={busyKey === `config-${row.booth.boothId}`}
+                        onChange={e => saveConfiguration(row, row.rentalPrice ?? 2000000, e.target.checked)}
+                      />
+                      <span>{row.enabled ? 'Mở đăng ký' : 'Tạm khóa'}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: YÊU CẦU ĐỐI TÁC */}
+          {tab === 'requests' && (
+            <div className="s2-panel">
+              <div className="s2-panel-heading">
+                <div><h2>Yêu cầu thuê gian hàng từ đối tác</h2><p>Duyệt chọn đối tác phù hợp và giữ chỗ gian hàng cho sự kiện.</p></div>
+              </div>
+              {requests.length === 0 ? (
+                <div className="s2-empty"><Store size={32} /><p>Chưa có yêu cầu đăng ký gian hàng nào cho sự kiện này.</p></div>
+              ) : (
+                <div className="s2-request-list">
+                  {requests.map(req => (
+                    <div className="s2-request-card" key={req.boothRequestId}>
+                      <div className="s2-request-main">
+                        <div>
+                          <span className={`s2-status request-${req.status.toLowerCase()}`}>{requestStatusLabel[req.status]}</span>
+                          <h3>{req.partnerOrganizationName} — Gian {req.boothCode}</h3>
+                          <small style={{ color: '#6B7280' }}>Gửi lúc: {dateTime(req.submittedAt)}</small>
+                        </div>
+                        {req.status === 'PENDING' && (
+                          <div className="s2-actions">
+                            <button type="button" className="btn-org-secondary" onClick={() => { setRejectingRequest(req); setReviewNote(''); }}>
+                              Từ chối
+                            </button>
+                            <button type="button" className="btn-org-primary" onClick={() => selectRequest(req)}>
+                              Duyệt & Giữ chỗ
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {req.requestNote && <div className="s2-request-note"><p><strong>Ghi chú đối tác:</strong> {req.requestNote}</p></div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* CREATE / EDIT BOOTH MODAL */}
+      {showBoothForm && (
+        <div className="s2-modal-backdrop" onClick={() => setShowBoothForm(false)}>
+          <div className="s2-modal" onClick={e => e.stopPropagation()}>
+            <div className="s2-modal-header">
+              <h2>{editingBooth ? `Chỉnh sửa ${editingBooth.code}` : 'Thêm gian hàng mới'}</h2>
+              <button type="button" onClick={() => setShowBoothForm(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={submitBooth} className="s2-form">
+              <label>
+                Mã gian hàng *
+                <input
+                  type="text"
+                  value={boothForm.code}
+                  disabled={!!editingBooth}
+                  onChange={e => setBoothForm({ ...boothForm, code: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Tên gian hàng *
+                <input
+                  type="text"
+                  value={boothForm.name}
+                  onChange={e => setBoothForm({ ...boothForm, name: e.target.value })}
+                  required
+                />
+              </label>
+              <label className="s2-form-wide">
+                Mô tả
+                <textarea
+                  rows={2}
+                  value={boothForm.description}
+                  onChange={e => setBoothForm({ ...boothForm, description: e.target.value })}
+                />
+              </label>
+              <label>
+                Tọa độ X (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={boothForm.mapX}
+                  onChange={e => setBoothForm({ ...boothForm, mapX: e.target.value })}
+                />
+              </label>
+              <label>
+                Tọa độ Y (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={boothForm.mapY}
+                  onChange={e => setBoothForm({ ...boothForm, mapY: e.target.value })}
+                />
+              </label>
+              <div className="s2-modal-actions s2-form-wide">
+                <button type="button" className="btn-org-secondary" onClick={() => setShowBoothForm(false)}>Hủy</button>
+                <button type="submit" className="btn-org-primary" disabled={busyKey === 'booth-form'}>
+                  {busyKey === 'booth-form' ? 'Đang lưu...' : editingBooth ? 'Cập nhật' : 'Tạo mới'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {showBoothForm && <div className="s2-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setShowBoothForm(false); }}><div className="s2-modal" role="dialog" aria-modal="true" aria-labelledby="booth-form-title">
-        <div className="s2-modal-header"><div><span className="s2-eyebrow">Gian hàng vật lý</span><h2 id="booth-form-title">{editingBooth ? 'Chỉnh sửa gian hàng' : 'Tạo gian hàng mới'}</h2></div><button type="button" aria-label="Đóng" onClick={() => setShowBoothForm(false)}><X size={20} /></button></div>
-        <form onSubmit={submitBooth} className="s2-form">
-          <label>Mã gian hàng<input value={boothForm.code} disabled={Boolean(editingBooth)} maxLength={30} required onChange={event => setBoothForm(current => ({ ...current, code: event.target.value }))} /></label>
-          <label>Tên gian hàng<input value={boothForm.name} maxLength={100} required onChange={event => setBoothForm(current => ({ ...current, name: event.target.value }))} /></label>
-          <label>Sức chứa<input type="number" min="1" step="1" value={boothForm.maxCapacity} required onChange={event => setBoothForm(current => ({ ...current, maxCapacity: event.target.value }))} /></label>
-          <label>Mã danh mục<input value={boothForm.categoryCode} maxLength={50} onChange={event => setBoothForm(current => ({ ...current, categoryCode: event.target.value }))} /></label>
-          <label>Tọa độ X<input type="number" step="0.01" value={boothForm.mapX} onChange={event => setBoothForm(current => ({ ...current, mapX: event.target.value }))} /></label>
-          <label>Tọa độ Y<input type="number" step="0.01" value={boothForm.mapY} onChange={event => setBoothForm(current => ({ ...current, mapY: event.target.value }))} /></label>
-          <label className="s2-form-wide">Mô tả<textarea rows={3} value={boothForm.description} onChange={event => setBoothForm(current => ({ ...current, description: event.target.value }))} /></label>
-          <label className="s2-form-wide">Ghi chú<textarea rows={2} value={boothForm.note} onChange={event => setBoothForm(current => ({ ...current, note: event.target.value }))} /></label>
-          {editingBooth && <label className="s2-checkbox s2-form-wide"><input type="checkbox" checked={boothForm.active} onChange={event => setBoothForm(current => ({ ...current, active: event.target.checked }))} />Gian hàng đang hoạt động</label>}
-          <div className="s2-modal-actions s2-form-wide"><button type="button" className="btn-org-secondary" onClick={() => setShowBoothForm(false)}>Hủy</button><button type="submit" className="btn-org-primary" disabled={busyKey === 'booth-form'}>{busyKey === 'booth-form' ? 'Đang lưu...' : 'Lưu gian hàng'}</button></div>
-        </form>
-      </div></div>}
-
-      {rejectingRequest && <div className="s2-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setRejectingRequest(null); }}><div className="s2-modal s2-modal-small" role="dialog" aria-modal="true" aria-labelledby="reject-title">
-        <div className="s2-modal-header"><div><span className="s2-eyebrow">Yêu cầu {rejectingRequest.boothCode}</span><h2 id="reject-title">Từ chối yêu cầu</h2></div><button type="button" aria-label="Đóng" onClick={() => setRejectingRequest(null)}><X size={20} /></button></div>
-        <form onSubmit={rejectRequest} className="s2-stack-form"><label>Lý do từ chối<textarea autoFocus rows={4} maxLength={1000} required value={reviewNote} onChange={event => setReviewNote(event.target.value)} /></label><div className="s2-modal-actions"><button type="button" className="btn-org-secondary" onClick={() => setRejectingRequest(null)}>Hủy</button><button type="submit" className="btn-org-primary" disabled={!reviewNote.trim() || Boolean(busyKey)}>Xác nhận từ chối</button></div></form>
-      </div></div>}
+      {/* REJECT REQUEST MODAL */}
+      {rejectingRequest && (
+        <div className="s2-modal-backdrop" onClick={() => setRejectingRequest(null)}>
+          <div className="s2-modal s2-modal-small" onClick={e => e.stopPropagation()}>
+            <div className="s2-modal-header">
+              <h2>Từ chối yêu cầu gian hàng</h2>
+              <button type="button" onClick={() => setRejectingRequest(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={rejectRequest} className="s2-stack-form">
+              <p>Bạn sắp từ chối yêu cầu của <strong>{rejectingRequest.partnerOrganizationName}</strong> cho gian <strong>{rejectingRequest.boothCode}</strong>.</p>
+              <label>
+                Lý do từ chối *
+                <textarea
+                  rows={3}
+                  value={reviewNote}
+                  onChange={e => setReviewNote(e.target.value)}
+                  placeholder="Nhập lý do từ chối để thông báo cho đối tác..."
+                  required
+                />
+              </label>
+              <div className="s2-modal-actions">
+                <button type="button" className="btn-org-secondary" onClick={() => setRejectingRequest(null)}>Hủy</button>
+                <button type="submit" className="btn-org-primary" style={{ background: '#991B1B' }} disabled={busyKey.startsWith('request-') || !reviewNote.trim()}>
+                  Xác nhận từ chối
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
-};
-
-const ConfigurationRow: React.FC<{ row: EventBooth; busy: boolean; onSave: (row: EventBooth, rentalPrice: number, enabled: boolean) => Promise<void> }> = ({ row, busy, onSave }) => {
-  const [price, setPrice] = useState(row.rentalPrice === null ? '0' : String(row.rentalPrice));
-  const [enabled, setEnabled] = useState(row.enabled);
-  return <article className="s2-config-row">
-    <div className="s2-config-identity"><strong>{row.booth.code}</strong><div><h3>{row.booth.name}</h3><p>{row.booth.categoryCode || 'Chưa phân loại'} · Sức chứa {row.booth.maxCapacity}</p></div></div>
-    <label>Giá thuê (VND)<input type="number" min="0" step="1000" value={price} onChange={event => setPrice(event.target.value)} /></label>
-    <label className="s2-toggle"><input type="checkbox" checked={enabled} onChange={event => setEnabled(event.target.checked)} /><span>{enabled ? 'Đang mở' : 'Đang đóng'}</span></label>
-    <span className={`s2-status ${row.availability.toLowerCase()}`}>{availabilityLabel[row.availability]}</span>
-    <button type="button" className="btn-org-secondary" disabled={busy} onClick={() => void onSave(row, Number(price), enabled)}>{busy ? 'Đang lưu...' : 'Lưu'}</button>
-  </article>;
 };

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'luc
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Booth, Language } from '../types';
+import { Booth, EventItem, Language } from '../types';
 import './BoothsSection.css';
 import { IconBookSpine, IconBookmark } from './CustomIcons';
 
@@ -11,6 +11,10 @@ interface BoothsSectionProps {
   language: Language;
   booths?: Booth[];
   isLoading?: boolean;
+  error?: string;
+  events?: EventItem[];
+  selectedEventId?: string;
+  onSelectEventId?: (eventId: string) => void;
   onSelectBoothOnMap: (boothId: string) => void;
   searchQuery?: string;
   onSearchQueryChange?: (q: string) => void;
@@ -23,6 +27,10 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
   language,
   booths: initialBooths,
   isLoading = false,
+  error = '',
+  events = [],
+  selectedEventId = '',
+  onSelectEventId,
   onSelectBoothOnMap,
   searchQuery: externalSearchQuery,
   onSearchQueryChange,
@@ -173,10 +181,18 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           </h2>
           <p className="figma-section-subtitle">
             {language === 'vi'
-              ? 'Hơn 20 nhà xuất bản và đơn vị phát hành sách uy tín luôn sẵn sàng đón chào bạn đọc.'
-              : 'Over 20 prestigious publishers and distributors welcoming reading enthusiasts.'}
+              ? `${booths.length} gian hàng đang được công bố từ dữ liệu hệ thống.`
+              : `${booths.length} booths are currently published by the system.`}
           </p>
         </div>
+
+        {events.length > 0 && <div className="public-map-event-picker">
+          <label htmlFor="public-booths-event">{language === 'vi' ? 'Sự kiện' : 'Event'}</label>
+          <select id="public-booths-event" value={selectedEventId} onChange={event => onSelectEventId?.(event.target.value)}>
+            {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
+          </select>
+        </div>}
+        {error && <p role="alert">{error}</p>}
 
         {/* Search & Category Filter Bar */}
         <div className="figma-stalls-controls">
@@ -251,7 +267,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
         >
-          {isLoading || booths.length === 0 ? (
+          {isLoading ? (
             <div className="booths-carousel-page" style={{ opacity: 1 }}>
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
@@ -277,7 +293,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
             </div>
           ) : displayedBooths.length === 0 ? (
             <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
-              <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
+              <p>{booths.length === 0 ? (language === 'vi' ? 'Sự kiện này chưa có gian hàng.' : 'This event has no booths yet.') : (language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.')}</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
@@ -302,12 +318,12 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                 >
                   {/* Real Photography Header with Label */}
                   <div className="kiosk-card-photo-wrapper">
-                    <img 
-                      src={booth.image.url || undefined}
-                      alt={booth.image.alt} 
-                      loading="lazy" 
+                    {booth.image.url && <img
+                      src={booth.image.url}
+                      alt={booth.image.alt}
+                      loading="lazy"
                       className="kiosk-photo-img"
-                    />
+                    />}
                     <div className="kiosk-photo-overlay"></div>
                     <div className="kiosk-banner-tags">
                       <span className="kiosk-cat-label">
@@ -324,7 +340,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                       {language === 'vi' ? booth.tagline : booth.taglineEn}
                     </p>
 
-                    <div className="kiosk-highlights">
+                    {booth.featuredBooks.length > 0 && <div className="kiosk-highlights">
                       <span className="kiosk-hl-label">
                         <IconBookmark size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
                         {language === 'vi' ? 'Đầu sách đặc trưng:' : 'Notable reads:'}
@@ -334,7 +350,8 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                           <span key={i} className="kiosk-book-tag">{bk}</span>
                         ))}
                       </div>
-                    </div>
+                    </div>}
+                    {booth.availability && <p>{booth.availability === 'AVAILABLE' ? 'Còn trống' : booth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : booth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}{booth.rentalPrice !== null && booth.rentalPrice !== undefined ? ` · ${booth.rentalPrice.toLocaleString('vi-VN')} đ` : ''}</p>}
 
                     <div className="kiosk-card-footer">
                       <button
@@ -437,7 +454,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               <X size={20} />
             </button>
             <div className="modal-booth-header-img">
-              <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />
+              {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />}
               <div className="modal-img-caption">
                 <span className="kiosk-number-badge">{activeModalBooth.code}</span>
               </div>
@@ -449,8 +466,10 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               {language === 'vi' ? activeModalBooth.description : activeModalBooth.descriptionEn}
             </p>
             <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Giờ mở cửa:' : 'Hours:'}</strong> {activeModalBooth.openHours}</p>
-              <p><strong>{language === 'vi' ? 'Sách tuyển chọn:' : 'Featured:'}</strong> {activeModalBooth.featuredBooks.join(', ')}</p>
+              <p><strong>{language === 'vi' ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
+              {activeModalBooth.maxCapacity !== undefined && <p><strong>{language === 'vi' ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
+              {activeModalBooth.availability && <p><strong>{language === 'vi' ? 'Tình trạng:' : 'Availability:'}</strong> {activeModalBooth.availability === 'AVAILABLE' ? 'Còn trống' : activeModalBooth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : activeModalBooth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</p>}
+              {activeModalBooth.rentalPrice !== undefined && <p><strong>{language === 'vi' ? 'Giá sự kiện:' : 'Event price:'}</strong> {activeModalBooth.rentalPrice === null ? 'Chưa cấu hình' : `${activeModalBooth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
             </div>
             <button
               type="button"

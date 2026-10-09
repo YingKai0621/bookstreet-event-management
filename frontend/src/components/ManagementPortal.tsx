@@ -13,7 +13,7 @@ import {
 } from './portal/OrganizerSidebar';
 import { OrganizerTopBar } from './portal/OrganizerTopBar';
 
-import { Sprint2BoothMapView } from './portal/Sprint2BoothMapView';
+import { OrganizerBoothManagementView } from './portal/OrganizerBoothManagementView';
 import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
 import { ActivityManagementView } from './portal/ActivityManagementView';
 import { OrganizerAttendanceModal } from './portal/OrganizerAttendanceModal';
@@ -28,6 +28,8 @@ import { ParticipantManagementView } from './portal/ParticipantManagementView';
 
 import { useAuth } from '../auth/useAuth';
 import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';
+import { boothApi } from '../services/boothApi';
+import type { BoothRequest } from '../types/booth';
 import {
   OrganizerActivityItem,
   OrganizerBoothItem,
@@ -66,15 +68,16 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
   const [boothsList, setBoothsList] = useState<OrganizerBoothItem[]>([]);
-  const [activitiesList, setActivitiesList] = useState<OrganizerActivityItem[]>([]);
-  const [participantsList, setParticipantsList] = useState<OrganizerParticipantItem[]>([]);
+  const activitiesList: OrganizerActivityItem[] = [];
+  const participantsList: OrganizerParticipantItem[] = [];
   const [notificationsList, setNotificationsList] = useState<OrganizerNotificationItem[]>([]);
   const [profile, setProfile] = useState<OrganizerProfile>(() => {
     const fullName = user?.fullName || '';
     const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase();
-    return { id: String(user?.userId || ''), name: fullName, role: 'ORGANIZER', department: 'Ban Tổ Chức Sự Kiện', organization: 'Đường Sách TP.HCM', email: user?.email || '', phone: '', avatarInitials: initials };
+    return { id: String(user?.userId || ''), name: fullName, role: 'ORGANIZER', department: '', organization: '', email: user?.email || '', phone: '', avatarInitials: initials };
   });
   const [partnerApplications, setPartnerApplications] = useState<OrganizerPartnerApplication[]>([]);
+  const [boothRequests, setBoothRequests] = useState<BoothRequest[]>([]);
   const [proposalList] = useState<any[]>([]);
   const [eventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
@@ -85,12 +88,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   const refreshOrganizerData = async (preferredEventId?: string | null) => {
     try {
-      const [events, activities] = await Promise.all([
-        organizerApi.getEvents(),
-        organizerApi.getActivities(preferredEventId || undefined),
-      ]);
+      const events = await organizerApi.getEvents();
       setEventsList(events);
-      setActivitiesList(activities);
       if (preferredEventId && !events.some(event => event.id === preferredEventId)) {
         setSelectedEventId(null);
       }
@@ -114,9 +113,18 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   useEffect(() => {
     const targetEventId = selectedEventId || firstEventId;
-    organizerApi.getActivities(targetEventId).then(setActivitiesList).catch(() => setActivitiesList([]));
-    organizerApi.getBooths(targetEventId).then(setBoothsList).catch(() => setBoothsList([]));
-    organizerApi.getParticipants(targetEventId).then(setParticipantsList).catch(() => setParticipantsList([]));
+    if (targetEventId) {
+      setBoothsList([]);
+      setBoothRequests([]);
+      organizerApi.getBooths(targetEventId).then(setBoothsList).catch(error => {
+        setBoothsList([]);
+        setActionError(error instanceof Error ? error.message : 'Không tải được gian hàng sự kiện.');
+      });
+      boothApi.listAllOrganizerRequests(targetEventId).then(setBoothRequests).catch(error => {
+        setBoothRequests([]);
+        setActionError(error instanceof Error ? error.message : 'Không tải được yêu cầu gian hàng.');
+      });
+    }
 
     if (selectedEventId) {
       organizerApi.getEvent(selectedEventId).then(event => {
@@ -126,17 +134,18 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, [firstEventId, selectedEventId]);
 
   useEffect(() => {
-    if (!selectedEventId) {
-      setPartnerApplications([]);
+    const targetEventId = selectedEventId || firstEventId;
+    if (!targetEventId) {
       return;
     }
 
     const refreshApplications = () => {
-      void organizerApi.getPartnerApplications(selectedEventId)
+      void organizerApi.getPartnerApplications(targetEventId)
         .then(setPartnerApplications)
-        .catch(error => setActionError(
-          error instanceof Error ? error.message : 'Không tải được hồ sơ đối tác.',
-        ));
+        .catch(error => {
+          setPartnerApplications([]);
+          setActionError(error instanceof Error ? error.message : 'Không tải được hồ sơ đối tác.');
+        });
     };
 
     refreshApplications();
@@ -149,27 +158,10 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       window.removeEventListener('focus', refreshApplications);
       window.removeEventListener('duongsach:data-changed', refreshApplications);
     };
-  }, [selectedEventId]);
+  }, [firstEventId, selectedEventId]);
 
   // Unread notifications count
   const unreadCount = notificationsList.filter(n => !n.isRead).length;
-
-  // Handlers for Booth Approval
-  const handleApproveBooth = async (boothId: string) => {
-    const booth = boothsList.find(item => item.id === boothId);
-    if (!booth?.requestId) return;
-    await organizerApi.approveBoothRequest(booth.requestId);
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
-  const handleRejectBooth = async (boothId: string) => {
-    const booth = boothsList.find(item => item.id === boothId);
-    if (!booth?.requestId) return;
-    await organizerApi.rejectBoothRequest(booth.requestId);
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
 
   // Handlers for Activity Approval
   const handleApproveActivity = async (actId: string) => {
@@ -405,7 +397,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
         {loadError && <p className="app-loading-state" role="alert">{loadError}</p>}
         {isLoadingEvents && <p className="app-loading-state" role="status">Đang tải danh sách sự kiện...</p>}
-        {actionError && activeTab === 'events' && selectedEventId && <p className="app-loading-state" role="alert">{actionError}</p>}
+        {actionError && <p className="app-loading-state" role="alert">{actionError}</p>}
 
         {/* Dynamic Views Rendering based on activeTab */}
         {activeTab === 'venues' && <FacilityManagementView key="venues" kind="venues" />}
@@ -417,17 +409,19 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             activeEvent={currentSelectedEvent}
             events={eventsList}
             booths={boothsList}
-            activities={activitiesList}
-            onNavigateTab={(tab: OrganizerTab) => {
-              setActiveTab(tab);
-              if (tab !== 'events') setSelectedEventId(null);
+            boothRequests={boothRequests}
+            partnerApplications={partnerApplications}
+            onNavigateTab={(tab: OrganizerTab, extraState?: { eventId?: string }) => {
+              setActiveTab(tab === 'event_detail' ? 'events' : tab);
+              if (extraState?.eventId) setSelectedEventId(extraState.eventId);
+              else if (tab !== 'events') setSelectedEventId(null);
             }}
             onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
             onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
           />
         )}
 
-        {activeTab === 'overview' && !currentSelectedEvent && (
+        {activeTab === 'overview' && !currentSelectedEvent && !loadError && !isLoadingEvents && (
           <div className="organizer-content"><div className="organizer-card"><h2>Chưa có sự kiện</h2><p>Hãy tạo sự kiện đầu tiên để bắt đầu điều hành.</p><button type="button" className="btn-org-primary" onClick={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}>Tạo sự kiện</button></div></div>
         )}
 
@@ -448,6 +442,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             event={currentSelectedEvent}
             booths={boothsList}
+            boothRequests={boothRequests}
             activities={activitiesList}
             participants={participantsList}
             partnerApplications={partnerApplications}
@@ -460,7 +455,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             onNavigateToBoothsMap={() => {
               setActiveTab('booths');
             }}
-            onNavigateToReports={() => setActiveTab('reports')}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={handlePublishEvent}
           />
@@ -476,11 +470,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
 
         {activeTab === 'booths' && (
-          <Sprint2BoothMapView
+          <OrganizerBoothManagementView
             language={language}
-            events={eventsList}
-            selectedEventId={currentSelectedEvent?.id || 'all'}
-            onSelectEventId={(id: string) => setSelectedEventId(id)}
             onOpenRequests={() => setActiveTab('booth_requests')}
           />
         )}

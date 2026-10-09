@@ -2,11 +2,9 @@ import {
   ArrowLeft,
   Calendar,
   Check,
-  Download,
   Edit3,
   Layers,
   Map,
-  MapPin,
   Send,
   Star,
   Store,
@@ -14,6 +12,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { OrganizerPartnerApplication } from '../../services/organizerApi';
+import type { BoothRequest } from '../../types/booth';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
 
@@ -21,6 +20,7 @@ interface EventDetailViewProps {
   language: Language;
   event: OrganizerEvent;
   booths: OrganizerBoothItem[];
+  boothRequests: BoothRequest[];
   activities: OrganizerActivityItem[];
   participants: OrganizerParticipantItem[];
   partnerApplications?: OrganizerPartnerApplication[];
@@ -31,7 +31,6 @@ interface EventDetailViewProps {
   onRejectProposal?: (proposalId: string) => void;
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
-  onNavigateToReports: () => void;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (eventId: string) => void | Promise<void>;
 }
@@ -40,6 +39,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   language,
   event,
   booths,
+  boothRequests,
   activities,
   participants,
   partnerApplications = [],
@@ -50,7 +50,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onRejectProposal,
   onBack,
   onNavigateToBoothsMap,
-  onNavigateToReports,
   onEditEvent,
   onPublishEvent
 }) => {
@@ -103,11 +102,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           gap: '1.25rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, minWidth: '320px' }}>
-            <img 
+            {event.imageUrl && <img
               src={event.imageUrl} 
               alt={event.title}
               style={{ width: '110px', height: '80px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #DCE5E0' }}
-            />
+            />}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                 <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', color: '#172421', margin: 0 }}>
@@ -121,10 +120,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <Calendar size={14} color="#17382E" />
                   <span>{event.dateRange}</span>
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <MapPin size={14} color="#17382E" />
-                  <span>{event.location}</span>
                 </span>
               </div>
             </div>
@@ -158,27 +153,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             onClick={() => setActiveTab('booths')}
           >
             {language === 'vi' ? 'Gian hàng' : 'Booths'}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeTab === 'activities' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('activities')}
-          >
-            {language === 'vi' ? 'Hoạt động' : 'Activities'}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeTab === 'participants' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('participants')}
-          >
-            {language === 'vi' ? 'Người tham gia' : 'Participants'}
-          </button>
-          <button
-            type="button"
-            className={`org-tab-btn ${activeTab === 'schedule' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('schedule')}
-          >
-            {language === 'vi' ? 'Lịch trình' : 'Schedule'}
           </button>
           <button
             type="button"
@@ -228,24 +202,24 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <strong style={{ color: '#172421' }}>{event.dateRange}</strong>
               </div>
               <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Địa điểm' : 'Location'}</span>
-                <strong style={{ color: '#172421' }}>{event.location}</strong>
+                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Hạn đăng ký đối tác' : 'Partner application deadline'}</span>
+                <strong style={{ color: '#172421' }}>{event.partnerApplicationDeadlineAt ? new Date(event.partnerApplicationDeadlineAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}</strong>
               </div>
               <div>
                 <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Trạng thái' : 'Status'}</span>
                 <span className="org-chip happening" style={{ marginTop: '0.2rem' }}>● {event.statusLabelVi}</span>
               </div>
               <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Số gian hàng' : 'Booths Occupied'}</span>
-                <strong style={{ color: '#172421' }}>{event.boothOccupancy} gian</strong>
+                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Gian hàng đã cấu hình' : 'Configured booths'}</span>
+                <strong style={{ color: '#172421' }}>{booths.length} gian</strong>
               </div>
               <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Số hoạt động' : 'Activities'}</span>
-                <strong style={{ color: '#172421' }}>{event.activitiesCount} chương trình</strong>
+                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Thời hạn giữ chỗ' : 'Hold window'}</span>
+                <strong style={{ color: '#172421' }}>{event.boothPaymentWindowMinutes} phút</strong>
               </div>
               <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Lượt đăng ký' : 'Registrations'}</span>
-                <strong style={{ color: '#172421' }}>{event.registrationsCount.toLocaleString()} người</strong>
+                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Giới hạn gian hàng mỗi đối tác' : 'Booth limit per partner'}</span>
+                <strong style={{ color: '#172421' }}>{event.maxBoothsPerPartner}</strong>
               </div>
             </div>
           </div>
@@ -262,33 +236,33 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
                   <Users size={16} color="#17382E" />
                   <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {participants.length.toLocaleString('vi-VN')}
+                    {partnerApplications.length.toLocaleString('vi-VN')}
                   </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Người tham gia</span>
+                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Hồ sơ đối tác</span>
                 </div>
 
                 <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
                   <Store size={16} color="#B48A3C" />
                   <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {booths.filter(item => item.status === 'assigned').length}
+                    {booths.length}
                   </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Gian hàng</span>
+                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Gian hàng đã cấu hình</span>
                 </div>
 
                 <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
                   <Layers size={16} color="#059669" />
                   <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {activities.length}
+                    {boothRequests.filter(item => item.status === 'PENDING').length}
                   </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Hoạt động</span>
+                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Yêu cầu chờ chọn</span>
                 </div>
 
                 <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
                   <Star size={16} color="#E9BC63" />
                   <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {event.averageRating > 0 ? event.averageRating.toFixed(1) : '—'}
+                    {boothRequests.filter(item => item.hold?.status === 'ACTIVE').length}
                   </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Đánh giá trung bình</span>
+                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Giữ chỗ đang hoạt động</span>
                 </div>
               </div>
             </div>
@@ -300,16 +274,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                <button
-                  type="button"
-                  className="btn-org-secondary"
-                  style={{ justifyContent: 'flex-start', gap: '0.75rem' }}
-                  onClick={onNavigateToReports}
-                >
-                  <Download size={15} color="#17382E" />
-                  <span>{language === 'vi' ? 'Xuất báo cáo sự kiện' : 'Export Event Report'}</span>
-                </button>
-
                 <button
                   type="button"
                   className="btn-org-secondary"
@@ -416,7 +380,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         <div className="organizer-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: 0 }}>
-              {language === 'vi' ? 'Gian hàng đã phân bổ cho sự kiện' : 'Event Booth Allocations'}
+              {language === 'vi' ? 'Gian hàng cấu hình cho sự kiện' : 'Event Booth Configurations'}
             </h2>
             <button
               type="button"
@@ -434,18 +398,18 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <tr>
                   <th>Mã</th>
                   <th>Gian hàng</th>
-                  <th>Đơn vị tham gia</th>
-                  <th>Khu vực</th>
+                  <th>Danh mục</th>
+                  <th>Giá sự kiện</th>
                   <th>Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
-                {booths.slice(0, 8).map((b) => (
+                {booths.map((b) => (
                   <tr key={b.id}>
                     <td><strong>{b.code}</strong></td>
                     <td>{b.name}</td>
-                    <td>{b.orgName || 'Chưa phân bổ'}</td>
                     <td>{b.zone}</td>
+                    <td>{b.priceEstimate}</td>
                     <td>
                       <span className={`org-chip ${b.status}`}>{b.statusLabelVi}</span>
                     </td>

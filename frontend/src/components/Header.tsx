@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={`header-ticket-wrapper ${isHeaderVisible ? '' : 'header-ticket-hidden'}`}>
-      <div className="container header-ticket-container">
+      <div className="header-ticket-container">
         {/* Horizontal Admission Ticket Header Bar */}
         <div className="header-ticket-bar">
           {/* Ticket Left Section: Brand Logo */}

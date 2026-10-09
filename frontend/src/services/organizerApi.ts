@@ -13,22 +13,9 @@ import {
   OrganizerReport,
 } from '../types/organizer';
 import { apiClient } from './apiClient';
+import { boothApi } from './boothApi';
 import { toHeritageProfile } from './publicApi';
-
-interface PublicBoothResponse {
-  id: string;
-  code?: string;
-  name: string;
-  areaName?: string;
-  dimensions?: string;
-  status?: 'rented' | 'reserved' | 'available' | 'unavailable';
-  partnerName?: string;
-  category?: string;
-  price?: number;
-  description?: string;
-  mapX?: number | null;
-  mapY?: number | null;
-}
+import type { EventBooth, PhysicalBooth } from '../types/booth';
 
 export type OrganizerFeedbackStatus = 'new' | 'in_progress' | 'responded' | 'closed';
 
@@ -151,6 +138,40 @@ function formatEventDateRange(startAt: string, endAt: string): string {
   return `${start} - ${end}`;
 }
 
+function toOrganizerBoothItem(booth: PhysicalBooth, eventBooth?: EventBooth): OrganizerBoothItem {
+  const availability = eventBooth?.availability
+    ?? (booth.active ? 'AVAILABLE' : 'UNAVAILABLE');
+  const statusByAvailability: Record<EventBooth['availability'], OrganizerBoothItem['status']> = {
+    AVAILABLE: 'available',
+    ON_HOLD: 'pending',
+    ASSIGNED: 'assigned',
+    UNAVAILABLE: 'unavailable',
+  };
+  const labelByAvailability: Record<EventBooth['availability'], string> = {
+    AVAILABLE: 'Còn trống',
+    ON_HOLD: 'Đang giữ chỗ',
+    ASSIGNED: 'Đã phân bổ',
+    UNAVAILABLE: 'Chưa mở',
+  };
+
+  return {
+    id: String(booth.boothId),
+    code: booth.code,
+    name: booth.name,
+    zone: booth.categoryCode || 'Chưa phân khu',
+    areaType: booth.categoryCode || 'Chưa phân loại',
+    dimensions: `Sức chứa ${booth.maxCapacity}`,
+    status: statusByAvailability[availability],
+    statusLabelVi: labelByAvailability[availability],
+    priceEstimate: eventBooth?.rentalPrice === null || eventBooth?.rentalPrice === undefined
+      ? 'Chưa cấu hình'
+      : `${eventBooth.rentalPrice.toLocaleString('vi-VN')} đ`,
+    notes: booth.description || booth.note || '',
+    x: booth.mapX,
+    y: booth.mapY,
+  };
+}
+
 export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent {
   return {
     id: String(event.eventId),
@@ -159,20 +180,20 @@ export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent 
     dateRange: formatEventDateRange(event.startAt, event.endAt),
     startDate: event.startAt,
     endDate: event.endAt,
-    location: 'Đường Sách TP.HCM',
+    location: null,
     status: mapEventStatus(event.status),
     apiStatus: event.status,
     statusLabelVi: getEventStatusLabel(event.status),
     imageUrl: event.bannerUrl || '',
     coverImage: event.bannerUrl || undefined,
     description: event.description || '',
-    boothOccupancy: '0',
-    boothsCount: 0,
+    boothOccupancy: null,
+    boothsCount: null,
     maxBooths: event.maxBoothsPerPartner,
-    activitiesCount: 0,
-    registrationsCount: 0,
-    attendanceRate: 0,
-    averageRating: 0,
+    activitiesCount: null,
+    registrationsCount: null,
+    attendanceRate: null,
+    averageRating: null,
     boothDeadline: event.boothRequestDeadlineAt || undefined,
     activityDeadline: event.activityProposalDeadlineAt || undefined,
     participantDeadline: event.participantRegistrationDeadlineAt || undefined,
@@ -197,7 +218,7 @@ export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent 
 export const organizerApi = {
   async getProfile(): Promise<OrganizerProfile> {
     const user = await apiClient.get<any>('/organizer/profile');
-    return { id: user.id, name: user.fullName, role: 'Organizer / Điều hành Sự kiện', department: 'Ban Quản Lý & Vận Hành Đường Sách TP.HCM', organization: 'Ban Quản Lý & Vận Hành Đường Sách TP.HCM', email: user.email, phone: user.phone || '', avatarInitials: user.fullName.split(' ').map((part: string) => part[0]).join('').slice(-2).toUpperCase(), avatarUrl: user.avatarUrl || undefined, notificationPreferences: user.notificationPreferences };
+    return { id: user.id, name: user.fullName, role: 'ORGANIZER', department: user.department || '', organization: user.organization || '', email: user.email, phone: user.phone || '', avatarInitials: user.fullName.split(' ').map((part: string) => part[0]).join('').slice(-2).toUpperCase(), avatarUrl: user.avatarUrl || undefined, notificationPreferences: user.notificationPreferences };
   },
   updateProfile: (data: unknown) => apiClient.patch('/organizer/profile', data),
   async getNotifications(): Promise<OrganizerNotificationItem[]> {
@@ -213,7 +234,13 @@ export const organizerApi = {
       sort,
     });
     const response = await apiClient.get<OrganizerEventPageResponse>(`/organizer/events?${query.toString()}`);
-    return response.content.map(toOrganizerEvent);
+    const remaining = response.totalPages > page + 1
+      ? await Promise.all(Array.from({ length: response.totalPages - page - 1 }, (_, index) => {
+        const nextQuery = new URLSearchParams({ page: String(page + index + 1), size: String(size), sort });
+        return apiClient.get<OrganizerEventPageResponse>(`/organizer/events?${nextQuery.toString()}`);
+      }))
+      : [];
+    return [response, ...remaining].flatMap(result => result.content).map(toOrganizerEvent);
   },
 
   async getEvent(id: string): Promise<OrganizerEvent> {
@@ -234,39 +261,14 @@ export const organizerApi = {
     return toOrganizerEvent(event);
   },
   async getBooths(eventId?: string): Promise<OrganizerBoothItem[]> {
-    try {
-      const rows = await apiClient.get<any[]>(`/organizer/booths${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-      if (Array.isArray(rows)) return rows;
-    } catch {
-      // Fallback to public booths
+    if (!eventId) {
+      const physicalBooths = await boothApi.listAllPhysicalBooths();
+      return physicalBooths.map(booth => toOrganizerBoothItem(booth));
     }
-    try {
-      const publicBooths = await apiClient.get<PublicBoothResponse[]>('/public/booths');
-      if (Array.isArray(publicBooths)) {
-        return publicBooths.map((b, index) => ({
-          id: b.id,
-          code: b.code || b.name,
-          name: b.name,
-          zone: b.areaName || 'Khu A',
-          dimensions: b.dimensions || '3m x 3m',
-          status: (b.status === 'rented' ? 'assigned' : b.status === 'reserved' ? 'pending' : 'available') as OrganizerBoothItem['status'],
-          statusLabelVi: b.status === 'rented' ? 'Đã thuê' : b.status === 'reserved' ? 'Đang chờ' : 'Còn trống',
-          orgName: b.partnerName || undefined,
-          areaType: b.category || 'Gian hàng tiêu chuẩn',
-          priceEstimate: b.price ? `${b.price.toLocaleString('vi-VN')} đ` : '5.000.000 đ',
-          notes: b.description || '',
-          x: b.mapX ?? (12 + (index % 12) * 6.9),
-          y: b.mapY ?? (38 + Math.floor(index / 12) * 16),
-        }));
-      }
-    } catch {
-      // Empty if not in DB
-    }
-    return [];
+
+    const eventBooths = await boothApi.listEventBoothConfigurations(eventId);
+    return eventBooths.map(row => toOrganizerBoothItem(row.booth, row));
   },
-  approveBoothRequest: (id: string) => apiClient.post(`/organizer/booth-requests/${encodeURIComponent(id)}/approve`, {}),
-  rejectBoothRequest: (id: string, note?: string) => apiClient.post(`/organizer/booth-requests/${encodeURIComponent(id)}/reject`, { note }),
-  updateBoothMapPosition: (id: string, x: number, y: number) => apiClient.patch(`/organizer/booths/${encodeURIComponent(id)}/map-position`, { x, y }),
   createBooth: (data: unknown) => apiClient.post('/admin/booths', data),
   updateBooth: (id: string, data: unknown) => apiClient.put(`/admin/booths/${encodeURIComponent(id)}`, data),
   deleteBooth: (id: string) => apiClient.delete(`/admin/booths/${encodeURIComponent(id)}`),
@@ -285,10 +287,9 @@ export const organizerApi = {
     }));
   },
   async getActivities(eventId?: string): Promise<OrganizerActivityItem[]> {
-    try {
-      const rows = await apiClient.get<any[]>(`/organizer/activities${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-      if (!Array.isArray(rows)) return [];
-      return rows.map(activity => ({
+    const rows = await apiClient.get<any[]>(`/organizer/activities${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
+    if (!Array.isArray(rows)) throw new Error('Dữ liệu hoạt động không hợp lệ.');
+    return rows.map(activity => ({
         id: String(activity.id || ''),
         eventId: String(activity.eventId || ''),
         title: activity.title || '',
@@ -297,30 +298,23 @@ export const organizerApi = {
         timeStr: activity.startAt && activity.endAt
           ? `${new Date(activity.startAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} – ${new Date(activity.endAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`
           : '',
-        location: activity.location?.name || activity.location || 'Khu vực sân khấu chính',
+        location: activity.location?.name || activity.location || '',
         capacity: Number(activity.capacity || 0),
         registeredCount: Number(activity.registeredCount || 0),
         attendedCount: Number(activity.attendedCount || activity._count?.attendanceSessions || 0),
-        partnerName: activity.organization?.name || activity.partnerName || 'Ban Quản Lý Đường Sách',
+        partnerName: activity.organization?.name || activity.partnerName || '',
         speaker: activity.speaker || '',
         status: activity.status || 'pending',
         statusLabelVi: activity.status === 'published' ? 'Đã công bố' : activity.status === 'approved' ? 'Đã duyệt' : activity.status === 'cancelled' ? 'Đã hủy' : 'Chờ duyệt',
         isPublished: ['published', 'ongoing', 'completed'].includes(activity.status),
-        thumbnail: activity.imageUrl || activity.thumbnail || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60',
+        thumbnail: activity.imageUrl || activity.thumbnail || '',
         description: activity.description || '',
-      }));
-    } catch {
-      return [];
-    }
+    }));
   },
   async getParticipants(eventId?: string): Promise<OrganizerParticipantItem[]> {
-    try {
-      const rows = await apiClient.get<any[]>(`/organizer/participants${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-      if (Array.isArray(rows)) return rows;
-    } catch {
-      // Empty if no participants registered yet in database
-    }
-    return [];
+    const rows = await apiClient.get<any[]>(`/organizer/participants${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
+    if (!Array.isArray(rows)) throw new Error('Dữ liệu người tham gia không hợp lệ.');
+    return rows;
   },
   publishActivity: (id: string) => apiClient.post(`/organizer/activities/${encodeURIComponent(id)}/publish`, {}),
   createActivity: (data: unknown) => apiClient.post('/organizer/activities', data),
@@ -331,10 +325,18 @@ export const organizerApi = {
       size: '100',
       sort: 'submittedAt,desc',
     });
-    const response = await apiClient.get<PartnerApplicationPageResponse>(
+    const first = await apiClient.get<PartnerApplicationPageResponse>(
       `/organizer/events/${encodeURIComponent(eventId)}/applications?${query.toString()}`,
     );
-    return response.content.map(toOrganizerPartnerApplication);
+    const remaining = first.totalPages > 1
+      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
+        const nextQuery = new URLSearchParams({ page: String(index + 1), size: '100', sort: 'submittedAt,desc' });
+        return apiClient.get<PartnerApplicationPageResponse>(
+          `/organizer/events/${encodeURIComponent(eventId)}/applications?${nextQuery.toString()}`,
+        );
+      }))
+      : [];
+    return [first, ...remaining].flatMap(page => page.content).map(toOrganizerPartnerApplication);
   },
   approvePartnerApplication: (id: string, reviewNote = '') =>
     apiClient.post<OrganizerPartnerApplicationResponse>(
@@ -358,87 +360,7 @@ export const organizerApi = {
   overrideAttendance: (registrationId: string, status: string, reason: string, durationMinutes = 30) =>
     apiClient.post(`/organizer/participants/${encodeURIComponent(registrationId)}/override-attendance`, { status, reason, durationMinutes }),
   async getReport(eventId: string): Promise<OrganizerReport> {
-    try {
-      const res = await apiClient.get<any>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
-      if (res && typeof res === 'object' && res.totalParticipants !== undefined) return res;
-    } catch {
-      // Compute strictly from actual database entities
-    }
-    try {
-      const [event, activities, applications, participants, feedbacks, booths] = await Promise.all([
-        apiClient.get<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(eventId)}`).catch(() => null),
-        organizerApi.getActivities(eventId).catch(() => []),
-        organizerApi.getPartnerApplications(eventId).catch(() => []),
-        organizerApi.getParticipants(eventId).catch(() => []),
-        organizerApi.getFeedbacks().catch(() => []),
-        organizerApi.getBooths(eventId).catch(() => []),
-      ]);
-
-      const eventName = event ? event.name : 'Sự kiện';
-      const totalParticipants = participants.length;
-      const attended = participants.filter(p => p.status === 'attended').length;
-      const pending = participants.filter(p => p.status === 'not_attended').length;
-      const cancelled = participants.filter(p => p.status === 'cancelled').length;
-      const totalBooths = booths.filter(b => b.status === 'assigned').length || applications.filter(a => a.status === 'approved').length;
-      const totalActivities = activities.length;
-      const attendanceRate = totalParticipants > 0 ? Math.round((attended / totalParticipants) * 100) : 0;
-      const ratingCount = feedbacks.length;
-      let totalRating = 0;
-      for (const feedback of feedbacks) {
-        totalRating += Number(feedback?.rating) || 0;
-      }
-      const averageRating = ratingCount > 0
-        ? Number((totalRating / ratingCount).toFixed(1))
-        : 0;
-
-      const activityStats = activities.map(act => ({
-        name: act.title,
-        count: act.registeredCount || 0,
-      }));
-
-      const ratingDistribution = [5, 4, 3, 2, 1].map(stars => ({
-        stars,
-        count: feedbacks.filter(f => Math.round(Number(f.rating) || 0) === stars).length,
-      }));
-
-      return {
-        eventId,
-        eventName,
-        totalParticipants,
-        attended,
-        pending,
-        cancelled,
-        totalBooths,
-        totalActivities,
-        attendanceRate,
-        averageRating,
-        ratingCount,
-        activityStats,
-        ratingDistribution,
-      };
-    } catch {
-      return {
-        eventId,
-        eventName: 'Sự kiện',
-        totalParticipants: 0,
-        attended: 0,
-        pending: 0,
-        cancelled: 0,
-        totalBooths: 0,
-        totalActivities: 0,
-        attendanceRate: 0,
-        averageRating: 0,
-        ratingCount: 0,
-        activityStats: [],
-        ratingDistribution: [
-          { stars: 5, count: 0 },
-          { stars: 4, count: 0 },
-          { stars: 3, count: 0 },
-          { stars: 2, count: 0 },
-          { stars: 1, count: 0 },
-        ],
-      };
-    }
+    return apiClient.get<OrganizerReport>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
   },
 
   getFeedbacks: () => apiClient.get<OrganizerFeedback[]>('/organizer/feedbacks'),

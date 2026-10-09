@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Camera,
   CheckCircle2,
-  Clock,
   Keyboard,
   QrCode,
   RotateCcw,
@@ -40,7 +39,6 @@ export const OrganizerAttendanceModal: React.FC<OrganizerAttendanceModalProps> =
     ticketCode?: string;
   } | null>(null);
 
-  const [recentScans, setRecentScans] = useState<Array<{ id: string; name: string; code: string; time: string; mode: string; status: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -60,12 +58,7 @@ export const OrganizerAttendanceModal: React.FC<OrganizerAttendanceModalProps> =
       const result = await onRecordScan(code, scanMode);
       const participantName = result.participantName || 'Độc giả';
       const ticketCode = result.ticketCode || code;
-      const nowTime = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       setScanFeedback({ status: 'success', message: result.message || 'Điểm danh thành công!', participantName, ticketCode });
-      setRecentScans(prev => [
-        { id: `sc-${Date.now()}`, name: participantName, code: ticketCode, time: nowTime, mode: scanMode, status: 'success' },
-        ...prev.slice(0, 4)
-      ]);
     } catch (error) {
       setScanFeedback({
         status: 'error',
@@ -277,32 +270,9 @@ export const OrganizerAttendanceModal: React.FC<OrganizerAttendanceModalProps> =
               Nhật ký quét vé gần nhất
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.45rem' }}>
-              {recentScans.map((s) => (
-                <div 
-                  key={s.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.55rem 0.85rem',
-                    background: '#F8FAF9',
-                    borderRadius: '6px',
-                    border: '1px solid #E5ECE8',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }}></span>
-                    <strong style={{ color: '#172421' }}>{s.name}</strong>
-                    <code style={{ fontSize: '0.74rem', color: '#556B65' }}>{s.code}</code>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#637771' }}>
-                    <Clock size={12} />
-                    <span>{s.time}</span>
-                  </div>
-                </div>
-              ))}
-              {recentScans.length === 0 && <p style={{ color: '#637771', fontSize: '0.8rem' }}>Chưa có lượt điểm danh trong phiên này.</p>}
+              <p style={{ color: '#637771', fontSize: '0.8rem' }}>
+                Lịch sử điểm danh chỉ hiển thị khi backend cung cấp API truy vấn dữ liệu.
+              </p>
             </div>
           </div>
         </div>

@@ -66,6 +66,8 @@ export const Sprint2BoothMapView: React.FC<Props> = ({
       setConfigurations(rows);
       setSelectedBoothId(current => booths.some(booth => booth.boothId === current) ? current : booths[0]?.boothId ?? null);
     } catch (caughtError) {
+      setPhysicalBooths([]);
+      setConfigurations([]);
       setError(apiMessage(caughtError));
     } finally {
       setLoading(false);

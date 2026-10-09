@@ -102,6 +102,11 @@ export const boothApi = {
       }),
     ),
 
+  listAllPartnerRequests: (eventId?: string, status?: BoothRequestStatus) =>
+    loadAllPages<BoothRequest>(page => withQuery('/partner/booth-requests', {
+      page, size: 100, sort: 'submittedAt,desc', eventId, status,
+    })),
+
   getPartnerRequest: (boothRequestId: number) =>
     apiClient.get<BoothRequest>(`/partner/booth-requests/${boothRequestId}`),
 
@@ -118,6 +123,11 @@ export const boothApi = {
         status,
       }),
     ),
+
+  listAllOrganizerRequests: (eventId: string, boothId?: number, status?: BoothRequestStatus) =>
+    loadAllPages<BoothRequest>(page => withQuery(`/organizer/events/${encodeURIComponent(eventId)}/booth-requests`, {
+      page, size: 100, sort: 'submittedAt,asc', boothId, status,
+    })),
 
   selectRequest: (eventId: string, boothRequestId: number) =>
     apiClient.post<BoothRequest>(

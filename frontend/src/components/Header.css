@@ -22,13 +22,13 @@
 }
 
 .header-ticket-container {
-  max-width: 100%; /* Fill full 100% bề ngang */
-  width: 100%;
-  margin: 0;
-  padding: 0;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* Chiếc vé nằm ngang chạm mép trên, bo tròn 2 góc dưới sang trọng */
+/* Chiếc vé nằm ngang chạm mép trên trải dài, bo tròn 2 góc dưới sang trọng */
 .header-ticket-bar {
   position: relative;
   display: flex;
@@ -40,10 +40,11 @@
   border-left: none;
   border-right: none;
   border-bottom: 2px solid #E9BC63; /* Viền vàng kim tinh tế đáy vé */
-  border-radius: 0 0 24px 24px; /* Bo góc ở 2 phần dưới như yêu cầu */
+  border-radius: 0 0 24px 24px; /* Giữ chuẩn bo cong 2 góc dưới */
   padding: 0.55rem 2.25rem;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(12px);
+  box-sizing: border-box;
 }
 
 /* Ticket Brand Section */

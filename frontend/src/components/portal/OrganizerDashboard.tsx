@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { Language } from '../../types';
-import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerProfile, OrganizerTab } from '../../types/organizer';
+import { OrganizerBoothItem, OrganizerEvent, OrganizerProfile, OrganizerTab } from '../../types/organizer';
+import type { BoothRequest } from '../../types/booth';
+import type { OrganizerPartnerApplication } from '../../services/organizerApi';
 
 interface OrganizerDashboardProps {
   language: Language;
@@ -19,7 +21,8 @@ interface OrganizerDashboardProps {
   activeEvent: OrganizerEvent;
   events: OrganizerEvent[];
   booths: OrganizerBoothItem[];
-  activities: OrganizerActivityItem[];
+  boothRequests: BoothRequest[];
+  partnerApplications: OrganizerPartnerApplication[];
   onNavigateTab: (tab: OrganizerTab, extraState?: any) => void;
   onOpenCreateEvent: () => void;
   onOpenAttendanceModal: () => void;
@@ -31,14 +34,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   activeEvent,
   events,
   booths,
-  activities,
+  boothRequests,
+  partnerApplications,
   onNavigateTab,
   onOpenCreateEvent,
   onOpenAttendanceModal: _onOpenAttendanceModal
 }) => {
-  const pendingBooths = booths.filter(item => item.status === 'pending');
-  const pendingActivities = activities.filter(item => item.status === 'pending' || item.status === 'need_revision');
-  const attentionCount = pendingBooths.length + pendingActivities.length;
+  const pendingBooths = boothRequests.filter(item => item.status === 'PENDING');
+  const pendingApplications = partnerApplications.filter(item => item.status === 'pending');
+  const attentionCount = pendingBooths.length + pendingApplications.length;
   return (
     <div className="organizer-content">
       {/* 1. Greeting & Date Banner matching Sketch Screen 1 */}
@@ -81,27 +85,27 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* 2. 4 Metric KPI Cards matching Sketch Screen 1 */}
       <div className="org-metric-grid">
         <div className="org-metric-card" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('events')}>
-          <p>{language === 'vi' ? 'Sự kiện đang diễn ra' : 'Active Events'}</p>
-          <strong>{events.filter(item => item.status === 'happening').length}</strong>
-          <span style={{ color: '#166534', fontWeight: 600 }}>{events.length} sự kiện trong hệ thống</span>
+          <p>{language === 'vi' ? 'Sự kiện sắp diễn ra' : 'Upcoming Events'}</p>
+          <strong>{events.filter(item => item.status === 'upcoming' || item.status === 'happening').length}</strong>
+          <span style={{ color: '#166534', fontWeight: 600 }}>{events.length} sự kiện được giao quản lý</span>
         </div>
 
-        <div className="org-metric-card gold" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('activities')}>
-          <p>{language === 'vi' ? 'Tổng hoạt động' : 'Total Activities'}</p>
-          <strong>{activities.length}</strong>
-          <span>{activities.filter(item => item.isPublished).length} đã công bố • {pendingActivities.length} cần xử lý</span>
+        <div className="org-metric-card gold" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('events')}>
+          <p>{language === 'vi' ? 'Hồ sơ đối tác' : 'Partner Applications'}</p>
+          <strong>{partnerApplications.length}</strong>
+          <span>{pendingApplications.length} cần xét duyệt</span>
         </div>
 
         <div className="org-metric-card red" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('booths')}>
-          <p>{language === 'vi' ? 'Gian hàng tham gia' : 'Assigned Booths'}</p>
-          <strong>{booths.filter(item => item.status === 'assigned').length}</strong>
-          <span>{pendingBooths.length} yêu cầu đang chờ duyệt</span>
+          <p>{language === 'vi' ? 'Gian hàng đã cấu hình' : 'Configured Booths'}</p>
+          <strong>{booths.length}</strong>
+          <span>{booths.filter(item => item.status === 'available').length} đang còn trống</span>
         </div>
 
-        <div className="org-metric-card blue" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('participants')}>
-          <p>{language === 'vi' ? 'Tổng lượt đăng ký' : 'Registrations'}</p>
-          <strong>{activeEvent.registrationsCount}</strong>
-          <span style={{ color: '#0369A1', fontWeight: 600 }}>Đăng ký cho sự kiện đang chọn</span>
+        <div className="org-metric-card blue" style={{ cursor: 'pointer' }} onClick={() => onNavigateTab('booth_requests')}>
+          <p>{language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth Requests'}</p>
+          <strong>{boothRequests.length}</strong>
+          <span style={{ color: '#0369A1', fontWeight: 600 }}>{pendingBooths.length} đang chờ chọn</span>
         </div>
       </div>
 
@@ -174,10 +178,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <Calendar size={14} color="#17382E" />
                     <span>{activeEvent.dateRange}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  {activeEvent.location && <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <MapPin size={14} color="#17382E" />
                     <span>{activeEvent.location}</span>
-                  </div>
+                  </div>}
                 </div>
               </div>
 
@@ -210,7 +214,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
             {/* Item 1: 3 gian hàng đang chờ duyệt */}
             <div 
-              onClick={() => onNavigateTab('booths')}
+              onClick={() => onNavigateTab('booth_requests')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -233,7 +237,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   {language === 'vi' ? `${pendingBooths.length} gian hàng đang chờ duyệt` : `${pendingBooths.length} pending booth requests`}
                 </strong>
                 <span style={{ fontSize: '0.74rem', color: '#B91C1C' }}>
-                  {pendingBooths.length ? pendingBooths.map(item => item.orgName || item.name).join(', ') : (language === 'vi' ? 'Không có yêu cầu tồn đọng' : 'No pending requests')}
+                  {pendingBooths.length ? pendingBooths.map(item => item.partnerOrganizationName).join(', ') : (language === 'vi' ? 'Không có yêu cầu tồn đọng' : 'No pending requests')}
                 </span>
               </div>
               <ArrowRight size={16} color="#DC2626" />
@@ -241,7 +245,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             {/* Item 2: 5 hoạt động chờ phê duyệt */}
             <div 
-              onClick={() => onNavigateTab('activities')}
+              onClick={() => onNavigateTab('events')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -261,10 +265,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: '0.86rem', color: '#92400E' }}>
-                  {language === 'vi' ? `${pendingActivities.length} hoạt động cần phê duyệt` : `${pendingActivities.length} activity proposals pending`}
+                  {language === 'vi' ? `${pendingApplications.length} hồ sơ đối tác chờ duyệt` : `${pendingApplications.length} partner applications pending`}
                 </strong>
                 <span style={{ fontSize: '0.74rem', color: '#B45309' }}>
-                  {pendingActivities.length ? pendingActivities.map(item => item.title).join(', ') : (language === 'vi' ? 'Không có hoạt động tồn đọng' : 'No pending activities')}
+                  {pendingApplications.length ? pendingApplications.map(item => item.orgName).join(', ') : (language === 'vi' ? 'Không có hồ sơ chờ duyệt' : 'No pending applications')}
                 </span>
               </div>
               <ArrowRight size={16} color="#D97706" />
@@ -272,7 +276,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             {/* Tổng đăng ký của sự kiện đang chọn */}
             <div 
-              onClick={() => onNavigateTab('participants')}
+              onClick={() => onNavigateTab('booth_requests')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -292,10 +296,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: '0.86rem', color: '#166534' }}>
-                  {language === 'vi' ? `${activeEvent.registrationsCount} lượt đăng ký sự kiện` : `${activeEvent.registrationsCount} event registrations`}
+                  {language === 'vi' ? `${boothRequests.filter(item => item.hold?.status === 'ACTIVE').length} gian hàng đang giữ chỗ` : `${boothRequests.filter(item => item.hold?.status === 'ACTIVE').length} active booth holds`}
                 </strong>
                 <span style={{ fontSize: '0.74rem', color: '#15803D' }}>
-                  {language === 'vi' ? 'Dữ liệu đăng ký hiện tại trong hệ thống' : 'Current registrations in the system'}
+                  {language === 'vi' ? 'Dữ liệu giữ chỗ của sự kiện đang chọn' : 'Current event hold data'}
                 </span>
               </div>
               <ArrowRight size={16} color="#16A34A" />
@@ -303,7 +307,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             {/* Báo cáo sự kiện */}
             <div 
-              onClick={() => onNavigateTab('reports')}
+              onClick={() => onNavigateTab('events')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -323,10 +327,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: '0.86rem', color: '#0369A1' }}>
-                  {language === 'vi' ? 'Mở báo cáo sự kiện' : 'Open event report'}
+                  {language === 'vi' ? 'Xem cấu hình sự kiện' : 'Open event settings'}
                 </strong>
                 <span style={{ fontSize: '0.74rem', color: '#0284C7' }}>
-                  {language === 'vi' ? 'Xem số liệu tham dự và phản hồi đã ghi nhận' : 'View recorded attendance and feedback'}
+                  {language === 'vi' ? 'Xem thời gian, hạn đăng ký và giới hạn gian hàng' : 'View dates, deadlines and booth limits'}
                 </span>
               </div>
               <ArrowRight size={16} color="#0284C7" />
@@ -374,10 +378,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <button
             type="button"
             className="btn-org-secondary"
-            onClick={() => onNavigateTab('reports')}
+            onClick={() => onNavigateTab('booth_requests')}
           >
             <FileText size={15} />
-            <span>{language === 'vi' ? 'Báo cáo thống kê' : 'Reports'}</span>
+            <span>{language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth Requests'}</span>
           </button>
 
           <button

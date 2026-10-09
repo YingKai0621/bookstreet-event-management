@@ -3,19 +3,22 @@ import {
   ArrowRight,
   MapPin,
   Search,
-  Store,
   X
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Booth, Language } from '../types';
+import { Booth, EventItem, Language } from '../types';
 import './BoothsExperience.css';
 
 interface BoothsExperienceProps {
   language: Language;
   open: boolean;
   booths: Booth[];
+  events: EventItem[];
+  selectedEventId: string;
+  onSelectEventId: (eventId: string) => void;
+  error?: string;
   onSelectBoothOnMap?: (boothId: string) => void;
 }
 
@@ -23,6 +26,10 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   language,
   open,
   booths,
+  events,
+  selectedEventId,
+  onSelectEventId,
+  error,
   onSelectBoothOnMap,
 }) => {
   const vi = language === 'vi';
@@ -121,16 +128,13 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               </h1>
               <p>
                 {vi
-                  ? 'Hơn 20 nhà xuất bản danh tiếng, ki-ốt sách văn học cổ điển, tranh truyện thiếu nhi và không gian cà phê dưới tán me rợp bóng.'
-                  : 'Over 20 prestigious publishers, classic literature corners, children reading pavilions, and quiet coffee stalls under tamarind shade.'}
+                  ? `${booths.length} gian hàng đang được công bố từ dữ liệu hệ thống.`
+                  : `${booths.length} booths are currently published by the system.`}
               </p>
 
               <div className="heritage-hero-footnote">
                 <strong>{booths.length}</strong>
                 <span>{vi ? 'gian hàng tuyển chọn' : 'featured kiosks'}</span>
-                <i />
-                <Store size={17} />
-                <span>{vi ? 'Mở cửa 08:00 — 22:00' : 'Daily 08:00 — 22:00'}</span>
               </div>
             </div>
 
@@ -144,14 +148,14 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 tabIndex={0}
                 aria-label={`Khám phá ${featuredBooth.name}`}
               >
-                <img
+                {featuredBooth.image.url && <img
                   src={featuredBooth.image.url}
                   alt={featuredBooth.image.alt}
                   fetchPriority="high"
-                />
+                />}
                 <span className="heritage-image-ribbon">{featuredBooth.code}</span>
                 <div>
-                  <span>{vi ? 'Gian hàng tiêu biểu' : 'Featured Pavilion'}</span>
+                  <span>{vi ? 'Gian hàng đầu danh sách' : 'First pavilion in the list'}</span>
                   <h2>{vi ? featuredBooth.name : featuredBooth.nameEn}</h2>
                   <span>{vi ? featuredBooth.tagline : featuredBooth.taglineEn}</span>
                 </div>
@@ -163,6 +167,13 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Collection Section */}
         <section className="heritage-inner heritage-collection" id="booths-collection">
+          {events.length > 0 && <div className="public-map-event-picker">
+            <label htmlFor="booths-experience-event">{vi ? 'Sự kiện' : 'Event'}</label>
+            <select id="booths-experience-event" value={selectedEventId} onChange={event => onSelectEventId(event.target.value)}>
+              {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
+            </select>
+          </div>}
+          {error && <p role="alert">{error}</p>}
           <div className="heritage-collection-title">
             <div>
               <span className="heritage-section-marker">
@@ -234,7 +245,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                   <div className="heritage-card-image">
                     {booth.image.url && <img src={booth.image.url} alt={booth.image.alt} loading="lazy" />}
                     <span className="heritage-card-code">{booth.code}</span>
-                    <span className="heritage-card-period">{booth.openHours}</span>
+                    {booth.availability && <span className="heritage-card-period">{booth.availability === 'AVAILABLE' ? 'Còn trống' : booth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : booth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</span>}
                   </div>
                   <div className="heritage-card-body">
                     <span className="heritage-card-cat">
@@ -242,6 +253,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                     </span>
                     <h3>{vi ? booth.name : booth.nameEn}</h3>
                     <p>{vi ? booth.tagline : booth.taglineEn}</p>
+                    {booth.rentalPrice !== undefined && <p>{vi ? 'Giá sự kiện: ' : 'Event price: '}{booth.rentalPrice === null ? (vi ? 'Chưa cấu hình' : 'Not configured') : `${booth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
                     <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span className="heritage-card-arrow-text">
                         {vi ? 'Xem chi tiết' : 'View details'}
@@ -271,10 +283,10 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
-                <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />
+                {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />}
                 <div className="modal-img-caption">
                   <span className="kiosk-number-badge">{activeModalBooth.code}</span>
-                  <span className="photo-source-cite">Nguồn: {activeModalBooth.image.source}</span>
+                  {activeModalBooth.image.source && <span className="photo-source-cite">Nguồn: {activeModalBooth.image.source}</span>}
                 </div>
               </div>
               <h3 className="modal-heading-title">
@@ -284,9 +296,10 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 {vi ? activeModalBooth.description : activeModalBooth.descriptionEn}
               </p>
               <div className="modal-meta-box">
-                <p>🏛️ <strong>{vi ? 'Đơn vị phát hành:' : 'Publisher:'}</strong> {activeModalBooth.publisher}</p>
-                <p>⏰ <strong>{vi ? 'Giờ mở cửa:' : 'Hours:'}</strong> {activeModalBooth.openHours}</p>
-                <p>📖 <strong>{vi ? 'Sách tuyển chọn:' : 'Featured:'}</strong> {activeModalBooth.featuredBooks.join(', ')}</p>
+                <p><strong>{vi ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
+                {activeModalBooth.maxCapacity !== undefined && <p><strong>{vi ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
+                {activeModalBooth.availability && <p><strong>{vi ? 'Tình trạng:' : 'Availability:'}</strong> {activeModalBooth.availability === 'AVAILABLE' ? 'Còn trống' : activeModalBooth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : activeModalBooth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</p>}
+                {activeModalBooth.rentalPrice !== undefined && <p><strong>{vi ? 'Giá sự kiện:' : 'Event price:'}</strong> {activeModalBooth.rentalPrice === null ? 'Chưa cấu hình' : `${activeModalBooth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
               </div>
               <button
                 type="button"

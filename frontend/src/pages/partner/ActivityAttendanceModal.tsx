@@ -27,6 +27,7 @@ export const ActivityAttendanceModal: React.FC<ActivityAttendanceModalProps> = (
 }) => {
   const [manualCode, setManualCode] = useState('');
   const [lastScanResult, setLastScanResult] = useState<AttendanceScanRecord | null>(null);
+  const [scanError, setScanError] = useState('');
 
   const activityScans = scans.filter(s => s.activityId === activity.id);
   const successfulScans = activityScans.filter(s => s.status === 'success');
@@ -36,16 +37,14 @@ export const ActivityAttendanceModal: React.FC<ActivityAttendanceModalProps> = (
     if (!manualCode.trim()) return;
 
     try {
+      setScanError('');
       const record = await onScanQr(manualCode.trim());
       const result = { ...record, id: `scan-${Date.now()}` };
       setLastScanResult(result);
       onRecordScan(record);
-    } catch {
-      const invalidRecord: AttendanceScanRecord = {
-        id: `scan-${Date.now()}`, activityId: activity.id, activityTitle: activity.title,
-        participantName: 'Không xác định', ticketCode: manualCode.trim(), scanTime: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }), status: 'invalid',
-      };
-      setLastScanResult(invalidRecord);
+    } catch (error) {
+      setLastScanResult(null);
+      setScanError(error instanceof Error ? error.message : 'Không thể xác minh mã vé từ hệ thống.');
     }
     setManualCode('');
   };
@@ -118,6 +117,12 @@ export const ActivityAttendanceModal: React.FC<ActivityAttendanceModalProps> = (
                   <strong>{lastScanResult.participantName}</strong> • Mã: {lastScanResult.ticketCode} • Lúc: {lastScanResult.scanTime}
                 </div>
               </div>
+            </div>
+          )}
+          {scanError && (
+            <div className="scan-result-card invalid" role="alert">
+              <AlertCircle size={24} color="#DC2626" />
+              <div style={{ fontSize: '0.9rem', fontWeight: 750 }}>{scanError}</div>
             </div>
           )}
 

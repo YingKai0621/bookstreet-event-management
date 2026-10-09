@@ -14,7 +14,7 @@ export interface Booth {
   name: string;
   nameEn: string;
   publisher: string;
-  category: 'literature' | 'history' | 'children' | 'lifestyle' | 'cafe';
+  category: 'literature' | 'history' | 'children' | 'lifestyle' | 'cafe' | 'other';
   categoryLabelVi: string;
   categoryLabelEn: string;
   tagline: string;
@@ -26,6 +26,10 @@ export interface Booth {
   mapLocationId: string;
   openHours: string;
   image: ImageAsset;
+  eventId?: string;
+  rentalPrice?: number | null;
+  availability?: 'AVAILABLE' | 'ON_HOLD' | 'ASSIGNED' | 'UNAVAILABLE';
+  maxCapacity?: number;
   isModelData?: boolean;
 }
 

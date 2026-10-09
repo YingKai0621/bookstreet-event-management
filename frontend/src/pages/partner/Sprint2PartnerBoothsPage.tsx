@@ -85,13 +85,15 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     setLoading(true);
     setError('');
     try {
-      const [boothPage, requestPage] = await Promise.all([
-        boothApi.listPublicEventBooths(eventId),
-        boothApi.listPartnerRequests(eventId),
+      const [eventBooths, ownRequests] = await Promise.all([
+        boothApi.listAllPublicEventBooths(eventId),
+        boothApi.listAllPartnerRequests(eventId),
       ]);
-      setBooths(boothPage.content);
-      setRequests(requestPage.content);
+      setBooths(eventBooths);
+      setRequests(ownRequests);
     } catch (caughtError) {
+      setBooths([]);
+      setRequests([]);
       setError(apiMessage(caughtError));
     } finally {
       setLoading(false);
@@ -226,7 +228,14 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       <div className="s2-panel-heading"><div><h2>Yêu cầu của tôi</h2><p>Theo dõi quyết định của Organizer và thời hạn giữ chỗ.</p></div></div>
       <div className="s2-request-list">{requests.map(request => <article className="s2-request-card" key={request.boothRequestId}>
         <div className="s2-request-main"><div><span className={`s2-status request-${request.status.toLowerCase()}`}>{requestStatusLabel[request.status]}</span><h3>Gian {request.boothCode}</h3><p>Gửi lúc {dateTime(request.submittedAt)}</p></div><p className="s2-request-note">{request.requestNote || 'Không có ghi chú.'}</p></div>
-        {request.hold && <div className="s2-hold-card"><div className="s2-hold-summary"><Clock3 size={18} /><div><strong>{money(request.hold.lockedRentalPrice)}</strong><span>Giá đã khóa · hết hạn {dateTime(request.hold.expiresAt)}</span></div></div>{request.hold.status === 'ACTIVE' && <div className="s2-countdown"><span>Thời gian còn lại</span><strong>{now === 0 ? 'Đang đồng bộ thời gian…' : remainingTime(request.hold.expiresAt, now)}</strong><small>Đồng hồ chỉ để tham khảo; trạng thái backend là quyết định cuối cùng.</small></div>}</div>}
+        <div className="s2-request-note">
+          {request.reviewedAt && <p>Đã xét duyệt: {dateTime(request.reviewedAt)}</p>}
+          {request.selectedAt && <p>Được chọn: {dateTime(request.selectedAt)}</p>}
+          {request.completedAt && <p>Hoàn tất: {dateTime(request.completedAt)}</p>}
+          {request.paymentExpiredAt && <p>Hết hạn thanh toán: {dateTime(request.paymentExpiredAt)}</p>}
+          {request.withdrawnAt && <p>Đã rút: {dateTime(request.withdrawnAt)}</p>}
+        </div>
+        {request.hold && <div className="s2-hold-card"><div className="s2-hold-summary"><Clock3 size={18} /><div><strong>{money(request.hold.lockedRentalPrice)}</strong><span>Giữ chỗ: {request.hold.status} · tạo {dateTime(request.hold.createdAt)} · hết hạn {dateTime(request.hold.expiresAt)}</span>{request.hold.releasedAt && <span>Giải phóng: {dateTime(request.hold.releasedAt)}</span>}</div></div>{request.hold.status === 'ACTIVE' && <div className="s2-countdown"><span>Thời gian còn lại</span><strong>{now === 0 ? 'Đang đồng bộ thời gian…' : remainingTime(request.hold.expiresAt, now)}</strong><small>Đồng hồ chỉ để tham khảo; trạng thái backend là quyết định cuối cùng.</small></div>}</div>}
         {request.reviewNote && <p className="s2-review-note"><strong>Phản hồi Organizer:</strong> {request.reviewNote}</p>}
         {request.status === 'PENDING' && <div className="s2-actions"><button type="button" className="btn-part-secondary" disabled={busy === `withdraw-${request.boothRequestId}`} onClick={() => void withdraw(request)}>Rút yêu cầu</button></div>}
       </article>)}{!requests.length && <div className="s2-empty">Bạn chưa gửi yêu cầu gian hàng nào cho sự kiện này.</div>}</div>
