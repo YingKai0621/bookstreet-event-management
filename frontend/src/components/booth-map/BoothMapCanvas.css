@@ -151,7 +151,6 @@
   position: relative;
   width: 100%;
   transform-origin: center;
-  transition: transform 180ms ease;
 }
 
 .booth-map-viewport.is-dragging .booth-map-image-layer { transition: none; }
@@ -177,10 +176,14 @@
   transform: translate(-50%, -50%) scale(var(--marker-scale));
   border-radius: 999px;
   font: 750 0.76rem/1 var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
-  cursor: grab;
+  cursor: pointer;
   transform-origin: center;
-  transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease;
+  transition: box-shadow 120ms ease, background-color 150ms ease;
   user-select: none;
+}
+
+.booth-map-shell.is-editable .booth-map-marker {
+  cursor: grab;
 }
 
 /* 1. Available: Light Cyan / Blue */
@@ -222,16 +225,18 @@
 
 .booth-map-marker:hover,
 .booth-map-marker:focus-visible,
-.booth-map-marker.is-selected {
+.booth-map-marker.is-selected,
+.booth-map-marker:active {
+  transform: translate(-50%, -50%) scale(var(--marker-scale)) !important;
   z-index: 25;
   outline: none;
   box-shadow: 0 0 0 3px rgba(20, 58, 47, 0.4), 0 6px 16px rgba(0, 0, 0, 0.22);
 }
 
-.booth-map-marker.is-active-dragging {
+.booth-map-shell.is-editable .booth-map-marker.is-active-dragging {
   z-index: 30;
   cursor: grabbing !important;
-  transform: translate(-50%, -50%) scale(1.18) !important;
+  transform: translate(-50%, -50%) scale(1.15) !important;
   box-shadow: 0 0 0 4px rgba(233, 188, 99, 0.8), 0 10px 24px rgba(0, 0, 0, 0.35) !important;
 }
 
@@ -254,7 +259,7 @@
   border: 1px solid #E2EAE5;
   padding: 1.25rem 1.25rem 1.15rem;
   transform: translate(-50%, -100%) translateY(-14px);
-  animation: popoverFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: popoverFadeIn 140ms ease;
   pointer-events: auto;
   user-select: text;
 }
@@ -275,8 +280,8 @@
 }
 
 @keyframes popoverFadeIn {
-  from { opacity: 0; transform: translate(-50%, -96%) translateY(-8px) scale(0.96); }
-  to { opacity: 1; transform: translate(-50%, -100%) translateY(-14px) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .popover-header {
