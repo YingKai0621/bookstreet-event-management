@@ -6,12 +6,14 @@ import com.swp391.bookstreet.booth.dto.BoothPageResponse;
 import com.swp391.bookstreet.booth.dto.BoothRequestResponse;
 import com.swp391.bookstreet.booth.dto.RejectBoothRequest;
 import com.swp391.bookstreet.booth.entity.Booth;
+import com.swp391.bookstreet.booth.entity.BoothAssignment;
 import com.swp391.bookstreet.booth.entity.BoothHold;
 import com.swp391.bookstreet.booth.entity.BoothRequest;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.entity.EventBoothConfig;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
+import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.BoothRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
@@ -38,6 +40,7 @@ public class OrganizerBoothRequestService {
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
     private final BoothHoldRepository holdRepository;
+    private final BoothAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
@@ -49,6 +52,7 @@ public class OrganizerBoothRequestService {
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
             BoothHoldRepository holdRepository,
+            BoothAssignmentRepository assignmentRepository,
             UserRepository userRepository,
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
@@ -59,6 +63,7 @@ public class OrganizerBoothRequestService {
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
         this.holdRepository = holdRepository;
+        this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
@@ -132,10 +137,13 @@ public class OrganizerBoothRequestService {
         }
         if (!config.isEnabled() || !booth.getLocation().isActive()
                 || configRepository.existsCurrentOverlappingHoldForBooth(
-                        boothId, event.getStartAt(), event.getEndAt(), selectedAt)) {
+                        boothId, event.getStartAt(), event.getEndAt())
+                || assignmentRepository.existsOverlappingActiveAssignment(
+                        boothId, event.getStartAt(), event.getEndAt())) {
             throw boothNotAvailable();
         }
-        if (requestRepository.countCurrentActiveHolds(application.getId(), selectedAt)
+        if (requestRepository.countCurrentActiveHolds(application.getId())
+                + assignmentRepository.countActiveByApplication(application.getId())
                 >= event.getMaxBoothsPerPartner()) {
             throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_QUOTA_EXCEEDED",
                     "The Partner has reached this Event's Booth quota.");
@@ -149,6 +157,15 @@ public class OrganizerBoothRequestService {
         try {
             requestRepository.save(request);
             hold = holdRepository.saveAndFlush(hold);
+            if (config.getRentalPrice().signum() == 0) {
+                hold.consume(selectedAt);
+                request.complete(selectedAt);
+                assignmentRepository.save(BoothAssignment.create(hold, selectedAt));
+                requestRepository.findCompetingForUpdate(
+                                eventId, boothId, BoothRequestStatus.PENDING)
+                        .forEach(competing -> competing.notSelected(selectedAt));
+                assignmentRepository.flush();
+            }
         } catch (DataIntegrityViolationException error) {
             if (isActiveHoldConstraint(error)) {
                 throw boothNotAvailable();

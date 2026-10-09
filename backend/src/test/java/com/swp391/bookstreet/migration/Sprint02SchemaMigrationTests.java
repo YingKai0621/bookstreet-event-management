@@ -49,7 +49,7 @@ class Sprint02SchemaMigrationTests {
 
     @Test
     void cleanDatabaseMigratesThroughV6() throws SQLException {
-        Flyway flyway = flyway(null);
+        Flyway flyway = flyway(MigrationVersion.fromVersion("6"));
 
         flyway.migrate();
 

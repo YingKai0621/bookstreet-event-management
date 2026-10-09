@@ -107,7 +107,8 @@ public class SecurityConfiguration {
         configuration.setAllowedHeaders(List.of(
                 "Accept",
                 "Content-Type",
-                "X-XSRF-TOKEN"
+                "X-XSRF-TOKEN",
+                "Idempotency-Key"
         ));
         configuration.setAllowCredentials(true);
 
@@ -136,6 +137,7 @@ public class SecurityConfiguration {
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
                 .csrfTokenRequestHandler(csrfRequestHandler)
+                .ignoringRequestMatchers("/api/v1/payments/vnpay/ipn")
         );
 
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
@@ -150,6 +152,7 @@ public class SecurityConfiguration {
                         "/swagger-ui.html",
                         "/swagger-ui/**"
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
                 .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")

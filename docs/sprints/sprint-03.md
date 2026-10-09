@@ -1,6 +1,6 @@
 # Sprint 03 Booth Payment and Assignment
 
-> Design draft. Sprint 2 backend is merged, but Sprint 2 remains the active Sprint until its frontend and Booth E2E Definition of Done are verified on `main`. Sprint 3 remains in planning until the provider spike and all provider-dependent decisions are approved.
+> Approved implementation baseline. VNPay Sandbox is the Sprint 3 provider, the local spike is complete, and V7 implementation is authorized on the Sprint 3 branch.
 
 ## 1 Purpose
 
@@ -44,7 +44,7 @@ Therefore this Sprint does not rename or split the approved Use Case and does no
 
 ### In scope
 
-- One real Payment Gateway sandbox adapter selected by the team.
+- One VNPay Sandbox adapter.
 - Initial Booth rental payments only.
 - One durable `BoothPayment` record per gateway attempt.
 - Required idempotency for payment creation and gateway callbacks.
@@ -75,10 +75,13 @@ These flows remain in the MVP baseline but are deliberately deferred so Sprint 3
 - A later EventBoothConfig price change never changes an existing Hold or Payment amount.
 - A failed or timed-out attempt does not expire or release the Hold.
 - Only `BoothHold.expiresAt` ends the payment window.
+- A VNPay checkout expires at `min(now + 15 minutes, BoothHold.expiresAt)`. Do not start a new checkout with less than five minutes remaining on the Hold.
 - Competing candidates stay `PENDING` until verified success creates the Assignment.
 - Hold expiry changes only the selected request to `PAYMENT_EXPIRED`; competing requests remain `PENDING`.
 - Session authentication, CSRF and ownership continue to follow the existing browser-security contract.
 - PostgreSQL is the source of truth; Redis is not used as payment or Assignment storage.
+- A zero-price Booth bypasses VNPay and is settled atomically during Organizer selection. A
+  positive rental price below 5,000 VND is invalid; prices from 5,000 VND use VNPay.
 
 ## 5 Main data model
 
@@ -120,7 +123,7 @@ Payment statuses are:
 
 Every retry creates a new record and a new idempotency key. Repeating the same creation request with the same key returns the original attempt instead of creating another one.
 
-V7 must add these database protections after the provider spike confirms the final purpose and checkout-recovery design:
+V7 adds the following approved database protections:
 
 - unique `idempotency_key`;
 - unique `(gateway_provider, gateway_transaction_ref)` where the reference is not null;
@@ -156,7 +159,9 @@ PENDING
   └─→ TIMEOUT
 ```
 
-These are terminal states for one attempt. A retry is a new `PENDING` record, not a transition back from `FAILED` or `TIMEOUT`.
+These are normally terminal states for one attempt. A retry is a new `PENDING` record, not a transition back from `FAILED` or `TIMEOUT`; the only exception is the narrow, stronger-evidence correction described below.
+
+A narrow correction applies when stronger evidence arrives after a locally inferred VNPay `TIMEOUT`: while holding the source Hold lock, the backend may correct that attempt to `SUCCESS` and run normal settlement only when the Hold is still `ACTIVE`, no later attempt exists, no other Payment succeeded and no Assignment exists. Otherwise the attempt is not silently overwritten; the verified late-success evidence is persisted as a reconciliation conflict and the Booth is not reassigned by that processing path. Compensation remains mandatory when settlement is no longer safe.
 
 ### 6.2 Successful settlement
 
@@ -178,24 +183,61 @@ A duplicate callback returns the already-settled result and creates no second As
 ### 6.3 Failed or unknown attempt
 
 - Verified failure changes only the attempt to `FAILED`.
-- `TIMEOUT` is terminal only when the gateway confirms that the transaction/session expired and cannot later succeed.
+- A VNPay user cancellation confirmed by a signed IPN with response code `24` and transaction status `02` changes the attempt to `FAILED`.
+- VNPay Sandbox may keep an expired checkout at raw transaction status `01` instead of publishing a terminal expiry status. Raw `01` is not mapped directly to `FAILED` or `TIMEOUT`.
+- An expired VNPay attempt becomes domain `TIMEOUT` only through the approved bounded reconciliation policy in section 6.4. The last raw provider status remains stored for audit.
 - A network timeout, missing callback or unavailable query result is not a domain `TIMEOUT`; the attempt stays `PENDING` and enters reconciliation.
 - The request remains `SELECTED` and the Hold remains `ACTIVE` while the payment window is open.
 - For the initial request, or a replay with the same idempotency key, an ambiguous gateway result returns `202 Accepted` with the durable Pending Payment so the frontend can poll it.
 - A new idempotency key submitted while an earlier Payment still has an unknown gateway result is rejected with `409 PAYMENT_RESULT_UNKNOWN`; no retry Payment is created.
 - Before a new retry, every earlier ambiguous attempt must be resolved to a terminal non-success state by trusted provider evidence.
 
-## 6.4 Payment initiation transaction boundary
+### 6.4 VNPay expired-checkout reconciliation
 
-Payment initiation uses short database transactions around the external gateway call:
+The sandbox spike established the following provider-specific behavior on 2026-10-08:
 
-1. In a short transaction, lock/re-check the Hold, enforce idempotency and the one-Pending-attempt rule, create the `PENDING` Payment, then commit.
-2. Call the gateway without holding a database transaction or row lock open.
-3. If session creation succeeds, persist the provider reference and any approved recoverable checkout metadata in a second short transaction, then return the checkout URL.
-4. If the gateway is definitely unavailable and trusted evidence proves that no external transaction/session was created, mark the durable attempt `FAILED` in a second short transaction before returning `502 PAYMENT_GATEWAY_UNAVAILABLE`.
-5. If the network result is ambiguous, keep the attempt `PENDING` and query/reconcile it. Return `202 Accepted` for the initial response or a replay with the same key; reject a new key with `409 PAYMENT_RESULT_UNKNOWN` and do not create another attempt.
+- a checkout that reached the OTP screen became unusable when its 15-minute countdown expired;
+- no terminal IPN arrived for that expiry;
+- signed QueryDR calls approximately six and eleven minutes after checkout expiry both returned query response code `00` with transaction status `01`, matching transaction reference and amount;
+- VNPay therefore cannot be expected to convert an abandoned expired checkout into a provider-terminal status promptly.
+- VNPay accepted a separately tested five-minute `vnp_ExpireDate`, displayed the matching countdown and rejected the transaction when that shorter countdown ended.
 
-If the Hold becomes ineligible between steps, the provider-specific design must cancel or reconcile the external session safely. This behavior is part of the gateway spike and must be tested.
+To prevent one attempt from remaining `PENDING` forever without guessing from the browser page alone, Sprint 3 adopts this bounded domain policy:
+
+1. At checkout expiry, keep the Payment `PENDING` under reconciliation. Browser text or a frontend timer is not evidence.
+2. Make the first QueryDR no earlier than five minutes after checkout expiry.
+3. Make a second QueryDR at least five minutes after the first, respecting VNPay's duplicate-query window.
+4. Each result must have a valid provider signature, query response code `00`, matching transaction reference and amount, and raw transaction status `01`. No verified success IPN or QueryDR may have been observed.
+5. After both trusted incomplete results, atomically change the local Payment to `TIMEOUT`, record `completedAt`, preserve the latest raw provider result for audit, and allow a new attempt only if the Hold remains Active and unexpired.
+6. A transport error, invalid signature, mismatched reference/amount, response code other than `00`, suspicious status, or only one trusted `01` result is insufficient; the Payment remains `PENDING` and blocks retry.
+
+This `TIMEOUT` is a bounded BookStreet lifecycle decision, not a claim that VNPay changed its raw transaction status from `01`. A later verified success follows the narrow correction rule in section 6.1 or is persisted as a reconciliation conflict; it must never create a duplicate Assignment.
+
+### 6.5 Payment initiation transaction boundary
+
+The transaction boundary depends on whether initiation performs remote provider I/O. VNPay PAY
+creates a signed URL locally and therefore uses one short atomic database transaction:
+
+1. Lock and re-check the Hold, enforce ownership, idempotency and the one-Pending-attempt rule.
+2. Re-check the idempotency key after acquiring the Hold lock so concurrent requests with the
+   same key converge on one Payment.
+3. Insert and flush the `PENDING` Payment to obtain `boothPaymentId`, derive
+   `vnp_TxnRef = BSP{boothPaymentId}`, build the signed VNPay URL locally and attach the exact
+   checkout URL and expiry.
+4. Commit the Payment and complete checkout metadata together, then return the checkout URL.
+5. If local configuration/signing fails, change that attempt to `FAILED` in the same transaction;
+   return `502 PAYMENT_GATEWAY_UNAVAILABLE` only after the failure record commits.
+
+No remote network call occurs in these steps, so there is no reason to expose a committed
+`PENDING` Payment without a usable checkout. A legacy/incomplete Pending row that has no checkout
+URL or expiry and is older than the reconciliation grace period is changed to `FAILED` with
+`CHECKOUT_NOT_CREATED`; it is safe to retry because no URL was delivered and VNPay has no remote
+session to recover.
+
+For a future provider whose initiation really performs remote I/O, create the durable correlation
+record in a short transaction, release database locks before calling the provider, then persist the
+result in another short transaction. An ambiguous network result must remain `PENDING` and be
+reconciled instead of being guessed as failed.
 
 Idempotent initiation uses this decision table:
 
@@ -203,6 +245,15 @@ Idempotent initiation uses this decision table:
 - same key while the Payment is under reconciliation: return `202` with that same Pending Payment;
 - new key while another Pending Payment has a usable checkout: reject with `409 PAYMENT_ATTEMPT_ALREADY_PENDING`;
 - new key while another Pending Payment has an unknown gateway result: reject with `409 PAYMENT_RESULT_UNKNOWN`.
+
+For VNPay PAY, checkout initiation is local URL construction and HMAC signing; it does not call a
+remote session-creation API. `vnp_TxnRef` is `BSP` followed by the decimal `boothPaymentId`. This
+value is globally unique, within VNPay's length/character rules, and lets IPN/QueryDR locate the
+Payment before `vnp_TransactionNo` exists. The exact signed checkout URL and
+`checkoutExpiresAt` commit atomically with the new Payment so a same-key replay can return the
+identical usable checkout without minting another attempt.
+
+The normal new-attempt response is therefore `201`. Local signing/configuration failure proves that no external session was created, so the Payment is committed as `FAILED` before `502`. `202` is used for same-key replay only after the stored checkout is no longer usable and the Payment is still under reconciliation.
 
 ## 7 Concurrency boundary
 
@@ -213,7 +264,16 @@ Idempotent initiation uses this decision table:
 - A duplicate or reordered callback is idempotent.
 - A payment creation command re-checks the current backend Clock against `expiresAt`; the frontend countdown is informational only.
 - The expiry job must not decide solely from local Payment timestamps. Before releasing a due Hold with a `PENDING` attempt, it follows the selected provider's approved query/reconciliation policy.
-- An unresolved provider result must not permit a competing Assignment that could conflict with a later confirmed charge. The exact bounded reconciliation behavior is a provider-selection blocker.
+- A due Hold with no unresolved `PENDING` Payment expires normally.
+- A due Hold with an unresolved `PENDING` Payment remains `ACTIVE`, its source request remains `SELECTED`, and no new payment attempt is permitted. Every availability and selection query treats that `ACTIVE` row as blocking even though `expiresAt` is in the past.
+- Gateway I/O is never performed while holding a database lock. Before QueryDR, the reconciliation
+  worker atomically claims the due Payment by locking `Hold → Payment`, re-checking eligibility and
+  recording `lastGatewayQueryAt` in a short transaction. It then releases the locks, calls QueryDR,
+  and opens another short `Hold → Payment` transaction to apply only the still-current result. This
+  claim prevents concurrent workers or a crash/retry loop from violating VNPay's minimum query
+  interval.
+- Trusted SUCCESS follows atomic settlement. Trusted FAILED or the approved two-query local TIMEOUT closes the attempt and, when the Hold is already due, expires the Hold and source request in that same transaction.
+- An invalid, unavailable or still-unknown provider result keeps Payment `PENDING`, sets or retains `reconciliationRequired`, and leaves the Hold blocking the Booth. It is retried no sooner than the provider query interval and is never auto-released merely to restore availability.
 
 ## 8 Security boundary
 
@@ -229,7 +289,9 @@ Idempotent initiation uses this decision table:
 - V7 applies cleanly after V6 and Hibernate validation succeeds.
 - A selected Partner can create a sandbox payment attempt for the locked price.
 - Repeating the same idempotency key creates no duplicate attempt.
-- `FAILED` and attempt `TIMEOUT` are preserved as history and allow retry while the Hold is active.
+- Ordinary `FAILED` and attempt `TIMEOUT` records are preserved as history and allow retry while
+  the Hold is active. A terminal attempt with contradictory verified-success evidence remains
+  reconciliation-blocking and does not permit another charge.
 - Backend-verified `SUCCESS` atomically produces Payment SUCCESS, Hold CONSUMED, Request COMPLETED and one Active Assignment.
 - Competing Pending requests become `NOT_SELECTED` only after Assignment creation.
 - Duplicate callbacks and concurrent success/expiry processing produce no duplicate Assignment or invalid mixed state.
@@ -239,24 +301,27 @@ Idempotent initiation uses this decision table:
 - Backend tests, frontend lint/build and the Sprint 3 Playwright happy path pass.
 - The primary demo uses a real gateway sandbox; a callback simulator is test-only or a clearly labelled offline backup.
 
-## 10 Open decisions before gateway implementation
+## 10 Approved VNPay implementation decisions
 
-The following choices are intentionally not guessed by this draft:
-
-1. Payment Gateway provider and sandbox account.
-2. Provider-supported checkout/session lifetime; the effective expiry must not exceed `BoothHold.expiresAt`.
-3. Provider-specific webhook path, signature fields, query API and status mapping.
-4. The durable merchant-order correlation identifier sent during session creation, provider queries and callbacks. It may be `boothPaymentId` when the provider format permits, otherwise V7 may need a unique `provider_request_id`.
-5. The provider-specific evidence that safely distinguishes ambiguous initiation (`202` with the durable Pending Payment) from definite unavailability (`502` only after committing the Payment as `FAILED` because no external transaction/session exists).
-6. Precedence for a verified provider success that was paid before Hold expiry but whose callback arrives after expiry processing.
-7. Whether the expiry job can authoritatively query every Pending attempt before releasing the Hold, and what bounded reconciliation policy applies when that query is unavailable.
-8. How a charge confirmed after the Hold can no longer produce an Assignment is handled. The provider spike must choose one safe boundary: allow an eligible pre-expiry payment to settle, add minimum automatic compensation/refund to Sprint 3, or retain the Booth in manual reconciliation without reassignment.
-9. The exact stable purpose code for the initial Booth rental payment.
-10. Whether checkout replay uses persisted `checkout_url`/`checkout_expires_at`, provider recovery, or safe session recreation for the same Payment/reference.
-
-V7, the gateway adapter and final API examples must not be marked approved until these decisions are recorded. The checkout-replay choice can change V7, and the success-expiry choice can change both state handling and the eventual refund boundary.
-
-Until item 8 is resolved, the system must never silently discard a confirmed charge or release/reassign the Booth while the corresponding Payment remains unresolved.
+- The exact public callback is `GET /api/v1/payments/vnpay/ipn`; only this path is exempt from
+  CSRF and every callback still requires valid VNPay HMAC verification.
+- `00/00` is success. Raw transaction status `01` remains Pending and enters reconciliation.
+  Signed `24/02` is customer cancellation and becomes Failed; transaction status `02` is the only
+  safe terminal failure mapping in the initial-payment flow. Status `04` can follow a customer
+  debit/reversal, while suspicious or flow-inapplicable statuses such as `07` and refund status
+  `09` remain Pending with `reconciliationRequired`; they never enable an unsafe retry or create
+  an Assignment.
+- The stable initial-rental purpose is `INITIAL_BOOTH_RENTAL`.
+- V7 is approved to add `checkout_url`, `checkout_expires_at`, `provider_response_code`,
+  `provider_transaction_status`, `last_gateway_query_at`, `trusted_incomplete_query_count`,
+  `reconciliation_required` and nullable `reconciliation_detail`.
+- `vnp_TxnRef` needs no separate column because it is reversibly derived from
+  `booth_payment_id`; `gateway_transaction_ref` stores VNPay `vnp_TransactionNo`.
+- When a verified late charge cannot satisfy the narrow automatic correction, the Payment keeps
+  its safe local terminal state, stores the provider evidence in `reconciliation_detail`, sets
+  `reconciliation_required = true`, creates no Assignment, blocks another Payment attempt and
+  enters manual refund review.
+  Refund execution remains outside Sprint 3.
 
 ## 10.1 V6 readiness audit
 
@@ -268,17 +333,22 @@ The merged V6 schema was checked before planning V7:
 - `booth_requests.completed_at` already exists;
 - the corresponding Java status enums and entity fields already exist.
 
-V7 does not need to alter those fields. It still needs the two new tables, Payment/Assignment constraints and any checkout-recovery columns approved by the provider spike.
+V7 does not alter those existing fields. It creates the two new tables, their Payment/Assignment
+constraints and the checkout/reconciliation columns approved by the provider spike.
 
-## 11 Recommended implementation sequence
+## 11 Implementation status and remaining sequence
 
-1. Approve this scope and resolve all provider-dependent open decisions.
-2. Freeze the Sprint 3 use cases and API contract.
-3. Add and verify the V7 Payment/Assignment schema.
-4. Add Payment and Assignment persistence models.
-5. Implement the gateway adapter and payment initiation.
-6. Implement verified, idempotent success settlement.
-7. Add payment history, Assignment queries and `ASSIGNED` availability.
-8. Integrate frontend checkout/result/history views.
-9. Run authorization, retry, duplicate callback, expiry-race and concurrency tests.
-10. Run the Sprint 2 regression suite and Sprint 3 E2E demo.
+Completed backend work:
+
+1. Provider decisions, scope, use cases and API contract are frozen.
+2. V7 Payment/Assignment schema and persistence models are implemented.
+3. VNPay initiation, verified IPN, QueryDR reconciliation and idempotent settlement are implemented.
+4. Payment history, Assignment queries, free-Booth settlement and `ASSIGNED` availability are implemented.
+5. Authorization, retry, duplicate callback, expiry-race, query-claim concurrency and the full
+   backend regression suite pass.
+
+Remaining delivery work:
+
+1. Integrate frontend checkout, return/result, history and Assignment views.
+2. Add Playwright happy-path and failure/retry E2E coverage.
+3. Configure deployed VNPay credentials, frontend Return URL and public HTTPS IPN URL.

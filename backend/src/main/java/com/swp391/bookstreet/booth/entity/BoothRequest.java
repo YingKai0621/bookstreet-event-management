@@ -104,6 +104,22 @@ public class BoothRequest {
         }
     }
 
+    public void complete(Instant now) {
+        if (status != BoothRequestStatus.SELECTED) {
+            throw new IllegalStateException("Only a Selected Booth request can be completed.");
+        }
+        status = BoothRequestStatus.COMPLETED;
+        completedAt = now;
+    }
+
+    public void notSelected(Instant now) {
+        if (status != BoothRequestStatus.PENDING) {
+            return;
+        }
+        status = BoothRequestStatus.NOT_SELECTED;
+        completedAt = now;
+    }
+
     public Long getBoothRequestId() {
         return boothRequestId;
     }

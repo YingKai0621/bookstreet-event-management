@@ -1,6 +1,6 @@
 # Sprint 03 Backend Work Assignment
 
-> Planning draft. Do not start gateway implementation until the provider and expiry-race decisions in `sprint-03.md` are approved.
+> Approved implementation assignment. VNPay Sandbox and the V7 provider/reconciliation design are frozen for Sprint 3.
 
 ## 1 Delivery strategy
 
@@ -16,12 +16,13 @@ Deliverables:
 - Select one real sandbox gateway.
 - Record required credentials, callback verification, checkout lifetime and query API without committing secrets.
 - Define and verify the durable merchant-order correlation identifier used for session creation, provider queries and callbacks, including callbacks received before `gatewayTransactionRef` is persisted.
-- Decide whether that identifier can be derived from `boothPaymentId` or requires a unique V7 `provider_request_id` column.
+- Use the approved reversible identifier `BSP{boothPaymentId}`; no separate V7 `provider_request_id` column is required.
 - Verify the HTTP decision table: same-key usable/terminal `200`, same-key reconciliation `202`, new-key usable Pending `409 PAYMENT_ATTEMPT_ALREADY_PENDING`, new-key unknown Pending `409 PAYMENT_RESULT_UNKNOWN`, and definite no-session gateway failure `502 PAYMENT_GATEWAY_UNAVAILABLE` after committing Payment `FAILED`.
-- Resolve late callback versus Hold expiry precedence.
+- Apply the approved narrow late-success correction rule and retain every unsafe late success as a reconciliation conflict pending compensation.
 - Freeze the initial-rental purpose code.
 - Choose and prove a checkout URL/session recovery strategy for idempotent replay.
 - Define a bounded reconciliation policy for unresolved Pending attempts at Hold expiry.
+- Implement the approved expired-checkout rule only after two trusted VNPay QueryDR results at least five minutes apart both return response code `00`, matching reference/amount and raw status `01`, with no verified success.
 - Define compensation for any confirmed charge that cannot produce an Assignment.
 - Prove sandbox access with a minimal throwaway/local spike before application integration.
 
@@ -31,7 +32,7 @@ Exit criteria:
 - The team can create, query and verify a sandbox transaction.
 - A lost initiation response can be recovered without creating a second charge.
 - A callback can locate the durable Payment using merchant-order correlation before any gateway transaction reference is stored.
-- An ambiguous initiation returns an observable Payment identifier that the frontend can poll.
+- A same-key reconciliation response returns the durable Payment identifier that the frontend can poll.
 
 ### Workstream B - V7 Payment and Assignment schema
 
@@ -83,10 +84,24 @@ Deliverables:
 - Locked amount sourced only from the Active Hold.
 - Checkout expiry capped by Hold expiry.
 - Query-before-retry handling for ambiguous attempts.
+- Bounded expired-checkout reconciliation that preserves raw VNPay evidence and changes the local attempt to `TIMEOUT` only after both required trusted `01` results.
 - Unknown results remain Pending and block retries until reconciled.
+- Due Holds with unresolved Pending Payments remain Active and keep availability `ON_HOLD`; ordinary expiry skips them until trusted reconciliation closes the attempt.
+- Reconciliation performs gateway I/O outside a transaction, then locks `Hold → Payment` to apply
+  the result. For initial payments, trusted status `02` is the safe terminal failure that closes the
+  attempt; `04`, `07`, `09` and unknown combinations stay Pending for reconciliation. A closed
+  non-success attempt expires an already-due Hold atomically.
 - Definite gateway unavailability with proof that no external session exists changes the attempt to `FAILED` before returning `502`.
 - Environment-only configuration and startup validation for required provider settings.
-- Short database transactions before and after the external call; no row lock is held across gateway I/O.
+- For VNPay PAY, insert/flush the Payment, locally sign the URL and persist the complete checkout
+  metadata in one short atomic transaction; URL construction has no remote I/O.
+- Re-check the idempotency key after the Hold lock so concurrent same-key requests converge on one
+  Payment and one signed checkout.
+- Claim a QueryDR slot by recording `lastGatewayQueryAt` under the `Hold → Payment` lock before
+  releasing the transaction and calling VNPay. Apply the result in a second short transaction; no
+  row lock is held across gateway I/O.
+- Close legacy/incomplete Pending rows without checkout metadata after the grace period as
+  `CHECKOUT_NOT_CREATED`, because no VNPay session or delivered checkout can exist for those rows.
 
 Tests:
 
@@ -100,6 +115,14 @@ Tests:
 - New-key `PAYMENT_ATTEMPT_ALREADY_PENDING` versus `PAYMENT_RESULT_UNKNOWN` rejection behavior.
 - `502` is returned only after the durable Payment is committed as `FAILED`.
 - Lost-response checkout recovery.
+- Concurrent same-key initiation creates one Payment and returns one creation plus one replay.
+- Reusing one idempotency key for another BoothRequest is rejected.
+- Concurrent reconciliation workers obtain only one QueryDR claim inside the provider interval.
+- Pending checkout-metadata orphans are closed safely and permit an eligible retry.
+- One trusted expired-checkout `01` result remains Pending; two qualifying results close the attempt as TIMEOUT.
+- Transport, signature, response-code and reference/amount failures never satisfy the timeout counter.
+- A due Hold with unknown Payment evidence is not released, does not appear AVAILABLE and blocks a competing selection.
+- After trusted FAILED/TIMEOUT evidence, a due Hold and its source request expire in the same transaction as the Payment transition.
 
 ### Workstream E - Verified callback and atomic Assignment
 
@@ -114,14 +137,18 @@ Deliverables:
 - Competing candidates moved from PENDING to NOT_SELECTED.
 - Duplicate and reordered callback idempotency.
 - Reconciliation/query path for uncertain results if supported by the provider.
+- Narrow late-success correction only when the Hold is Active and no later attempt, successful Payment or Assignment exists; all other late success evidence becomes a persisted reconciliation conflict.
 
 Tests:
 
 - Valid and invalid signatures.
 - SUCCESS, FAILED and TIMEOUT mappings.
+- VNPay cancellation is accepted only for the exact `vnp_ResponseCode=24` and
+  `vnp_TransactionStatus=02` pair; inconsistent pairs remain under reconciliation.
 - Duplicate callback.
 - Concurrent duplicate callbacks.
 - Payment success versus Hold expiry race.
+- Partner-owned Payment and Assignment queries do not disclose another Partner's resources.
 - Due Hold with an unresolved Pending gateway result.
 - Provider-confirmed charge that cannot produce an Assignment follows the approved compensation path.
 - Transaction rollback leaves no partial Assignment state.
@@ -166,21 +193,22 @@ Deliverables:
 ## 5 Pre-implementation checklist
 
 - [ ] Sprint 2 frontend/E2E completion status is known.
-- [ ] Gateway provider selected.
-- [ ] Sandbox merchant access verified.
-- [ ] Webhook signature rules documented.
-- [ ] Status mapping documented.
-- [ ] Durable merchant-order correlation identifier verified end to end.
-- [ ] `201`/same-key `200`/same-key `202`/new-key `409`/definite `502` initiation matrix verified against the provider.
-- [ ] Query-before-retry policy documented.
-- [ ] Checkout lifetime documented and capped by Hold expiry.
-- [ ] Late callback/expiry precedence approved.
-- [ ] Checkout replay/recovery strategy approved, including any V7 columns.
-- [ ] Unknown-result reconciliation and retry blocking approved.
-- [ ] Compensation path for a late confirmed charge approved.
-- [ ] Initial-rental purpose code approved.
-- [ ] V7 owner assigned.
-- [ ] API contract reviewed by backend and frontend owners.
+- [x] Gateway provider selected: VNPay.
+- [x] Sandbox merchant access verified.
+- [x] Webhook signature rules documented.
+- [x] Status mapping documented.
+- [x] Durable merchant-order correlation selected: `BSP{boothPaymentId}`; no extra provider-request ID column.
+- [x] VNPay initiation matrix documented: local signed-URL `201`, same-key usable/terminal `200`, same-key reconciliation `202`, new-key `409`, definite local no-session failure `502`.
+- [x] Expired-checkout QueryDR-before-retry policy documented.
+- [x] Checkout lifetime documented and sandbox-verified: `min(now + 15 minutes, hold.expiresAt)`, with no new checkout below five minutes remaining.
+- [x] Late callback/expiry precedence approved for automatic settlement; unsafe late charges still require the compensation decision below.
+- [x] Checkout replay strategy approved: persist and return the original signed URL plus its expiry.
+- [x] Expired-checkout status `01` reconciliation and retry blocking approved; non-expiry unknown-result behavior remains Pending.
+- [x] Unresolved-Payment Hold retention approved: keep Hold Active/ON_HOLD, block reassignment and release only after trusted reconciliation.
+- [x] Compensation boundary for a late confirmed charge approved: persist conflict and route to manual refund review.
+- [x] Initial-rental purpose code approved: `INITIAL_BOOTH_RENTAL`.
+- [x] V7 owner assigned to the active Sprint 3 implementation branch.
+- [x] API contract approved for implementation; frontend integration follows the backend contract.
 
 ## 6 Definition of handoff readiness
 

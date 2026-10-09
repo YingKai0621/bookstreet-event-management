@@ -9,6 +9,7 @@ import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.entity.EventBoothConfig;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
+import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
@@ -38,6 +39,7 @@ public class PartnerBoothRequestService {
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
+    private final BoothAssignmentRepository assignmentRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
     private final Clock clock;
@@ -47,6 +49,7 @@ public class PartnerBoothRequestService {
             PartnerEventApplicationRepository applicationRepository,
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
+            BoothAssignmentRepository assignmentRepository,
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
             Clock clock
@@ -55,6 +58,7 @@ public class PartnerBoothRequestService {
         this.applicationRepository = applicationRepository;
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
+        this.assignmentRepository = assignmentRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
         this.clock = clock;
@@ -90,13 +94,16 @@ public class PartnerBoothRequestService {
         }
         if (!booth.getLocation().isActive()
                 || configRepository.existsCurrentOverlappingHoldForBooth(
-                        booth.getBoothId(), event.getStartAt(), event.getEndAt(), now)) {
+                        booth.getBoothId(), event.getStartAt(), event.getEndAt())
+                || assignmentRepository.existsOverlappingActiveAssignment(
+                        booth.getBoothId(), event.getStartAt(), event.getEndAt())) {
             throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_NOT_AVAILABLE",
                     "The Booth is not available for request.");
         }
 
         rejectDuplicateOrRejected(application.getId(), booth.getBoothId());
-        if (requestRepository.countCurrentActiveHolds(application.getId(), now)
+        if (requestRepository.countCurrentActiveHolds(application.getId())
+                + assignmentRepository.countActiveByApplication(application.getId())
                 >= event.getMaxBoothsPerPartner()) {
             throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_QUOTA_EXCEEDED",
                     "The Partner has reached this Event's Booth quota.");
