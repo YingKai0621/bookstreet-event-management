@@ -102,6 +102,8 @@ public class BoothCatalogService {
         var mapY = request.contains("mapY") ? request.getMapY() : location.getMapY();
         String category = request.contains("categoryCode")
                 ? optional(request.getCategoryCode()) : booth.getCategoryCode();
+        String note = request.contains("note")
+                ? optional(request.getNote()) : booth.getNote();
         if (request.contains("code")) {
             String newCode = required(request.getCode(), "code", 30).toUpperCase();
             location.setCode(newCode);
