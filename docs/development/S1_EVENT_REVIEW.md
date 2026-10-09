@@ -3,6 +3,10 @@
 Cập nhật 2026-10-04. Phạm vi UC-O01, AC-O01-01 đến AC-O01-05, 7 API Event.
 Báo cáo này thay thế các nhận xét cũ ngày 2026-10-01.
 
+> **Historical implementation review:** Báo cáo này ghi nhận trạng thái Sprint 1. Chính sách Event
+> lifecycle/cancellation hiện hành nằm trong Business Rules và tài liệu Sprint 4; các diễn giải cũ
+> về refund/cutoff bên dưới không phải nguồn triển khai mới.
+
 ## 1. Auth/public đã tích hợp
 
 SecurityConfiguration cho phép GET public; repository chỉ trả PUBLISHED.
@@ -23,7 +27,8 @@ Khóa dòng và transaction bảo vệ PATCH/publish; một lần chuyển trạ
 - Booth Request/Activity Proposal deadline >= Partner application deadline khi có cả hai.
 - Cho phép bằng nhau, so sánh Instant độc lập offset.
 - Cutoff rút/hủy độc lập hạn nộp, có thể sau hạn nộp nhưng không sau startAt.
-- Theo BR-08/BR-16, cutoff phân loại hủy muộn/refund, không cấm mọi yêu cầu hủy muộn.
+- Các cutoff vẫn được kiểm tra như dữ liệu Event. Cách dùng chúng để phân loại refund là thiết kế
+  Post-MVP; Sprint 4 không triển khai business refund.
 - Áp dụng trên create, trạng thái sau PATCH và publish. Sai trả 422 EVENT_TIME_INVALID kèm field.
 - Dời startAt kiểm tra lại deadline; PATCH sai rollback các thay đổi.
 

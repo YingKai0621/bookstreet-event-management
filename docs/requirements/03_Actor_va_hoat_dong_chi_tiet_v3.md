@@ -1,6 +1,6 @@
 **ACTORS & MAIN ACTIVITIES**
 
-*Updated baseline for Event participation, Booth selection and feedback*
+*Updated active MVP baseline for Event lifecycle, Booth selection and feedback — 09/10/2026*
 
 # 1. Tổng quan
 
@@ -44,15 +44,15 @@ Partner là tổ chức tham gia Event; tài khoản đại diện thao tác cho
 
 - Apply to Event: xin tham gia Event và chờ Organizer duyệt.
 
-- Manage Booth Request: sau khi được duyệt vào Event, chọn Booth cụ thể trên map rồi gửi/đổi/hủy request; submit request chưa tạo Hold.
+- Manage Booth Request: sau khi được duyệt vào Event, chọn Booth cụ thể trên map rồi gửi request; PENDING chưa tạo Hold. PENDING hoặc SELECTED chưa settlement có thể withdraw theo điều kiện an toàn.
 
-- Pay Booth Fee & View Assignment: sau khi request được SELECTED, thanh toán/retry theo giá đã khóa trong thời gian Hold; xem từng payment attempt và Assignment sau PAYMENT SUCCESS. Khi đổi/hủy/rút Event, theo dõi REFUND PENDING/SUCCESS/FAILED do backend xử lý qua Payment Gateway bằng cách tham chiếu giao dịch PAYMENT SUCCESS gốc.
+- Pay Booth Fee & View Assignment: sau khi request được SELECTED, thanh toán/retry theo giá đã khóa trước Hold `expiresAt`; xem từng payment attempt và Assignment sau PAYMENT SUCCESS hợp lệ khi Event PUBLISHED/ONGOING. Evidence chưa rõ có thể giữ Hold sang ONGOING; success sau COMPLETED/CANCELLED chỉ đối soát và không tạo Assignment. MVP không có business-refund hoặc đổi/hủy Booth sau Assignment.
 
 - Manage Activity Proposal: tạo/sửa/gửi/rút đề xuất Activity.
 
 - Request Activity Change / Cancellation: yêu cầu thay đổi hoặc hủy Activity đã được duyệt.
 
-- Withdraw from Event: xin rút toàn bộ đơn vị khỏi Event; khi Organizer xác nhận, request/Hold/Assignment liên quan kết thúc ngay và các refund đủ điều kiện được xử lý bất đồng bộ.
+- Post-MVP reference: whole-Event withdrawal sau approval, Booth change/cancellation sau Assignment và business refund không phải active MVP activity.
 
 Lưu ý: Booth availability được tính theo Event/thời gian. Cùng một Booth vật lý có thể dùng cho Event khác nếu lịch không overlap.
 
@@ -60,11 +60,13 @@ Lưu ý: Booth availability được tính theo Event/thời gian. Cùng một B
 
 Organizer thuộc Ban quản lý Đường Sách. Mỗi Event có organizerUserId xác định Organizer chịu trách nhiệm xử lý; đây là trách nhiệm nghiệp vụ/audit, không biến Event thành tài sản cá nhân.
 
-- Manage Events: tạo, cập nhật, publish, cancel, deadline và lifecycle.
+- Manage Events: tạo/cập nhật/xóa Draft; publish; cập nhật có giới hạn hoặc cancel một Event
+  PUBLISHED chưa có financial/Assignment blocker; theo dõi lifecycle một chiều đến ONGOING và
+  COMPLETED. Event đã publish không bị hard-delete.
 
 - Manage Locations & Booths: Area, Stage, physical Booth, EventBoothConfig (giá theo từng Event–Booth), availability, Hold, Payment và Assignment.
 
-- Review Partner Applications & Booth Requests; chọn request phù hợp rồi tạo Hold và khóa giá Event–Booth. Candidate khác giữ PENDING trong payment window; khi Assignment được tạo thì chuyển NOT_SELECTED; chỉ khi payment window/Hold hết hạn mới chuyển winner PAYMENT_EXPIRED và chọn candidate tiếp theo. Organizer xác nhận quyền refund; backend/gateway xử lý việc hoàn tiền.
+- Review Partner Applications & Booth Requests; chọn request phù hợp rồi tạo Hold và khóa giá Event–Booth. Candidate khác giữ PENDING trong payment window; Assignment tạo thì chuyển NOT_SELECTED. Hết Hold hoặc Partner release an toàn thì Organizer có thể chọn candidate tiếp theo. Organizer không xử lý business refund trong MVP.
 
 - Review Activity Proposals.
 

@@ -2,6 +2,10 @@
 
 > Approved implementation assignment. VNPay Sandbox and the V7 provider/reconciliation design are frozen for Sprint 3.
 
+> Active Sprint 4 overlay: Payment paths must prepend the Event-root lock and apply the Event
+> lifecycle settlement boundary defined by Sprint 4. This historical assignment does not override
+> that newer cross-module contract.
+
 ## 1 Delivery strategy
 
 Sprint 3 should be delivered as small pull requests in dependency order. One developer owns V7 to avoid duplicate migration numbers. All feature branches start from updated `main`.
@@ -100,6 +104,9 @@ Deliverables:
 - Claim a QueryDR slot by recording `lastGatewayQueryAt` under the `Hold → Payment` lock before
   releasing the transaction and calling VNPay. Apply the result in a second short transaction; no
   row lock is held across gateway I/O.
+
+> Historical Sprint 3 assignment note: Sprint 4 preserves this relative `Hold → Payment` order but
+> prefixes Event-scoped transactions with an Event row lock.
 - Close legacy/incomplete Pending rows without checkout metadata after the grace period as
   `CHECKOUT_NOT_CREATED`, because no VNPay session or delivered checkout can exist for those rows.
 

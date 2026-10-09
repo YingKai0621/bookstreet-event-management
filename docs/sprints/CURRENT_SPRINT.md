@@ -1,76 +1,55 @@
 # Current Sprint
 
-## Sprint 03 Booth Payment and Assignment
+## Sprint 04 Event Lifecycle and Pre-payment Booth Release
 
-- Status: `BACKEND IMPLEMENTED AND VERIFIED - FRONTEND/E2E PENDING`
-- Sprint file: `docs/sprints/sprint-03.md`
-- Use Case Specifications: `docs/use-cases/sprint-03-use-case-specifications.md`
-- API Contract: `docs/api/sprint-03-api-contract.md`
-- Backend Work Assignment: `docs/sprints/SPRINT_03_BACKEND_WORK_ASSIGNMENT.md`
+- Status: `DOCUMENTATION BASELINE - IMPLEMENTATION PENDING`
+- Sprint file: `docs/sprints/sprint-04.md`
+- Use Case Specifications: `docs/use-cases/sprint-04-use-case-specifications.md`
+- API Contract: `docs/api/sprint-04-api-contract.md`
+- Backend Work Assignment: `docs/sprints/SPRINT_04_BACKEND_WORK_ASSIGNMENT.md`
 
 ## Sprint goal
 
-Complete the initial Booth allocation path from a selected, price-locked Hold through
-backend-verified VNPay payment to one durable BoothAssignment.
+Harden Event update/delete/cancellation and timed lifecycle behavior, then let an owning Partner
+release an eligible selected Booth Hold before settlement without weakening Sprint 3 payment
+reconciliation safety.
 
 ## Starting baseline
 
-- Sprint 2 backend Booth selection and Hold lifecycle are implemented through V6.
-- The PostgreSQL-backed backend baseline passes 200 tests with no failures, errors or skips.
-- VNPay Sandbox signing, Return verification, IPN verification, QueryDR and five-minute checkout
-  expiry were proven by the repository-local disposable spike.
-- V1 through V6 are immutable; Sprint 3 owns V7.
+- Sprint 1 Event and Partner-application backend is implemented.
+- Sprint 2 Booth request, selection, price-locked Hold and expiry backend is implemented through V6.
+- Sprint 3 VNPay Payment and Assignment backend is implemented and verified through V7.
+- Backend baseline: 222 tests with no failures or errors; 69 tests are intentionally skipped by
+  test configuration.
+- VNPay disposable spike baseline: 20 tests passed.
+- Sprint 3 frontend payment integration and Playwright payment E2E remain tracked technical debt.
+- V1 through V7 are immutable; Sprint 4 owns V8.
 
 ## Included Use Case slices
 
-- UC-E03 Pay & View Booth - initial Booth rental payment, retry, history and Assignment view.
-- UC-E02 Manage Booth Request - `COMPLETED` and `NOT_SELECTED` outcomes from settlement.
-- UC-O04 Review Booth Requests - free-Booth settlement and paid winner finalization.
-
-## Approved provider decisions
-
-- Provider: VNPay Sandbox.
-- Merchant correlation: `vnp_TxnRef = BSP{boothPaymentId}`.
-- IPN path: `/api/v1/payments/vnpay/ipn`.
-- Purpose: `INITIAL_BOOTH_RENTAL`.
-- Checkout expiry: `min(now + 15 minutes, hold.expiresAt)`; do not create a checkout with less
-  than five minutes remaining.
-- Exact signed checkout URL and expiry are persisted for same-key replay.
-- An expired checkout is locally `TIMEOUT` only after two trusted QueryDR `00/01` results at
-  least five minutes apart with matching reference and amount.
-- An unresolved Payment retains the Active Hold and blocks Booth reassignment.
-- An unsafe verified late charge is retained as a reconciliation conflict for manual refund; it
-  never creates an invalid or duplicate Assignment.
-- A zero-price Booth bypasses VNPay and is assigned atomically when selected. A positive Booth
-  price below 5,000 VND is invalid; paid Booths use VNPay.
+- UC-O01 Manage Events — Draft delete, safe published update, eligible cancellation and timed
+  lifecycle transitions.
+- UC-E02 Manage Booth Request — Pending withdrawal and safe Selected Hold release before
+  settlement.
 
 ## Scope guard
 
-Sprint 3 implements only initial Booth rental payment and Assignment. Refund execution, Booth
-change/cancellation, Event-withdrawal refunds, Activity, attendance and rewards remain out of
-scope.
+Sprint 4 excludes post-assignment Booth change/cancellation, business refunds, Partner withdrawal
+from the whole Event after approval, cancellation of an Ongoing Event and Admin emergency
+cancellation.
 
-Every implementation change must map to the Sprint 3 Use Case Specifications and Acceptance
+Every Payment `PENDING`/`SUCCESS`, reconciliation-required record and BoothAssignment remains a
+hard blocker. A browser or frontend claim can never release a Hold or establish payment state.
+
+Every Event-scoped mutation serializes on the Event row before domain locks. Booth/payment work
+then follows `Event → Booth (if needed) → EventBoothConfig (if needed) → Hold → Payment by
+ascending id → BoothRequest`. Publish and operational patch also require
+`boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`.
+
+That invariant bounds the scheduled checkout window, not unresolved gateway evidence. A Pending or
+reconciliation-required Payment may keep its Hold Active into Ongoing without pausing the Event;
+trusted success may settle while Published/Ongoing, but after Completed/Cancelled it creates no
+Assignment and is retained for manual reconciliation.
+
+Every implementation change must map to the Sprint 4 Use Case Specifications and Acceptance
 Criteria.
-
-## Backend implementation verification
-
-- V7 Payment/Assignment schema, VNPay initiation/IPN/QueryDR, bounded reconciliation,
-  free-Booth assignment and Partner-owned Payment/Assignment queries are implemented.
-- VNPay Payment creation now commits the new attempt and complete signed checkout metadata
-  atomically. Concurrent same-key requests converge after the Hold lock, and incomplete legacy
-  Pending rows are closed safely as `CHECKOUT_NOT_CREATED` after the grace period.
-- Reconciliation atomically claims the provider query interval before network I/O, preventing
-  concurrent workers from sending duplicate QueryDR requests. Cancellation requires the exact
-  VNPay `24/02` response/status pair; inconsistent evidence remains Pending for reconciliation.
-- Initial-payment status `02` is the only safe generic terminal failure. Status `04` (possible
-  debit/reversal), `07`, `09` and unknown combinations remain Pending so retry cannot create a
-  second charge.
-- Verified success that contradicts a locally terminal attempt is persisted as a reconciliation
-  conflict and blocks another charge until manual resolution.
-- PostgreSQL migration tests cover clean V1-to-V7 migration and the V6-to-V7 upgrade path.
-- Backend regression suite: `222` tests passed with no failures, errors or skips. The expanded
-  suite includes concurrency, orphan-recovery, ownership and settlement/expiry-race coverage.
-- Disposable VNPay spike suite: `20` tests passed.
-- Remaining Sprint work is frontend integration and Playwright E2E against the approved backend
-  contract.

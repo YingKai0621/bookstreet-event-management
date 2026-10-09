@@ -2,6 +2,11 @@
 
 > Approved implementation baseline. VNPay Sandbox is the Sprint 3 provider, the local spike is complete, and V7 implementation is authorized on the Sprint 3 branch.
 
+> Active Sprint 4 overlay: Payment transactions acquire/recheck the Event root before existing
+> domain locks. Unresolved evidence may keep a Hold Active across Event start. Trusted success may
+> create an Assignment while the Event is Published/Ongoing; after Completed/Cancelled it is kept
+> for manual reconciliation and creates no Assignment. See `sprint-04.md` section 5.4.
+
 ## 1 Purpose
 
 Sprint 3 completes the successful Booth allocation path that Sprint 2 intentionally stopped before:
@@ -23,7 +28,7 @@ The Sprint must preserve the Sprint 2 price lock, Hold expiry, ownership and con
 
 | ID | Use Case | Sprint 3 delivery |
 |---|---|---|
-| UC-E03 | Pay & View Booth | Create and retry Booth payment attempts while a selected Hold is active; view payment history and the resulting BoothAssignment |
+| UC-E03 | Pay & View Booth | Create and retry Booth payment attempts while a selected Hold is active and its scheduled payment window is open; view payment history and the resulting BoothAssignment |
 | UC-E02 | Manage Booth Request | Surface `COMPLETED` and `NOT_SELECTED` states produced by verified payment success |
 | UC-O04 | Review Booth Requests | Complete the selected winner and close competing candidates after assignment creation |
 
@@ -49,7 +54,8 @@ Therefore this Sprint does not rename or split the approved Use Case and does no
 - One durable `BoothPayment` record per gateway attempt.
 - Required idempotency for payment creation and gateway callbacks.
 - Server-side callback/webhook signature verification or server-side gateway status verification.
-- Retry after `FAILED` or attempt `TIMEOUT` while the Hold remains active.
+- Retry after `FAILED` or attempt `TIMEOUT` while the Hold remains active and backend time is before
+  `expiresAt`.
 - Atomic payment-success settlement that creates one `BoothAssignment`.
 - Partner-owned payment history and Assignment queries.
 - Derived Booth availability becomes `ASSIGNED` for overlapping Active Assignments.
@@ -67,7 +73,8 @@ Therefore this Sprint does not rename or split the approved Use Case and does no
 - Multiple production gateway providers in the same Sprint.
 - Trusting a browser redirect or browser request as proof of payment.
 
-These flows remain in the MVP baseline but are deliberately deferred so Sprint 3 can deliver one complete and secure payment-to-assignment path.
+Sprint 4 subsequently moved these flows to Post-MVP reference scope. This Sprint 3 document remains
+the historical contract for the implemented payment-to-assignment path and does not authorize them.
 
 ## 4 Preserved Sprint 2 decisions
 
@@ -267,9 +274,11 @@ The normal new-attempt response is therefore `201`. Local signing/configuration 
 - A due Hold with no unresolved `PENDING` Payment expires normally.
 - A due Hold with an unresolved `PENDING` Payment remains `ACTIVE`, its source request remains `SELECTED`, and no new payment attempt is permitted. Every availability and selection query treats that `ACTIVE` row as blocking even though `expiresAt` is in the past.
 - Gateway I/O is never performed while holding a database lock. Before QueryDR, the reconciliation
-  worker atomically claims the due Payment by locking `Hold → Payment`, re-checking eligibility and
+  worker atomically claims the due Payment by locking `Hold → Payment` within the Sprint 3 payment
+  domain, re-checking eligibility and
   recording `lastGatewayQueryAt` in a short transaction. It then releases the locks, calls QueryDR,
-  and opens another short `Hold → Payment` transaction to apply only the still-current result. This
+  and opens another short `Hold → Payment` transaction to apply only the still-current result. The
+  active Sprint 4 contract prefixes both short transactions with the Event row. This
   claim prevents concurrent workers or a crash/retry loop from violating VNPay's minimum query
   interval.
 - Trusted SUCCESS follows atomic settlement. Trusted FAILED or the approved two-query local TIMEOUT closes the attempt and, when the Hold is already due, expires the Hold and source request in that same transaction.

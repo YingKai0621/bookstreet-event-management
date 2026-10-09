@@ -2,7 +2,10 @@
 
 ## 1 Purpose
 
-Sprint 2 delivers the Booth workflow from physical Booth setup through Organizer selection and a temporary payment hold. It intentionally stops before payment processing and final Booth assignment so that payment security, webhook verification and refund behavior can be implemented as one coherent Sprint 3 slice.
+Sprint 2 delivers the Booth workflow from physical Booth setup through Organizer selection and a
+temporary payment hold. It intentionally stops before payment processing and final Booth
+assignment. Sprint 3 later implemented initial Payment and Assignment; the Sprint 4 baseline moved
+business-refund behavior to Post-MVP reference scope.
 
 ## 2 Sprint goal
 
@@ -89,7 +92,9 @@ Sprint 2 has no BoothAssignment table yet, but the availability service must be 
 
 ### 5.4 Organizer selection creates the Hold
 
-The selection transaction must:
+The selection transaction must follow the steps below. Sprint 4 additionally prefixes the active
+transaction lock order with the Event row and rechecks Event status/backend time before these
+Sprint 2 checks.
 
 1. identify the Organizer from the authenticated session;
 2. verify ownership of the Event;
@@ -123,6 +128,11 @@ The implementation should combine a scheduled expiry job with an expiry check be
 - For a newly created Event, the Organizer UI initializes the control to `24 Hours`. When editing an existing Event, it displays the currently persisted value, converted from `boothPaymentWindowMinutes` for presentation when needed.
 - The UI may display a numeric value plus Hours/Days selector, but it converts the value to minutes for the existing Event create/update API.
 - A permitted change affects only future selections. It must not update `expiresAt` for an existing Hold.
+- Under the active Sprint 4 baseline, publish and operational update require
+  `boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`; selection remains rejected after
+  `boothRequestDeadlineAt`, so a new Hold's scheduled `expiresAt` cannot be later than Event start.
+  Unresolved Payment evidence may preserve that Hold as `ACTIVE` past `expiresAt` under the Sprint
+  3/4 reconciliation policy; this does not pause the Event lifecycle.
 - Demo Events may use a shorter valid window. Automated expiry tests advance an injected Clock rather than storing an invalid sub-hour window.
 - Sprint 2 does not define or implement a payment-session duration. Sprint 3 must ensure that every payment session ends no later than `BoothHold.expiresAt`.
 - Selection email is triggered only after the database transaction commits.

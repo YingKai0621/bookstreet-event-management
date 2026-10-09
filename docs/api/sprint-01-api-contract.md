@@ -215,7 +215,7 @@ All endpoints require role `ORGANIZER` and verified email.
   "partnerWithdrawalCutoffAt": "2026-10-20T23:59:59+07:00",
   "boothCancellationCutoffAt": "2026-10-20T23:59:59+07:00",
   "activityCancellationCutoffAt": "2026-10-25T23:59:59+07:00",
-  "boothPaymentWindowMinutes": 30,
+  "boothPaymentWindowMinutes": 1440,
   "maxBoothsPerPartner": 1,
   "maxActivitiesPerPartner": 5,
   "bannerUrl": null
@@ -249,9 +249,13 @@ supporting UC-O01 alternative A2 and AC-O01-01/03/04:
   must each be at or after `partnerApplicationDeadlineAt`, allowing the Partner
   application stage to precede downstream requests.
 - Equality is allowed; timestamps are compared as instants, independently of their UTC offset.
-- Cancellation/withdrawal cutoffs are independent of application deadlines. They
-  may be later than application deadlines. Under BR-08/BR-16 they classify late
-  cancellation/refund eligibility, not an absolute prohibition on cancellation.
+- Sprint 4 adds the publish/operational-update invariant
+  `boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`; equality with `startAt` is valid.
+  This guarantees that a selection made by the request deadline can receive its full payment window
+  before the Event starts.
+- Cancellation/withdrawal cutoff fields are independent of application deadlines and retained for
+  Post-MVP compatibility. The active MVP does not calculate Booth/Partner refund eligibility from
+  them; Sprint 4 cancellation safety follows its own contract.
 - These checks apply to create, the merged state after PATCH, and publish. Invalid
   values return `422 EVENT_TIME_INVALID` with the offending field; no changes persist.
 - Draft create/PATCH may omit deadlines. Null means unfinished configuration, not unlimited acceptance.
