@@ -8,6 +8,7 @@ import com.swp391.bookstreet.booth.entity.Booth;
 import com.swp391.bookstreet.booth.entity.Location;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRepository;
+import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.repository.LocationRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
@@ -24,6 +25,7 @@ public class BoothCatalogService {
     private final BoothRepository boothRepository;
     private final LocationRepository locationRepository;
     private final EventBoothConfigRepository configRepository;
+    private final BoothAssignmentRepository assignmentRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
     private final Clock clock;
@@ -31,10 +33,12 @@ public class BoothCatalogService {
     public BoothCatalogService(BoothRepository boothRepository,
             LocationRepository locationRepository,
             EventBoothConfigRepository configRepository,
+            BoothAssignmentRepository assignmentRepository,
             BoothCurrentUser currentUser, BoothHoldExpiryService expiryService, Clock clock) {
         this.boothRepository = boothRepository;
         this.locationRepository = locationRepository;
         this.configRepository = configRepository;
+        this.assignmentRepository = assignmentRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
         this.clock = clock;
@@ -86,10 +90,16 @@ public class BoothCatalogService {
         if (location.isActive() && !active) {
             expiryService.expireDueHolds();
         }
-        if (location.isActive() && !active
-                && configRepository.existsCurrentActiveHoldForBooth(boothId, clock.instant())) {
-            throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",
-                    "A Booth with an Active Hold cannot be deactivated.");
+        if (location.isActive() && !active) {
+            if (configRepository.existsCurrentActiveHoldForBooth(boothId)) {
+                throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",
+                        "A Booth with an Active Hold cannot be deactivated.");
+            }
+            if (assignmentRepository.existsActiveAssignmentForBooth(boothId)) {
+                throw new BoothApiException(HttpStatus.CONFLICT,
+                        "BOOTH_HAS_ACTIVE_ASSIGNMENT",
+                        "A Booth with an Active Assignment cannot be deactivated.");
+            }
         }
 
         String name = request.contains("name")

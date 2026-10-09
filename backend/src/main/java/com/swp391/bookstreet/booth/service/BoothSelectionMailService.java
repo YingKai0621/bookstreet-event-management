@@ -26,6 +26,9 @@ public class BoothSelectionMailService {
         message.setFrom(fromAddress);
         message.setTo(recipientEmail);
         message.setSubject(SUBJECT);
+        String nextStep = lockedRentalPrice.signum() == 0
+                ? "This free Booth has been assigned to your organization."
+                : "Complete payment before the Hold expiry shown above.";
         message.setText("""
                 Your Booth request has been selected.
 
@@ -34,8 +37,9 @@ public class BoothSelectionMailService {
                 Locked rental price: %s
                 Hold expires at: %s
 
-                Payment will be available in a later Sprint.
-                """.formatted(eventName, boothCode, lockedRentalPrice.toPlainString(), expiresAt));
+                %s
+                """.formatted(eventName, boothCode, lockedRentalPrice.toPlainString(), expiresAt,
+                        nextStep));
         mailSender.send(message);
     }
 }

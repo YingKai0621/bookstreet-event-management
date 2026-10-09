@@ -11,9 +11,9 @@ SWP391 project for managing Book Street events, partners, booths, activities and
 
 ## Project Status
 
-Sprint 1 backend is complete. Frontend integration and the full browser
-end-to-end demo are pending.
+Sprint 3 Payment/Assignment backend is implemented and verified through Flyway V7. Frontend
+checkout/result integration and the Sprint 3 browser E2E demo remain pending.
 
-Start with the shared documentation in [`docs/README.MD`](docs/README.MD). The
-frontend team should follow the
-[`Sprint 1 Frontend Handoff`](docs/development/SPRINT_01_FRONTEND_HANDOFF.md).
+Start with the shared documentation in [`docs/README.MD`](docs/README.MD), then read the
+[`Current Sprint`](docs/sprints/CURRENT_SPRINT.md) and
+[`Sprint 3 API Contract`](docs/api/sprint-03-api-contract.md).

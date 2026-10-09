@@ -3,8 +3,8 @@ package com.swp391.bookstreet.booth.repository;
 import com.swp391.bookstreet.booth.entity.BoothRequest;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import jakarta.persistence.LockModeType;
-import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -140,10 +140,20 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
               on request.booth_request_id = hold.booth_request_id
             where request.application_id = :applicationId
               and hold.status = 'ACTIVE'
-              and hold.expires_at > :now
             """, nativeQuery = true)
-    long countCurrentActiveHolds(
-            @Param("applicationId") Long applicationId,
-            @Param("now") Instant now
-    );
+    long countCurrentActiveHolds(@Param("applicationId") Long applicationId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select request
+            from BoothRequest request
+            where request.application.eventId = :eventId
+              and request.booth.boothId = :boothId
+              and request.status = :status
+            order by request.boothRequestId
+            """)
+    List<BoothRequest> findCompetingForUpdate(
+            @Param("eventId") Long eventId,
+            @Param("boothId") Long boothId,
+            @Param("status") BoothRequestStatus status);
 }

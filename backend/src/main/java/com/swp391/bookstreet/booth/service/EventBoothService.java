@@ -8,6 +8,7 @@ import com.swp391.bookstreet.booth.entity.BoothAvailability;
 import com.swp391.bookstreet.booth.entity.EventBoothConfig;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRepository;
+import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
@@ -31,19 +32,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class EventBoothService {
+    private static final BigDecimal MINIMUM_PAID_RENTAL_PRICE = new BigDecimal("5000");
+
     private final EventRepository eventRepository;
     private final BoothRepository boothRepository;
     private final EventBoothConfigRepository configRepository;
+    private final BoothAssignmentRepository assignmentRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
     private final Clock clock;
 
     public EventBoothService(EventRepository eventRepository, BoothRepository boothRepository,
             EventBoothConfigRepository configRepository, BoothCurrentUser currentUser,
+            BoothAssignmentRepository assignmentRepository,
             BoothHoldExpiryService expiryService, Clock clock) {
         this.eventRepository = eventRepository;
         this.boothRepository = boothRepository;
         this.configRepository = configRepository;
+        this.assignmentRepository = assignmentRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
         this.clock = clock;
@@ -52,10 +58,11 @@ public class EventBoothService {
     public List<EventBoothResponse> listOwnedConfigurations(Long eventId) {
         Event event = ownedEvent(eventId);
         expiryService.expireDueHolds();
-        Set<Long> blockedBoothIds = blockedBooths(event);
+        Set<Long> heldBoothIds = heldBooths(event);
+        Set<Long> assignedBoothIds = assignedBooths(event);
         return configRepository.findByEventIdOrderByBoothLocationCodeAsc(eventId).stream()
                 .map(config -> EventBoothResponse.configured(config,
-                        availability(config, blockedBoothIds)))
+                        availability(config, heldBoothIds, assignedBoothIds)))
                 .toList();
     }
 
@@ -64,6 +71,7 @@ public class EventBoothService {
             EventBoothConfigRequest request) {
         Event event = ownedEvent(eventId);
         expiryService.expireDueHolds();
+        requireSupportedPrice(request.rentalPrice());
         Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
                 .orElseThrow(EventBoothService::boothNotFound);
         if (request.enabled() && !booth.getLocation().isActive()) {
@@ -75,11 +83,18 @@ public class EventBoothService {
         EventBoothConfig config = configRepository.findByEventIdAndBoothIdForUpdate(
                         eventId, boothId)
                 .orElse(null);
-        if (config != null && config.isEnabled() && !request.enabled()
-                && configRepository.existsCurrentActiveHoldForConfig(
-                        config.getEventBoothConfigId(), clock.instant())) {
-            throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",
-                    "A Booth configuration with an Active Hold cannot be disabled.");
+        if (config != null && config.isEnabled() && !request.enabled()) {
+            if (configRepository.existsCurrentActiveHoldForConfig(
+                    config.getEventBoothConfigId())) {
+                throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",
+                        "A Booth configuration with an Active Hold cannot be disabled.");
+            }
+            if (assignmentRepository.existsActiveAssignmentForConfig(
+                    config.getEventBoothConfigId())) {
+                throw new BoothApiException(HttpStatus.CONFLICT,
+                        "BOOTH_HAS_ACTIVE_ASSIGNMENT",
+                        "A Booth configuration with an Active Assignment cannot be disabled.");
+            }
         }
 
         if (config == null) {
@@ -89,8 +104,8 @@ public class EventBoothService {
             config.update(request.rentalPrice(), request.enabled(), clock.instant());
         }
         config = configRepository.saveAndFlush(config);
-        Set<Long> blockedBoothIds = blockedBooths(event);
-        return EventBoothResponse.configured(config, availability(config, blockedBoothIds));
+        return EventBoothResponse.configured(config,
+                availability(config, heldBooths(event), assignedBooths(event)));
     }
 
     public BoothPageResponse<EventBoothResponse> listPublic(Long eventId, int page, int size,
@@ -100,7 +115,8 @@ public class EventBoothService {
         expiryService.expireDueHolds();
         List<Booth> booths = boothRepository.findAllActive();
         Map<Long, EventBoothConfig> configs = configsByBooth(eventId);
-        Set<Long> blockedBoothIds = blockedBooths(event);
+        Set<Long> heldBoothIds = heldBooths(event);
+        Set<Long> assignedBoothIds = assignedBooths(event);
         String normalizedCategory = normalizeFilter(categoryCode);
 
         List<EventBoothResponse> matching = new ArrayList<>();
@@ -112,7 +128,8 @@ public class EventBoothService {
             EventBoothConfig config = configs.get(booth.getBoothId());
             EventBoothResponse response = config == null
                     ? EventBoothResponse.unconfigured(eventId, booth)
-                    : EventBoothResponse.configured(config, availability(config, blockedBoothIds));
+                    : EventBoothResponse.configured(config,
+                            availability(config, heldBoothIds, assignedBoothIds));
             if (availabilityFilter == null || response.availability() == availabilityFilter) {
                 matching.add(response);
             }
@@ -136,7 +153,8 @@ public class EventBoothService {
         if (config == null) {
             return EventBoothResponse.unconfigured(eventId, booth);
         }
-        return EventBoothResponse.configured(config, availability(config, blockedBooths(event)));
+        return EventBoothResponse.configured(config,
+                availability(config, heldBooths(event), assignedBooths(event)));
     }
 
     private Event ownedEvent(Long eventId) {
@@ -159,18 +177,36 @@ public class EventBoothService {
         return configs;
     }
 
-    private Set<Long> blockedBooths(Event event) {
+    private Set<Long> heldBooths(Event event) {
         return new HashSet<>(configRepository.findBoothIdsWithCurrentOverlappingHold(
-                event.getStartAt(), event.getEndAt(), clock.instant()));
+                event.getStartAt(), event.getEndAt()));
+    }
+
+    private Set<Long> assignedBooths(Event event) {
+        return new HashSet<>(assignmentRepository.findBoothIdsWithOverlappingActiveAssignment(
+                event.getStartAt(), event.getEndAt()));
     }
 
     private static BoothAvailability availability(EventBoothConfig config,
-            Set<Long> blockedBoothIds) {
+            Set<Long> heldBoothIds, Set<Long> assignedBoothIds) {
         if (!config.isEnabled() || !config.getBooth().getLocation().isActive()) {
             return BoothAvailability.UNAVAILABLE;
         }
-        return blockedBoothIds.contains(config.getBooth().getBoothId())
-                ? BoothAvailability.ON_HOLD : BoothAvailability.AVAILABLE;
+        Long boothId = config.getBooth().getBoothId();
+        if (assignedBoothIds.contains(boothId)) {
+            return BoothAvailability.ASSIGNED;
+        }
+        return heldBoothIds.contains(boothId) ? BoothAvailability.ON_HOLD
+                : BoothAvailability.AVAILABLE;
+    }
+
+    private static void requireSupportedPrice(BigDecimal rentalPrice) {
+        if (rentalPrice != null && rentalPrice.signum() > 0
+                && rentalPrice.compareTo(MINIMUM_PAID_RENTAL_PRICE) < 0) {
+            throw new BoothApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "EVENT_BOOTH_PRICE_INVALID",
+                    "Rental price must be zero or at least 5000 VND.", "rentalPrice");
+        }
     }
 
     private static Comparator<EventBoothResponse> comparator(BoothPagination.SortSpec spec) {

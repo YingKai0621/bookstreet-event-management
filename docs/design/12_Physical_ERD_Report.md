@@ -142,11 +142,40 @@ is_enabled chỉ có nghĩa Booth có được mở trong Event hay không. AVAI
 
 ## 6.1 Payment retry và payment window
 
+V7 adds the approved provider/reconciliation columns to `booth_payments`:
+`checkout_url`, `checkout_expires_at`, `provider_response_code`,
+`provider_transaction_status`, `last_gateway_query_at`,
+`trusted_incomplete_query_count`, `reconciliation_required` and
+`reconciliation_detail`. The stable initial-rental purpose is
+`INITIAL_BOOTH_RENTAL`. `vnp_TxnRef` is derived as `BSP{booth_payment_id}` and is therefore not
+stored separately.
+
+- A zero-price Booth creates no BoothPayment. Organizer selection creates the Hold, immediately
+  consumes it and creates the Assignment atomically. A positive configured price below 5,000 VND
+  is invalid.
+
 - Mỗi retry tạo một BoothPayment mới với idempotency_key mới; attempt cũ được giữ nguyên.
+
+- Với VNPay PAY, BoothPayment mới và toàn bộ checkout metadata (`checkout_url`,
+  `checkout_expires_at`) được commit nguyên tử sau khi ký URL cục bộ. Vì không có remote
+  session-creation call, hệ thống không để lại một Payment `PENDING` nhìn thấy được nhưng thiếu URL.
+  Row cũ/bất thường thiếu checkout metadata sau grace period được đóng `FAILED` với
+  `CHECKOUT_NOT_CREATED` để Hold đủ điều kiện có thể retry an toàn.
 
 - FAILED hoặc TIMEOUT của một attempt không giải phóng Hold nếu expires_at chưa đến.
 
-- Scheduled job chỉ chuyển Hold thành EXPIRED khi payment window thực sự hết hạn.
+- Scheduled job chỉ chuyển Hold thành EXPIRED khi payment window thực sự hết hạn và không còn BoothPayment `PENDING` cần đối soát.
+
+- Nếu `expires_at` đã qua nhưng còn Payment `PENDING`, Hold tạm giữ `ACTIVE`, request nguồn giữ `SELECTED` và Booth vẫn được suy ra là `ON_HOLD`. `expires_at` chặn mọi payment attempt mới; nó không cho phép release/reassign khi kết quả giao dịch cũ chưa rõ.
+
+- Reconciliation claim lượt QueryDR trong một transaction ngắn bằng lock `Hold → Payment` và ghi
+  `last_gateway_query_at`, sau đó mới nhả lock và gọi gateway ngoài DB transaction. Transaction
+  ngắn tiếp theo khóa cùng thứ tự để áp dụng kết quả còn hợp lệ. Cơ chế claim chặn nhiều worker gọi
+  trùng trong minimum query interval. SUCCESS consume Hold và tạo Assignment; FAILED hoặc TIMEOUT
+  expire Hold nếu `expires_at` đã qua; kết quả chưa rõ giữ nguyên Hold và Payment để không cấp Booth
+  trùng.
+
+- Mọi truy vấn availability và selection phải coi một row Hold `ACTIVE` là đang khóa Booth kể cả khi `expires_at` đã qua. Chỉ expiry/reconciliation service mới được chuyển row đó sang `EXPIRED`; partial unique index hiện có tiếp tục là lớp bảo vệ cuối cùng.
 
 - Payment SUCCESS được backend xác minh trước khi tạo BoothAssignment.
 

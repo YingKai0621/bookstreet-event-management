@@ -1,6 +1,6 @@
 # Sprint 03 API Contract
 
-> Design draft. Provider-specific callback fields remain pending until the gateway is selected.
+> Approved implementation contract for the Sprint 3 VNPay Sandbox integration.
 
 ## 1 Purpose
 
@@ -15,7 +15,7 @@ This contract extends the Sprint 2 Booth APIs with initial rental Payment attemp
 - Money uses JSON decimal numbers and Java `BigDecimal`
 - Time uses ISO 8601 instants stored in UTC
 - `Idempotency-Key` is a required UUID header for payment creation
-- The exact gateway webhook path is CSRF-exempt only after its provider is selected
+- `GET /api/v1/payments/vnpay/ipn` is public and CSRF-exempt only for that exact path
 - Browser redirect data never proves payment success
 
 ## 3 Response models
@@ -32,7 +32,7 @@ This contract extends the Sprint 2 Booth APIs with initial rental Payment attemp
   "amount": 2000000,
   "status": "PENDING",
   "idempotencyKey": "47d85df4-c665-4a0d-844b-544f34c6d8fd",
-  "gatewayProvider": "TBD",
+  "gatewayProvider": "VNPAY",
   "gatewayTransactionRef": null,
   "failureCode": null,
   "failureMessage": null,
@@ -64,7 +64,7 @@ Allowed initial-payment statuses:
     "amount": 2000000,
     "status": "PENDING",
     "idempotencyKey": "47d85df4-c665-4a0d-844b-544f34c6d8fd",
-    "gatewayProvider": "TBD",
+    "gatewayProvider": "VNPAY",
     "gatewayTransactionRef": null,
     "failureCode": null,
     "failureMessage": null,
@@ -77,11 +77,11 @@ Allowed initial-payment statuses:
 }
 ```
 
-`checkoutUrl` is returned only by successful initiation and is not treated as payment-success proof. `sessionExpiresAt` must be no later than the source Hold's `expiresAt`.
+`checkoutUrl` is returned only by successful initiation and is not treated as payment-success proof. For VNPay, `sessionExpiresAt = min(now + 15 minutes, hold.expiresAt)`. A new checkout is rejected when less than five minutes remains on the Hold.
 
-Before V7 is finalized, the selected provider spike must choose one recoverable replay design: persist `checkoutUrl` and `checkoutExpiresAt`, recover them from the gateway, or safely recreate the same provider session for the same Payment/reference. A replay must not leave the Partner with a `PENDING` attempt that cannot be opened or safely resolved.
+The approved replay design persists the exact signed `checkoutUrl` and `checkoutExpiresAt`. A same-key replay returns that URL while it remains usable and never signs a replacement attempt.
 
-`INITIAL_BOOTH_RENTAL` is a provisional purpose code in this draft. Its final value must be approved before V7 and Java enums are implemented.
+`INITIAL_BOOTH_RENTAL` is the approved stable purpose code.
 
 ### Ambiguous initiation response
 
@@ -98,7 +98,7 @@ When the Payment is already durable but the gateway initiation result is unknown
     "amount": 2000000,
     "status": "PENDING",
     "idempotencyKey": "47d85df4-c665-4a0d-844b-544f34c6d8fd",
-    "gatewayProvider": "TBD",
+    "gatewayProvider": "VNPAY",
     "gatewayTransactionRef": null,
     "failureCode": null,
     "failureMessage": null,
@@ -112,7 +112,10 @@ When the Payment is already durable but the gateway initiation result is unknown
 }
 ```
 
-This response lets the frontend retain `boothPaymentId` and poll the durable Payment. The provider spike must verify what trusted evidence permits `502` instead and whether `resolution` belongs in the final response model.
+This response lets the frontend retain `boothPaymentId` and poll the durable Payment. The
+completed provider spike established that `502 PAYMENT_GATEWAY_UNAVAILABLE` is reserved for a
+definite local configuration/signing failure before any checkout can be delivered; `resolution`
+is retained so the frontend can distinguish this `202` reconciliation response.
 
 ### Booth Assignment response
 
@@ -164,26 +167,42 @@ Behavior:
 - Derives Partner ownership from the Session.
 - Requires a `SELECTED` request with an unexpired `ACTIVE` Hold.
 - Uses `BoothHold.lockedRentalPrice`; the client cannot submit an amount.
-- The first accepted key creates a `PENDING` BoothPayment and gateway checkout session.
-- The session-creation request includes a durable merchant-order correlation identifier already linked to the committed Payment. The provider must return that identifier in callbacks or query results so the backend can locate the Payment even if `gatewayTransactionRef` has not yet been persisted.
-- Repeating the same key for the same owned request returns the original Payment and never creates a second attempt. The approved provider design must also return a usable checkout URL, recover the existing provider session, or return a terminal/reconciliation response that does not strand the Partner.
+- The first accepted key creates a `PENDING` BoothPayment and a complete signed checkout URL.
+- The backend inserts and flushes the Payment inside the transaction to obtain its durable ID, then
+  uses that ID as the provider correlation identifier before the transaction commits.
+- For VNPay, that correlation identifier is `vnp_TxnRef = BSP{boothPaymentId}`;
+  `gatewayTransactionRef` stores the separate `vnp_TransactionNo` returned later by VNPay.
+- The exact signed checkout URL and `checkoutExpiresAt` are persisted. Replaying the same idempotency key while the URL remains usable returns that same URL and never signs a second attempt.
+- Repeating the same key for the same owned request returns the original Payment and never creates
+  a second attempt. It returns the stored URL while usable, the terminal Payment when already
+  closed, or an explicit `202 RECONCILING` response when the result is still unknown.
 - Reusing the key for another request is rejected instead of returning unrelated Payment data.
-- A retry after `FAILED` or `TIMEOUT` uses a new idempotency key.
+- A retry after an ordinary `FAILED` or `TIMEOUT` uses a new idempotency key. A terminal attempt
+  carrying contradictory verified-success evidence has `reconciliationRequired=true` and blocks
+  new attempts with `PAYMENT_RESULT_UNKNOWN` until manual resolution.
 - Ambiguous earlier attempts are queried according to the provider policy before a retry is created.
 - A network timeout or unavailable gateway query leaves the attempt `PENDING`; it is not converted to domain `TIMEOUT` and blocks another attempt with `PAYMENT_RESULT_UNKNOWN`.
-- Domain `TIMEOUT` is used only after trusted provider evidence confirms that the transaction/session expired and cannot later succeed.
-- The backend commits the idempotency/Payment record before the gateway call, does not hold a database transaction open during the network call, and persists the provider result afterward.
-- If the gateway is definitely unavailable and definitely created no external transaction/session, the backend commits the Payment transition from `PENDING` to `FAILED` before returning `502 PAYMENT_GATEWAY_UNAVAILABLE`.
+- VNPay raw transaction status `01` is not directly mapped to `FAILED` or `TIMEOUT`. After checkout expiry, domain `TIMEOUT` requires two trusted QueryDR results at least five minutes apart, each with valid signature, query response code `00`, matching transaction reference and amount, raw status `01`, and no verified success result. Any weaker evidence keeps the attempt `PENDING`.
+- VNPay PAY URL construction and HMAC signing are local and perform no network call. The new
+  Payment, signed URL and checkout expiry commit atomically, so a visible Pending attempt always has
+  recoverable checkout metadata.
+- If VNPay configuration or local signing fails, the same transaction records the attempt as
+  `FAILED`; `502 PAYMENT_GATEWAY_UNAVAILABLE` is returned only after that transaction commits.
+- A pre-existing incomplete Pending row without a checkout URL or expiry is marked `FAILED` after
+  the reconciliation grace period. No external session exists and no checkout URL was delivered,
+  so this cleanup cannot abandon a VNPay charge.
 - An ambiguous initiation result remains `PENDING` for reconciliation and must not be reported as a definite gateway failure.
 
 Initiation and idempotent replay response mapping:
 
-- `201 Created`: gateway session was created and a checkout URL is returned.
+- `201 Created`: a durable Payment and its signed checkout URL were created atomically.
 - `200 OK`: the same idempotency key returns its existing Payment when the checkout remains usable or the Payment is already terminal.
 - `202 Accepted`: the same idempotency key returns its existing `PENDING` Payment while gateway reconciliation is still in progress; the body includes `boothPaymentId` for polling.
 - `409 PAYMENT_ATTEMPT_ALREADY_PENDING`: a new idempotency key is rejected because another Pending Payment for the Hold already has a usable checkout.
 - `409 PAYMENT_RESULT_UNKNOWN`: a new idempotency key is rejected because another Pending Payment has an unknown gateway result under reconciliation.
 - `502 PAYMENT_GATEWAY_UNAVAILABLE`: the gateway is definitely unavailable and no external transaction/session was created; the corresponding durable Payment is committed as `FAILED` before this response is returned.
+
+VNPay PAY creates and signs its checkout URL locally. It has no remote session-creation call in this integration, so a new valid attempt normally returns `201`; local signing/configuration failure is a definite no-session `502`, while `202` applies to same-key replay of an expired checkout still under reconciliation.
 
 Errors:
 
@@ -192,6 +211,7 @@ Errors:
 - `409 BOOTH_REQUEST_NOT_SELECTED`
 - `409 BOOTH_HOLD_NOT_ACTIVE`
 - `409 BOOTH_HOLD_EXPIRED`
+- `409 BOOTH_HOLD_EXPIRING_SOON`
 - `409 PAYMENT_ALREADY_COMPLETED`
 - `409 PAYMENT_RESULT_UNKNOWN`
 - `409 PAYMENT_ATTEMPT_ALREADY_PENDING`
@@ -199,6 +219,21 @@ Errors:
 - `502 PAYMENT_GATEWAY_UNAVAILABLE`
 
 Acceptance Criteria: AC-E03-01 through AC-E03-05 and AC-E03-13 through AC-E03-15.
+
+### Hold expiry while a Payment is unresolved
+
+- A due Hold with no unresolved `PENDING` Payment follows the existing expiry flow.
+- A due Hold with an unresolved `PENDING` Payment is not changed to `EXPIRED`. It remains `ACTIVE`, its source request remains `SELECTED`, and all payment-initiation endpoints reject new attempts.
+- Event Booth availability and Organizer selection treat every `ACTIVE` Hold as blocking even when `expiresAt` is in the past. The expiry/reconciliation services, not read queries, own the transition to `EXPIRED`.
+- Before QueryDR, the reconciliation worker opens a short transaction, locks `Hold → Payment`,
+  re-checks eligibility and records `lastGatewayQueryAt` to claim the provider-query interval. It
+  releases those locks before the network call, then opens another short `Hold → Payment`
+  transaction and applies only the still-current trusted result. Concurrent workers therefore
+  cannot issue duplicate QueryDR calls inside the configured minimum interval.
+- Trusted success settles normally. Trusted terminal failure or the approved two-query `TIMEOUT` closes the attempt and expires the already-due Hold and source request atomically.
+- Transport errors, invalid signatures, mismatched reference/amount or other unknown results retain `PENDING` and `reconciliationRequired`; they never restore Booth availability.
+
+Acceptance Criteria: AC-E03-11 and AC-E03-17.
 
 ### GET `/partner/booth-requests/{boothRequestId}/payments`
 
@@ -236,15 +271,40 @@ Acceptance Criteria: AC-E03-09.
 
 ## 5 Gateway callback contract
 
-The exact provider route, request body, headers, signature algorithm and acknowledgement response are pending the gateway decision. The approved implementation must satisfy all of the following independent requirements:
+### GET `/payments/vnpay/ipn`
+
+The public VNPay callback is `/api/v1/payments/vnpay/ipn`. It accepts VNPay query parameters,
+verifies `vnp_SecureHash` with HMAC-SHA512 over the canonical signed fields and returns the VNPay
+acknowledgement shape `{"RspCode":"..","Message":".."}`.
+
+Status mapping:
+
+- signed `vnp_ResponseCode=00` and `vnp_TransactionStatus=00`: `SUCCESS` and atomic settlement;
+- raw transaction status `01`: retain `PENDING` and reconcile with QueryDR;
+- signed `24/02`: customer cancellation, mapped to `FAILED`;
+- transaction status `02`: `FAILED` (with response/status pair `24/02` recorded specifically as
+  customer cancellation);
+- status `04` remains `PENDING` because it can represent a reversal after the customer was
+  debited; suspicious or flow-inapplicable statuses such as `07` and refund status `09` also remain
+  under reconciliation instead of enabling an unsafe retry;
+- unknown or inconsistent combinations: retain `PENDING`, set `reconciliationRequired` and
+  persist a safe diagnostic without trusting the callback.
+
+Acknowledgements use `00/Confirm Success`, `01/Order not Found`, `02/Order already confirmed`,
+`04/Invalid Amount` and `97/Invalid Checksum` as applicable.
+
+The implementation must satisfy all of the following independent requirements:
 
 - The endpoint is public only because the gateway cannot use the browser Session.
 - CSRF exemption is limited to the exact callback path.
 - The backend verifies the provider signature and/or performs a server-to-server status query.
 - Callback/query correlation uses the durable merchant-order identifier sent during initiation; it cannot depend only on `gatewayTransactionRef` having been saved first.
 - The backend maps provider results into `SUCCESS`, `FAILED` or `TIMEOUT` without trusting browser data.
-- `TIMEOUT` requires provider-confirmed terminal expiry; an unknown result stays `PENDING` for query/reconciliation.
+- VNPay checkout expiry initially remains `PENDING`. Domain `TIMEOUT` follows the approved two-query bounded reconciliation rule; the raw provider status remains stored separately for audit.
 - Callback processing is idempotent.
+- A verified success after local `TIMEOUT` follows AC-E03-16. It is never treated as an ordinary duplicate and its evidence must be retained even when automatic settlement is unsafe.
+- A verified success that contradicts any other terminal local attempt is likewise retained as a
+  reconciliation conflict and blocks another charge; it is never silently discarded.
 - Unknown Payment references reveal no internal data.
 - Secrets and raw sensitive payment data are not logged.
 - A verified success invokes the atomic settlement described by AC-E03-07.
@@ -258,21 +318,15 @@ Sprint 2 response shapes remain backward compatible.
 - Booth request responses may now produce `COMPLETED` and `NOT_SELECTED`.
 - Hold responses may now produce `CONSUMED` and should expose `consumedAt` when present.
 - Event Booth responses now actively produce `ASSIGNED` when an overlapping Active Assignment exists.
+- Disabling an Event Booth configuration or deactivating a physical Booth with an Active
+  Assignment returns `409 BOOTH_HAS_ACTIVE_ASSIGNMENT`. Existing Active-Hold conflicts retain
+  the Sprint 2 code `409 BOOTH_HAS_ACTIVE_HOLD`.
 - A selected BoothRequest detail may include a lightweight payment summary, but full history remains under the Payment endpoints.
 
-## 7 Provider-dependent items not yet approved
+## 7 Operational follow-up outside the implementation gate
 
-- Concrete `gatewayProvider` value.
-- Durable merchant-order correlation format and whether V7 needs `provider_request_id` or can use `boothPaymentId` directly.
-- Callback path and payload.
-- Checkout/session creation fields.
-- Session-duration cap and return/cancel URLs.
-- Provider status-to-domain status mapping.
-- Query-before-retry policy and timeout duration.
-- Late verified-success behavior when callback delivery crosses Hold expiry.
-- Checkout URL/session recovery strategy for idempotent replay and its possible V7 columns.
-- Expiry-job behavior while a Payment remains unresolved `PENDING`.
-- Compensating/refund handling if a provider confirms a charge after Assignment can no longer be created.
-- Provider-specific evidence that safely distinguishes ambiguous reconciliation from definite unavailability where no external transaction/session was created.
-
-No implementation should hard-code examples marked `TBD`.
+- Alerting for a Payment whose QueryDR remains repeatedly unavailable.
+- Manual refund processing for an unsafe verified late charge retained as a reconciliation
+  conflict. Automatic refund execution is outside Sprint 3.
+- The environment-specific browser Return URL is configuration; browser Return data remains
+  display-only and never settles a Payment.

@@ -76,6 +76,14 @@ public class BoothHold {
         return true;
     }
 
+    public void consume(Instant consumedAt) {
+        if (status != BoothHoldStatus.ACTIVE) {
+            throw new IllegalStateException("Only an Active Booth Hold can be consumed.");
+        }
+        status = BoothHoldStatus.CONSUMED;
+        this.consumedAt = consumedAt;
+    }
+
     public Long getBoothHoldId() {
         return boothHoldId;
     }
