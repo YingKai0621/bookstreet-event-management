@@ -4,11 +4,15 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  DollarSign,
+  Info,
   Loader2,
   MessageSquare,
   RefreshCw,
   Store,
+  Tag,
   Timer,
+  Users,
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -25,6 +29,16 @@ interface Props {
   language: Language;
   applications: PartnerEventApplication[];
 }
+
+const CATEGORY_LABEL: Record<string, string> = {
+  MANGA_COMICS: 'Truyện tranh & Manga',
+  LITERATURE: 'Văn học & Nghệ thuật',
+  TECHNOLOGY_SCIENCE: 'Công nghệ & Khởi nghiệp',
+  CHILDREN: 'Sách Thiếu nhi',
+  ART_CULTURE: 'Nghệ thuật & Văn hóa',
+  HISTORY_SOCIETY: 'Lịch sử & Xã hội',
+  LIFESTYLE_EDUCATION: 'Đời sống & Giáo dục',
+};
 
 const availabilityLabel: Record<EventBooth['availability'], string> = {
   AVAILABLE: 'Còn trống',
@@ -459,64 +473,101 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           className="booth-modal-backdrop"
           onClick={() => busy !== 'submit' && setSelectedBooth(null)}
         >
-          <div className="booth-modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+          <div className="booth-modal-box s2-booth-request-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            {/* Header */}
             <div className="booth-modal-header">
               <div>
-                <span className="s2-eyebrow" style={{ display: 'inline-block', marginBottom: '0.25rem' }}>
-                  {selectedBooth.booth.code} · {availabilityLabel[selectedBooth.availability]}
-                </span>
-                <h2 style={{ margin: 0 }}>{selectedBooth.booth.name}</h2>
+                <div className="s2-booth-modal-badge-row">
+                  <span className="s2-booth-tag">
+                    <Store size={14} />
+                    {selectedBooth.booth.code}
+                  </span>
+                  <span className={`s2-status ${selectedBooth.availability.toLowerCase()}`}>
+                    {availabilityLabel[selectedBooth.availability]}
+                  </span>
+                </div>
+                <h2 className="s2-booth-modal-title">{selectedBooth.booth.name}</h2>
               </div>
               <button
                 type="button"
                 className="booth-modal-close-btn"
                 onClick={() => busy !== 'submit' && setSelectedBooth(null)}
+                title="Đóng"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="s2-booth-detail" style={{ padding: '1rem 0' }}>
-              <p style={{ margin: '0 0 1rem 0', color: '#475569' }}>
-                {selectedBooth.booth.description || selectedBooth.booth.note || 'Chưa có mô tả chi tiết vị trí.'}
-              </p>
-              <dl>
-                <div>
-                  <dt>Chuyên mục</dt>
-                  <dd>{selectedBooth.booth.categoryCode || 'Chưa phân loại'}</dd>
+            {/* Description */}
+            {(selectedBooth.booth.description || selectedBooth.booth.note) && (
+              <div className="s2-booth-desc-box">
+                <Info size={16} className="s2-desc-icon" />
+                <p>{selectedBooth.booth.description || selectedBooth.booth.note}</p>
+              </div>
+            )}
+
+            {/* Specifications Grid */}
+            <div className="s2-booth-specs-grid">
+              <div className="s2-booth-spec-card">
+                <div className="s2-spec-header">
+                  <Tag size={13} />
+                  <span>Chuyên mục</span>
                 </div>
-                <div>
-                  <dt>Sức chứa</dt>
-                  <dd>{selectedBooth.booth.maxCapacity} đơn vị</dd>
+                <strong className="s2-spec-value">
+                  {CATEGORY_LABEL[selectedBooth.booth.categoryCode || ''] || selectedBooth.booth.categoryCode || 'Chưa phân loại'}
+                </strong>
+              </div>
+
+              <div className="s2-booth-spec-card">
+                <div className="s2-spec-header">
+                  <Users size={13} />
+                  <span>Sức chứa</span>
                 </div>
-                <div>
-                  <dt>Giá thuê sự kiện</dt>
-                  <dd style={{ color: '#059669', fontWeight: 700 }}>{money(selectedBooth.rentalPrice)}</dd>
+                <strong className="s2-spec-value">
+                  {selectedBooth.booth.maxCapacity ? `${selectedBooth.booth.maxCapacity} đơn vị` : 'Tiêu chuẩn'}
+                </strong>
+              </div>
+
+              <div className="s2-booth-spec-card s2-spec-price-card">
+                <div className="s2-spec-header">
+                  <DollarSign size={13} />
+                  <span>Giá thuê</span>
                 </div>
-              </dl>
+                <strong className="s2-spec-value s2-price-highlight">
+                  {money(selectedBooth.rentalPrice)}
+                </strong>
+              </div>
             </div>
 
+            {/* Form / Blocked Notice */}
             {requestBlockedReason(selectedBooth) ? (
-              <div className="s2-alert s2-alert-error" style={{ margin: '0.75rem 0' }}>
-                <AlertCircle size={16} />
+              <div className="s2-alert s2-alert-error" style={{ margin: 0 }}>
+                <AlertCircle size={18} />
                 <span>{requestBlockedReason(selectedBooth)}</span>
               </div>
             ) : (
-              <form onSubmit={submitRequest} className="s2-stack-form">
-                <label>
-                  Ghi chú gửi Ban tổ chức (không bắt buộc)
+              <form onSubmit={submitRequest} className="s2-modal-request-form">
+                <div className="s2-form-field">
+                  <label htmlFor="partner-request-note" className="s2-form-label">
+                    <MessageSquare size={14} />
+                    <span>Ghi chú gửi Ban tổ chức</span>
+                    <small>(không bắt buộc)</small>
+                  </label>
                   <textarea
+                    id="partner-request-note"
+                    className="s2-request-textarea"
                     rows={3}
                     maxLength={1000}
                     value={requestNote}
                     onChange={event => setRequestNote(event.target.value)}
                     placeholder="Mô tả nhu cầu trưng bày, diện tích hoặc mong muốn đổi gian..."
                   />
-                </label>
-                <div className="booth-modal-footer" style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                </div>
+
+                <div className="booth-modal-footer">
                   <button
                     type="button"
-                    className="btn-org-secondary"
+                    className="btn-part-secondary"
                     onClick={() => setSelectedBooth(null)}
                     disabled={busy === 'submit'}
                   >
@@ -524,10 +575,20 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                   </button>
                   <button
                     type="submit"
-                    className="btn-org-primary"
+                    className="btn-part-primary"
                     disabled={busy === 'submit'}
                   >
-                    {busy === 'submit' ? 'Đang gửi...' : 'Gửi yêu cầu thuê / đổi gian'}
+                    {busy === 'submit' ? (
+                      <>
+                        <Loader2 size={16} className="s2-spin" />
+                        <span>Đang gửi...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        <span>Gửi yêu cầu thuê / đổi gian</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

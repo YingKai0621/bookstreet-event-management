@@ -163,14 +163,14 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   };
 
   const movePan = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (draggingMarkerId) {
+    if (draggingMarkerId && editable && onPositionChange) {
       const dist = Math.hypot(event.clientX - pointerStartPos.current.x, event.clientY - pointerStartPos.current.y);
-      if (dist > 4) {
+      if (dist > 6) {
         hasMovedMarkerRef.current = true;
-      }
-      const coords = getPercentCoordinates(event.clientX, event.clientY);
-      if (coords && onPositionChange) {
-        onPositionChange(draggingMarkerId, coords.x, coords.y);
+        const coords = getPercentCoordinates(event.clientX, event.clientY);
+        if (coords) {
+          onPositionChange(draggingMarkerId, coords.x, coords.y);
+        }
       }
       return;
     }
@@ -194,7 +194,6 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
     hasMovedMarkerRef.current = false;
     if (editable && onPositionChange) {
       setDraggingMarkerId(marker.id);
-      (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
     }
   };
 
@@ -247,7 +246,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   }, []);
 
   return (
-    <div className={`booth-map-shell ${className}`.trim()}>
+    <div className={`booth-map-shell ${editable ? 'is-editable' : 'is-readonly'} ${className}`.trim()}>
       {/* Hidden file input for uploading map */}
       <input
         ref={fileInputRef}

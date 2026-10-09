@@ -256,14 +256,14 @@
   box-shadow: 0 5px 14px rgba(24, 41, 36, 0.26);
   backdrop-filter: blur(5px);
   transform: translate(-50%, -50%);
-  transition: transform 80ms ease-out, background-color 60ms linear, box-shadow 80ms ease-out;
+  transition: background-color 100ms ease, box-shadow 100ms ease;
   white-space: nowrap;
 }
 
 .illustrated-map-marker:hover,
 .illustrated-map-marker:focus-visible {
   z-index: 5;
-  transform: translate(-50%, calc(-50% - 5px)) scale(1.04);
+  transform: translate(-50%, -50%);
   background: #173D32;
   box-shadow: 0 7px 18px rgba(24, 41, 36, 0.34);
 }
@@ -274,7 +274,7 @@
   background: #E9BC63;
   border-color: #FFF7E2;
   box-shadow: 0 0 0 4px rgba(233, 188, 99, 0.28), 0 8px 20px rgba(24, 41, 36, 0.3);
-  transform: translate(-50%, calc(-50% - 12px));
+  transform: translate(-50%, -50%);
 }
 
 .marker-index {
