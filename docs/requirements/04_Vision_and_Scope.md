@@ -5,7 +5,7 @@ Book Street Event Management System
 
 **VISION & SCOPE**
 
-MVP Baseline v1.2 - 22/09/2026
+MVP Baseline v1.3 - 09/10/2026
 
 <table>
 <colgroup>
@@ -91,7 +91,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 - Interactive Booth selection theo Event: Partner chọn Booth cụ thể và gửi BoothRequest mà chưa tạo Hold; nhiều Partner có thể cùng request một Booth. Organizer chọn request rồi hệ thống mới tạo Hold cho bước thanh toán.
 
-- Booth change, cancellation/release, manual reassign, Payment Gateway, refund và xử lý Activity bị ảnh hưởng.
+- Booth Request, pre-settlement Hold release, manual candidate selection, initial-rental Payment Gateway và Assignment. Booth change/cancellation sau Assignment và refund là Post-MVP.
 
 - Activity Proposal của Partner: exact time + location, review, request change, approve/reject, publish.
 
@@ -103,7 +103,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 - Participant Activity Registration với capacity control, schedule warning và trạng thái đăng ký.
 
-- Booth pricing theo từng cặp Event–Booth qua EventBoothConfig. Organizer selection tạo Hold và khóa giá cho toàn payment window; thanh toán Booth thật qua Payment Gateway và chỉ backend-verified Payment SUCCESS mới tạo Assignment.
+- Booth pricing theo từng cặp Event–Booth qua EventBoothConfig. Organizer selection tạo Hold và khóa giá cho toàn payment window; thanh toán Booth thật qua Payment Gateway và chỉ backend-verified Payment SUCCESS khi Event còn PUBLISHED/ONGOING mới tạo Assignment. Success đến sau COMPLETED/CANCELLED được giữ để đối soát thủ công, không tạo Assignment.
 
 - Activity/Event reschedule/cancellation, notification và lịch sử trạng thái.
 
@@ -138,11 +138,11 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 | Public Experience          | Browse/Search Event, Activity, Booth; Map; Heritage; public feedback.                                                                                                                                               |
 | Identity & Access          | Username/password authentication, optional email cho Participant, verified email cho role nâng cao, multi-role và ownership/private data.                                                                           |
 | Event Management           | Create, publish, configure deadlines/limits, lifecycle, cancel.                                                                                                                                                     |
-| Partner Participation      | Organization profile, apply Event, approval and withdrawal.                                                                                                                                                         |
-| Booth Management           | Map selection, competing requests, EventBoothConfig(rentalPrice/isEnabled), derived availability, selection, Hold, payment/retry, assignment, change, refund, release/reassign.                                     |
+| Partner Participation      | Organization profile, apply Event, approval and withdrawal khi application còn PENDING.                                                                                                                             |
+| Booth Management           | Map selection, competing requests, EventBoothConfig(rentalPrice/isEnabled), derived availability, selection, Hold, payment/retry, Assignment và pre-settlement release/reassign.                                   |
 | Activity Management        | Proposal, approval, publish, conflict/capacity check, change/reschedule/cancel.                                                                                                                                     |
 | Participant Registration   | Join/Leave Event; register/cancel Activity; capacity, schedule warning và trạng thái.                                                                                                                               |
-| Booth Payment              | Giá khóa tại SELECTED + Hold; nhiều payment attempt riêng trong Hold; PAYMENT/REFUND transaction; backend-verified SUCCESS mới tạo Assignment; refund xử lý bất đồng bộ.                                            |
+| Booth Payment              | Giá khóa tại SELECTED + Hold; nhiều initial PAYMENT attempt riêng trong scheduled payment window; backend-verified SUCCESS chỉ tạo Assignment khi Event PUBLISHED/ONGOING. REFUND workflow là Post-MVP.             |
 | Notification & Feedback    | In-app notifications, general feedback and verified Activity rating.                                                                                                                                                |
 | Analytics                  | Partner/Booth/Activity/registration/payment/cancellation summaries.                                                                                                                                                 |
 | QR Participation & Rewards | Activity QR self-scan → Attendance; BoothAssignment QR self-scan → BoothVisit → Point → Badge; ActivityRating cần Attendance hợp lệ; Certificate cần Activity COMPLETED + Attendance hợp lệ + certificateAvailable. |
@@ -152,10 +152,10 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 | **Luồng**                       | **Tóm tắt**                                                                                                                                                                                                                                              |
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Flow 1 - Partner tham gia Event | Partner Profile → Apply to Event → Organizer Review → Approved → được phép Request Booth và Submit Activity Proposal.                                                                                                                                    |
-| Flow 2 - Booth                  | Partner chọn Booth → BoothRequest PENDING → Organizer chọn winner → SELECTED + Hold; candidate khác vẫn PENDING → retry payment trong Hold → SUCCESS tạo Assignment và candidate khác NOT_SELECTED; hết payment window → PAYMENT_EXPIRED + release Hold. |
+| Flow 2 - Booth                  | Partner chọn Booth → BoothRequest PENDING → Organizer chọn winner → SELECTED + Hold; candidate khác vẫn PENDING → retry trước Hold `expiresAt` → SUCCESS khi Event PUBLISHED/ONGOING tạo Assignment và candidate khác NOT_SELECTED; window expiry chỉ release khi không có evidence chưa rõ. |
 | Flow 3 - Activity của Partner   | Submit Proposal (time + location) → system validation/conflict check → Organizer Review → Approve → Publish → Participant nhìn thấy/đăng ký.                                                                                                             |
 | Flow 4 - Participant            | Browse public → Login → Join Event hoặc auto-create EventRegistration khi đăng ký Activity/scan Booth QR → Register Activity → self-scan Activity QR → Attendance; self-scan BoothAssignment QR → BoothVisit/Point/Badge.                                |
-| Flow 5 - Change/Cancel          | Partner/Organizer tạo Change/Cancellation flow → xử lý dependency → update status → notify affected users → giữ lịch sử.                                                                                                                                 |
+| Flow 5 - Change/Cancel          | Organizer safely updates/cancels an eligible Event; Partner may release an eligible pre-settlement Hold. Activity change/cancellation remains a separate Activity workflow.                                    |
 
 # 11. Assumptions & Constraints
 
@@ -175,7 +175,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 - Booth category chỉ dùng để gợi ý hoặc ưu tiên phù hợp, không phải điều kiện cứng để chặn request.
 
-Refund khi hủy Booth/rút Event dùng request.submittedAt so với Event.boothCancellationCutoffAt: trước/đúng cutoff 100%, sau cutoff 0%; Event bị Organizer/System hủy refund 100%. Organizer xác nhận quyền refund; hệ thống release/swap nội bộ ngay, tạo REFUND PENDING từ Payment gốc và để gateway xử lý bất đồng bộ, không chờ tiền về tài khoản.
+- Business refund, Booth change/cancellation sau Assignment và Partner withdrawal sau approval là Post-MVP. Event có Payment SUCCESS/PENDING, reconciliation conflict hoặc Assignment không được Organizer hủy trong MVP.
 
 - Notification bắt buộc trong MVP là in-app và gửi tới User; không có NotificationType entity hoặc senderUserId. Email là optional.
 
@@ -191,7 +191,7 @@ Refund khi hủy Booth/rút Event dùng request.submittedAt so với Event.booth
 
 - Participant có thể Join Event, đăng ký hoặc hủy Activity trong giới hạn capacity và theo dõi trạng thái.
 
-- Organizer chọn một candidate hợp lệ; candidate đó chuyển SELECTED, được tạo Hold và khóa rentalPrice hiện tại, các candidate khác vẫn PENDING. Mỗi attempt FAILED/TIMEOUT được lưu riêng và có thể retry khi Hold còn hiệu lực; chỉ hết payment window/Hold mới PAYMENT_EXPIRED và release Hold. Payment SUCCESS tạo BoothAssignment, hoàn tất winner và chuyển candidate cạnh tranh sang NOT_SELECTED.
+- Organizer chọn một candidate hợp lệ; candidate đó chuyển SELECTED, được tạo Hold và khóa rentalPrice hiện tại, các candidate khác vẫn PENDING. Mỗi attempt FAILED/TIMEOUT được lưu riêng và chỉ retry trước Hold `expiresAt`; evidence chưa rõ tiếp tục giữ Hold nhưng chặn retry. Payment SUCCESS khi Event PUBLISHED/ONGOING tạo BoothAssignment, hoàn tất winner và chuyển candidate cạnh tranh sang NOT_SELECTED; sau COMPLETED/CANCELLED chỉ giữ evidence để đối soát, không tạo Assignment.
 
 - Change/cancellation không làm mất lịch sử và notification đến đúng đối tượng.
 
@@ -226,7 +226,7 @@ Từ baseline này, team nên ưu tiên hoàn thiện Use Case Specification, ER
 | Booth Request      | Yêu cầu Partner gửi để xin một Booth cụ thể.                                                                                                 |
 | Activity Proposal  | Đề xuất của Partner; chưa phải Official Activity cho đến khi được Organizer duyệt.                                                           |
 | Registration       | Bản ghi Participant đăng ký một Activity; dùng để quản lý capacity và trạng thái.                                                            |
-| Booth Payment      | PAYMENT/REFUND transaction theo giá Event–Booth đã khóa; refund PENDING xử lý bất đồng bộ; PAYMENT SUCCESS mới tạo BoothAssignment.          |
+| Booth Payment      | Initial PAYMENT transaction theo giá Event–Booth đã khóa; backend-verified SUCCESS chỉ tạo BoothAssignment khi Event PUBLISHED/ONGOING. REFUND là Post-MVP. |
 | Booth Hold         | Giữ tạm Booth sau khi Organizer chọn request; có thời hạn trong bước thanh toán.                                                             |
 | Booth Assignment   | Quan hệ xác nhận một Booth được cấp cho một Partner trong một Event/khoảng thời gian cụ thể.                                                 |
 | Booth Availability | Runtime state theo Event/time, suy ra từ EventBoothConfig.isEnabled + Active Hold/Assignment: AVAILABLE, ON_HOLD, ASSIGNED hoặc UNAVAILABLE. |

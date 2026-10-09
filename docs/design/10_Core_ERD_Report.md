@@ -2,6 +2,11 @@
 
 SWP391 \| Baseline 2.1 \| 27/09/2026
 
+> **Active MVP overlay (09/10/2026):** Conceptual structure remains unchanged. `BoothPayment`
+> represents initial-rental payment attempts in the active MVP. Refund, Booth change/cancellation
+> after Assignment and whole-Event Partner withdrawal are Post-MVP references and do not require a
+> Conceptual ERD redraw.
+
 **Mục đích tài liệu. Tài liệu này giải thích Core Conceptual ERD đã được nhóm và giảng viên duyệt cho hệ thống quản lý sự kiện Đường Sách. Bản 2.1 đồng bộ cách hiểu của sơ đồ với requirement, Logical ERD và Physical ERD hiện hành mà không thay đổi cấu trúc Conceptual đã chốt.**
 
 **Kết luận chính. Baseline vẫn gồm 17 entity nghiệp vụ và 23 quan hệ. Không cần thêm hộp mới vào sơ đồ: User đại diện khái niệm tài khoản ở mức cao; Role, UserRole và user_tokens là cấu trúc triển khai. GeneralFeedback, ActivityRating, Notification và HeritageContent là các khái niệm hỗ trợ được mô tả đầy đủ từ Logical ERD, còn Core Conceptual chỉ giữ xương sống Event, Booth, Activity và Participant.**
@@ -124,7 +129,7 @@ Ký hiệu 1 nghĩa là đúng một, 0..1 nghĩa là không có hoặc tối đ
 
 Partner Organization nộp Partner Event Application cho Event. Sau khi đủ điều kiện tham gia, Partner tạo Booth Request cho Booth mong muốn. Việc submit request chưa giữ hoặc khóa Booth. Organizer chọn một candidate, sau đó hệ thống mới tạo cơ chế giữ chỗ ở tầng Logical hoặc Physical và mở payment window.
 
-Mỗi lần thanh toán được lưu thành một Booth Payment riêng. Payment attempt thất bại không tự động kết thúc toàn bộ quy trình nếu payment window vẫn còn hiệu lực; Partner có thể retry. Khi có transaction thành công và được backend xác minh, hệ thống tạo Booth Assignment. Các request cạnh tranh còn lại kết thúc với trạng thái NOT_SELECTED; nếu payment window hết hạn, Hold được giải phóng và các candidate còn PENDING có thể được chọn tiếp.
+Mỗi lần thanh toán được lưu thành một Booth Payment riêng. Payment attempt thất bại không tự động kết thúc toàn bộ quy trình nếu payment window vẫn còn hiệu lực; Partner có thể retry. Khi có transaction thành công, được backend xác minh và Event còn PUBLISHED/ONGOING, hệ thống tạo Booth Assignment. Các request cạnh tranh còn lại kết thúc với trạng thái NOT_SELECTED. Nếu payment window hết hạn và không có evidence chưa rõ, Hold được giải phóng; evidence chưa rõ tiếp tục giữ Hold nhưng không dừng Event lifecycle.
 
 ## 4.2 Partner đề xuất Activity
 
@@ -147,10 +152,10 @@ Khi Participant tự quét Booth QR, hệ thống tạo Booth Visit cho Event Re
 | BoothRequest phải nối trực tiếp Booth           | Partner chọn Booth trước khi Organizer review và trước khi có Hold. Vì vậy Booth mục tiêu là dữ liệu nghiệp vụ của request, không được suy ngược qua BoothHold.               |
 | BoothHold không phải entity Conceptual          | Hold là cơ chế kiểm soát cạnh tranh và payment window. Nó cần ở Logical và Physical nhưng không phải khái niệm trung tâm khi giải thích nghiệp vụ cấp cao.                    |
 | EventBoothConfig chưa xuất hiện thành hộp riêng | Quan hệ Event và Booth được giữ ở dạng M:N. Logical ERD sẽ bổ sung EventBoothConfig với eventId, boothId, rentalPrice và isEnabled; cặp eventId và boothId là duy nhất.       |
-| BoothPayment được giữ trong Conceptual          | Payment thuộc phạm vi MVP, có vòng đời và lịch sử riêng. Entity này bao quát payment attempt và refund transaction; không tạo Refund entity riêng.                            |
+| BoothPayment được giữ trong Conceptual          | Initial Booth payment thuộc MVP và có lịch sử riêng. Khả năng biểu diễn refund được giữ làm extension Post-MVP; không tạo Refund entity riêng.                               |
 | Giá đang giao dịch phải được cố định            | Khi bắt đầu thanh toán, amount được snapshot từ giá Booth của Event. Thay đổi cấu hình giá sau đó không làm thay đổi transaction đang chạy hoặc Booth đã được chốt.           |
 | Không nối Activity với Booth                    | Activity chỉ cần Location. Booth là một trường hợp chuyên biệt của Location, nên quan hệ trực tiếp sẽ trùng nghĩa và gây lệch mô hình.                                        |
-| Không đưa request đổi hủy vào Conceptual        | BoothChangeRequest, BoothCancellationRequest, PartnerWithdrawalRequest và các request tương tự có vòng đời chi tiết, nhưng không cần thiết để trình bày xương sống nghiệp vụ. |
+| Không đưa request đổi hủy vào Conceptual        | BoothChangeRequest, BoothCancellationRequest và PartnerWithdrawalRequest hiện là Post-MVP reference, không cần thiết để trình bày xương sống nghiệp vụ.                      |
 
 # 6 Tác động khi chuyển sang Logical và Physical ERD
 
@@ -160,7 +165,7 @@ Logical ERD và Physical ERD hiện hành đã giữ nguyên ý nghĩa của Con
 
 - Bổ sung BoothHold sau khi Organizer chọn candidate; Active Hold và Active Assignment mới tạo exclusivity.
 
-- Bổ sung các trạng thái thống nhất cho BoothRequest và BoothChangeRequest như PENDING, SELECTED, COMPLETED, PAYMENT_EXPIRED, NOT_SELECTED, REJECTED và WITHDRAWN.
+- Active BoothRequest dùng PENDING, SELECTED, COMPLETED, PAYMENT_EXPIRED, NOT_SELECTED, REJECTED, WITHDRAWN và CANCELLED. BoothChangeRequest là Post-MVP.
 
 - Cho phép nhiều BoothPayment record cho cùng request hoặc hold; không overwrite attempt cũ.
 

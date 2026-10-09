@@ -2,6 +2,10 @@
 
 > Approved implementation contract for the Sprint 3 VNPay Sandbox integration.
 
+> Active Sprint 4 overlay: endpoint and payload shapes below remain unchanged, but Payment
+> mutations use the Event-rooted lock and lifecycle guards in
+> [`sprint-04-api-contract.md`](sprint-04-api-contract.md#7-payment-resolution-across-event-start).
+
 ## 1 Purpose
 
 This contract extends the Sprint 2 Booth APIs with initial rental Payment attempts and Partner-owned BoothAssignment queries. It does not define refunds, Booth changes or Booth cancellation.
@@ -225,11 +229,14 @@ Acceptance Criteria: AC-E03-01 through AC-E03-05 and AC-E03-13 through AC-E03-15
 - A due Hold with no unresolved `PENDING` Payment follows the existing expiry flow.
 - A due Hold with an unresolved `PENDING` Payment is not changed to `EXPIRED`. It remains `ACTIVE`, its source request remains `SELECTED`, and all payment-initiation endpoints reject new attempts.
 - Event Booth availability and Organizer selection treat every `ACTIVE` Hold as blocking even when `expiresAt` is in the past. The expiry/reconciliation services, not read queries, own the transition to `EXPIRED`.
-- Before QueryDR, the reconciliation worker opens a short transaction, locks `Hold → Payment`,
+- Before QueryDR, the reconciliation worker opens a short transaction and locks `Hold → Payment`
+  within the Sprint 3 payment domain,
   re-checks eligibility and records `lastGatewayQueryAt` to claim the provider-query interval. It
   releases those locks before the network call, then opens another short `Hold → Payment`
   transaction and applies only the still-current trusted result. Concurrent workers therefore
   cannot issue duplicate QueryDR calls inside the configured minimum interval.
+- Under the active Sprint 4 contract, both short reconciliation transactions first lock the Event
+  row; the network call remains outside the transaction.
 - Trusted success settles normally. Trusted terminal failure or the approved two-query `TIMEOUT` closes the attempt and expires the already-due Hold and source request atomically.
 - Transport errors, invalid signatures, mismatched reference/amount or other unknown results retain `PENDING` and `reconciliationRequired`; they never restore Booth availability.
 

@@ -2,13 +2,18 @@
 
 ## *BOOK STREET EVENT MANAGEMENT SYSTEM*
 
-**SWP391  |  Logical Data Model Baseline**
+**SWP391  |  Logical Data Model Baseline with Post-MVP Reference Overlay**
 
-Mục đích: giúp toàn bộ team hiểu 32 entity, trách nhiệm dữ liệu và cách các entity phối hợp trong các luồng Event, Booth, Payment, Activity, Participant, Attendance, Reward và Feedback.
+Mục đích: giúp toàn bộ team hiểu active MVP model và target model tương lai. Sơ đồ v7 có 32
+entity, trong đó `BoothChangeRequest`, `BoothCancellationRequest` và
+`PartnerWithdrawalRequest` là `POST-MVP REFERENCE`, không phải nguồn tạo table/API hiện tại.
 
 # **Kết luận chính**
 
-Logical ERD hiện tại đã chuyển các khái niệm nghiệp vụ trong Conceptual ERD thành cấu trúc dữ liệu đủ rõ để bước sang Physical ERD. Mô hình giữ riêng Request, Hold, Payment và Assignment; dùng EventBoothConfig để cấu hình Booth theo từng Event; tách đăng ký khỏi tham dự thực tế; và giữ lịch sử giao dịch thay vì ghi đè dữ liệu cũ.
+Active MVP giữ riêng Request, Hold, initial Payment và Assignment; dùng EventBoothConfig để cấu
+hình Booth theo từng Event; tách đăng ký khỏi tham dự thực tế; và giữ lịch sử giao dịch thay vì ghi
+đè dữ liệu cũ. Các entity đổi/hủy Booth sau Assignment và whole-Event Partner withdrawal chỉ mô tả
+hướng mở rộng sau MVP.
 
 Tài liệu tập trung vào ý nghĩa của từng entity và các ràng buộc cần được team hiểu thống nhất. PK, FK, datatype, index và câu lệnh database sẽ được chốt ở Physical ERD.
 
@@ -18,7 +23,7 @@ Tài liệu tập trung vào ý nghĩa của từng entity và các ràng buộc
 | :---- | :---- | :---- |
 | Tài khoản và phân quyền | 3 | User, Role và UserRole. |
 | Partner và Event | 3 | PartnerOrganization, PartnerEventApplication và Event. |
-| Booth và thanh toán | 10 | Location, Booth, EventBoothConfig, Request, Hold, Payment, Assignment và các request thay đổi hoặc hủy. |
+| Booth và thanh toán | 7 active + 3 Post-MVP | Active: Location, Booth, EventBoothConfig, BoothRequest, BoothHold, BoothPayment, BoothAssignment. Post-MVP: ba request thay đổi/hủy/rút Event. |
 | Activity | 4 | Proposal, Activity, Change Request và Cancellation Request. |
 | Participant và attendance | 4 | EventRegistration, ActivityRegistration, Attendance và BoothVisit. |
 | Reward | 4 | PointTransaction, Badge, UserBadge và Certificate. |
@@ -53,7 +58,7 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 * Entity nghiệp vụ được giữ riêng khi có vòng đời, trạng thái hoặc lịch sử cần audit.  
 * Không hard-delete dữ liệu đã phát sinh nghiệp vụ; kết thúc vòng đời bằng status và timestamp.  
 * Giá Booth được cấu hình theo Event và được snapshot khi bắt đầu Hold để thay đổi giá sau đó không làm đổi giao dịch đang chạy.  
-* Một payment attempt thất bại không đồng nghĩa toàn bộ payment process thất bại; Partner được retry khi Hold còn hiệu lực.  
+* Một payment attempt thất bại không đồng nghĩa toàn bộ payment process thất bại; Partner chỉ được retry khi Hold còn ACTIVE và backend time chưa tới `expiresAt`.
 * Payment window hết hạn mới release Hold và cho Organizer chọn candidate khác.  
 * Activity QR thuộc Activity; Booth QR thuộc BoothAssignment. QR không được tạo thành entity riêng trong Logical ERD.
 
@@ -185,11 +190,11 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 ### **BoothHold**
 
-**Vai trò:** Giữ Booth tạm thời sau khi Organizer chọn candidate hoặc duyệt bước đổi Booth.
+**Vai trò:** Giữ Booth tạm thời sau khi Organizer chọn candidate.
 
 **Khi nào phát sinh:** Khi request được SELECTED và bắt đầu payment window.
 
-**Ý nghĩa và vòng đời:** Hold tạo exclusivity theo Event và Booth. lockedRentalPrice snapshot giá tại lúc chọn. Hold có ACTIVE, CONSUMED hoặc RELEASED/EXPIRED; attempt thất bại không release Hold nếu window còn hạn. Nguồn Hold là BoothRequest hoặc BoothChangeRequest theo XOR.
+**Ý nghĩa và vòng đời:** Hold tạo exclusivity theo Event và Booth. lockedRentalPrice snapshot giá tại lúc chọn. Hold có ACTIVE, CONSUMED hoặc RELEASED/EXPIRED; attempt thất bại không release Hold nếu window còn hạn. Active MVP chỉ dùng BoothRequest làm nguồn Hold. Partner được release sớm Hold khi mọi payment evidence đã terminal an toàn và chưa có Assignment.
 
 **Quan hệ chính:** Nối EventBoothConfig với đúng một nguồn request; là cha của BoothPayment và có thể sinh BoothAssignment.
 
@@ -197,29 +202,29 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 ### **BoothPayment**
 
-**Vai trò:** Sổ giao dịch tiền liên quan Booth, bao gồm PAYMENT và REFUND.
+**Vai trò:** Sổ payment attempt cho tiền thuê Booth ban đầu. V7 giữ `REFUND` như extension point Post-MVP nhưng active MVP không tạo refund.
 
-**Khi nào phát sinh:** Mỗi lần Partner tạo payment attempt hoặc hệ thống khởi tạo refund.
+**Khi nào phát sinh:** Mỗi lần Partner tạo initial-rental payment attempt.
 
-**Ý nghĩa và vòng đời:** Mỗi retry là một record riêng, không ghi đè attempt cũ. amount là snapshot. Assignment chỉ dựa trên transaction PAYMENT SUCCESS đã được backend verify. Refund là giao dịch bất đồng bộ; nghiệp vụ có thể tiếp tục khi REFUND PENDING theo policy đã chốt, sau đó cập nhật SUCCESS hoặc FAILED từ gateway. Không có entity Refund riêng.
+**Ý nghĩa và vòng đời:** Mỗi retry là một record riêng, không ghi đè attempt cũ. amount là snapshot. Assignment chỉ dựa trên transaction PAYMENT SUCCESS đã được backend verify. Refund workflow không thuộc active MVP.
 
-**Quan hệ chính:** Thuộc BoothHold; refund có thể tham chiếu originalPayment. purpose phân biệt tiền thuê, chênh lệch đổi Booth và hoàn tiền.
+**Quan hệ chính:** Thuộc BoothHold. `originalPayment`, `transactionType=REFUND` và purpose tương lai tồn tại trong physical schema nhưng chưa có active workflow.
 
-**Ví dụ:** Payment \#1 FAILED, Payment \#2 SUCCESS; hoặc Refund chênh lệch đang PENDING.
+**Ví dụ:** Payment \#1 FAILED, Payment \#2 SUCCESS.
 
 ### **BoothAssignment**
 
 **Vai trò:** Ghi nhận Booth đã được cấp chính thức cho Partner trong Event.
 
-**Khi nào phát sinh:** Chỉ sau khi settlement cần thiết hoàn tất theo rule: PAYMENT SUCCESS, hoặc REFUND PENDING đối với đổi sang Booth rẻ hơn, hoặc không phát sinh chênh lệch.
+**Khi nào phát sinh:** Sau PAYMENT SUCCESS đã được backend xác minh hoặc atomic zero-price settlement.
 
-**Ý nghĩa và vòng đời:** Assignment liên kết duy nhất với BoothHold để không lặp lại boothRequestId hoặc boothChangeRequestId. Assignment cũ vẫn ACTIVE trong lúc đổi Booth và chỉ release khi atomic swap thành công. qrToken thuộc Assignment để ghi nhận BoothVisit.
+**Ý nghĩa và vòng đời:** Assignment liên kết duy nhất với BoothHold để không lặp lại boothRequestId. Active MVP không cho đổi/hủy sau Assignment. qrToken thuộc Assignment để ghi nhận BoothVisit.
 
-**Quan hệ chính:** Thuộc một BoothHold; có BoothChangeRequest, BoothCancellationRequest và BoothVisit.
+**Quan hệ chính:** Thuộc một BoothHold và có BoothVisit. Quan hệ tới request đổi/hủy là Post-MVP.
 
 **Ví dụ:** A05 chính thức được cấp cho Partner B sau payment success.
 
-### **BoothChangeRequest**
+### **BoothChangeRequest — POST-MVP REFERENCE**
 
 **Vai trò:** Yêu cầu đổi từ Booth đang được cấp sang một Booth khác.
 
@@ -231,7 +236,7 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 **Ví dụ:** Đổi A05 giá 2 triệu sang A10 giá 2,5 triệu và trả thêm 500 nghìn.
 
-### **BoothCancellationRequest**
+### **BoothCancellationRequest — POST-MVP REFERENCE**
 
 **Vai trò:** Yêu cầu hủy Booth đang được cấp.
 
@@ -243,7 +248,7 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 **Ví dụ:** Partner hủy trước cutoff và được hoàn 100 phần trăm.
 
-### **PartnerWithdrawalRequest**
+### **PartnerWithdrawalRequest — POST-MVP REFERENCE**
 
 **Vai trò:** Yêu cầu Partner rút khỏi toàn bộ Event.
 
@@ -461,10 +466,10 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 * Partner tạo BoothRequest cho một Booth; ở bước này chưa tạo Hold.  
 * Organizer chọn candidate; hệ thống tạo BoothHold trên EventBoothConfig và snapshot lockedRentalPrice.  
 * Partner có thể tạo nhiều BoothPayment attempt trong payment window.  
-* PAYMENT SUCCESS đã được backend verify mới tạo BoothAssignment; các candidate còn lại chuyển NOT\_SELECTED.  
+* PAYMENT SUCCESS đã được backend verify chỉ tạo BoothAssignment khi Event còn PUBLISHED/ONGOING; các candidate còn lại chuyển NOT\_SELECTED. Success sau COMPLETED/CANCELLED chỉ được giữ để đối soát.
 * Nếu window hết hạn, Hold được release, request được chọn chuyển PAYMENT\_EXPIRED và các candidate khác vẫn PENDING.
 
-## **10.2 Đổi hoặc hủy Booth**
+## **10.2 Đổi hoặc hủy Booth — POST-MVP REFERENCE**
 
 * BoothChangeRequest giữ Assignment cũ ACTIVE trong suốt thời gian xét duyệt và settlement.  
 * Booth mới đắt hơn cần PAYMENT SUCCESS; rẻ hơn tạo REFUND PENDING; bằng giá không cần transaction.  
@@ -489,11 +494,11 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 | Quyết định | Lý do |
 | :---- | :---- |
 | BoothHold nối EventBoothConfig, không lặp boothId | Config đã xác định đồng thời Event, Booth và giá; lặp boothId tạo nguy cơ không nhất quán. |
-| BoothAssignment chỉ nối BoothHold | Hold đã truy được request source và Booth; Assignment không cần lặp boothRequestId hoặc boothChangeRequestId. |
-| BoothPayment có transactionType và purpose | Cùng một sổ giao dịch phải phân biệt PAYMENT, REFUND, tiền thuê ban đầu và chênh lệch đổi Booth. |
+| BoothAssignment chỉ nối BoothHold | Hold đã truy được BoothRequest và Booth; future model có thể mở rộng source mà không lặp Booth trên Assignment. |
+| BoothPayment có transactionType và purpose | Active MVP dùng PAYMENT/INITIAL_BOOTH_RENTAL; REFUND và purpose đổi Booth là extension point Post-MVP. |
 | Activity chỉ nối Location | Booth là subtype của Location; nối thêm Activity-Booth sẽ lặp quan hệ và không dùng được cho Main Stage hoặc Workshop Area. |
 | Activity QR nằm trên Activity | Một QR chung tại địa điểm giúp Participant self-scan; Attendance vẫn gắn đúng ActivityRegistration của User. |
-| Refund không có entity riêng | Refund là một BoothPayment transaction loại REFUND và vẫn cần PENDING, SUCCESS hoặc FAILED. |
+| Refund không có active MVP workflow | V7 giữ khả năng biểu diễn REFUND cho tương lai; không có endpoint/service tạo refund trong active MVP. |
 | User-Badge dùng UserBadge | Quan hệ nhiều nhiều cần record earnedAt và uniqueness cho từng cặp User-Badge. |
 | GeneralFeedback dùng XOR target | Mỗi feedback chỉ phản ánh một target: toàn Đường Sách, một Event hoặc một HeritageContent. |
 
@@ -501,5 +506,8 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 Trước khi chuyển sang Physical ERD, team cần chốt enum status và transition; datatype tiền tệ, timestamp và timezone; unique constraint, index, transaction locking; cùng các ràng buộc XOR của BoothHold và GeneralFeedback. Không đưa lại QR, Refund hoặc PaymentGatewayConfig thành entity nếu không có requirement mới.
 
-Logical ERD này bao quát baseline hiện tại và là nguồn tham chiếu khi chia module backend, thiết kế API, viết migration và kiểm thử state transition. Physical ERD bổ sung datatype, constraint, index, transaction rule và bảng kỹ thuật user\_tokens; không có entity SystemSetting chung và không thay đổi business direction đã chốt.
+Logical ERD này gồm active MVP model và Post-MVP reference overlay. Chỉ entity/rule được ghi active
+MVP cùng Physical active-schema overlay mới được dùng để chia module, thiết kế API và migration.
+Không triển khai ba request Post-MVP hoặc refund nếu chưa có một quyết định scope mới cập nhật đồng
+bộ Business Rules, Use Case và Sprint contract.
 

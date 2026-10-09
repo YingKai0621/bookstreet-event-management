@@ -33,14 +33,20 @@ Last updated: `2026-10-09`
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The complete backend suite runs 222 tests against PostgreSQL with no failures, errors or skips,
-  including Sprint 3 migration, concurrency, reconciliation, ownership and settlement/expiry-race
-  coverage. The disposable VNPay spike suite runs 20 tests with no failures.
+- The complete backend suite runs 222 tests against PostgreSQL with no failures or errors; 69 tests
+  are intentionally skipped by the current test configuration. The executed tests include Sprint 3
+  migration, concurrency, reconciliation, ownership and settlement/expiry-race coverage. The
+  disposable VNPay spike suite runs 20 tests with no failures.
 - Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
 - Sprint 2 backend Booth selection, price-locked BoothHold and Hold expiry are implemented through
   V6.
 - Sprint 3 backend Payment and Assignment are implemented and verified through V7. Frontend
-  integration and Playwright E2E remain pending.
+  integration and Playwright payment E2E remain tracked technical debt.
+- Sprint 4 documentation is approved for Event lifecycle hardening and pre-payment Booth release;
+  implementation and V8 are pending.
+- Current MVP policy does not permit Booth change/cancellation after Assignment, whole-Event
+  Partner withdrawal after approval or business-refund execution. Those designs are retained only
+  as post-MVP references.
 - Sprint 2 keeps `boothPaymentWindowMinutes` in the existing Event record, constrains it to `60..10080` minutes inclusive and defaults a new Event to `1440` minutes (24 hours).
 - Selection persists `expiresAt = selectedAt + boothPaymentWindowMinutes`; a later permitted Event setting change applies only to future selections and never rewrites an existing Hold.
 - Selection email is a post-commit side effect. Email failure is logged and must not roll back the selected request or Hold; Sprint 2 does not add an outbox or notification table.
@@ -54,8 +60,10 @@ Last updated: `2026-10-09`
   reconciliation and cannot enable an unsafe retry.
 - Verified success contradicting a terminal local Payment is retained with
   `reconciliationRequired=true` and blocks new attempts until manual resolution.
-- Reconciliation claims `lastGatewayQueryAt` under the `Hold → Payment` lock before network I/O,
-  then applies the response in another short transaction. Unknown results retain the Active Hold.
+- Reconciliation currently claims `lastGatewayQueryAt` under the Sprint 3 `Hold → Payment` lock
+  before network I/O, then applies the response in another short transaction. Sprint 4 extends
+  Event-scoped mutations to the global order `Event → Booth (if needed) → EventBoothConfig (if
+  needed) → Hold → Payment by ascending id → BoothRequest`. Unknown results retain the Active Hold.
 - Zero-price Booths bypass VNPay and settle atomically during Organizer selection. Positive Booth
   prices below 5,000 VND are invalid.
 
@@ -110,38 +118,49 @@ Last updated: `2026-10-09`
 
 - Forgot/Reset Password
 - Sprint 3 frontend integration and Playwright payment/assignment E2E
-- Refund execution, Booth change/cancellation and Partner Event withdrawal
+- Sprint 4 Event lifecycle and pre-payment Hold-release backend/frontend work
+- Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 
 ## Immediate next task
 
-- Complete Sprint 3 frontend integration and Playwright happy-path plus failure/retry E2E.
-- Keep VNPay Return browser data non-authoritative; only verified IPN or trusted QueryDR settles.
-- Preserve `Hold → Payment` lock order across expiry, callback and reconciliation paths.
-- Keep unresolved Payment evidence blocking: Hold remains Active/ON_HOLD until trusted settlement.
-- Do not modify applied migrations V1 through V7; later schema changes require a new migration.
+- Implement the approved Sprint 4 documentation baseline.
+- Use V8 for Event cancellation metadata and BoothRequest cancellation state; never edit V1–V7.
+- Migrate Event-scoped mutations to the approved order `Event → Booth (if needed) →
+  EventBoothConfig (if needed) → Hold → Payment by ascending id → BoothRequest`; never acquire a
+  skipped level later in reverse.
+- Enforce `boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt` on publish and operational
+  patch so every new Hold's scheduled `expiresAt` is no later than Event start. Unresolved Payment
+  evidence may keep that Hold `ACTIVE` into `ONGOING` without pausing Event lifecycle. Trusted
+  success may settle while the Event is `PUBLISHED`/`ONGOING`; after `COMPLETED`/`CANCELLED`, retain
+  the evidence for manual reconciliation and create no Assignment.
+- Keep unresolved Payment evidence blocking: it prevents Event cancellation and selected Hold
+  release until trusted resolution.
+- Keep Sprint 3 frontend/payment E2E debt visible rather than reporting it as completed.
 
 ## Active Sprint
 
-Active Sprint: Sprint 03 Booth Payment and Assignment. Backend is implemented and verified;
-frontend integration and E2E are pending.
+Active Sprint: Sprint 04 Event Lifecycle and Pre-payment Booth Release. Documentation is approved;
+implementation is pending.
 
-Included Use Cases:
+Included Use Case slices:
 
-- UC-E03 Pay & View Booth - initial rental payment, retry, history and Assignment view
-- UC-E02 Manage Booth Request - COMPLETED/NOT_SELECTED settlement outcomes
-- UC-O04 Review Booth Requests - paid winner finalization and zero-price Booth settlement
+- UC-O01 Manage Events - Draft delete, safe published update, eligible cancellation and timed
+  lifecycle transitions
+- UC-E02 Manage Booth Request - Pending withdrawal and safe Selected Hold release before settlement
 
 ## Current approved baselines
 
-- Requirement baseline: v4
-- Use Case Diagram: V2 only
+- Requirement baseline: v5 (Sprint 4 scope clarification)
+- Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v7
-- Physical ERD: v1
-- Use Case count: 27
+- Logical ERD: v7 with active-MVP/Post-MVP overlay
+- Physical implementation source: Flyway V1–V7 plus the active planned V8 overlay in
+  `docs/design/12_Physical_ERD_Report.md`; the v1 33-table image is target/reference only
+- Active MVP Use Case count: 26
 
-Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation source.
+Do not use the old Use Case Diagram V1, an earlier ERD or the 33-table target image as an
+implementation source.
 
 ## Authentication baseline
 
@@ -154,16 +173,15 @@ Do not use the old Use Case Diagram V1 or an earlier ERD as an implementation so
 - The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
 - Forgot/Reset Password remains outside the active Sprint.
 
-## Sprint 3 scope guard
+## Sprint 4 scope guard
 
-Sprint 3 excludes:
+Sprint 4 excludes:
 
-- Refund execution (initial PAYMENT attempts only)
-- Booth change and cancellation
-- Partner withdrawal from the whole Event
-- Activity proposal, management, registration and rating
-- QR flows
-- Attendance and Booth Visit
-- Points, Badge and Certificate rewards
-- General Feedback
-- Reporting
+- Business refund execution
+- Booth change or cancellation after Assignment
+- Partner withdrawal from the whole Event after approval
+- Event cancellation after any Payment `PENDING`/`SUCCESS`, reconciliation-required evidence or
+  any Assignment
+- Cancellation of an Ongoing or Completed Event
+- Admin emergency cancellation
+- Activity, attendance, reward and reporting implementation

@@ -1,6 +1,24 @@
-**QUY TRÌNH HỦY BOOTH VÀ ACTIVITY**
+**QUY TRÌNH HỦY BOOTH VÀ ACTIVITY — MVP VÀ THAM CHIẾU POST-MVP**
 
 Cancellation & Change Handling
+
+> **Trạng thái tài liệu (2026-10-09):** Luồng Activity vẫn là định hướng MVP. Đối với Booth,
+> MVP hiện tại chỉ cho withdraw `PENDING` hoặc release an toàn `SELECTED` trước settlement.
+> Booth đã có Assignment không được đổi/hủy; Partner withdrawal sau approval và business refund
+> là `POST-MVP REFERENCE`. Các mục được đánh dấu Post-MVP không phải nguồn triển khai hiện hành.
+
+# 0. Chính sách Booth đang có hiệu lực
+
+- `PENDING`: Partner withdraw trực tiếp; chưa có Hold.
+- `SELECTED`: Partner được withdraw và release Hold khi không có Payment `PENDING`/`SUCCESS`,
+  không có reconciliation conflict và chưa có Assignment.
+- Payment `FAILED`/`TIMEOUT` đã xác minh không chặn withdrawal.
+- Payment chưa rõ kết quả tiếp tục khóa Hold; không được release hoặc reassign Booth.
+- Sau khi có BoothAssignment, Partner không được đổi/hủy Booth trong MVP.
+- Event có Payment thành công/chưa rõ kết quả hoặc có Assignment không được Organizer hủy trong
+  MVP, vì vậy không phát sinh business refund.
+- Thiết kế refund/Booth change phía dưới được giữ để nghiên cứu sau MVP, không dùng cho API hay
+  migration Sprint 4.
 
 <table>
 <colgroup>
@@ -23,7 +41,7 @@ Mô tả rõ cách Partner gửi yêu cầu hủy, cách Organizer xử lý, và
 | Booth                | Gian hàng / vị trí vật lý dùng chung của Đường Sách; có thể được dùng lại ở các Event không trùng thời gian.           |
 | Activity             | Hoạt động / chương trình diễn ra tại một thời gian và địa điểm cụ thể.                                                 |
 | Booth Assignment     | Việc một Booth được phân cho một Partner trong một Event/khoảng thời gian cụ thể.                                      |
-| Cancellation Request | Yêu cầu hủy được Partner gửi sau khi nội dung đã được duyệt/phân bổ.                                                   |
+| Cancellation Request | Yêu cầu hủy Activity đã duyệt; Booth Cancellation Request sau Assignment là Post-MVP.                                 |
 | Withdraw             | Rút một request/proposal khi nó vẫn còn Pending, chưa được duyệt.                                                      |
 | Booth Payment        | Giao dịch thanh toán Booth theo mức giá cấu hình riêng cho từng Event; thanh toán thành công mới tạo Booth Assignment. |
 
@@ -45,13 +63,13 @@ Booth là “chỗ”, Activity là “việc”. Hủy một Activity không đ
 
 - Nếu Booth Request hoặc Activity Proposal vẫn ở trạng thái PENDING: Partner được tự Withdraw, không cần Organizer xác nhận. Booth Request đang PENDING chưa tạo Hold nên không có Hold để release.
 
-- Nếu Booth đã được phân hoặc Activity đã Approved/Published: Partner gửi Cancellation Request; Organizer là người xác nhận và xử lý chính thức trên hệ thống.
+- Nếu Activity đã Approved/Published: Partner gửi Cancellation Request; Organizer xử lý chính thức. Booth đã Assigned không có cancellation workflow trong MVP.
 
 - Không xóa dữ liệu lịch sử. Hệ thống giữ lại request, lý do hủy, thời điểm hủy và trạng thái để phục vụ báo cáo.
 
 - Nên dùng “Confirm Cancellation” thay vì hiểu Organizer có thể ép Partner tiếp tục. Organizer xác nhận và xử lý hậu quả của việc hủy.
 
-# 3. Hủy Booth / Hủy Booth Assignment
+# 3. BoothRequest withdrawal và thiết kế hủy Booth Assignment tương lai
 
 Thực tế không nên “xóa Booth”. Booth là tài nguyên vật lý dùng chung của Đường Sách; chỉ Booth Assignment của Partner trong một Event bị hủy/release.
 
@@ -59,7 +77,7 @@ Thực tế không nên “xóa Booth”. Booth là tài nguyên vật lý dùng
 
 Partner có thể bấm Withdraw Request. Booth chưa được cấp và chưa có Hold nên không cần Organizer duyệt việc rút request; việc rút cũng không ảnh hưởng các request khác đang cùng xin Booth đó.
 
-## 3.2 Khi Booth đã được phân
+## 3.2 Khi Booth đã được phân — POST-MVP REFERENCE
 
 - Partner mở Booth đã được cấp và chọn “Request Cancellation / Yêu cầu hủy gian hàng”.
 
@@ -75,7 +93,7 @@ Partner có thể bấm Withdraw Request. Booth chưa được cấp và chưa c
 
 - Hệ thống tính lại availability của Booth cho Event/khoảng thời gian liên quan. Booth vật lý không đổi trạng thái ASSIGNED toàn cục.
 
-## 3.3 Hủy Booth sớm và hủy Booth sát giờ
+## 3.3 Hủy Booth sớm và hủy Booth sát giờ — POST-MVP REFERENCE
 
 | **Tình huống**         | **Organizer xử lý**                                                                         | **Kết quả**                                                                                 |
 |------------------------|---------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
@@ -85,7 +103,7 @@ Partner có thể bấm Withdraw Request. Booth chưa được cấp và chưa c
 
 Organizer cấu hình Event.boothCancellationCutoffAt. BoothCancellationRequest.submittedAt \<= cutoff được refund 100%; submittedAt \> cutoff được refund 0%. Nếu Event bị Organizer/System hủy, Partner được hoàn 100%. Số tiền refund lấy từ Payment SUCCESS gốc, không lấy từ giá EventBoothConfig hiện tại. Sau khi Assignment được release, Booth có thể mở lại trước cutoff; sau cutoff, Organizer quyết định reassign thủ công hay để trống.
 
-## 3.4 Activity đang nằm tại Booth bị hủy thì sao?
+## 3.4 Activity đang nằm tại Booth bị hủy thì sao? — POST-MVP REFERENCE
 
 Hệ thống không nên tự động hủy tất cả Activity. Khi Booth Assignment bị release, hệ thống liệt kê các Activity có location chính là Booth đó để Organizer xử lý.
 
@@ -141,7 +159,7 @@ Partner có thể Withdraw Proposal trực tiếp. Vì Activity chưa được d
 
 Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organizer xác nhận việc hủy ngay trên hệ thống; hệ thống thông báo hàng loạt cho Participant và đóng các đăng ký liên quan. Organizer không xử lý từng người thủ công.
 
-# 5. Partner rút khỏi toàn bộ Event
+# 5. Partner rút khỏi toàn bộ Event — POST-MVP REFERENCE
 
 Đây là trường hợp lớn hơn Cancel Booth hoặc Cancel Activity. Partner chọn “Withdraw from Event” và gửi yêu cầu cho Organizer.
 
@@ -157,7 +175,7 @@ Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organi
 
 - Các Activity Registration của Activity bị hủy được giữ lại để truy vết, chuyển trạng thái phù hợp và thông báo cho Participant bị ảnh hưởng.
 
-# 6. Business Rule đề xuất
+# 6. Ma trận thiết kế tương lai — POST-MVP REFERENCE
 
 | **Trạng thái / tình huống** | **Partner**                      | **Organizer**                                                                                                                                                                      |
 |-----------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -173,6 +191,8 @@ Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organi
 
 # 7. Flow tóm tắt
 
-Booth: Partner chọn Booth → BoothRequest PENDING (chưa Hold, chưa khóa giá) → Organizer chọn request → SELECTED + Hold và khóa giá từ EventBoothConfig → Partner thanh toán thật. Payment attempt FAILED hoặc attempt TIMEOUT được lưu riêng và vẫn có thể retry khi Hold còn hiệu lực; chỉ khi payment window/Hold hết hạn mới chuyển PAYMENT_EXPIRED và release Hold. Payment SUCCESS tạo BoothAssignment và hoàn tất request. Khi hủy: Partner gửi Cancellation Request → Organizer Confirm → hoàn 100% trước cutoff, 0% sau cutoff; Event bị hủy hoàn 100% → release Assignment → tính lại availability.
+Booth MVP: Partner chọn Booth → BoothRequest PENDING (chưa Hold, chưa khóa giá) → Organizer chọn request → SELECTED + Hold và khóa giá từ EventBoothConfig → Partner thanh toán thật. Payment attempt FAILED hoặc attempt TIMEOUT được lưu riêng và vẫn có thể retry khi payment window còn mở. Partner có thể withdraw SELECTED để release Hold khi mọi Payment đều đã terminal an toàn và chưa có Assignment. Payment chưa rõ kết quả tiếp tục khóa Hold và có thể kéo dài sang ONGOING mà không dừng Event lifecycle. Payment SUCCESS tạo BoothAssignment và hoàn tất request khi Event còn PUBLISHED/ONGOING; sau COMPLETED/CANCELLED, success chỉ tạo reconciliation evidence và không tạo Assignment. Sau Assignment không có change/cancellation/refund workflow trong MVP.
+
+Booth Post-MVP: Cancellation Request, Partner withdrawal sau approval và refund theo cutoff chỉ là thiết kế tham khảo tương lai.
 
 Activity: Partner Proposal → Organizer Approve → Activity Published → Partner Cancellation Request → Organizer Handle → Cancel/Reschedule/Change Location → System Notify Participant.

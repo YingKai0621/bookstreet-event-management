@@ -1,6 +1,6 @@
-**USE CASE LIST - COMPACT v3**
+**USE CASE LIST - COMPACT v4**
 
-Reduced for a readable Use Case Diagram
+Active MVP baseline updated 09/10/2026; Post-MVP references are listed separately
 
 # 1. Quy tắc đặt tên Use Case
 
@@ -53,21 +53,20 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 | **ID** | **Use Case**                  | **Description**                                                                                                                                                                                                                                                                                |
 |--------|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | UC-E01 | Apply to Event                | Đăng ký tổ chức tham gia Event.                                                                                                                                                                                                                                                                |
-| UC-E02 | Manage Booth Request          | Chọn Booth và gửi request; nhiều candidate có thể cùng nhắm một Booth/time. Theo dõi PENDING/SELECTED/COMPLETED/PAYMENT_EXPIRED/NOT_SELECTED; yêu cầu đổi hoặc hủy theo lifecycle.                                                                                                             |
-| UC-E03 | Pay & View Booth              | Thanh toán giá đã khóa khi SELECTED + Hold; mỗi FAILED/TIMEOUT attempt được lưu riêng và có thể retry khi Hold còn hiệu lực. Xem BoothAssignment sau PAYMENT SUCCESS cùng lịch sử PAYMENT/REFUND; backend xử lý refund qua Payment Gateway bằng cách tham chiếu giao dịch PAYMENT SUCCESS gốc. |
+| UC-E02 | Manage Booth Request          | Chọn Booth và gửi request; nhiều candidate có thể cùng nhắm một Booth/time. Theo dõi lifecycle và withdraw PENDING hoặc SELECTED chưa settlement để release Hold an toàn. Booth đã Assigned không được đổi/hủy trong MVP. |
+| UC-E03 | Pay & View Booth              | Thanh toán giá đã khóa khi SELECTED + Hold; mỗi FAILED/TIMEOUT attempt được lưu riêng và chỉ retry khi payment window còn mở, không có kết quả chưa chắc chắn. Evidence PENDING/reconciliation tiếp tục giữ Hold nhưng không dừng Event lifecycle. Xem BoothAssignment sau PAYMENT SUCCESS và lịch sử PAYMENT; MVP không cung cấp business-refund workflow. |
 | UC-E04 | Manage Activity Proposal      | Tạo, sửa, gửi lại hoặc rút Activity Proposal trước khi duyệt.                                                                                                                                                                                                                                  |
 | UC-E05 | Request Activity Change       | Yêu cầu đổi Activity đã được duyệt/published.                                                                                                                                                                                                                                                  |
 | UC-E06 | Request Activity Cancellation | Yêu cầu hủy Activity đã được duyệt/published.                                                                                                                                                                                                                                                  |
-| UC-E07 | Withdraw from Event           | Yêu cầu rút toàn bộ đơn vị khỏi Event; sau khi Organizer xác nhận, request/Hold/Assignment kết thúc ngay và các refund đủ điều kiện được xử lý bất đồng bộ.                                                                                                                                    |
 
 ## Event Organizer
 
 | **ID** | **Use Case**                | **Description**                                                                                                                                                                                                                                         |
 |--------|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| UC-O01 | Manage Events               | Tạo, cập nhật, publish, cancel và quản lý Event lifecycle/deadline; Event.organizerUserId xác định Organizer chịu trách nhiệm.                                                                                                                          |
+| UC-O01 | Manage Events               | Tạo, cập nhật, publish, xóa Draft, cancel Event chưa settlement và quản lý lifecycle/deadline; Event.organizerUserId xác định Organizer chịu trách nhiệm.                                                                                               |
 | UC-O02 | Manage Locations            | Quản lý Area, Stage, Booth, capacity và availability.                                                                                                                                                                                                   |
 | UC-O03 | Review Partner Applications | Duyệt Partner tham gia Event.                                                                                                                                                                                                                           |
-| UC-O04 | Review Booth Requests       | Review candidate cạnh tranh cùng Booth/time; chọn winner để tạo Hold và khóa giá. Candidate khác giữ PENDING; chỉ payment-window expiry mới PAYMENT_EXPIRED. Xác nhận change/cancellation/refund theo cutoff; backend/gateway xử lý REFUND bất đồng bộ. |
+| UC-O04 | Review Booth Requests       | Review candidate cạnh tranh cùng Booth/time; chọn winner để tạo Hold và khóa giá. Candidate khác giữ PENDING; payment-window expiry chuyển winner thành PAYMENT_EXPIRED. Organizer chọn candidate tiếp theo sau khi Hold hết hạn hoặc được Partner release an toàn. |
 | UC-O05 | Review Activity Proposals   | Approve, request change hoặc reject proposal.                                                                                                                                                                                                           |
 | UC-O06 | Manage Activities           | Tạo Activity của BTC; publish, reschedule, move hoặc cancel.                                                                                                                                                                                            |
 | UC-O07 | Monitor Participation       | Theo dõi Event/Activity registrations, Attendance, no-show và BoothVisit; correction/override Attendance khi cần phải lưu lý do.                                                                                                                        |
@@ -82,6 +81,17 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 | UC-A02 | Manage Roles    | Gán/gỡ PARTNER, ORGANIZER hoặc ADMIN qua UserRole; role nâng cao yêu cầu verified email. Tài khoản mới mặc định PARTICIPANT; không có Permission/RolePermission entity. |
 | UC-A03 | Manage Badges   | Quản lý Badge và ngưỡng total Points dùng để unlock Badge.                                                                                                              |
 
+## Post-MVP reference
+
+Các Use Case dưới đây giữ ID để tham chiếu thiết kế tương lai nhưng không thuộc MVP hiện tại và
+không được đưa vào Sprint/API/migration nếu chưa có quyết định scope mới:
+
+- `UC-E07 Withdraw from Event` sau khi application đã APPROVED.
+- Booth change sau Assignment.
+- Booth cancellation sau Assignment.
+- Business refund cho Booth/Event cancellation hoặc đổi Booth.
+- Admin emergency cancellation của Event đang ONGOING.
+
 <table>
 <colgroup>
 <col style="width: 100%" />
@@ -89,7 +99,7 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 <thead>
 <tr class="header">
 <th>Tổng số Use Case<br />
-27 Use Case. Bản này đủ gọn để vẽ diagram; Participant chỉ còn 4 Use Case lớn. Các thao tác xem chi tiết, status, deadline, conflict, QR validation, Points/Certificate rules sẽ đi vào Use Case Specification và Business Rules, không tách thêm oval.</th>
+26 active MVP Use Case. Các Post-MVP reference không tính vào tổng này. Bản active đủ gọn để vẽ diagram; Participant chỉ còn 4 Use Case lớn. Các thao tác xem chi tiết, status, deadline, conflict, QR validation, Points/Certificate rules sẽ đi vào Use Case Specification và Business Rules, không tách thêm oval.</th>
 </tr>
 </thead>
 <tbody>

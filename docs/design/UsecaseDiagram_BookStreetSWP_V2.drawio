@@ -112,7 +112,7 @@
         <mxCell id="qJp2FFhqtvb5zNyNCly7-39" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Request Activity Cancellation" vertex="1">
           <mxGeometry height="50" width="130" x="520" y="662.5" as="geometry" />
         </mxCell>
-        <mxCell id="qJp2FFhqtvb5zNyNCly7-40" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Withdraw from Event" vertex="1">
+        <mxCell id="qJp2FFhqtvb5zNyNCly7-40" parent="1" style="ellipse;whiteSpace=wrap;html=1;dashed=1;" value="Withdraw from Event&lt;br&gt;(POST-MVP REFERENCE)" vertex="1">
           <mxGeometry height="35" width="150" x="750" y="522.5" as="geometry" />
         </mxCell>
         <mxCell id="qJp2FFhqtvb5zNyNCly7-42" edge="1" parent="1" source="qJp2FFhqtvb5zNyNCly7-4" style="endArrow=none;html=1;rounded=0;entryX=0.364;entryY=1.017;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="qJp2FFhqtvb5zNyNCly7-35" value="">

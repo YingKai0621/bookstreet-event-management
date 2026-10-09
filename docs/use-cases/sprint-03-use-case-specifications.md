@@ -2,11 +2,17 @@
 
 > Approved implementation criteria for initial Booth rental payment and Assignment creation.
 
+> Active Sprint 4 overlay: these historical criteria remain valid only with the Event-rooted lock
+> and lifecycle boundary in
+> [`sprint-04-use-case-specifications.md`](sprint-04-use-case-specifications.md), AC-O01-16.
+
 ## UC-E03 Pay & View Booth - initial rental slice
 
 ### Goal
 
-Allow the selected Partner to pay the price locked in an Active BoothHold, retry failed or timed-out attempts while the Hold remains active, and view the resulting BoothAssignment after the backend verifies payment success.
+Allow the selected Partner to pay the price locked in an Active BoothHold, retry failed or timed-out
+attempts while the Hold remains active and backend time is before `expiresAt`, and view the
+resulting BoothAssignment after the backend verifies payment success.
 
 ### Primary actor
 
@@ -53,7 +59,7 @@ Payment Gateway
 - A5. Gateway reports a safe terminal failure: mark only that attempt `FAILED`; keep request
   `SELECTED` and Hold `ACTIVE` if the window remains open. If later verified success contradicts
   that terminal result, retain the conflict and block another charge pending manual resolution.
-- A6. For VNPay, checkout expiry alone does not close the attempt because signed QueryDR may continue returning raw status `01`. Keep the attempt `PENDING` during bounded reconciliation. After two trusted QueryDR results at least five minutes apart both return query response `00`, matching reference/amount and raw status `01`, with no verified success, mark only that attempt `TIMEOUT`; retry remains available while the Hold is active.
+- A6. For VNPay, checkout expiry alone does not close the attempt because signed QueryDR may continue returning raw status `01`. Keep the attempt `PENDING` during bounded reconciliation. After two trusted QueryDR results at least five minutes apart both return query response `00`, matching reference/amount and raw status `01`, with no verified success, mark only that attempt `TIMEOUT`; retry remains available only while the Hold is active and backend time is before `expiresAt`.
 - A7. Gateway result remains unknown because of a network/query failure or missing callback: keep the attempt `PENDING` and reconcile server-side. Return `202 Accepted` for the initial request or a replay with the same idempotency key. If the Partner submits a new key while that result remains unknown, reject it with `409 PAYMENT_RESULT_UNKNOWN` and create no new attempt.
 - A8. Callback is duplicated or reordered: return idempotently without duplicating state transitions.
 - A9. Browser returns with a claimed success but backend verification is absent: show processing/unknown; do not create Assignment.
@@ -271,7 +277,7 @@ When initiation cannot continue
 Then the backend changes that Payment to FAILED
 And commits the state change before responding
 And returns HTTP 502 with PAYMENT_GATEWAY_UNAVAILABLE
-And the Partner may retry with a new key while the Hold remains Active
+And the Partner may retry with a new key while the Hold remains Active and backend time is before expiresAt
 ```
 
 **AC-E03-16 Late success never creates duplicate settlement**
@@ -307,9 +313,12 @@ And closes the Payment attempt
 And expires the already-due Hold and source request in the same transaction
 ```
 
-Before QueryDR, the worker atomically claims the query slot by locking `Hold → Payment`, checking
+Within the Sprint 3 payment domain, before QueryDR the worker atomically claims the query slot by
+locking `Hold → Payment`, checking
 that the attempt is still eligible and recording `lastGatewayQueryAt`. It releases those locks
 before network I/O, then uses another short `Hold → Payment` transaction to apply the response.
+The active Sprint 4 concurrency contract prefixes both short transactions with the Event row; the
+gateway call remains outside every database transaction.
 Concurrent workers therefore cannot query the same Payment inside VNPay's minimum interval. An
 unavailable, invalid or mismatched result never releases the Hold; it retains
 `reconciliationRequired` and is retried no sooner than that interval.

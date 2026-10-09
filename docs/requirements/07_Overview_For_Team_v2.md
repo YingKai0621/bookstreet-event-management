@@ -1,6 +1,6 @@
-**OVERVIEW FOR TEAM - v2**
+**OVERVIEW FOR TEAM - v2.1**
 
-What every team member must understand
+What every team member must understand — active MVP updated 09/10/2026
 
 # 1. Hệ thống này là gì?
 
@@ -53,7 +53,7 @@ Join Event không giữ chỗ Activity và không cấp Event QR. Nếu user đ�
 
 - Participant → Register Activity → tự quét Activity QR trong time window → Attendance = ATTENDED; sau khi Activity COMPLETED mới xét Certificate. Khi ghé Booth, Participant tự quét QR của BoothAssignment → BoothVisit → Point → Badge.
 
-- Partner → Apply Event → Approved → BoothRequest PENDING → Organizer Selection → SELECTED + BoothHold + khóa rentalPrice → payment/retry theo giá đã khóa → SUCCESS tạo BoothAssignment; candidate khác NOT_SELECTED. FAILED/attempt TIMEOUT vẫn retry khi Hold còn hạn; chỉ hết payment window/Hold mới PAYMENT_EXPIRED + release Hold.
+- Partner → Apply Event → Approved → BoothRequest PENDING → Organizer Selection → SELECTED + BoothHold + khóa rentalPrice → payment/retry theo giá đã khóa → SUCCESS khi Event PUBLISHED/ONGOING tạo BoothAssignment; candidate khác NOT_SELECTED. FAILED/attempt TIMEOUT chỉ retry khi payment window còn mở. Evidence chưa rõ có thể giữ Hold sang ONGOING mà không dừng Event; success sau COMPLETED/CANCELLED chỉ được giữ để đối soát và không tạo Assignment.
 
 - Partner → Activity Proposal → Conflict Check → Organizer Review → Publish.
 
@@ -65,17 +65,17 @@ Join Event không giữ chỗ Activity và không cấp Event QR. Nếu user đ�
 
 - Partner phải được duyệt vào Event trước khi request Booth/propose Activity.
 
-- Partner chọn Booth cụ thể; nhiều BoothRequest/BoothChangeRequest có thể cạnh tranh nếu cùng Booth và thời gian allocation overlap. Booth.categoryCode chỉ recommend/filter/priority/warn. Organizer chọn winner; candidate khác giữ PENDING cho đến khi Assignment được tạo rồi mới NOT_SELECTED.
+- Partner chọn Booth cụ thể; nhiều BoothRequest có thể cạnh tranh nếu cùng Booth và thời gian allocation overlap. Booth.categoryCode chỉ recommend/filter/priority/warn. Organizer chọn winner; candidate khác giữ PENDING cho đến khi Assignment được tạo rồi mới NOT_SELECTED.
 
-- EventBoothConfig lưu rentalPrice và isEnabled cho từng Event–Booth. isEnabled chỉ cho biết Booth có được mở trong Event; không được disable khi có Active Hold/Assignment overlap. Organizer selection snapshot rentalPrice vào Hold. FAILED/attempt TIMEOUT có thể retry khi Hold còn ACTIVE; chỉ hết payment window/Hold mới PAYMENT_EXPIRED và release Hold; SUCCESS mới tạo Assignment.
+- EventBoothConfig lưu rentalPrice và isEnabled cho từng Event–Booth. isEnabled chỉ cho biết Booth có được mở trong Event; không được disable khi có Active Hold/Assignment overlap. Organizer selection snapshot rentalPrice vào Hold. FAILED/attempt TIMEOUT chỉ retry trước Hold `expiresAt`; evidence chưa rõ giữ Hold nhưng chặn retry. SUCCESS chỉ tạo Assignment khi Event PUBLISHED/ONGOING.
 
 - Activity có exact time + Location; same physical Location + overlapping time bị system block.
 
 - Participant được đăng ký Activity trùng giờ; mỗi ActivityRegistration chỉ có tối đa một Attendance và scan QR lặp không tạo Attendance trùng.
 
-- Booth release không đồng nghĩa xóa Booth. Đổi sang Booth giá cao hơn giữ Assignment cũ đến PAYMENT chênh lệch SUCCESS; giá thấp hơn ghi REFUND PENDING rồi swap ngay, không chờ tiền về. Cancellation/Withdrawal cũng release nội bộ ngay và để gateway xử lý refund bất đồng bộ. Payment gốc vẫn SUCCESS.
+- Booth release không đồng nghĩa xóa Booth. MVP cho Partner withdraw SELECTED request và release Hold khi chưa có Payment/Assignment blocker. Sau Assignment không đổi/hủy Booth và không business refund.
 
-- Activity đã publish đổi time/location phải notify Participant và cho phép họ cancel. BoothCancellationRequest/PartnerWithdrawalRequest dùng submittedAt so với Event.boothCancellationCutoffAt: trước/đúng cutoff refund 100%, sau cutoff 0%; Event bị hủy refund 100%.
+- Activity đã publish đổi time/location phải notify Participant và cho phép họ cancel. BoothCancellationRequest, PartnerWithdrawalRequest sau approval và refund theo cutoff là Post-MVP reference.
 
 - Points đến từ BoothVisit hợp lệ; Badge dựa trên total Points. Certificate chỉ cấp sau Activity COMPLETED nếu Attendance hợp lệ và Activity hỗ trợ Certificate; Booth QR và Activity QR là hai flow khác nhau.
 
@@ -90,6 +90,12 @@ Join Event không giữ chỗ Activity và không cấp Event QR. Nếu user đ�
 - Đăng ký dùng username, full name và password; confirm password không lưu database. Email tùy chọn với PARTICIPANT nhưng phải verified trước khi cấp PARTNER, ORGANIZER hoặc ADMIN. Authorization dùng User/Role/UserRole và chỉ có 5 actor: Guest, Participant, Partner, Organizer, Admin.
 
 # 6. MVP không làm
+
+- Booth change hoặc cancellation sau Assignment
+
+- Partner withdrawal sau khi application đã APPROVED
+
+- Business refund và Event cancellation sau settlement
 
 - AI
 

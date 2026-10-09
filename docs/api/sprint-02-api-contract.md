@@ -4,7 +4,9 @@
 
 This contract defines the REST API for Sprint 2 Booth setup, Booth requests, Organizer selection and temporary Holds. Backend and frontend changes must keep this document synchronized.
 
-Payment initiation, payment callbacks, BoothAssignment and refunds are intentionally absent. They belong to Sprint 3.
+Payment initiation, payment callbacks, BoothAssignment and refunds are intentionally absent from
+Sprint 2. Sprint 3 later implemented initial Payment and BoothAssignment; business refund was moved
+to Post-MVP reference scope by the Sprint 4 baseline.
 
 ## 2 General conventions
 
@@ -399,6 +401,10 @@ Errors:
 
 Acceptance Criteria: AC-E02-05 and AC-E02-06.
 
+> Active Sprint 4 override: the same endpoint also accepts an eligible `SELECTED` request, releases
+> its Hold safely and uses `BOOTH_REQUEST_NOT_WITHDRAWABLE` as the withdrawal-specific catch-all.
+> See [`sprint-04-api-contract.md`](sprint-04-api-contract.md#4-partner-booth-request-api).
+
 ## 8 Organizer Booth review APIs
 
 All endpoints require a verified `ORGANIZER` role and ownership of the Event.
@@ -438,6 +444,9 @@ Response: `200` with the updated Booth request and non-null Hold.
 After the selection transaction commits, the backend triggers an email to the Partner representative's verified account email. The email contains the Event, Booth, locked price and `expiresAt`.
 
 The transaction obtains one authoritative backend time, stores it as `selectedAt` and the Hold creation time, and calculates `expiresAt = selectedAt + boothPaymentWindowMinutes`. The computed instant is persisted on the Hold and is not derived again when the response is read.
+
+Under the active Sprint 4 concurrency contract, selection first locks the Event and rechecks its
+status/backend time before the Sprint 2 configuration, availability and request checks.
 
 Email failure is logged and does not roll back the committed request or Hold. Sprint 2 does not add an outbox, notification table or complex email retry mechanism.
 

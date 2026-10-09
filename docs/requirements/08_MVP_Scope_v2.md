@@ -66,7 +66,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Organizer approval
 
-- Withdraw from Event
+- Withdraw a Partner application while it is still PENDING
 
 ## Booth
 
@@ -78,17 +78,31 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Booth Request, Booth Hold, Booth Payment and Booth Assignment are separate records/concepts.
 
-- Competing BoothRequest/BoothChangeRequest for the same Booth and overlapping allocation time remain PENDING while the selected candidate pays. SUCCESS creates Assignment and marks other candidates NOT_SELECTED; payment-window expiry marks the winner PAYMENT_EXPIRED and leaves others PENDING.
+- Competing BoothRequest for the same Booth and overlapping allocation time remain PENDING while the selected candidate pays. SUCCESS creates Assignment and marks other candidates NOT_SELECTED only while Event is PUBLISHED/ONGOING; payment-window expiry marks the winner PAYMENT_EXPIRED and leaves others PENDING unless unresolved evidence must keep the Hold blocking.
 
-- Request/change/cancel Booth
+- Request and withdraw Booth before settlement. An eligible SELECTED request may release its Hold
+  when no Payment `PENDING`/`SUCCESS`, reconciliation-required evidence or Assignment exists.
 
 - EventBoothConfig is an official Logical/Physical entity, unique per Event–Booth, storing rentalPrice/isEnabled. Organizer selection creates a Hold and snapshots rentalPrice as the locked price for every attempt in that payment window; later config changes apply only to new selections
 
 - The same physical Booth may be reused by different Events when their time ranges do not overlap.
 
-- Release/reassign rules
+- Hold release/reassign rules before settlement
 
-- Booth cancellation and Partner withdrawal refunds compare request.submittedAt with Event.boothCancellationCutoffAt: on/before cutoff 100%, after cutoff 0%; Event cancellation 100%. Confirmed operations release internal Booth state immediately, create REFUND PENDING from the original SUCCESS payment and let the gateway process it asynchronously.
+- Booth change/cancellation after Assignment, whole-Event Partner withdrawal after approval and business refunds are Post-MVP.
+
+## Event Lifecycle Hardening
+
+- Draft Event hard delete with Event-scoped configuration cleanup.
+
+- Safe descriptive updates after publication; operational updates only before external participation.
+
+- One-way DRAFT → PUBLISHED → ONGOING → COMPLETED lifecycle.
+
+- Organizer cancellation of a PUBLISHED Event only before any Payment `PENDING`/`SUCCESS`,
+  reconciliation-required evidence or Assignment exists.
+
+- Atomic cancellation of open Booth requests and release of eligible Active Holds.
 
 ## Activity
 
@@ -158,7 +172,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - A physical Booth is not globally ASSIGNED. EventBoothConfig.isEnabled controls whether it is offered in an Event; runtime availability is derived separately from config, Hold, Assignment and allocation time. A config with overlapping Active Hold/Assignment cannot be disabled.
 
-- Activity participation remains free. Booth rental uses real Payment Gateway payment. The Event–Booth price is locked at SELECTED + Hold; each FAILED/attempt TIMEOUT is stored separately and may retry while Hold remains active. Only payment-window/Hold expiry releases the Hold, and Assignment requires backend-verified SUCCESS.
+- Activity participation remains free. Booth rental uses real Payment Gateway payment. The Event–Booth price is locked at SELECTED + Hold; each FAILED/attempt TIMEOUT is stored separately and may retry only while the payment window is open. Unresolved evidence can preserve an Active Hold past scheduled expiry and blocks retry/reassignment. Assignment requires backend-verified SUCCESS while Event is PUBLISHED/ONGOING.
 
 - Heritage is supporting public content, not a separate heritage-management workflow.
 
@@ -170,7 +184,16 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Paid Activity tickets
 
-- Advanced billing/invoice and advanced partial-refund scenarios; basic Booth Payment + cutoff-based refund are in MVP
+- Billing/invoice and all business-refund execution
+
+- Booth change or cancellation after Assignment
+
+- Partner withdrawal from the whole Event after approval
+
+- Event cancellation after any Payment `PENDING`/`SUCCESS`, reconciliation-required evidence or
+  any Assignment
+
+- Admin emergency cancellation of an ONGOING Event
 
 - Staff shift management
 
@@ -196,9 +219,9 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Participant can Join Event, see My Events, register Activity, self-scan Activity QR for Attendance and BoothAssignment QR for BoothVisit.
 
-- Partner can apply to an Event, be approved, select/request a specific Booth, pay after Organizer selection, receive Assignment after success and submit an Activity Proposal.
+- Partner can apply to an Event, be approved, select/request a specific Booth, release an eligible pre-payment Hold, pay after Organizer selection, receive Assignment after success and submit an Activity Proposal.
 
-- Organizer can manage Event/Location/Booth/Activity and handle change/cancel workflows.
+- Organizer can manage Event/Location/Booth/Activity, safely update/cancel an eligible Event and handle the in-scope Activity workflows.
 
 - System enforces capacity, conflict, Event/time Booth availability and access rules while maintaining history.
 
