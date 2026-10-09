@@ -2,10 +2,10 @@ import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'luc
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { EventItem, Language, ParticipantProfile } from '../types';
+import { EventItem, Language, ParticipantProfile } from '../../types';
 import { IconEventTicket } from './CustomIcons';
 import './EventsSection.css';
-import { EventCoverflow } from './ui/EventCoverflow';
+import { EventCoverflow } from '../ui/EventCoverflow';
 
 const parseEventDate = (value: string) => {
   const parts = value.includes('/') ? value.split('/') : value.split('-');

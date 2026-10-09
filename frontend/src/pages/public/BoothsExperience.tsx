@@ -8,7 +8,7 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Booth, EventItem, Language } from '../types';
+import { Booth, EventItem, Language } from '../../types';
 import './BoothsExperience.css';
 
 interface BoothsExperienceProps {
@@ -167,12 +167,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Collection Section */}
         <section className="heritage-inner heritage-collection" id="booths-collection">
-          {events.length > 0 && <div className="public-map-event-picker">
-            <label htmlFor="booths-experience-event">{vi ? 'Sự kiện' : 'Event'}</label>
-            <select id="booths-experience-event" value={selectedEventId} onChange={event => onSelectEventId(event.target.value)}>
-              {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
-            </select>
-          </div>}
+
           {error && <p role="alert">{error}</p>}
           <div className="heritage-collection-title">
             <div>

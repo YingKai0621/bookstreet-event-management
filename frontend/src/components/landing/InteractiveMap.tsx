@@ -6,12 +6,12 @@ import {
   ZoomOut
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../services/mapService';
-import { boothApi } from '../services/boothApi';
-import { Booth, EventItem, Language } from '../types';
-import type { EventBooth } from '../types/booth';
+import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../../services/mapService';
+import { boothApi } from '../../services/boothApi';
+import { Booth, EventItem, Language } from '../../types';
+import type { EventBooth } from '../../types/booth';
 import { IconMapBookPin } from './CustomIcons';
-import { eventBoothToMarker } from './booth-map/boothMapModel';
+import { eventBoothToMarker } from '../booth-map/boothMapModel';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
@@ -250,18 +250,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </p>
         </div>
 
-        <div className="public-map-event-picker">
-          <label htmlFor="public-map-event">{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</label>
-          <select
-            id="public-map-event"
-            value={selectedEventId}
-            onChange={event => onSelectEventId(event.target.value)}
-          >
-            <option value="">{language === 'vi' ? 'Chọn sự kiện để xem gian hàng' : 'Select an event to view booths'}</option>
-            {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
-          </select>
-          {!events.length && <span>{language === 'vi' ? 'Chưa có sự kiện đã công bố.' : 'No published events yet.'}</span>}
-        </div>
+
 
         {/* Map Blueprint & Detail Column Layout */}
         <div className="blueprint-map-layout">

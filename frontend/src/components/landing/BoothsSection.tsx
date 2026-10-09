@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'luc
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Booth, EventItem, Language } from '../types';
+import { Booth, EventItem, Language } from '../../types';
 import './BoothsSection.css';
 import { IconBookSpine, IconBookmark } from './CustomIcons';
 
@@ -186,12 +186,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           </p>
         </div>
 
-        {events.length > 0 && <div className="public-map-event-picker">
-          <label htmlFor="public-booths-event">{language === 'vi' ? 'Sự kiện' : 'Event'}</label>
-          <select id="public-booths-event" value={selectedEventId} onChange={event => onSelectEventId?.(event.target.value)}>
-            {events.map(event => <option key={event.id} value={event.id}>{event.title}</option>)}
-          </select>
-        </div>}
+
         {error && <p role="alert">{error}</p>}
 
         {/* Search & Category Filter Bar */}

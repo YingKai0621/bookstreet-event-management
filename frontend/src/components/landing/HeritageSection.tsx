@@ -2,8 +2,8 @@ import gsap from 'gsap';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Language } from '../types';
-import { HeritageProfile } from '../types/heritage';
+import { Language } from '../../types';
+import { HeritageProfile } from '../../types/heritage';
 import { IconHeritageSeal } from './CustomIcons';
 import './HeritageSection.css';
 

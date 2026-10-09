@@ -1,7 +1,7 @@
 import { Mail, MapPin, Phone } from 'lucide-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Language } from '../types';
+import { Language } from '../../types';
 import './Footer.css';
 
 interface FooterProps {

@@ -1,7 +1,7 @@
 import { ArrowRight, BookOpen, ChevronDown, MapPin, Search, Store, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Booth, Language } from '../types';
+import { Booth, Language } from '../../types';
 import './Hero.css';
 
 interface HeroProps {

@@ -2,34 +2,34 @@ import React, { useEffect, useState } from 'react';
 import {
   ExtendedHeritageProfile,
   Language
-} from '../types';
-import { FacilityManagementView } from './admin/FacilityManagementView';
-import { EventDetailView } from './portal/EventDetailView';
-import { EventManagementView } from './portal/EventManagementView';
-import { OrganizerDashboard } from './portal/OrganizerDashboard';
+} from '../../types';
+import { FacilityManagementView } from '../admin/FacilityManagementView';
+import { EventDetailView } from './EventDetailView';
+import { EventManagementView } from './EventManagementView';
+import { OrganizerDashboard } from './OrganizerDashboard';
 import {
   OrganizerSidebar,
   OrganizerTab
-} from './portal/OrganizerSidebar';
-import { OrganizerTopBar } from './portal/OrganizerTopBar';
+} from './OrganizerSidebar';
+import { OrganizerTopBar } from './OrganizerTopBar';
 
-import { OrganizerBoothManagementView } from './portal/OrganizerBoothManagementView';
-import { Sprint2BoothWorkspace } from './portal/Sprint2BoothWorkspace';
-import { ActivityManagementView } from './portal/ActivityManagementView';
-import { OrganizerAttendanceModal } from './portal/OrganizerAttendanceModal';
-import { OrganizerCreateActivityModal } from './portal/OrganizerCreateActivityModal';
-import { OrganizerCreateEventModal } from './portal/OrganizerCreateEventModal';
-import { OrganizerFeedbackView } from './portal/OrganizerFeedbackView';
-import { OrganizerNotificationsView } from './portal/OrganizerNotificationsView';
-import { OrganizerProfileView } from './portal/OrganizerProfileView';
-import { OrganizerPublicContentView } from './portal/OrganizerPublicContentView';
-import { OrganizerReportsView } from './portal/OrganizerReportsView';
-import { ParticipantManagementView } from './portal/ParticipantManagementView';
+import { OrganizerBoothManagementView } from './OrganizerBoothManagementView';
+import { Sprint2BoothWorkspace } from './Sprint2BoothWorkspace';
+import { ActivityManagementView } from './ActivityManagementView';
+import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
+import { OrganizerCreateActivityModal } from './OrganizerCreateActivityModal';
+import { OrganizerCreateEventModal } from './OrganizerCreateEventModal';
+import { OrganizerFeedbackView } from './OrganizerFeedbackView';
+import { OrganizerNotificationsView } from './OrganizerNotificationsView';
+import { OrganizerProfileView } from './OrganizerProfileView';
+import { OrganizerPublicContentView } from './OrganizerPublicContentView';
+import { OrganizerReportsView } from './OrganizerReportsView';
+import { ParticipantManagementView } from './ParticipantManagementView';
 
-import { useAuth } from '../auth/useAuth';
-import { organizerApi, OrganizerPartnerApplication } from '../services/organizerApi';
-import { boothApi } from '../services/boothApi';
-import type { BoothRequest } from '../types/booth';
+import { useAuth } from '../../auth/useAuth';
+import { organizerApi, OrganizerPartnerApplication } from '../../services/organizerApi';
+import { boothApi } from '../../services/boothApi';
+import type { BoothRequest } from '../../types/booth';
 import {
   OrganizerActivityItem,
   OrganizerBoothItem,
@@ -38,9 +38,9 @@ import {
   OrganizerNotificationItem,
   OrganizerParticipantItem,
   OrganizerProfile
-} from '../types/organizer';
+} from '../../types/organizer';
 
-import './portal/OrganizerPortal.css';
+import './OrganizerPortal.css';
 
 export interface ManagementPortalProps {
   language: Language;

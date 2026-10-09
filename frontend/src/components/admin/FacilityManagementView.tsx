@@ -2,7 +2,7 @@ import { Building2, MapPin, Package, Pencil, Plus, RefreshCw, Search, Store, Tra
 import { useEffect, useRef, useState } from 'react';
 import { boothStatusLabels, notifyBoothsChanged } from '../../services/booths';
 import { facilityRequest, type Facility, type FacilityInput, type FacilityKind } from '../../services/facilities';
-import '../BoothBookingView.css';
+import '../landing/BoothBookingView.css';
 import './FacilityManagementView.css';
 
 const labels = { venues: 'địa điểm', assets: 'thiết bị', booths: 'gian hàng' };

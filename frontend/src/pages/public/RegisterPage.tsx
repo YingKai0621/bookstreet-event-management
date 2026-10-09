@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth';
-import { Language } from '../types';
+import { useAuth } from '../../auth/useAuth';
+import { Language } from '../../types';
 import './RegisterPage.css';
 
 interface RegisterPageProps {

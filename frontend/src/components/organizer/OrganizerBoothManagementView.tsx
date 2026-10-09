@@ -690,30 +690,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                 </label>
               </div>
 
-              {/* Map Coordinates (Optional) */}
-              <div className="booth-form-group">
-                <label>{language === 'vi' ? 'Tọa độ X (Tùy chọn)' : 'Map X (Optional)'}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Ví dụ: 120.50"
-                  value={formData.mapX}
-                  onChange={e => setFormData({ ...formData, mapX: e.target.value })}
-                  disabled={formSubmitting}
-                />
-              </div>
 
-              <div className="booth-form-group">
-                <label>{language === 'vi' ? 'Tọa độ Y (Tùy chọn)' : 'Map Y (Optional)'}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Ví dụ: 45.00"
-                  value={formData.mapY}
-                  onChange={e => setFormData({ ...formData, mapY: e.target.value })}
-                  disabled={formSubmitting}
-                />
-              </div>
 
               {/* Description */}
               <div className="booth-form-group full-width">

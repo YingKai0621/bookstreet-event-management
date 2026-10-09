@@ -45,7 +45,14 @@
   box-shadow: 0 6px 18px rgba(24, 41, 36, 0.08);
 }
 
+.cert-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+  max-width: 650px;
+}
+
 .stat-number-box {
+  white-space: nowrap;
+  flex-shrink: 0;
   font-family: var(--font-serif);
   font-size: 2.1rem;
   font-weight: 700;
@@ -1929,7 +1936,14 @@
       gap: 0.35rem;
     }
 
-    .stat-number-box {
+    .cert-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+  max-width: 650px;
+}
+
+.stat-number-box {
+  white-space: nowrap;
+  flex-shrink: 0;
       font-size: 1.5rem;
     }
 

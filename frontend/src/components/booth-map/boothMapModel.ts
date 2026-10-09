@@ -46,9 +46,9 @@ export function eventBoothToMarker(row: EventBooth): BoothMapMarker | null {
 export function markerStatusLabel(status: BoothMapMarkerStatus): string {
   switch (status) {
     case 'AVAILABLE': return 'Còn trống';
-    case 'ON_HOLD': return 'Đang giữ chỗ';
-    case 'ASSIGNED': return 'Đã phân bổ';
-    case 'UNAVAILABLE': return 'Chưa mở';
+    case 'ASSIGNED': return 'Đã thuê';
+    case 'ON_HOLD': return 'Chờ duyệt';
+    case 'UNAVAILABLE': return 'Tạm khóa';
     default: return 'Gian hàng vật lý';
   }
 }

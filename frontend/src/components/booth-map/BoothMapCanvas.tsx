@@ -1,44 +1,131 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Check,
+  Download,
+  Lock,
+  Minus,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { DEFAULT_MAP_IMAGE } from '../../services/mapService';
 import type { BoothMapMarker } from './boothMapModel';
 import { markerStatusLabel } from './boothMapModel';
 import './BoothMapCanvas.css';
 
+export interface PopoverBoothData {
+  boothId: number;
+  code: string;
+  name: string;
+  status: 'AVAILABLE' | 'ASSIGNED' | 'ON_HOLD' | 'UNAVAILABLE';
+  partnerName?: string;
+  x: number;
+  y: number;
+}
+
 interface BoothMapCanvasProps {
   markers: BoothMapMarker[];
   selectedMarkerId?: string | null;
   onSelectMarker?: (marker: BoothMapMarker) => void;
+  activePopoverData?: PopoverBoothData | null;
+  onOpenPopover?: (marker: BoothMapMarker) => void;
+  onClosePopover?: () => void;
+  onSavePopover?: (data: PopoverBoothData) => Promise<void> | void;
+  onDeleteBooth?: (boothId: number) => Promise<void> | void;
   onPositionChange?: (markerId: string, x: number, y: number) => void;
+  onSaveAllMap?: () => Promise<void> | void;
+  onUploadMapImage?: (file: File) => void;
+  isSavingAll?: boolean;
+  hasUnsavedChanges?: boolean;
   editable?: boolean;
   ariaLabel: string;
   emptyMessage?: string;
   className?: string;
+  customMapUrl?: string;
 }
 
 export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   markers,
   selectedMarkerId,
   onSelectMarker,
+  activePopoverData,
+  onOpenPopover,
+  onClosePopover,
+  onSavePopover,
+  onDeleteBooth,
   onPositionChange,
-  editable = false,
+  onSaveAllMap,
+  onUploadMapImage,
+  isSavingAll = false,
+  hasUnsavedChanges = false,
+  editable = true,
   ariaLabel,
-  emptyMessage = 'Chưa có gian hàng đã định vị trên bản đồ.',
+  emptyMessage = 'Chưa có gian hàng nào trên bản đồ.',
   className = '',
+  customMapUrl,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [draggingMarkerId, setDraggingMarkerId] = useState<string | null>(null);
 
+  // Popover Form State
+  const [popoverForm, setPopoverForm] = useState<{
+    code: string;
+    name: string;
+    status: 'AVAILABLE' | 'ASSIGNED' | 'ON_HOLD' | 'UNAVAILABLE';
+    partnerName: string;
+  }>({
+    code: '',
+    name: '',
+    status: 'AVAILABLE',
+    partnerName: '',
+  });
+  const [popoverSaving, setPopoverSaving] = useState(false);
+
   const imageLayerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
+  const pointerStartPos = useRef({ x: 0, y: 0 });
+  const hasMovedMarkerRef = useRef(false);
+
+  // Sync popover form when active marker changes
+  useEffect(() => {
+    if (activePopoverData) {
+      setPopoverForm({
+        code: activePopoverData.code || '',
+        name: activePopoverData.name || '',
+        status: activePopoverData.status || 'AVAILABLE',
+        partnerName: activePopoverData.partnerName || '',
+      });
+    }
+  }, [activePopoverData]);
+
+  // Close popover on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClosePopover?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClosePopover]);
 
   const visibleMarkers = useMemo(() => markers.filter(marker =>
     Number.isFinite(marker.x) && Number.isFinite(marker.y)
       && marker.x >= 0 && marker.x <= 100 && marker.y >= 0 && marker.y <= 100,
   ), [markers]);
+
+  // Counts
+  const availableCount = visibleMarkers.filter(m => m.status === 'AVAILABLE').length;
+  const assignedCount = visibleMarkers.filter(m => m.status === 'ASSIGNED').length;
+  const onHoldCount = visibleMarkers.filter(m => m.status === 'ON_HOLD').length;
 
   const reset = () => {
     setZoom(1);
@@ -65,10 +152,10 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
     };
   };
 
-  // Pan controls
+  // Pan handlers
   const beginPan = (event: React.PointerEvent<HTMLDivElement>) => {
     if (draggingMarkerId) return;
-    if (zoom <= 1 || (event.target as HTMLElement).closest('.booth-map-marker')) return;
+    if (zoom <= 1 || (event.target as HTMLElement).closest('.booth-map-marker') || (event.target as HTMLElement).closest('.booth-marker-popover')) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragStart.current = { x: event.clientX, y: event.clientY };
     panStart.current = pan;
@@ -77,6 +164,10 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
 
   const movePan = (event: React.PointerEvent<HTMLDivElement>) => {
     if (draggingMarkerId) {
+      const dist = Math.hypot(event.clientX - pointerStartPos.current.x, event.clientY - pointerStartPos.current.y);
+      if (dist > 4) {
+        hasMovedMarkerRef.current = true;
+      }
       const coords = getPercentCoordinates(event.clientX, event.clientY);
       if (coords && onPositionChange) {
         onPositionChange(draggingMarkerId, coords.x, coords.y);
@@ -84,7 +175,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
       return;
     }
     if (!isPanning || zoom <= 1) return;
-    const limit = (zoom - 1) * 240;
+    const limit = (zoom - 1) * 260;
     setPan({
       x: Math.max(-limit, Math.min(limit, panStart.current.x + event.clientX - dragStart.current.x)),
       y: Math.max(-limit, Math.min(limit, panStart.current.y + event.clientY - dragStart.current.y)),
@@ -96,23 +187,56 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
     setDraggingMarkerId(null);
   };
 
-  // Click on map to place/move selected marker
-  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!editable || !selectedMarkerId || !onPositionChange) return;
-    if ((event.target as HTMLElement).closest('.booth-map-marker')) return;
-    const coords = getPercentCoordinates(event.clientX, event.clientY);
-    if (coords) {
-      onPositionChange(selectedMarkerId, coords.x, coords.y);
-    }
-  };
-
-  // Start dragging a marker
+  // Marker drag start
   const handleMarkerPointerDown = (event: React.PointerEvent, marker: BoothMapMarker) => {
     event.stopPropagation();
-    onSelectMarker?.(marker);
+    pointerStartPos.current = { x: event.clientX, y: event.clientY };
+    hasMovedMarkerRef.current = false;
     if (editable && onPositionChange) {
       setDraggingMarkerId(marker.id);
       (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
+    }
+  };
+
+  // Marker click toggle
+  const handleMarkerClick = (event: React.MouseEvent, marker: BoothMapMarker) => {
+    event.stopPropagation();
+    if (hasMovedMarkerRef.current) {
+      hasMovedMarkerRef.current = false;
+      return;
+    }
+    onSelectMarker?.(marker);
+    if (activePopoverData?.boothId === marker.boothId) {
+      onClosePopover?.();
+    } else {
+      onOpenPopover?.(marker);
+    }
+  };
+
+  // Submit Popover form
+  const handleSavePopoverForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activePopoverData || !onSavePopover) return;
+    setPopoverSaving(true);
+    try {
+      await onSavePopover({
+        ...activePopoverData,
+        code: popoverForm.code.trim().toUpperCase() || activePopoverData.code,
+        name: popoverForm.name.trim() || activePopoverData.name,
+        status: popoverForm.status,
+        partnerName: popoverForm.partnerName.trim(),
+      });
+      onClosePopover?.();
+    } finally {
+      setPopoverSaving(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadMapImage) {
+      onUploadMapImage(file);
     }
   };
 
@@ -124,28 +248,107 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
 
   return (
     <div className={`booth-map-shell ${className}`.trim()}>
+      {/* Hidden file input for uploading map */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
+      {/* 1. MAP TOOLBAR (MATCHING SCREENSHOT 1) */}
       <div className="booth-map-toolbar">
-        <div className="booth-map-legend" aria-label="Chú thích trạng thái gian hàng">
-          <span><i className="available" />Còn trống</span>
-          <span><i className="on-hold" />Đang giữ chỗ / Chờ duyệt</span>
-          <span><i className="assigned" />Đã thuê / Phân bổ</span>
-          <span><i className="unavailable" />Chưa mở</span>
+        {/* Left: Status Legend */}
+        <div className="booth-map-legend">
+          <div className="booth-map-legend-item">
+            <span className="booth-map-legend-dot available"></span>
+            <span>Còn trống ({availableCount})</span>
+          </div>
+          <div className="booth-map-legend-item">
+            <span className="booth-map-legend-dot assigned"></span>
+            <span>Đã thuê ({assignedCount})</span>
+          </div>
+          <div className="booth-map-legend-item">
+            <span className="booth-map-legend-dot on_hold"></span>
+            <span>Chờ duyệt ({onHoldCount})</span>
+          </div>
         </div>
-        <div className="booth-map-zoom" aria-label="Công cụ thu phóng bản đồ">
-          <button type="button" onClick={() => zoomBy(0.25)} disabled={zoom >= 2.5} aria-label="Phóng to bản đồ"><ZoomIn size={16} /></button>
-          <button type="button" onClick={() => zoomBy(-0.25)} disabled={zoom <= 1} aria-label="Thu nhỏ bản đồ"><ZoomOut size={16} /></button>
-          <button type="button" onClick={reset} disabled={zoom === 1 && pan.x === 0 && pan.y === 0} aria-label="Đặt lại bản đồ"><RotateCcw size={15} /></button>
-          <output aria-live="polite">{Math.round(zoom * 100)}%</output>
+
+        {/* Right: Actions & Zoom */}
+        <div className="booth-map-toolbar-actions">
+          {editable && onUploadMapImage && (
+            <button
+              type="button"
+              className="btn-map-tool"
+              onClick={() => fileInputRef.current?.click()}
+              title="Tải ảnh bản đồ mới lên"
+            >
+              <Upload size={15} />
+              <span>Tải bản đồ lên</span>
+            </button>
+          )}
+
+          {editable && onSaveAllMap && (
+            <button
+              type="button"
+              className="btn-map-tool primary"
+              onClick={() => void onSaveAllMap()}
+              disabled={isSavingAll}
+              title="Lưu toàn bộ tọa độ sơ đồ vào cơ sở dữ liệu"
+            >
+              <Check size={15} />
+              <span>{isSavingAll ? 'Đang lưu...' : 'Lưu sơ đồ'}</span>
+            </button>
+          )}
+
+          <div className="booth-map-zoom-group">
+            <button
+              type="button"
+              className="booth-map-zoom-btn"
+              onClick={() => zoomBy(-0.25)}
+              disabled={zoom <= 1}
+              aria-label="Thu nhỏ"
+              title="Thu nhỏ"
+            >
+              <Minus size={15} />
+            </button>
+            <button
+              type="button"
+              className="booth-map-zoom-btn"
+              onClick={reset}
+              disabled={zoom === 1 && pan.x === 0 && pan.y === 0}
+              aria-label="Đặt lại thu phóng"
+              title="Đặt lại bản đồ"
+            >
+              <RotateCcw size={14} />
+            </button>
+            <button
+              type="button"
+              className="booth-map-zoom-btn"
+              onClick={() => zoomBy(0.25)}
+              disabled={zoom >= 2.5}
+              aria-label="Phóng to"
+              title="Phóng to"
+            >
+              <Plus size={15} />
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* 2. MAP VIEWPORT */}
       <div
-        className={`booth-map-viewport ${zoom > 1 ? 'is-zoomed' : ''} ${isPanning || draggingMarkerId ? 'is-dragging' : ''} ${editable ? 'is-editable' : ''}`}
+        className={`booth-map-viewport ${zoom > 1 ? 'is-zoomed' : ''} ${isPanning || draggingMarkerId ? 'is-dragging' : ''}`}
         onPointerDown={beginPan}
         onPointerMove={movePan}
         onPointerUp={endPanOrDrag}
         onPointerCancel={endPanOrDrag}
-        onClick={handleMapClick}
+        onClick={() => {
+          if (!hasMovedMarkerRef.current) {
+            onClosePopover?.();
+          }
+        }}
       >
         <div
           ref={imageLayerRef}
@@ -153,29 +356,137 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           aria-label={ariaLabel}
         >
-          <img src={DEFAULT_MAP_IMAGE} alt="Bản đồ minh họa Đường Sách Nguyễn Văn Bình" draggable={false} />
+          <img
+            src={customMapUrl || DEFAULT_MAP_IMAGE}
+            alt="Bản đồ minh họa Đường Sách Nguyễn Văn Bình"
+            draggable={false}
+          />
+
+          {/* Markers */}
           {visibleMarkers.map(marker => {
-            const selected = marker.id === selectedMarkerId;
+            let statusClass = 'status-available';
+            if (marker.status === 'ASSIGNED') statusClass = 'status-assigned';
+            else if (marker.status === 'ON_HOLD') statusClass = 'status-on_hold';
+            else if (marker.status === 'UNAVAILABLE') statusClass = 'status-unavailable';
+
+            const isSelected = activePopoverData?.boothId === marker.boothId || selectedMarkerId === marker.id;
             const isDraggingThis = draggingMarkerId === marker.id;
+
             return (
               <button
                 type="button"
                 key={marker.id}
-                className={`booth-map-marker status-${marker.status.toLowerCase()} ${selected ? 'is-selected' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
-                style={{ left: `${marker.x}%`, top: `${marker.y}%`, '--marker-scale': 1 / zoom } as React.CSSProperties}
+                className={`booth-map-marker ${statusClass} ${isSelected ? 'is-selected' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
+                style={{
+                  left: `${marker.x}%`,
+                  top: `${marker.y}%`,
+                  '--marker-scale': 1 / zoom,
+                } as React.CSSProperties}
                 aria-label={`${marker.code} – ${marker.name} – ${markerStatusLabel(marker.status)}`}
-                aria-pressed={selected}
                 onPointerDown={e => handleMarkerPointerDown(e, marker)}
-                onClick={e => {
-                  e.stopPropagation();
-                  onSelectMarker?.(marker);
-                }}
-                title={`${marker.code}: ${marker.name} (${markerStatusLabel(marker.status)})`}
+                onClick={e => handleMarkerClick(e, marker)}
+                title={`${marker.code}: ${marker.name} (${markerStatusLabel(marker.status)}) - Kéo để đổi vị trí, Click để chỉnh sửa`}
               >
                 <span>{marker.code}</span>
+                {marker.status === 'ASSIGNED' && <Lock size={11} className="booth-marker-lock" />}
               </button>
             );
           })}
+
+          {/* 3. INLINE POPOVER (MATCHING SCREENSHOT 2) */}
+          {activePopoverData && (
+            <div
+              className="booth-marker-popover"
+              style={{
+                left: `${activePopoverData.x}%`,
+                top: `${activePopoverData.y}%`,
+                transform: `translate(-50%, -100%) translateY(-16px) scale(${1 / zoom})`,
+                transformOrigin: 'bottom center',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <form onSubmit={handleSavePopoverForm}>
+                {/* Header */}
+                <div className="popover-header">
+                  <input
+                    type="text"
+                    className="popover-code-input"
+                    value={popoverForm.code}
+                    onChange={e => setPopoverForm({ ...popoverForm, code: e.target.value.toUpperCase() })}
+                    placeholder="Mã gian..."
+                    title="Chỉnh sửa mã gian hàng (Ví dụ: A01, BOOTH-A02)"
+                    maxLength={30}
+                    required
+                  />
+                  <input
+                    type="text"
+                    className="popover-title-input"
+                    value={popoverForm.name}
+                    onChange={e => setPopoverForm({ ...popoverForm, name: e.target.value })}
+                    placeholder="Tên gian hàng..."
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="popover-close-btn"
+                    onClick={onClosePopover}
+                    title="Đóng"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {/* Form Fields (2 columns) */}
+                <div className="popover-body-grid">
+                  <div className="popover-field">
+                    <label>Trạng thái gian hàng</label>
+                    <select
+                      value={popoverForm.status}
+                      onChange={e => setPopoverForm({ ...popoverForm, status: e.target.value as any })}
+                    >
+                      <option value="AVAILABLE">Còn trống</option>
+                      <option value="ASSIGNED">Đã thuê</option>
+                      <option value="ON_HOLD">Chờ duyệt</option>
+                    </select>
+                  </div>
+
+                  <div className="popover-field">
+                    <label>Đơn vị tham gia (NXB / Đối tác)</label>
+                    <input
+                      type="text"
+                      placeholder="Nhập tên đơn vị..."
+                      value={popoverForm.partnerName}
+                      onChange={e => setPopoverForm({ ...popoverForm, partnerName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="popover-footer">
+                  {onDeleteBooth && (
+                    <button
+                      type="button"
+                      className="btn-popover-delete"
+                      onClick={() => onDeleteBooth(activePopoverData.boothId)}
+                      title="Xóa gian hàng này"
+                    >
+                      <Trash2 size={14} />
+                      <span>Xóa</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="btn-popover-save"
+                    disabled={popoverSaving}
+                  >
+                    <Check size={15} />
+                    <span>{popoverSaving ? 'Đang lưu...' : 'Hoàn tất & Đồng bộ'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
 

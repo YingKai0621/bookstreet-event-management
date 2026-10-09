@@ -1,5 +1,5 @@
 import React from 'react';
-import { Language } from '../types';
+import { Language } from '../../types';
 import './AboutSection.css';
 
 interface AboutSectionProps {

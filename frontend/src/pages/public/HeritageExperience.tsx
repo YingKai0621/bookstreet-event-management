@@ -8,8 +8,8 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ExtendedHeritageProfile, Language } from "../types";
-import { HeritageProfile } from "../types/heritage";
+import { ExtendedHeritageProfile, Language } from "../../types";
+import { HeritageProfile } from "../../types/heritage";
 import "./HeritageExperience.css";
 
 const imageInfo = (item?: HeritageProfile | ExtendedHeritageProfile) => {

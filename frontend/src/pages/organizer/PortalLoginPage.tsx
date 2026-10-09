@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth';
-import { NotificationCallout } from '../components/ui/NotificationCallout';
-import { Language } from '../types';
+import { useAuth } from '../../auth/useAuth';
+import { NotificationCallout } from '../../components/ui/NotificationCallout';
+import { Language } from '../../types';
 import './PortalLoginPage.css';
 
 interface PortalLoginPageProps {

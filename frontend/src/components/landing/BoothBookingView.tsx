@@ -1,8 +1,8 @@
 import { RefreshCw, Search, Store, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { bookingStatusLabels, boothStatusLabels, notifyBoothsChanged, type useBoothData } from '../services/booths';
-import { apiRequest } from '../services/facilities';
-import './admin/FacilityManagementView.css';
+import { bookingStatusLabels, boothStatusLabels, notifyBoothsChanged, type useBoothData } from '../../services/booths';
+import { apiRequest } from '../../services/facilities';
+import '../admin/FacilityManagementView.css';
 import './BoothBookingView.css';
 
 type Action = { id: string; name: string; action: 'book' | 'approve' | 'reject' | 'cancel' };

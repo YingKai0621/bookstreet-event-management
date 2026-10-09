@@ -80,6 +80,6 @@ export interface CreatePhysicalBoothInput {
   note: string | null;
 }
 
-export type UpdatePhysicalBoothInput = Partial<Omit<CreatePhysicalBoothInput, 'code'>> & {
+export type UpdatePhysicalBoothInput = Partial<CreatePhysicalBoothInput> & {
   active?: boolean;
 };

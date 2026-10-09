@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Language } from '../types';
-import { AdminAuditLogsView } from './admin/AdminAuditLogsView';
-import { AdminBadgeRulesView } from './admin/AdminBadgeRulesView';
-import { AdminDashboardView } from './admin/AdminDashboardView';
-import { AdminNotificationsView } from './admin/AdminNotificationsView';
-import { AdminProfileView } from './admin/AdminProfileView';
-import { AdminRolesPermissionsView } from './admin/AdminRolesPermissionsView';
+import { Language } from '../../types';
+import { AdminAuditLogsView } from './AdminAuditLogsView';
+import { AdminBadgeRulesView } from './AdminBadgeRulesView';
+import { AdminDashboardView } from './AdminDashboardView';
+import { AdminNotificationsView } from './AdminNotificationsView';
+import { AdminProfileView } from './AdminProfileView';
+import { AdminRolesPermissionsView } from './AdminRolesPermissionsView';
 import {
   AdminSidebar,
   AdminTab
-} from './admin/AdminSidebar';
-import { AdminSystemSettingsView } from './admin/AdminSystemSettingsView';
-import { AdminTopBar } from './admin/AdminTopBar';
-import { AdminUserManagementView } from './admin/AdminUserManagementView';
-import { FacilityManagementView } from './admin/FacilityManagementView';
+} from './AdminSidebar';
+import { AdminSystemSettingsView } from './AdminSystemSettingsView';
+import { AdminTopBar } from './AdminTopBar';
+import { AdminUserManagementView } from './AdminUserManagementView';
+import { FacilityManagementView } from './FacilityManagementView';
+import { OrganizerBoothManagementView } from '../organizer/OrganizerBoothManagementView';
 
 import {
   adminApi,
   AdminDashboardStats,
-} from '../services/adminApi';
+} from '../../services/adminApi';
 import {
   AdminAuditLogItem,
   AdminBadgeRule,
@@ -29,9 +30,9 @@ import {
   AdminRoleType,
   AdminSystemSettings,
   AdminUserAccount
-} from '../types/admin';
+} from '../../types/admin';
 
-import './admin/AdminPortal.css';
+import './AdminPortal.css';
 
 export interface AdminPortalProps {
   language: Language;
@@ -241,7 +242,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           {loadError && <p className="app-loading-state" role="status">Các chức năng quản trị khác đang chờ dữ liệu. Bạn vẫn có thể quản lý gian hàng, địa điểm và thiết bị.</p>}
           {activeTab === 'venues' && <FacilityManagementView key="venues" kind="venues" />}
           {activeTab === 'assets' && <FacilityManagementView key="assets" kind="assets" />}
-          {activeTab === 'booths' && <FacilityManagementView key="booths" kind="booths" />}
+          {activeTab === 'booths' && <OrganizerBoothManagementView language={language} />}
           {activeTab === 'dashboard' && (
             <AdminDashboardView
               stats={dashboardStats}

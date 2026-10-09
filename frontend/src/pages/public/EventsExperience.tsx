@@ -11,7 +11,7 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { EventItem, Language, ParticipantProfile } from '../types';
+import { EventItem, Language, ParticipantProfile } from '../../types';
 import './EventsExperience.css';
 
 interface EventsExperienceProps {

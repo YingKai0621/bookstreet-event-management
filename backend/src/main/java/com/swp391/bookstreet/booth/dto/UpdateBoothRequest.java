@@ -14,6 +14,8 @@ public class UpdateBoothRequest {
     @JsonIgnore
     private final Set<String> suppliedFields = new HashSet<>();
 
+    @Size(max = 30)
+    private String code;
     @Size(max = 100)
     private String name;
     private String description;
@@ -41,6 +43,9 @@ public class UpdateBoothRequest {
     public void rejectUnknownField(String field, Object value) {
         throw new IllegalArgumentException("Unsupported Booth request field: " + field);
     }
+
+    public String getCode() { return code; }
+    @JsonSetter("code") public void setCode(String value) { suppliedFields.add("code"); code = value; }
 
     public String getName() { return name; }
     @JsonSetter("name") public void setName(String value) { suppliedFields.add("name"); name = value; }
