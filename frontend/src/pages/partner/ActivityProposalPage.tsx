@@ -1,20 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Eye, 
-  Edit3, 
-  Copy, 
-  AlertCircle, 
-  CheckCircle2, 
-  X,
+import {
+  AlertCircle,
+  Edit3,
+  Eye,
+  Layers,
+  Plus,
   QrCode,
-  Layers
+  X
 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Language, PartnerActivityProposal } from '../../types';
 import './PartnerPages.css';
 
@@ -40,7 +34,6 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
       .formatToParts(new Date()).reduce<Record<string, string>>((result, part) => ({ ...result, [part.type]: part.value }), {});
     return `${parts.year}-${parts.month}-${parts.day}`;
   };
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'need_changes' | 'cancelled'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 

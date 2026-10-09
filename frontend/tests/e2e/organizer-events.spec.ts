@@ -84,7 +84,8 @@ test('organizer creates, completes, and publishes an event', async ({ page }) =>
   await page.getByLabel('Hạn đối tác rút hồ sơ').fill(futureDateTimeLocal(30, 9));
   await page.getByLabel('Hạn hủy gian hàng').fill(futureDateTimeLocal(40, 9));
   await page.getByLabel('Hạn hủy hoạt động').fill(futureDateTimeLocal(40, 10));
-  await page.getByLabel('Thời hạn thanh toán gian hàng (phút)').fill('30');
+  await page.getByLabel('Thời hạn giữ chỗ gian hàng').fill('24');
+  await page.getByLabel('Đơn vị thời hạn giữ chỗ').selectOption('HOURS');
   await page.getByLabel('Số gian hàng tối đa / đối tác').fill('2');
   await page.getByLabel('Số hoạt động tối đa / đối tác').fill('3');
   await page.getByRole('button', { name: 'Lưu thay đổi' }).click();

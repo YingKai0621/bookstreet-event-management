@@ -1,5 +1,5 @@
+import { PartnerActivityProposal, PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
 import { ApiError, apiClient } from './apiClient';
-import { PartnerActivityProposal, PartnerBooth, PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
 
 interface PageResponse<T> {
   content: T[];
@@ -56,16 +56,6 @@ export interface PartnerAvailableEvent {
   acceptingApplications: boolean;
 }
 
-export interface PartnerBoothContent {
-  name: string;
-  description: string;
-  dimensions: string;
-  areaName: string;
-  categories: string[];
-  images: Array<{ id: string; url: string; caption: string }>;
-  documents: Array<{ id: string; name: string; size: string; dataUrl?: string }>;
-}
-
 const formatDate = (value: unknown) => value ? new Date(String(value)).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
 
 const formatDateTime = (value: unknown) => value ? new Date(String(value)).toLocaleString('vi-VN', {
@@ -120,8 +110,14 @@ function toAvailableEvent(event: PublicEventResponse): PartnerAvailableEvent {
 
 async function loadPublishedEvents(): Promise<PartnerAvailableEvent[]> {
   const query = new URLSearchParams({ page: '0', size: '100', sort: 'startAt,asc' });
-  const response = await apiClient.get<PageResponse<PublicEventResponse>>(`/events?${query.toString()}`);
-  return response.content.map(toAvailableEvent);
+  const first = await apiClient.get<PageResponse<PublicEventResponse>>(`/events?${query.toString()}`);
+  const remaining = first.totalPages > 1
+    ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
+      const nextQuery = new URLSearchParams({ page: String(index + 1), size: '100', sort: 'startAt,asc' });
+      return apiClient.get<PageResponse<PublicEventResponse>>(`/events?${nextQuery.toString()}`);
+    }))
+    : [];
+  return [first, ...remaining].flatMap(page => page.content).map(toAvailableEvent);
 }
 
 export const partnerApi = {
@@ -153,20 +149,29 @@ export const partnerApi = {
   },
   async getApplications(): Promise<PartnerEventApplication[]> {
     const query = new URLSearchParams({ page: '0', size: '100', sort: 'submittedAt,desc' });
-    const [response, events] = await Promise.all([
-      apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${query.toString()}`),
+    const first = await apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${query.toString()}`);
+    const [eventsResult, organizationResult] = await Promise.allSettled([
       loadPublishedEvents(),
+      partnerApi.getProfile(),
     ]);
+    const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
+    const organization = organizationResult.status === 'fulfilled' ? organizationResult.value : null;
+    const remaining = first.totalPages > 1
+      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
+        const nextQuery = new URLSearchParams({ page: String(index + 1), size: '100', sort: 'submittedAt,desc' });
+        return apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${nextQuery.toString()}`);
+      }))
+      : [];
     const eventById = new Map(events.map(event => [event.id, event]));
 
-    return response.content.map(application => {
+    return [first, ...remaining].flatMap(page => page.content).map(application => {
       const event = eventById.get(String(application.eventId));
       return {
         id: String(application.applicationId),
         eventId: String(application.eventId),
         eventTitle: event?.name || `Sự kiện #${application.eventId}`,
         dateRange: event ? `${formatDateTime(event.startAt)} - ${formatDateTime(event.endAt)}` : '',
-        location: 'Đường Sách TP.HCM',
+        location: '',
         imageUrl: event?.bannerUrl || '',
         status: application.status.toLowerCase() as PartnerEventApplication['status'],
         applicationNote: application.applicationNote || '',
@@ -174,19 +179,14 @@ export const partnerApi = {
         submittedAt: formatDateTime(application.submittedAt),
         reviewedAt: formatDateTime(application.reviewedAt),
         withdrawnAt: formatDateTime(application.withdrawnAt),
-        organizationName: '',
-        shortDesc: '',
-        representativeName: '',
-        email: '',
-        phone: '',
+        organizationName: organization?.name || '',
+        shortDesc: organization?.shortDesc || '',
+        representativeName: organization?.representativeName || '',
+        email: organization?.email || '',
+        phone: organization?.phone || '',
       };
     });
   },
-  getBooths: (eventId: string) => apiClient.get<PartnerBooth[]>(`/partner/booths?eventId=${encodeURIComponent(eventId)}`),
-  getBoothContent: (boothId: string) => apiClient.get<PartnerBoothContent>(`/partner/booths/${encodeURIComponent(boothId)}/content`),
-  updateBoothContent: (boothId: string, data: Partial<PartnerBoothContent>) => apiClient.patch<PartnerBoothContent>(`/partner/booths/${encodeURIComponent(boothId)}/content`, data),
-  requestBoothChange: (boothId: string, reason: string) => apiClient.post(`/partner/booths/${encodeURIComponent(boothId)}/requests`, { kind: 'change', reason }),
-  requestBoothCancellation: (boothId: string, reason: string) => apiClient.post(`/partner/booths/${encodeURIComponent(boothId)}/requests`, { kind: 'cancellation', reason }),
   getEventLocations: (eventId: string) => apiClient.get<Array<{ id: string; name: string; capacity: number }>>(`/partner/event-locations?eventId=${encodeURIComponent(eventId)}`),
   getAssets: () => apiClient.get<Array<{ id: string; name: string; totalQuantity: number }>>('/partner/assets'),
   getSchedule: () => apiClient.get<Array<Record<string, unknown>>>('/partner/schedule'),
@@ -195,7 +195,6 @@ export const partnerApi = {
     apiClient.post<PartnerApplicationResponse>(`/events/${encodeURIComponent(eventId)}/applications`, { applicationNote }),
   withdrawApplication: (applicationId: string) =>
     apiClient.post<PartnerApplicationResponse>(`/partner/applications/${encodeURIComponent(applicationId)}/withdraw`, {}),
-  requestBooth: (data: { eventId: string; boothId: string; note?: string }) => apiClient.post('/partner/booth-requests', data),
   submitActivityProposal: (data: unknown) => apiClient.post('/partner/activity-proposals', data),
   updateActivityProposal: (id: string, data: Partial<PartnerActivityProposal>) => apiClient.patch<PartnerActivityProposal>(`/partner/activity-proposals/${encodeURIComponent(id)}`, data),
   requestActivityChange: (id: string, reason: string) => apiClient.post(`/partner/activity-proposals/${encodeURIComponent(id)}/requests`, { kind: 'change', reason }),

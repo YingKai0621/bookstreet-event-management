@@ -1,6 +1,6 @@
+import { ArrowRight, Award, Calendar, Download, Eye, QrCode, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, Download, Eye, Calendar, QrCode, Sparkles, ArrowRight } from 'lucide-react';
 import { Language, ParticipantCertificate } from '../../types';
 import './ParticipantPages.css';
 

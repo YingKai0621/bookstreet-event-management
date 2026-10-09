@@ -1,6 +1,6 @@
+import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, QrCode, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, QrCode, ArrowRight, XCircle, CheckCircle2 } from 'lucide-react';
 import { Language, ParticipantActivity } from '../../types';
 import './ParticipantPages.css';
 

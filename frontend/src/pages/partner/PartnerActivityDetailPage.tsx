@@ -1,23 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Edit3, 
-  RefreshCw, 
-  XCircle, 
-  QrCode, 
-  CheckCircle2, 
-  FileText, 
-  Layers,
-  Sparkles,
-  Info
+import {
+  ArrowLeft,
+  Edit3,
+  FileText,
+  QrCode,
+  RefreshCw,
+  XCircle
 } from 'lucide-react';
-import { Language, PartnerActivityProposal } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { partnerApi } from '../../services/partnerApi';
+import { Language, PartnerActivityProposal } from '../../types';
 import './PartnerPages.css';
 
 interface PartnerActivityDetailPageProps {
@@ -52,7 +44,7 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
     setDescription(activity.description);
     setCapacity(activity.capacity);
     partnerApi.getActivityParticipants(activity.id).then(setParticipants).catch(() => setParticipants([]));
-  }, [activity?.id]);
+  }, [activity]);
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();

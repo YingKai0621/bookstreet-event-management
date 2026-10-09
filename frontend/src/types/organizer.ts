@@ -2,6 +2,7 @@ export type OrganizerTab =
   | 'overview'
   | 'events'
   | 'event_detail'
+  | 'booth_requests'
   | 'booths'
   | 'activities'
   | 'participants'
@@ -77,24 +78,24 @@ export interface OrganizerEvent {
   dateRange: string;
   startDate: string;
   endDate: string;
-  location: string;
+  location: string | null;
   status: 'happening' | 'upcoming' | 'draft' | 'completed' | 'cancelled';
   apiStatus: OrganizerEventStatus;
   statusLabelVi: string;
   imageUrl: string;
   coverImage?: string;
   description: string;
-  boothOccupancy: string;
-  boothsCount: number;
+  boothOccupancy: string | null;
+  boothsCount: number | null;
   maxBooths: number;
   totalBooths?: number;
-  activitiesCount: number;
-  registrationsCount: number;
+  activitiesCount: number | null;
+  registrationsCount: number | null;
   registeredBooths?: number;
   registeredActivities?: number;
   registeredParticipants?: number;
-  attendanceRate: number;
-  averageRating: number;
+  attendanceRate: number | null;
+  averageRating: number | null;
   // Configurable Settings
   boothDeadline?: string;
   activityDeadline?: string;
@@ -184,4 +185,20 @@ export interface OrganizerNotificationItem {
   isImportant?: boolean;
   targetTab?: string;
   relatedId?: string;
+}
+
+export interface OrganizerReport {
+  eventId: string;
+  eventName: string;
+  totalParticipants: number;
+  attended: number;
+  pending: number;
+  cancelled: number;
+  totalBooths: number;
+  totalActivities: number;
+  attendanceRate: number;
+  averageRating: number;
+  ratingCount: number;
+  activityStats: Array<{ name: string; count: number }>;
+  ratingDistribution: Array<{ stars: number; count: number }>;
 }

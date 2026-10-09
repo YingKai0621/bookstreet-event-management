@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -10,10 +9,11 @@ import {
   Send,
   Undo2,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
 import { ApiError } from '../../services/apiClient';
 import { PartnerAvailableEvent, partnerApi } from '../../services/partnerApi';
+import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
 import './PartnerPages.css';
 
 interface EventApplicationPageProps {
@@ -196,7 +196,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
               </div>
             ))}
           </div>
-        ) : events.length === 0 ? (
+        ) : !errorMessage && events.length === 0 ? (
           <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
             <CalendarDays size={36} color="#B3862A" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
             <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>

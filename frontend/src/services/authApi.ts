@@ -1,10 +1,10 @@
-import { apiClient } from './apiClient';
 import type {
   AccountResponse,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
 } from '../types/auth';
+import { apiClient } from './apiClient';
 
 export const authApi = {
   login: (request: LoginRequest) =>

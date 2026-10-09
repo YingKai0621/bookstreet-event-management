@@ -155,7 +155,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
-                .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")
+                .requestMatchers("/api/v1/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

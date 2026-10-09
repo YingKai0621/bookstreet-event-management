@@ -1,20 +1,19 @@
-import React from 'react';
-import { 
-  Users, 
-  Calendar, 
-  Store, 
-  Sparkles, 
-  UserPlus, 
-  ArrowRight, 
+import {
   Activity,
+  ArrowRight,
+  Calendar,
+  CheckCircle2,
   Clock,
   FileText,
-  UserX,
-  MailCheck,
-  CheckCircle2
+  Sparkles,
+  Store,
+  UserPlus,
+  Users,
+  UserX
 } from 'lucide-react';
-import { AdminAuditLogItem, AdminUserAccount } from '../../types/admin';
+import React from 'react';
 import type { AdminDashboardStats } from '../../services/adminApi';
+import { AdminAuditLogItem, AdminUserAccount } from '../../types/admin';
 
 interface AdminDashboardViewProps {
   onNavigateTab: (tab: string) => void;
@@ -57,13 +56,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const circumference = 2 * Math.PI * radius;
 
   // Compute donut stroke segments if users > 0
-  let accumulatedPercent = 0;
-  const donutSegments = ROLES_LIST.map((role) => {
+  const donutSegments = ROLES_LIST.map((role, index) => {
     const count = stats.usersByRole[role.key] || 0;
     const percent = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
     const strokeDasharray = `${(percent / 100) * circumference} ${circumference}`;
+    const accumulatedPercent = ROLES_LIST.slice(0, index).reduce((sum, previousRole) => {
+      const previousCount = stats.usersByRole[previousRole.key] || 0;
+      return sum + (totalUsers > 0 ? (previousCount / totalUsers) * 100 : 0);
+    }, 0);
     const strokeDashoffset = -((accumulatedPercent / 100) * circumference);
-    accumulatedPercent += percent;
 
     return {
       ...role,

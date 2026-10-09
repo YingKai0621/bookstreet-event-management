@@ -1,5 +1,5 @@
-import React from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import React from 'react';
 import './NotificationCallout.css';
 
 export type NotificationCalloutVariant = 'info' | 'success' | 'warning' | 'error';

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
+import { useRef, useState } from 'react';
 import type { EventItem, Language } from '../../types';
 import './EventCoverflow.css';
 
@@ -17,18 +17,15 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
   const dragStart = useRef<number | null>(null);
   const suppressClick = useRef(false);
   const count = events.length;
-  const current = events[Math.min(selected, count - 1)];
-
-  useEffect(() => {
-    if (selected >= count && count > 0) setSelected(0);
-  }, [count, selected]);
+  const selectedIndex = count > 0 ? Math.min(selected, count - 1) : 0;
+  const current = events[selectedIndex];
 
   const move = (step: number) => {
     if (count > 1) setSelected((index) => (index + step + count) % count);
   };
 
   const offsetFor = (index: number) => {
-    let offset = index - selected;
+    let offset = index - selectedIndex;
     if (offset > count / 2) offset -= count;
     if (offset < -count / 2) offset += count;
     return offset;
@@ -133,7 +130,7 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
               <button
                 key={event.id}
                 type="button"
-                className={`event-coverflow-slide ${index === selected ? 'is-selected' : ''}`}
+                className={`event-coverflow-slide ${index === selectedIndex ? 'is-selected' : ''}`}
                 style={{
                   transform: `translateX(calc(-50% + ${offset * 76}%)) translateZ(${-distance * 105}px) rotateY(${-Math.sign(offset) * Math.min(distance * 43, 76)}deg)`,
                   opacity: visible ? 1 - distance * 0.22 : 0,
@@ -146,11 +143,11 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
                     suppressClick.current = false;
                     return;
                   }
-                  if (index === selected) onDetails(event);
+                  if (index === selectedIndex) onDetails(event);
                   else setSelected(index);
                 }}
-                aria-label={`${language === 'vi' ? event.title : event.titleEn}${index === selected ? '' : language === 'vi' ? ', chọn sự kiện' : ', select event'}`}
-                aria-current={index === selected ? 'true' : undefined}
+                aria-label={`${language === 'vi' ? event.title : event.titleEn}${index === selectedIndex ? '' : language === 'vi' ? ', chọn sự kiện' : ', select event'}`}
+                aria-current={index === selectedIndex ? 'true' : undefined}
                 tabIndex={visible ? 0 : -1}
               >
                 <img src={event.image.url || undefined} alt={event.image.alt} draggable={false} loading={distance > 1 ? 'lazy' : 'eager'} />
@@ -185,7 +182,7 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
         </div>
       </div>
       {count > 1 && <div className="event-coverflow-pagination" aria-label={language === 'vi' ? 'Chọn sự kiện' : 'Choose event'}>
-        {events.map((event, index) => <button key={event.id} type="button" className={index === selected ? 'is-selected' : ''} aria-label={`${language === 'vi' ? 'Sự kiện' : 'Event'} ${index + 1}`} aria-current={index === selected ? 'true' : undefined} onClick={() => setSelected(index)} />)}
+        {events.map((event, index) => <button key={event.id} type="button" className={index === selectedIndex ? 'is-selected' : ''} aria-label={`${language === 'vi' ? 'Sự kiện' : 'Event'} ${index + 1}`} aria-current={index === selectedIndex ? 'true' : undefined} onClick={() => setSelected(index)} />)}
       </div>}
     </div>
   );

@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Download, CheckCircle, Calendar, Clock, MapPin } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Language, ParticipantActivity } from '../../types';
 import './ParticipantPages.css';
 

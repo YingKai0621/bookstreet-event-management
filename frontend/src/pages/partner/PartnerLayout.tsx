@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  Store, 
-  Layers, 
-  BarChart3, 
-  Bell, 
-  User, 
-  Search, 
-  LogOut, 
-  Menu, 
-  X, 
-  BookOpen, 
+import {
+  BarChart3,
+  Bell,
+  CalendarDays,
   ChevronDown,
-  QrCode
+  Layers,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Search,
+  Store,
+  User,
+  X
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Language, PartnerOrganization, PartnerNotification } from '../../types';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
+import { Language, PartnerNotification, PartnerOrganization } from '../../types';
 import './PartnerLayout.css';
 
 interface PartnerLayoutProps {
@@ -88,10 +86,10 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       icon: <CalendarDays size={18} />,
     },
     {
-      id: 'booths',
-      path: '/partner/booths',
-      labelVi: 'Quản lý gian hàng',
-      labelEn: 'Booth Management',
+      id: 'booth-requests',
+      path: '/partner/booth-requests',
+      labelVi: 'Yêu cầu gian hàng',
+      labelEn: 'Booth Requests',
       icon: <Store size={18} />,
     },
     {

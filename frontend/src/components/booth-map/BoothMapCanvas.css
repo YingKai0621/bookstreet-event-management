@@ -1,0 +1,470 @@
+/* ==========================================================================
+   BOOTH MAP CANVAS & INTERACTIVE POPOVER STYLES
+   ========================================================================== */
+
+.booth-map-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #E2EAE5;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 20px rgba(19, 56, 44, 0.06);
+}
+
+/* 1. TOP TOOLBAR */
+.booth-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #E8EFEA;
+  background: #FFFFFF;
+  flex-wrap: wrap;
+}
+
+.booth-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.booth-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #2D3748;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.booth-map-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.booth-map-legend-dot.available {
+  background: #C7F2F6;
+  border: 2px solid #0891B2;
+}
+
+.booth-map-legend-dot.assigned {
+  background: #CCD8DE;
+  border: 2px solid #64748B;
+}
+
+.booth-map-legend-dot.on_hold {
+  background: #FEF3C7;
+  border: 2px solid #D97706;
+}
+
+.booth-map-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.btn-map-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.48rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 180ms ease;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+}
+
+.btn-map-tool:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+.btn-map-tool.primary {
+  background: #143A2F;
+  border-color: #143A2F;
+  color: #FFFFFF;
+}
+
+.btn-map-tool.primary:hover {
+  background: #0E2A22;
+  box-shadow: 0 4px 12px rgba(20, 58, 47, 0.2);
+}
+
+.booth-map-zoom-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.booth-map-zoom-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.booth-map-zoom-btn:hover:not(:disabled) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.booth-map-zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.booth-map-zoom-btn + .booth-map-zoom-btn {
+  border-left: 1px solid #E2E8F0;
+}
+
+/* 2. MAP VIEWPORT */
+.booth-map-viewport {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 520px;
+  background: #F6F3EC;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.booth-map-viewport.is-zoomed { cursor: grab; touch-action: none; }
+.booth-map-viewport.is-dragging { cursor: grabbing; }
+
+.booth-map-image-layer {
+  position: relative;
+  width: 100%;
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.booth-map-viewport.is-dragging .booth-map-image-layer { transition: none; }
+.booth-map-image-layer > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+/* 3. BOOTH MARKERS */
+.booth-map-marker {
+  --marker-scale: 1;
+  position: absolute;
+  z-index: 10;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  transform: translate(-50%, -50%) scale(var(--marker-scale));
+  border-radius: 999px;
+  font: 750 0.76rem/1 var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  cursor: grab;
+  transform-origin: center;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease;
+  user-select: none;
+}
+
+/* 1. Available: Light Cyan / Blue */
+.booth-map-marker.status-available {
+  background: #C7F2F6;
+  border: 1.5px solid #0891B2;
+  color: #0E7490;
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.25);
+}
+
+/* 2. Assigned / Rented: Soft Slate Gray */
+.booth-map-marker.status-assigned {
+  background: #CCD8DE;
+  border: 1.5px solid #94A3B8;
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(51, 65, 85, 0.2);
+}
+
+/* 3. On Hold / Pending: Soft Amber / Orange */
+.booth-map-marker.status-on_hold {
+  background: #FEF3C7;
+  border: 1.5px solid #F59E0B;
+  color: #B45309;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.22);
+}
+
+.booth-map-marker.status-unavailable {
+  background: #E2E8F0;
+  border: 1.5px solid #94A3B8;
+  color: #64748B;
+  opacity: 0.75;
+}
+
+.booth-map-marker.status-physical {
+  background: #E0F2FE;
+  border: 1.5px solid #0284C7;
+  color: #0369A1;
+}
+
+.booth-map-marker:hover,
+.booth-map-marker:focus-visible,
+.booth-map-marker.is-selected {
+  z-index: 25;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(20, 58, 47, 0.4), 0 6px 16px rgba(0, 0, 0, 0.22);
+}
+
+.booth-map-marker.is-active-dragging {
+  z-index: 30;
+  cursor: grabbing !important;
+  transform: translate(-50%, -50%) scale(1.18) !important;
+  box-shadow: 0 0 0 4px rgba(233, 188, 99, 0.8), 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Lock Icon inside Marker */
+.booth-marker-lock {
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* 4. INLINE POPOVER OVER CLICKED MARKER */
+.booth-marker-popover {
+  position: absolute;
+  z-index: 50;
+  width: 425px;
+  max-width: calc(100vw - 32px);
+  background: #FFFFFF;
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(15, 41, 33, 0.22), 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E2EAE5;
+  padding: 1.25rem 1.25rem 1.15rem;
+  transform: translate(-50%, -100%) translateY(-14px);
+  animation: popoverFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  user-select: text;
+}
+
+/* Popover Arrow pointing down to marker */
+.booth-marker-popover::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 18px;
+  height: 18px;
+  background: #FFFFFF;
+  border-right: 1px solid #E2EAE5;
+  border-bottom: 1px solid #E2EAE5;
+  z-index: 51;
+}
+
+@keyframes popoverFadeIn {
+  from { opacity: 0; transform: translate(-50%, -96%) translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -100%) translateY(-14px) scale(1); }
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.popover-code-badge,
+.popover-code-input {
+  background: #EAF8F1;
+  border: 1.5px solid #A3E4C6;
+  color: #0F6B41;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  padding: 0.42rem 0.65rem;
+  border-radius: 9px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  text-align: center;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.popover-code-input {
+  width: 105px;
+  cursor: text;
+}
+
+.popover-code-input:focus {
+  border-color: #0F6B41;
+  box-shadow: 0 0 0 3px rgba(15, 107, 65, 0.18);
+  background: #FFFFFF;
+}
+
+.popover-title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  background: #FFFFFF;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.popover-title-input:focus {
+  border-color: #137A4B;
+  box-shadow: 0 0 0 3px rgba(19, 122, 75, 0.14);
+}
+
+.popover-close-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: #F3F4F6;
+  border-radius: 50%;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.popover-close-btn:hover {
+  background: #E5E7EB;
+  color: #111827;
+  transform: scale(1.05);
+}
+
+.popover-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 0.85rem;
+  margin-bottom: 1.15rem;
+}
+
+.popover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.popover-field label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #4B5563;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.popover-field select,
+.popover-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 9px;
+  font-size: 0.86rem;
+  color: #1F2937;
+  background: #FFFFFF;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.popover-field select:focus,
+.popover-field input:focus {
+  border-color: #137A4B;
+  box-shadow: 0 0 0 3px rgba(19, 122, 75, 0.14);
+}
+
+.popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #F1F5F9;
+}
+
+.btn-popover-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  background: #FEF2F2;
+  border: 1.5px solid #FECACA;
+  color: #DC2626;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.btn-popover-delete:hover {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+
+.btn-popover-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex: 1;
+  padding: 0.58rem 1.15rem;
+  background: #143A2F;
+  border: 1.5px solid #143A2F;
+  color: #FFFFFF;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.btn-popover-save:hover:not(:disabled) {
+  background: #0E2A22;
+  box-shadow: 0 4px 14px rgba(20, 58, 47, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-popover-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Empty feedback */
+.booth-map-empty {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  color: #6B7280;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 680px) {
+  .booth-map-toolbar { flex-direction: column; align-items: stretch; }
+  .booth-map-toolbar-actions { flex-wrap: wrap; }
+  .booth-marker-popover { width: calc(100vw - 32px); }
+  .popover-body-grid { grid-template-columns: 1fr; }
+}

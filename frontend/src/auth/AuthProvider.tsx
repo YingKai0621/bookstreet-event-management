@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { authApi } from '../services/authApi';
 import { apiClient, ApiError } from '../services/apiClient';
+import { authApi } from '../services/authApi';
 import type { AccountResponse, LoginRequest, RegisterRequest, RoleCode } from '../types/auth';
-import { AuthContext, type AuthenticationStatus, type AuthContextValue } from './authContext';
+import { AuthContext, type AuthContextValue, type AuthenticationStatus } from './authContext';
 
 interface AuthProviderProps {
   children: React.ReactNode;

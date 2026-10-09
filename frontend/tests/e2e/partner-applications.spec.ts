@@ -84,7 +84,7 @@ async function createPublishedEvent(page: Page, eventName: string): Promise<void
 
 async function savePartnerOrganization(page: Page, organizationName: string): Promise<void> {
   await page.getByRole('button', { name: 'Hồ sơ tài khoản' }).click();
-  await expect(page.getByRole('heading', { name: 'Hồ sơ tổ chức' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hồ sơ tổ chức', exact: true })).toBeVisible();
 
   await page.getByLabel('Tên tổ chức *').fill(organizationName);
   await page.getByLabel('Mô tả').fill('Tổ chức được cập nhật trong kiểm thử E2E.');
@@ -156,7 +156,9 @@ test('Partner submits, withdraws, and receives Organizer approval', async ({ bro
     await eventRow.getByRole('button', { name: 'Xem' }).click();
     await organizerPage.getByRole('button', { name: /Hồ sơ đối tác/ }).click();
 
-    const applicationRow = organizerPage.locator('tr').filter({ hasText: organizationName });
+    const applicationRow = organizerPage.locator('tr').filter({
+      hasText: 'Hồ sơ dùng để kiểm thử thao tác duyệt.',
+    });
     await expect(applicationRow).toContainText('Chờ duyệt');
     organizerPage.once('dialog', dialog => dialog.accept('Hồ sơ phù hợp với sự kiện.'));
     await applicationRow.getByRole('button', { name: 'Duyệt' }).click();

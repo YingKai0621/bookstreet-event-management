@@ -1,20 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  Store, 
-  Lock, 
-  User, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  ArrowLeft,
-  BookOpen, 
+import {
   AlertCircle,
-  Building2
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Eye,
+  EyeOff,
+  Lock,
+  User
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Language } from '../../types';
 import { useAuth } from '../../auth/useAuth';
-import '../PortalLoginPage.css';
+import { Language } from '../../types';
+import '../organizer/PortalLoginPage.css';
 
 interface PartnerLoginPageProps {
   language: Language;
