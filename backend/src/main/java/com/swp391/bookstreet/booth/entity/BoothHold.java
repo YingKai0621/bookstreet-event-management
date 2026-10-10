@@ -84,6 +84,15 @@ public class BoothHold {
         this.consumedAt = consumedAt;
     }
 
+    public boolean release(Instant releasedAt) {
+        if (status != BoothHoldStatus.ACTIVE) {
+            return false;
+        }
+        status = BoothHoldStatus.RELEASED;
+        this.releasedAt = releasedAt;
+        return true;
+    }
+
     public Long getBoothHoldId() {
         return boothHoldId;
     }

@@ -80,6 +80,15 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
     @Query("select payment from BoothPayment payment where payment.boothPaymentId = :paymentId")
     Optional<BoothPayment> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select payment
+            from BoothPayment payment
+            where payment.boothHold.eventBoothConfig.eventId = :eventId
+            order by payment.boothPaymentId
+            """)
+    List<BoothPayment> findByEventIdForUpdate(@Param("eventId") Long eventId);
+
     @Query(value = """
             select booth_payment_id
             from booth_payments

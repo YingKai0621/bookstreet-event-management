@@ -167,4 +167,16 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
             @Param("eventId") Long eventId,
             @Param("boothId") Long boothId,
             @Param("status") BoothRequestStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select request
+            from BoothRequest request
+            where request.application.eventId = :eventId
+              and request.status in :statuses
+            order by request.boothRequestId
+            """)
+    List<BoothRequest> findByEventIdAndStatusInForUpdate(
+            @Param("eventId") Long eventId,
+            @Param("statuses") Collection<BoothRequestStatus> statuses);
 }

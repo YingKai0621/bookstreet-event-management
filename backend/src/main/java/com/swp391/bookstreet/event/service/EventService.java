@@ -1,5 +1,10 @@
 package com.swp391.bookstreet.event.service;
 
+import com.swp391.bookstreet.booth.entity.BoothHold;
+import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
+import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
+import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
+import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.event.dto.*;
 import com.swp391.bookstreet.event.entity.Event;
@@ -7,6 +12,14 @@ import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.repository.EventRepository;
 import com.swp391.bookstreet.event.security.EventCurrentUser;
+import com.swp391.bookstreet.payment.entity.BoothPayment;
+import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
+import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,15 +35,30 @@ public class EventService {
     private final EventValidation validation;
     private final EventRootLockService eventRootLockService;
     private final EventBoothConfigRepository eventBoothConfigRepository;
+    private final BoothHoldRepository boothHoldRepository;
+    private final BoothPaymentRepository boothPaymentRepository;
+    private final BoothAssignmentRepository boothAssignmentRepository;
+    private final BoothRequestRepository boothRequestRepository;
+    private final Clock clock;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
             EventValidation validation, EventRootLockService eventRootLockService,
-            EventBoothConfigRepository eventBoothConfigRepository) {
+            EventBoothConfigRepository eventBoothConfigRepository,
+            BoothHoldRepository boothHoldRepository,
+            BoothPaymentRepository boothPaymentRepository,
+            BoothAssignmentRepository boothAssignmentRepository,
+            BoothRequestRepository boothRequestRepository,
+            Clock clock) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.validation = validation;
         this.eventRootLockService = eventRootLockService;
         this.eventBoothConfigRepository = eventBoothConfigRepository;
+        this.boothHoldRepository = boothHoldRepository;
+        this.boothPaymentRepository = boothPaymentRepository;
+        this.boothAssignmentRepository = boothAssignmentRepository;
+        this.boothRequestRepository = boothRequestRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -117,6 +145,42 @@ public class EventService {
         }
     }
 
+    @Transactional
+    public EventResponse cancel(Long id, CancelEventRequest request) {
+        String reason = requireCancellationReason(request);
+        Long owner = currentUser.requireOrganizerId();
+        Event event = eventRootLockService.lockOwned(id, owner).orElseThrow(EventService::notFound);
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            return EventResponse.from(event);
+        }
+        if (event.getStatus() != EventStatus.PUBLISHED) {
+            throw conflict("EVENT_NOT_CANCELLABLE", "Only a Published Event can be cancelled.");
+        }
+
+        List<BoothHold> holds = boothHoldRepository.findByEventIdForUpdate(id);
+        List<BoothPayment> payments = boothPaymentRepository.findByEventIdForUpdate(id);
+        rejectPaymentBlockers(payments);
+        if (boothAssignmentRepository.existsByEventId(id)) {
+            throw conflict("EVENT_HAS_ASSIGNMENT",
+                    "An Event with a Booth Assignment cannot be cancelled.");
+        }
+
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        var openRequests = boothRequestRepository.findByEventIdAndStatusInForUpdate(id,
+                List.of(BoothRequestStatus.PENDING, BoothRequestStatus.SELECTED));
+        var openRequestIds = new HashSet<Long>();
+        openRequests.forEach(requestToCancel -> {
+            openRequestIds.add(requestToCancel.getBoothRequestId());
+            requestToCancel.cancel(now);
+        });
+        holds.stream()
+                .filter(hold -> openRequestIds.contains(hold.getBoothRequest().getBoothRequestId()))
+                .forEach(hold -> hold.release(now));
+        event.cancel(reason, now);
+        repository.flush();
+        return EventResponse.from(event);
+    }
+
     public EventPageResponse<EventSummaryResponse> listPublic(int page, int size, String sort) {
         return EventPageResponse.from(repository.findByStatus(EventStatus.PUBLISHED,
                 EventPagination.of(page, size, sort)).map(EventSummaryResponse::from));
@@ -140,6 +204,34 @@ public class EventService {
     private static EventException notFound() {
         // The same response hides both another Organizer's events and private drafts.
         return new EventException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found.");
+    }
+
+    private static String requireCancellationReason(CancelEventRequest request) {
+        String reason = request == null ? null : request.reason();
+        if (reason == null || reason.length() < 10 || reason.length() > 500) {
+            throw new EventException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                    "Cancellation reason must contain between 10 and 500 characters.", "reason");
+        }
+        return reason;
+    }
+
+    private static void rejectPaymentBlockers(List<BoothPayment> payments) {
+        if (payments.stream().anyMatch(payment -> payment.getStatus() == BoothPaymentStatus.PENDING)) {
+            throw conflict("EVENT_PAYMENT_PENDING",
+                    "An Event with a Pending Payment cannot be cancelled.");
+        }
+        if (payments.stream().anyMatch(BoothPayment::isReconciliationRequired)) {
+            throw conflict("EVENT_PAYMENT_RECONCILIATION_REQUIRED",
+                    "An Event with unresolved Payment evidence cannot be cancelled.");
+        }
+        if (payments.stream().anyMatch(payment -> payment.getStatus() == BoothPaymentStatus.SUCCESS)) {
+            throw conflict("EVENT_HAS_SUCCESSFUL_PAYMENT",
+                    "An Event with a Successful Payment cannot be cancelled.");
+        }
+    }
+
+    private static EventException conflict(String code, String message) {
+        return new EventException(HttpStatus.CONFLICT, code, message);
     }
 }
 

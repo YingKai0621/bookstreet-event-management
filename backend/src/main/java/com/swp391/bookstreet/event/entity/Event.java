@@ -99,6 +99,17 @@ public class Event {
         return false;
     }
 
+    public void cancel(String reason, Instant now) {
+        Objects.requireNonNull(reason, "reason must not be null");
+        Objects.requireNonNull(now, "now must not be null");
+        if (status != EventStatus.PUBLISHED) {
+            throw new IllegalStateException("Only a Published Event can be cancelled.");
+        }
+        status = EventStatus.CANCELLED;
+        cancelledAt = now;
+        cancellationReason = reason;
+    }
+
     @PrePersist
     void onCreate() {
         createdAt = Instant.now();

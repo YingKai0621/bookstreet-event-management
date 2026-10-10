@@ -51,6 +51,15 @@ public interface BoothHoldRepository extends JpaRepository<BoothHold, Long> {
             @Param("requestId") Long requestId,
             @Param("userId") Long userId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select hold
+            from BoothHold hold
+            where hold.eventBoothConfig.eventId = :eventId
+            order by hold.boothHoldId
+            """)
+    List<BoothHold> findByEventIdForUpdate(@Param("eventId") Long eventId);
+
     @Query(value = """
             select *
             from booth_holds

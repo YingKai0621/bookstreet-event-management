@@ -51,5 +51,11 @@ public class OrganizerEventController {
         service.deleteDraft(eventId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{eventId}/cancel")
+    public EventResponse cancel(@PathVariable Long eventId,
+            @RequestBody CancelEventRequest request) {
+        return service.cancel(eventId, request);
+    }
 }
 
