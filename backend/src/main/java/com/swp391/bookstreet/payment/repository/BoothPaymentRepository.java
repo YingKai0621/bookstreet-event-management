@@ -81,7 +81,7 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
     Optional<BoothPayment> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
     @Query(value = """
-            select *
+            select booth_payment_id
             from booth_payments
             where status = 'PENDING'
               and checkout_expires_at is not null
@@ -91,12 +91,12 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             order by checkout_expires_at, booth_payment_id
             limit 50
             """, nativeQuery = true)
-    List<BoothPayment> findReconciliationCandidates(
+    List<Long> findReconciliationCandidateIds(
             @Param("eligibleCheckoutExpiry") Instant eligibleCheckoutExpiry,
             @Param("eligibleLastQuery") Instant eligibleLastQuery);
 
     @Query(value = """
-            select *
+            select booth_payment_id
             from booth_payments
             where status = 'PENDING'
               and (checkout_url is null or checkout_expires_at is null)
@@ -104,6 +104,6 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             order by created_at, booth_payment_id
             limit 50
             """, nativeQuery = true)
-    List<BoothPayment> findCheckoutCreationOrphans(
+    List<Long> findCheckoutCreationOrphanIds(
             @Param("eligibleCreatedAt") Instant eligibleCreatedAt);
 }
