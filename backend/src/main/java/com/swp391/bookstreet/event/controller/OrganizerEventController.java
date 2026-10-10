@@ -45,5 +45,11 @@ public class OrganizerEventController {
     public EventResponse publish(@PathVariable Long eventId) {
         return service.publish(eventId);
     }
+
+    @DeleteMapping("/{eventId}")
+    public ResponseEntity<Void> deleteDraft(@PathVariable Long eventId) {
+        service.deleteDraft(eventId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

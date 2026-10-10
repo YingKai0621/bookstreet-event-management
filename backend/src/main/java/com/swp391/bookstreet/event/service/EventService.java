@@ -1,11 +1,13 @@
 package com.swp391.bookstreet.event.service;
 
+import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.event.dto.*;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.repository.EventRepository;
 import com.swp391.bookstreet.event.security.EventCurrentUser;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +21,16 @@ public class EventService {
     private final EventCurrentUser currentUser;
     private final EventValidation validation;
     private final EventRootLockService eventRootLockService;
+    private final EventBoothConfigRepository eventBoothConfigRepository;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
-            EventValidation validation, EventRootLockService eventRootLockService) {
+            EventValidation validation, EventRootLockService eventRootLockService,
+            EventBoothConfigRepository eventBoothConfigRepository) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.validation = validation;
         this.eventRootLockService = eventRootLockService;
+        this.eventBoothConfigRepository = eventBoothConfigRepository;
     }
 
     @Transactional
@@ -97,6 +102,19 @@ public class EventService {
         event.setStatus(EventStatus.PUBLISHED);
         repository.flush();
         return EventResponse.from(event);
+    }
+
+    @Transactional
+    public void deleteDraft(Long id) {
+        Event event = ownedDraftForUpdate(id);
+        try {
+            eventBoothConfigRepository.deleteByEventId(id);
+            repository.delete(event);
+            repository.flush();
+        } catch (DataIntegrityViolationException error) {
+            throw new EventException(HttpStatus.CONFLICT, "EVENT_HAS_DEPENDENCIES",
+                    "Draft Event has dependent business records and cannot be deleted.");
+        }
     }
 
     public EventPageResponse<EventSummaryResponse> listPublic(int page, int size, String sort) {

@@ -243,6 +243,85 @@ class EventApiIntegrationTests {
     }
 
     @Test
+    void deleteDraftRemovesEventConfigurationButPreservesPhysicalBooth() throws Exception {
+        long eventId = createEvent();
+        long boothId = jdbc.queryForObject("""
+                insert into locations(code, name, location_type, max_capacity, is_active,
+                    created_at, updated_at)
+                values (?, 'Draft delete Booth', 'BOOTH', 4, true,
+                    current_timestamp, current_timestamp)
+                returning location_id
+                """, Long.class, "DELETE-" + UUID.randomUUID().toString().substring(0, 12));
+        jdbc.update("insert into booths(booth_id, category_code) values (?, 'PUBLISHER')", boothId);
+        jdbc.update("""
+                insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
+                values (?, ?, 10000, true)
+                """, eventId, boothId);
+
+        try {
+            mvc.perform(delete(ORGANIZER + "/" + eventId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isNoContent());
+
+            assertThat(count("events", "event_id", eventId)).isZero();
+            assertThat(count("event_booth_configs", "event_id", eventId)).isZero();
+            assertThat(count("booths", "booth_id", boothId)).isOne();
+            assertThat(count("locations", "location_id", boothId)).isOne();
+
+            mvc.perform(delete(ORGANIZER + "/" + eventId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+        } finally {
+            jdbc.update("delete from event_booth_configs where event_id = ?", eventId);
+            jdbc.update("delete from booths where booth_id = ?", boothId);
+            jdbc.update("delete from locations where location_id = ?", boothId);
+        }
+    }
+
+    @Test
+    void deleteDraftRejectsPublishedForeignAndDependentEvents() throws Exception {
+        long publishedId = createEvent();
+        publish(publishedId);
+        mvc.perform(delete(ORGANIZER + "/" + publishedId).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
+
+        long foreignId = createEvent();
+        mvc.perform(delete(ORGANIZER + "/" + foreignId).with(csrf())
+                        .with(authentication(identity(other, true, "ORGANIZER"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+
+        long dependentId = createEvent();
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status, created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Delete dependency " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, dependentId);
+
+        try {
+            mvc.perform(delete(ORGANIZER + "/" + dependentId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("EVENT_HAS_DEPENDENCIES"));
+            assertThat(count("events", "event_id", dependentId)).isOne();
+        } finally {
+            jdbc.update("delete from partner_event_applications where application_id = ?", applicationId);
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    organizationId);
+        }
+    }
+
+    @Test
     void anotherOrganizerCannotReadUpdateOrPublish() throws Exception {
         long id = createEvent();
         var stranger = identity(other, true, "ORGANIZER");
@@ -340,6 +419,12 @@ class EventApiIntegrationTests {
                 .andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("select count(*) from events where organizer_user_id = ?",
                 Long.class, owner)).isZero();
+
+        long eventId = createEvent();
+        mvc.perform(delete(ORGANIZER + "/" + eventId)
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isForbidden());
+        assertThat(count("events", "event_id", eventId)).isOne();
     }
 
     @Test
@@ -394,6 +479,50 @@ class EventApiIntegrationTests {
             start.countDown();
             assertThat(List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS)))
                     .containsExactlyInAnyOrder(200, 409);
+        }
+    }
+
+    @Test
+    void concurrentPublishAndDeleteCannotBothSucceed() throws Exception {
+        long id = createEvent();
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<Integer> publishCommand = () -> {
+                SecurityContextHolder.getContext().setAuthentication(identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
+                    service.publish(id);
+                    return 200;
+                } catch (EventException error) {
+                    return error.getStatus().value();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Callable<Integer> deleteCommand = () -> {
+                SecurityContextHolder.getContext().setAuthentication(identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
+                    service.deleteDraft(id);
+                    return 204;
+                } catch (EventException error) {
+                    return error.getStatus().value();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+
+            Future<Integer> publish = executor.submit(publishCommand);
+            Future<Integer> delete = executor.submit(deleteCommand);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(List.of(publish.get(15, TimeUnit.SECONDS),
+                            delete.get(15, TimeUnit.SECONDS)))
+                    .isIn(List.of(200, 409), List.of(404, 204));
         }
     }
 
@@ -547,6 +676,11 @@ class EventApiIntegrationTests {
     private String eventStatus(long eventId) {
         return jdbc.queryForObject("select status from events where event_id = ?",
                 String.class, eventId);
+    }
+
+    private Long count(String table, String idColumn, long id) {
+        return jdbc.queryForObject("select count(*) from " + table + " where " + idColumn + " = ?",
+                Long.class, id);
     }
 
     private void publish(long id) throws Exception {
