@@ -719,6 +719,40 @@ class PaymentSprint03IntegrationTests {
                 .isZero();
     }
 
+    @Test
+    void verifiedSuccessAfterEventEndIsRetainedWithoutCreatingAssignment()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update events set start_at = ?, end_at = ?, status = 'PUBLISHED' "
+                        + "where event_id = ?", Timestamp.from(now.minus(Duration.ofHours(2))),
+                Timestamp.from(now.minus(Duration.ofHours(1))), fixture.eventId());
+
+        VnPayResult success = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "00", "00", "999997", "success after event end");
+
+        assertThat(settlementService.acceptIpn(success, now).rspCode()).isEqualTo("00");
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, fixture.eventId())).isEqualTo("COMPLETED");
+        assertThat(jdbc.queryForObject("select status from booth_payments "
+                + "where booth_payment_id = ?", String.class, pending.paymentId()))
+                .isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+        assertThat(jdbc.queryForObject("select status from booth_holds "
+                + "where booth_request_id = ?", String.class, fixture.requestId()))
+                .isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("select status from booth_requests "
+                + "where booth_request_id = ?", String.class, fixture.requestId()))
+                .isEqualTo("SELECTED");
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments assignment "
+                + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isZero();
+    }
+
     private PendingPayment createPendingPayment(long requestId) throws Exception {
         UUID key = UUID.randomUUID();
         when(gateway.buildCheckout(anyLong(), any(), any(), any(), any()))

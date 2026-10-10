@@ -67,11 +67,13 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             Long boothHoldId, Long boothPaymentId);
 
     @Query("""
-            select payment.boothHold.boothHoldId
+            select new com.swp391.bookstreet.payment.repository.PaymentLockRoot(
+                payment.boothHold.boothRequest.application.eventId,
+                payment.boothHold.boothHoldId)
             from BoothPayment payment
             where payment.boothPaymentId = :paymentId
             """)
-    Optional<Long> findBoothHoldIdByPaymentId(@Param("paymentId") Long paymentId);
+    Optional<PaymentLockRoot> findLockRootByPaymentId(@Param("paymentId") Long paymentId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"boothHold", "boothHold.boothRequest"})
