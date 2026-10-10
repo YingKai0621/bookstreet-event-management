@@ -553,12 +553,12 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void publishedEventCannotBeChangedOrPublishedAgain() throws Exception {
+    void publishedEventAllowsDescriptiveChangeButCannotBePublishedAgain() throws Exception {
         long id = createEvent();
         publish(id);
         mvc.perform(patch(ORGANIZER + "/" + id).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json").content("{\"name\":\"Changed\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Changed"));
         mvc.perform(post(ORGANIZER + "/" + id + "/publish")
                         .with(authentication(identity(owner, true, "ORGANIZER"))).with(csrf()))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
@@ -728,6 +728,180 @@ class EventApiIntegrationTests {
                 .andExpect(status().isBadRequest());
         assertThat(jdbc.queryForObject("select status from events where event_id = ?", String.class, id))
                 .isEqualTo("DRAFT");
+    }
+
+    @Test
+    void publishedAndOngoingEventsAllowDescriptivePatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "name": "Published Event Updated",
+                                  "description": null,
+                                  "bannerUrl": "https://example.test/banner.png"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Published Event Updated"))
+                .andExpect(jsonPath("$.description").doesNotExist())
+                .andExpect(jsonPath("$.bannerUrl")
+                        .value("https://example.test/banner.png"));
+
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Ongoing Event Updated\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ONGOING"))
+                .andExpect(jsonPath("$.name").value("Ongoing Event Updated"));
+    }
+
+    @Test
+    void untouchedPublishedEventAllowsValidOperationalPatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+        Instant updatedStart = eventStartAt.plus(Duration.ofDays(1));
+        Instant updatedEnd = eventEndAt.plus(Duration.ofDays(1));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "startAt": "%s",
+                                  "endAt": "%s",
+                                  "maxBoothsPerPartner": 2
+                                }
+                                """.formatted(updatedStart, updatedEnd)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startAt").value(updatedStart.toString()))
+                .andExpect(jsonPath("$.endAt").value(updatedEnd.toString()))
+                .andExpect(jsonPath("$.maxBoothsPerPartner").value(2));
+    }
+
+    @Test
+    void participationFreezesOperationalPatchButNotDescriptivePatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+        ExternalParticipationFixture fixture = insertExternalParticipation(id);
+        try {
+            mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                      "name": "Must roll back",
+                                      "maxBoothsPerPartner": 2
+                                    }
+                                    """))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("EVENT_OPERATIONAL_FIELDS_LOCKED"));
+            assertThat(jdbc.queryForObject(
+                    "select name from events where event_id = ?", String.class, id))
+                    .isEqualTo("Book Street Festival");
+
+            mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"name\":\"Descriptive change remains allowed\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name")
+                            .value("Descriptive change remains allowed"));
+        } finally {
+            deleteExternalParticipation(fixture);
+        }
+    }
+
+    @Test
+    void invalidPublishedOperationalPatchRollsBackAllFields() throws Exception {
+        long id = createEvent();
+        publish(id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "name": "Must roll back",
+                                  "partnerApplicationDeadlineAt": "%s"
+                                }
+                                """.formatted(Instant.now().minus(Duration.ofHours(1)))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("partnerApplicationDeadlineAt"));
+        assertThat(jdbc.queryForObject(
+                "select name from events where event_id = ?", String.class, id))
+                .isEqualTo("Book Street Festival");
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"partnerApplicationDeadlineAt\":null}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_CONFIGURATION_INVALID"));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\""
+                                + eventStartAt.minus(Duration.ofMinutes(30)) + "\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("boothPaymentWindowMinutes"));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\""
+                                + eventStartAt.minus(Duration.ofMinutes(60)) + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void operationalFieldsAreRejectedOngoingAndAllFieldsAreRejectedTerminal() throws Exception {
+        long id = createEvent();
+        publish(id);
+        jdbc.update("""
+                update events
+                set status = 'ONGOING', start_at = current_timestamp - interval '1 hour',
+                    end_at = current_timestamp + interval '1 hour'
+                where event_id = ?
+                """, id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"maxBoothsPerPartner\":2}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
+
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Not allowed after completion\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
+
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled terminal update fixture.'
+                where event_id = ?
+                """, id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Not allowed after cancellation\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
     }
 
     @Test
@@ -973,6 +1147,30 @@ class EventApiIntegrationTests {
         return boothId;
     }
 
+    private ExternalParticipationFixture insertExternalParticipation(long eventId) {
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Operational patch partner " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, eventId);
+        return new ExternalParticipationFixture(organizationId, applicationId);
+    }
+
+    private void deleteExternalParticipation(ExternalParticipationFixture fixture) {
+        jdbc.update("delete from partner_event_applications where application_id = ?",
+                fixture.applicationId());
+        jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                fixture.organizationId());
+    }
+
     private long insertCancellationConfig(long eventId, long boothId) {
         return jdbc.queryForObject("""
                 insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
@@ -1008,6 +1206,9 @@ class EventApiIntegrationTests {
             long selectedRequestId,
             long pendingRequestId,
             long holdId) {
+    }
+
+    private record ExternalParticipationFixture(long organizationId, long applicationId) {
     }
 
     private void publish(long id) throws Exception {

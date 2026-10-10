@@ -50,6 +50,11 @@ public class UpdateEventRequest {
         return suppliedFields.contains(field);
     }
 
+    @JsonIgnore
+    public Set<String> suppliedFields() {
+        return Set.copyOf(suppliedFields);
+    }
+
     @JsonAnySetter
     public void rejectUnknownField(String field, Object value) {
         throw new IllegalArgumentException("Unsupported event request field: " + field);

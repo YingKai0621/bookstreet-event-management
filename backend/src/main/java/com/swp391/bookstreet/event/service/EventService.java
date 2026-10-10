@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class EventService {
     private static final int DEFAULT_BOOTH_PAYMENT_WINDOW_MINUTES = 1440;
+    private static final Set<String> OPERATIONAL_FIELDS = Set.of(
+            "startAt", "endAt", "partnerApplicationDeadlineAt",
+            "boothRequestDeadlineAt", "activityProposalDeadlineAt",
+            "participantRegistrationDeadlineAt", "partnerWithdrawalCutoffAt",
+            "boothCancellationCutoffAt", "activityCancellationCutoffAt",
+            "boothPaymentWindowMinutes", "maxBoothsPerPartner",
+            "maxActivitiesPerPartner");
 
     private final EventRepository repository;
     private final EventCurrentUser currentUser;
@@ -102,7 +110,23 @@ public class EventService {
 
     @Transactional
     public EventResponse update(Long id, UpdateEventRequest request) {
-        Event event = ownedDraftForUpdate(id);
+        Long owner = currentUser.requireOrganizerId();
+        Event event = eventRootLockService.lockOwned(id, owner).orElseThrow(EventService::notFound);
+        boolean operationalPatch = request.suppliedFields().stream()
+                .anyMatch(OPERATIONAL_FIELDS::contains);
+
+        if (event.getStatus() == EventStatus.PUBLISHED && operationalPatch
+                && repository.existsExternalParticipation(id)) {
+            throw conflict("EVENT_OPERATIONAL_FIELDS_LOCKED",
+                    "Operational Event fields are locked after external participation begins.");
+        }
+        if ((event.getStatus() == EventStatus.ONGOING && operationalPatch)
+                || event.getStatus() == EventStatus.COMPLETED
+                || event.getStatus() == EventStatus.CANCELLED) {
+            throw conflict("EVENT_NOT_EDITABLE",
+                    "The requested Event fields cannot be edited in its current state.");
+        }
+
         if (request.contains("name")) event.setName(request.getName());
         if (request.contains("description")) event.setDescription(request.getDescription());
         if (request.contains("startAt")) event.setStartAt(request.getStartAt());
@@ -118,7 +142,11 @@ public class EventService {
         if (request.contains("maxBoothsPerPartner")) event.setMaxBoothsPerPartner(request.getMaxBoothsPerPartner());
         if (request.contains("maxActivitiesPerPartner")) event.setMaxActivitiesPerPartner(request.getMaxActivitiesPerPartner());
         if (request.contains("bannerUrl")) event.setBannerUrl(request.getBannerUrl());
-        validation.validate(event);
+        if (event.getStatus() == EventStatus.PUBLISHED && operationalPatch) {
+            validation.validateForOperationalUpdate(event, request.suppliedFields(), clock.instant());
+        } else {
+            validation.validate(event);
+        }
         repository.flush();
         return EventResponse.from(event);
     }
@@ -126,7 +154,7 @@ public class EventService {
     @Transactional
     public EventResponse publish(Long id) {
         Event event = ownedDraftForUpdate(id);
-        validation.validateForPublish(event);
+        validation.validateForPublish(event, clock.instant());
         event.setStatus(EventStatus.PUBLISHED);
         repository.flush();
         return EventResponse.from(event);

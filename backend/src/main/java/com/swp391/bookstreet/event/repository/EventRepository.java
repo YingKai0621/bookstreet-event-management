@@ -19,6 +19,20 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findByEventIdAndStatus(Long eventId, EventStatus status);
     Optional<Event> findByEventIdAndOrganizerUserId(Long eventId, Long organizerUserId);
 
+    /**
+     * Every Booth request, Hold, Payment and Assignment is rooted in a Partner Event
+     * application by the active V1-V8 foreign-key graph. Therefore the first application
+     * is also the first possible external participation record for the Event.
+     */
+    @Query(value = """
+            select exists (
+                select 1
+                from partner_event_applications
+                where event_id = :eventId
+            )
+            """, nativeQuery = true)
+    boolean existsExternalParticipation(@Param("eventId") Long eventId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Event e where e.eventId = :id")
     Optional<Event> findByIdForUpdate(@Param("id") Long id);
