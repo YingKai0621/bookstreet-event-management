@@ -18,12 +18,14 @@ public class EventService {
     private final EventRepository repository;
     private final EventCurrentUser currentUser;
     private final EventValidation validation;
+    private final EventRootLockService eventRootLockService;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
-            EventValidation validation) {
+            EventValidation validation, EventRootLockService eventRootLockService) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.validation = validation;
+        this.eventRootLockService = eventRootLockService;
     }
 
     @Transactional
@@ -109,7 +111,7 @@ public class EventService {
 
     private Event ownedDraftForUpdate(Long id) {
         Long owner = currentUser.requireOrganizerId();
-        Event event = repository.findOwnedForUpdate(id, owner).orElseThrow(EventService::notFound);
+        Event event = eventRootLockService.lockOwned(id, owner).orElseThrow(EventService::notFound);
         if (event.getStatus() != EventStatus.DRAFT) {
             throw new EventException(HttpStatus.CONFLICT, "EVENT_NOT_DRAFT",
                     "Only a DRAFT event can be updated or published.");

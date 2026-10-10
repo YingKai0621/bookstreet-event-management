@@ -2,6 +2,7 @@ package com.swp391.bookstreet.event.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "events")
@@ -76,6 +77,26 @@ public class Event {
     private Instant updatedAt;
 
     public Event() {
+    }
+
+    public boolean advanceTimedLifecycle(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+
+        if (status == EventStatus.PUBLISHED) {
+            if (!now.isBefore(endAt)) {
+                status = EventStatus.COMPLETED;
+                return true;
+            }
+            if (!now.isBefore(startAt)) {
+                status = EventStatus.ONGOING;
+                return true;
+            }
+        } else if (status == EventStatus.ONGOING && !now.isBefore(endAt)) {
+            status = EventStatus.COMPLETED;
+            return true;
+        }
+
+        return false;
     }
 
     @PrePersist

@@ -17,9 +17,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findByEventIdAndStatus(Long eventId, EventStatus status);
     Optional<Event> findByEventIdAndOrganizerUserId(Long eventId, Long organizerUserId);
 
-    // Serialize updates and publication without introducing a version column.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select e from Event e where e.eventId = :id and e.organizerUserId = :owner")
-    Optional<Event> findOwnedForUpdate(@Param("id") Long id, @Param("owner") Long owner);
+    @Query("select e from Event e where e.eventId = :id")
+    Optional<Event> findByIdForUpdate(@Param("id") Long id);
+
 }
 
