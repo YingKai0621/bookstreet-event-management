@@ -236,6 +236,30 @@ class PaymentSprint03IntegrationTests {
     }
 
     @Test
+    void paymentInitiationAfterEventEndIsRejectedBeforeCreatingAnAttempt()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        Instant now = Instant.now();
+        jdbc.update("update events set start_at = ?, end_at = ?, status = 'PUBLISHED' "
+                        + "where event_id = ?", Timestamp.from(now.minus(Duration.ofHours(2))),
+                Timestamp.from(now.minus(Duration.ofHours(1))), fixture.eventId());
+
+        mvc.perform(post("/api/v1/partner/booth-requests/{requestId}/payments",
+                        fixture.requestId())
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .with(identity(partner, "PARTNER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_ACCEPTING_PAYMENTS"));
+
+        assertThat(jdbc.queryForObject("select count(*) from booth_payments payment "
+                + "join booth_holds hold on hold.booth_hold_id = payment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isZero();
+        verify(gateway, times(0)).buildCheckout(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
     void concurrentSameKeyCreationReturnsOneCreatedOneReplayAndOnePayment() throws Exception {
         Fixture fixture = fixture(10_000, "SELECTED");
         insertHold(fixture.configId(), fixture.requestId(), 10_000);

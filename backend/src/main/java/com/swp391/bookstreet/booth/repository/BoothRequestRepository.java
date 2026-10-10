@@ -53,6 +53,17 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
             @Param("userId") Long userId
     );
 
+    @Query("""
+            select request.application.eventId
+            from BoothRequest request
+            where request.boothRequestId = :requestId
+              and request.application.partnerOrganization.representativeUserId = :userId
+            """)
+    Optional<Long> findOwnedEventIdById(
+            @Param("requestId") Long requestId,
+            @Param("userId") Long userId
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
             "application", "application.partnerOrganization", "booth", "booth.location"
