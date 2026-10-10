@@ -3,6 +3,8 @@ package com.swp391.bookstreet.event.repository;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +22,16 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Event e where e.eventId = :id")
     Optional<Event> findByIdForUpdate(@Param("id") Long id);
+
+    @Query(value = """
+            select event_id
+            from events
+            where (status = 'PUBLISHED' and start_at <= :now)
+               or (status = 'ONGOING' and end_at <= :now)
+            order by event_id
+            limit 100
+            """, nativeQuery = true)
+    List<Long> findDueLifecycleIds(@Param("now") Instant now);
 
 }
 

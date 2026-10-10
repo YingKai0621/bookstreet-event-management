@@ -44,6 +44,18 @@ class EventRootLockServiceTests {
     }
 
     @Test
+    void advanceReportsWhetherLifecycleChanged() {
+        Event due = event(EventStatus.PUBLISHED, NOW, NOW.plusSeconds(1));
+        when(repository.findByIdForUpdate(21L)).thenReturn(Optional.of(due));
+
+        assertThat(service.advance(21L)).isTrue();
+
+        Event notDue = event(EventStatus.PUBLISHED, NOW.plusSeconds(1), NOW.plusSeconds(2));
+        when(repository.findByIdForUpdate(22L)).thenReturn(Optional.of(notDue));
+        assertThat(service.advance(22L)).isFalse();
+    }
+
+    @Test
     void advancesOverduePublishedEventDirectlyToCompleted() {
         Event event = event(EventStatus.PUBLISHED, NOW.minusSeconds(2), NOW);
         when(repository.findByIdForUpdate(21L)).thenReturn(Optional.of(event));
@@ -94,9 +106,13 @@ class EventRootLockServiceTests {
         Transactional lockOwned = EventRootLockService.class
                 .getMethod("lockOwned", Long.class, Long.class)
                 .getAnnotation(Transactional.class);
+        Transactional advance = EventRootLockService.class
+                .getMethod("advance", Long.class)
+                .getAnnotation(Transactional.class);
 
         assertThat(lock.propagation()).isEqualTo(Propagation.MANDATORY);
         assertThat(lockOwned.propagation()).isEqualTo(Propagation.MANDATORY);
+        assertThat(advance.propagation()).isEqualTo(Propagation.MANDATORY);
     }
 
     private static Event event(EventStatus status, Instant startAt, Instant endAt) {

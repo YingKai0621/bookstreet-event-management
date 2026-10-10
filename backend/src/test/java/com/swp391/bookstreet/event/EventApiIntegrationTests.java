@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.event;
 
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
+import com.swp391.bookstreet.event.service.EventLifecycleService;
 import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.event.exception.EventException;
 import java.time.Duration;
@@ -60,6 +61,7 @@ class EventApiIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper mapper;
     @Autowired EventService service;
+    @Autowired EventLifecycleService lifecycleService;
     MockMvc mvc;
     Long owner;
     Long other;
@@ -150,6 +152,68 @@ class EventApiIntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"));
         assertThat(jdbc.queryForObject("select status from events where event_id = ?", String.class, id))
                 .isEqualTo("DRAFT");
+    }
+
+    @Test
+    void paymentWindowCrossingEventStartPreventsPublicationButNotDraftSave() throws Exception {
+        long id = createEvent();
+        String boothRequestDeadline = eventStartAt.minus(Duration.ofMinutes(30)).toString();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\"" + boothRequestDeadline + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boothRequestDeadlineAt").value(boothRequestDeadline));
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("boothPaymentWindowMinutes"));
+
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, id)).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void lifecycleWorkerAdvancesOnlyDueTimedStatusesAndIsIdempotent() throws Exception {
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long futureId = createEvent();
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP - interval '1 hour',
+                    end_at = CURRENT_TIMESTAMP + interval '1 hour'
+                where event_id = ?
+                """, ongoingId);
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP - interval '2 hours',
+                    end_at = CURRENT_TIMESTAMP - interval '1 hour'
+                where event_id = ?
+                """, completedId);
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP + interval '1 hour',
+                    end_at = CURRENT_TIMESTAMP + interval '2 hours'
+                where event_id = ?
+                """, futureId);
+
+        lifecycleService.advanceDueEvents();
+
+        assertThat(eventStatus(ongoingId)).isEqualTo("ONGOING");
+        assertThat(eventStatus(completedId)).isEqualTo("COMPLETED");
+        assertThat(eventStatus(futureId)).isEqualTo("PUBLISHED");
+
+        lifecycleService.advanceDueEvents();
+        assertThat(eventStatus(ongoingId)).isEqualTo("ONGOING");
+        assertThat(eventStatus(completedId)).isEqualTo("COMPLETED");
+        assertThat(eventStatus(futureId)).isEqualTo("PUBLISHED");
     }
 
     @Test
@@ -478,6 +542,11 @@ class EventApiIntegrationTests {
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(json).get("eventId").asLong();
+    }
+
+    private String eventStatus(long eventId) {
+        return jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, eventId);
     }
 
     private void publish(long id) throws Exception {

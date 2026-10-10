@@ -30,12 +30,21 @@ public class EventRootLockService {
                 .filter(event -> event.getOrganizerUserId().equals(organizerUserId));
     }
 
-    private Optional<Event> lockAndRefresh(Long eventId) {
-        Instant now = Instant.now(clock);
-        return eventRepository.findByIdForUpdate(eventId)
-                .map(event -> {
-                    event.advanceTimedLifecycle(now);
-                    return event;
-                });
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean advance(Long eventId) {
+        return lockAndRefreshResult(eventId).advanced();
     }
+
+    private Optional<Event> lockAndRefresh(Long eventId) {
+        return lockAndRefreshResult(eventId).event();
+    }
+
+    private LockResult lockAndRefreshResult(Long eventId) {
+        Instant now = Instant.now(clock);
+        Optional<Event> event = eventRepository.findByIdForUpdate(eventId);
+        boolean advanced = event.map(value -> value.advanceTimedLifecycle(now)).orElse(false);
+        return new LockResult(event, advanced);
+    }
+
+    private record LockResult(Optional<Event> event, boolean advanced) {}
 }
