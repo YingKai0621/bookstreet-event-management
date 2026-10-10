@@ -5,6 +5,9 @@ import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
+import com.swp391.bookstreet.event.entity.Event;
+import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.payment.config.VnPayProperties;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
@@ -24,15 +27,18 @@ public class PaymentAttemptTransactions {
     private final BoothPaymentRepository paymentRepository;
     private final BoothHoldRepository holdRepository;
     private final BoothRequestRepository requestRepository;
+    private final EventRootLockService eventRootLockService;
     private final VnPayProperties properties;
     private final VnPayGateway gateway;
 
     public PaymentAttemptTransactions(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
-            VnPayProperties properties, VnPayGateway gateway) {
+            EventRootLockService eventRootLockService, VnPayProperties properties,
+            VnPayGateway gateway) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
+        this.eventRootLockService = eventRootLockService;
         this.properties = properties;
         this.gateway = gateway;
     }
@@ -45,12 +51,23 @@ public class PaymentAttemptTransactions {
             return replay(replay, requestId, userId);
         }
 
+        Long eventId = requestRepository.findOwnedEventIdById(requestId, userId).orElse(null);
+        if (eventId == null) {
+            throw new BoothApiException(HttpStatus.NOT_FOUND, "BOOTH_REQUEST_NOT_FOUND",
+                    "Booth request not found.");
+        }
+        Event event = eventRootLockService.lock(eventId).orElse(null);
+        if (event == null) {
+            throw new BoothApiException(HttpStatus.NOT_FOUND, "BOOTH_REQUEST_NOT_FOUND",
+                    "Booth request not found.");
+        }
+        if (event.getStatus() != EventStatus.PUBLISHED) {
+            throw conflict("EVENT_NOT_ACCEPTING_PAYMENTS",
+                    "The Event no longer accepts new Payment attempts.");
+        }
+
         var hold = holdRepository.findOwnedByRequestIdForUpdate(requestId, userId).orElse(null);
         if (hold == null) {
-            if (requestRepository.findOwnedById(requestId, userId).isEmpty()) {
-                throw new BoothApiException(HttpStatus.NOT_FOUND, "BOOTH_REQUEST_NOT_FOUND",
-                        "Booth request not found.");
-            }
             throw conflict("BOOTH_REQUEST_NOT_SELECTED",
                     "The Booth request has not been selected for payment.");
         }

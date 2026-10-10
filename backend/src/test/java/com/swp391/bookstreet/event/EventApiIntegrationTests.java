@@ -1,8 +1,12 @@
 package com.swp391.bookstreet.event;
 
-import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
-import com.swp391.bookstreet.event.service.EventService;
+import com.swp391.bookstreet.booth.exception.BoothApiException;
+import com.swp391.bookstreet.event.dto.CancelEventRequest;
 import com.swp391.bookstreet.event.exception.EventException;
+import com.swp391.bookstreet.event.service.EventLifecycleService;
+import com.swp391.bookstreet.event.service.EventService;
+import com.swp391.bookstreet.payment.service.PartnerPaymentService;
+import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -60,6 +64,8 @@ class EventApiIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper mapper;
     @Autowired EventService service;
+    @Autowired EventLifecycleService lifecycleService;
+    @Autowired PartnerPaymentService partnerPaymentService;
     MockMvc mvc;
     Long owner;
     Long other;
@@ -153,6 +159,68 @@ class EventApiIntegrationTests {
     }
 
     @Test
+    void paymentWindowCrossingEventStartPreventsPublicationButNotDraftSave() throws Exception {
+        long id = createEvent();
+        String boothRequestDeadline = eventStartAt.minus(Duration.ofMinutes(30)).toString();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\"" + boothRequestDeadline + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boothRequestDeadlineAt").value(boothRequestDeadline));
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("boothPaymentWindowMinutes"));
+
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, id)).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void lifecycleWorkerAdvancesOnlyDueTimedStatusesAndIsIdempotent() throws Exception {
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long futureId = createEvent();
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP - interval '1 hour',
+                    end_at = CURRENT_TIMESTAMP + interval '1 hour'
+                where event_id = ?
+                """, ongoingId);
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP - interval '2 hours',
+                    end_at = CURRENT_TIMESTAMP - interval '1 hour'
+                where event_id = ?
+                """, completedId);
+        jdbc.update("""
+                update events
+                set status = 'PUBLISHED',
+                    start_at = CURRENT_TIMESTAMP + interval '1 hour',
+                    end_at = CURRENT_TIMESTAMP + interval '2 hours'
+                where event_id = ?
+                """, futureId);
+
+        lifecycleService.advanceDueEvents();
+
+        assertThat(eventStatus(ongoingId)).isEqualTo("ONGOING");
+        assertThat(eventStatus(completedId)).isEqualTo("COMPLETED");
+        assertThat(eventStatus(futureId)).isEqualTo("PUBLISHED");
+
+        lifecycleService.advanceDueEvents();
+        assertThat(eventStatus(ongoingId)).isEqualTo("ONGOING");
+        assertThat(eventStatus(completedId)).isEqualTo("COMPLETED");
+        assertThat(eventStatus(futureId)).isEqualTo("PUBLISHED");
+    }
+
+    @Test
     void updateThenPublishMakesEventPublic() throws Exception {
         long id = createEvent();
         mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
@@ -176,6 +244,258 @@ class EventApiIntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
         mvc.perform(get(PUBLIC)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void deleteDraftRemovesEventConfigurationButPreservesPhysicalBooth() throws Exception {
+        long eventId = createEvent();
+        long boothId = jdbc.queryForObject("""
+                insert into locations(code, name, location_type, max_capacity, is_active,
+                    created_at, updated_at)
+                values (?, 'Draft delete Booth', 'BOOTH', 4, true,
+                    current_timestamp, current_timestamp)
+                returning location_id
+                """, Long.class, "DELETE-" + UUID.randomUUID().toString().substring(0, 12));
+        jdbc.update("insert into booths(booth_id, category_code) values (?, 'PUBLISHER')", boothId);
+        jdbc.update("""
+                insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
+                values (?, ?, 10000, true)
+                """, eventId, boothId);
+
+        try {
+            mvc.perform(delete(ORGANIZER + "/" + eventId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isNoContent());
+
+            assertThat(count("events", "event_id", eventId)).isZero();
+            assertThat(count("event_booth_configs", "event_id", eventId)).isZero();
+            assertThat(count("booths", "booth_id", boothId)).isOne();
+            assertThat(count("locations", "location_id", boothId)).isOne();
+
+            mvc.perform(delete(ORGANIZER + "/" + eventId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+        } finally {
+            jdbc.update("delete from event_booth_configs where event_id = ?", eventId);
+            jdbc.update("delete from booths where booth_id = ?", boothId);
+            jdbc.update("delete from locations where location_id = ?", boothId);
+        }
+    }
+
+    @Test
+    void deleteDraftRejectsPublishedForeignAndDependentEvents() throws Exception {
+        long publishedId = createEvent();
+        publish(publishedId);
+        mvc.perform(delete(ORGANIZER + "/" + publishedId).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
+
+        long foreignId = createEvent();
+        mvc.perform(delete(ORGANIZER + "/" + foreignId).with(csrf())
+                        .with(authentication(identity(other, true, "ORGANIZER"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+
+        long dependentId = createEvent();
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status, created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Delete dependency " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, dependentId);
+
+        try {
+            mvc.perform(delete(ORGANIZER + "/" + dependentId).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER"))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("EVENT_HAS_DEPENDENCIES"));
+            assertThat(count("events", "event_id", dependentId)).isOne();
+        } finally {
+            jdbc.update("delete from partner_event_applications where application_id = ?", applicationId);
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    organizationId);
+        }
+    }
+
+    @Test
+    void cancelPublishedEventIsAtomicNormalizedAndIdempotent() throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        CancellationFixture fixture = insertCancellationFixture(eventId);
+
+        try {
+            String response = mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"  Venue   is no longer available.  \"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"))
+                    .andExpect(jsonPath("$.cancellationReason")
+                            .value("Venue is no longer available."))
+                    .andExpect(jsonPath("$.cancelledAt").isNotEmpty())
+                    .andReturn().getResponse().getContentAsString();
+
+            String cancelledAt = mapper.readTree(response).get("cancelledAt").asText();
+            assertThat(eventStatus(eventId)).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject(
+                    "select status from booth_requests where booth_request_id = ?",
+                    String.class, fixture.selectedRequestId())).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject(
+                    "select status from booth_requests where booth_request_id = ?",
+                    String.class, fixture.pendingRequestId())).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject(
+                    "select status from booth_holds where booth_hold_id = ?",
+                    String.class, fixture.holdId())).isEqualTo("RELEASED");
+
+            mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"short\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+            mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"A different valid retry reason.\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.cancellationReason")
+                            .value("Venue is no longer available."))
+                    .andExpect(jsonPath("$.cancelledAt").value(cancelledAt));
+        } finally {
+            deleteCancellationFixture(fixture);
+        }
+    }
+
+    @Test
+    void cancelRejectsInvalidReasonWrongLifecycleAndForeignOwner() throws Exception {
+        long draftId = createEvent();
+        mvc.perform(post(ORGANIZER + "/" + draftId + "/cancel")
+                        .with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json").content("{\"reason\":\"Too short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        mvc.perform(post(ORGANIZER + "/" + draftId + "/cancel")
+                        .with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"reason\":\"A sufficiently long cancellation reason.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_CANCELLABLE"));
+
+        publish(draftId);
+        mvc.perform(post(ORGANIZER + "/" + draftId + "/cancel")
+                        .with(csrf())
+                        .with(authentication(identity(other, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"reason\":\"A sufficiently long cancellation reason.\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", draftId);
+        mvc.perform(post(ORGANIZER + "/" + draftId + "/cancel")
+                        .with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"reason\":\"A sufficiently long cancellation reason.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_CANCELLABLE"));
+    }
+
+    @Test
+    void paymentAndAssignmentEvidenceBlockCancellationWithoutPartialMutation() throws Exception {
+        assertCancellationBlocked("PENDING", false, false, "EVENT_PAYMENT_PENDING");
+        assertCancellationBlocked("FAILED", true, false,
+                "EVENT_PAYMENT_RECONCILIATION_REQUIRED");
+        assertCancellationBlocked("SUCCESS", false, false,
+                "EVENT_HAS_SUCCESSFUL_PAYMENT");
+        assertCancellationBlocked(null, false, true, "EVENT_HAS_ASSIGNMENT");
+    }
+
+    @Test
+    void concurrentCancellationAndPaymentInitiationHaveOneValidWinner() throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        CancellationFixture fixture = insertCancellationFixture(eventId);
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<String> cancellation = () -> {
+                SecurityContextHolder.getContext().setAuthentication(
+                        identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Start timeout");
+                    }
+                    service.cancel(eventId,
+                            new CancelEventRequest("Venue is no longer available."));
+                    return "CANCELLED";
+                } catch (EventException error) {
+                    return error.getCode();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Callable<String> payment = () -> {
+                SecurityContextHolder.getContext().setAuthentication(
+                        identity(other, true, "PARTNER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Start timeout");
+                    }
+                    partnerPaymentService.initiate(fixture.selectedRequestId(),
+                            UUID.randomUUID(), "127.0.0.1");
+                    return "PAYMENT_CREATED";
+                } catch (BoothApiException error) {
+                    return error.getCode();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+
+            Future<String> cancellationResult = executor.submit(cancellation);
+            Future<String> paymentResult = executor.submit(payment);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            var outcomes = List.of(cancellationResult.get(15, TimeUnit.SECONDS),
+                    paymentResult.get(15, TimeUnit.SECONDS));
+            assertThat(outcomes).isIn(
+                    List.of("CANCELLED", "EVENT_NOT_ACCEPTING_PAYMENTS"),
+                    List.of("EVENT_PAYMENT_PENDING", "PAYMENT_CREATED"));
+
+            if (outcomes.getFirst().equals("CANCELLED")) {
+                assertThat(eventStatus(eventId)).isEqualTo("CANCELLED");
+                assertThat(count("booth_payments", "booth_hold_id", fixture.holdId())).isZero();
+                assertThat(jdbc.queryForObject(
+                        "select status from booth_holds where booth_hold_id = ?",
+                        String.class, fixture.holdId())).isEqualTo("RELEASED");
+            } else {
+                assertThat(eventStatus(eventId)).isEqualTo("PUBLISHED");
+                assertThat(count("booth_payments", "booth_hold_id", fixture.holdId())).isOne();
+                assertThat(jdbc.queryForObject(
+                        "select status from booth_holds where booth_hold_id = ?",
+                        String.class, fixture.holdId())).isEqualTo("ACTIVE");
+            }
+        } finally {
+            deleteCancellationFixture(fixture);
+        }
     }
 
     @Test
@@ -233,12 +553,12 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void publishedEventCannotBeChangedOrPublishedAgain() throws Exception {
+    void publishedEventAllowsDescriptiveChangeButCannotBePublishedAgain() throws Exception {
         long id = createEvent();
         publish(id);
         mvc.perform(patch(ORGANIZER + "/" + id).with(authentication(identity(owner, true, "ORGANIZER")))
                         .with(csrf()).contentType("application/json").content("{\"name\":\"Changed\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Changed"));
         mvc.perform(post(ORGANIZER + "/" + id + "/publish")
                         .with(authentication(identity(owner, true, "ORGANIZER"))).with(csrf()))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EVENT_NOT_DRAFT"));
@@ -276,6 +596,20 @@ class EventApiIntegrationTests {
                 .andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("select count(*) from events where organizer_user_id = ?",
                 Long.class, owner)).isZero();
+
+        long eventId = createEvent();
+        mvc.perform(delete(ORGANIZER + "/" + eventId)
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isForbidden());
+        assertThat(count("events", "event_id", eventId)).isOne();
+
+        publish(eventId);
+        mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"reason\":\"A sufficiently long cancellation reason.\"}"))
+                .andExpect(status().isForbidden());
+        assertThat(eventStatus(eventId)).isEqualTo("PUBLISHED");
     }
 
     @Test
@@ -333,6 +667,50 @@ class EventApiIntegrationTests {
         }
     }
 
+    @Test
+    void concurrentPublishAndDeleteCannotBothSucceed() throws Exception {
+        long id = createEvent();
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<Integer> publishCommand = () -> {
+                SecurityContextHolder.getContext().setAuthentication(identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
+                    service.publish(id);
+                    return 200;
+                } catch (EventException error) {
+                    return error.getStatus().value();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Callable<Integer> deleteCommand = () -> {
+                SecurityContextHolder.getContext().setAuthentication(identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Start timeout");
+                    service.deleteDraft(id);
+                    return 204;
+                } catch (EventException error) {
+                    return error.getStatus().value();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+
+            Future<Integer> publish = executor.submit(publishCommand);
+            Future<Integer> delete = executor.submit(deleteCommand);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(List.of(publish.get(15, TimeUnit.SECONDS),
+                            delete.get(15, TimeUnit.SECONDS)))
+                    .isIn(List.of(200, 409), List.of(404, 204));
+        }
+    }
+
 
     @Test
     void requestCannotSetOwnerOrStatus() throws Exception {
@@ -350,6 +728,180 @@ class EventApiIntegrationTests {
                 .andExpect(status().isBadRequest());
         assertThat(jdbc.queryForObject("select status from events where event_id = ?", String.class, id))
                 .isEqualTo("DRAFT");
+    }
+
+    @Test
+    void publishedAndOngoingEventsAllowDescriptivePatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "name": "Published Event Updated",
+                                  "description": null,
+                                  "bannerUrl": "https://example.test/banner.png"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Published Event Updated"))
+                .andExpect(jsonPath("$.description").doesNotExist())
+                .andExpect(jsonPath("$.bannerUrl")
+                        .value("https://example.test/banner.png"));
+
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Ongoing Event Updated\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ONGOING"))
+                .andExpect(jsonPath("$.name").value("Ongoing Event Updated"));
+    }
+
+    @Test
+    void untouchedPublishedEventAllowsValidOperationalPatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+        Instant updatedStart = eventStartAt.plus(Duration.ofDays(1));
+        Instant updatedEnd = eventEndAt.plus(Duration.ofDays(1));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "startAt": "%s",
+                                  "endAt": "%s",
+                                  "maxBoothsPerPartner": 2
+                                }
+                                """.formatted(updatedStart, updatedEnd)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startAt").value(updatedStart.toString()))
+                .andExpect(jsonPath("$.endAt").value(updatedEnd.toString()))
+                .andExpect(jsonPath("$.maxBoothsPerPartner").value(2));
+    }
+
+    @Test
+    void participationFreezesOperationalPatchButNotDescriptivePatch() throws Exception {
+        long id = createEvent();
+        publish(id);
+        ExternalParticipationFixture fixture = insertExternalParticipation(id);
+        try {
+            mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                      "name": "Must roll back",
+                                      "maxBoothsPerPartner": 2
+                                    }
+                                    """))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("EVENT_OPERATIONAL_FIELDS_LOCKED"));
+            assertThat(jdbc.queryForObject(
+                    "select name from events where event_id = ?", String.class, id))
+                    .isEqualTo("Book Street Festival");
+
+            mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"name\":\"Descriptive change remains allowed\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name")
+                            .value("Descriptive change remains allowed"));
+        } finally {
+            deleteExternalParticipation(fixture);
+        }
+    }
+
+    @Test
+    void invalidPublishedOperationalPatchRollsBackAllFields() throws Exception {
+        long id = createEvent();
+        publish(id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "name": "Must roll back",
+                                  "partnerApplicationDeadlineAt": "%s"
+                                }
+                                """.formatted(Instant.now().minus(Duration.ofHours(1)))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("partnerApplicationDeadlineAt"));
+        assertThat(jdbc.queryForObject(
+                "select name from events where event_id = ?", String.class, id))
+                .isEqualTo("Book Street Festival");
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"partnerApplicationDeadlineAt\":null}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_CONFIGURATION_INVALID"));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\""
+                                + eventStartAt.minus(Duration.ofMinutes(30)) + "\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field")
+                        .value("boothPaymentWindowMinutes"));
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\""
+                                + eventStartAt.minus(Duration.ofMinutes(60)) + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void operationalFieldsAreRejectedOngoingAndAllFieldsAreRejectedTerminal() throws Exception {
+        long id = createEvent();
+        publish(id);
+        jdbc.update("""
+                update events
+                set status = 'ONGOING', start_at = current_timestamp - interval '1 hour',
+                    end_at = current_timestamp + interval '1 hour'
+                where event_id = ?
+                """, id);
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"maxBoothsPerPartner\":2}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
+
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Not allowed after completion\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
+
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled terminal update fixture.'
+                where event_id = ?
+                """, id);
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"name\":\"Not allowed after cancellation\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_EDITABLE"));
     }
 
     @Test
@@ -439,7 +991,16 @@ class EventApiIntegrationTests {
     void allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne() throws Exception {
         long id = createEvent();
         for (String eventStatus : List.of("ONGOING", "COMPLETED", "CANCELLED")) {
-            jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
+            if (eventStatus.equals("CANCELLED")) {
+                jdbc.update("""
+                        update events
+                        set status = ?, cancelled_at = current_timestamp,
+                            cancellation_reason = 'Cancelled integration-test fixture.'
+                        where event_id = ?
+                        """, eventStatus, id);
+            } else {
+                jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
+            }
             mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isNotFound());
             mvc.perform(get(PUBLIC)).andExpect(status().isOk())
                     .andExpect(jsonPath("$.totalElements").value(0));
@@ -469,6 +1030,185 @@ class EventApiIntegrationTests {
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(json).get("eventId").asLong();
+    }
+
+    private String eventStatus(long eventId) {
+        return jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, eventId);
+    }
+
+    private Long count(String table, String idColumn, long id) {
+        return jdbc.queryForObject("select count(*) from " + table + " where " + idColumn + " = ?",
+                Long.class, id);
+    }
+
+    private void assertCancellationBlocked(String paymentStatus,
+            boolean reconciliationRequired, boolean assignment, String expectedCode) throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        CancellationFixture fixture = insertCancellationFixture(eventId);
+        try {
+            if (paymentStatus != null) {
+                jdbc.update("""
+                        insert into booth_payments(
+                            booth_hold_id, transaction_type, purpose, amount, status,
+                            idempotency_key, gateway_provider, reconciliation_required,
+                            created_at, updated_at, completed_at)
+                        values (?, 'PAYMENT', 'INITIAL_BOOTH_RENTAL', 10000, ?, ?, 'VNPAY', ?,
+                            current_timestamp, current_timestamp,
+                            case when ? = 'PENDING' then null else current_timestamp end)
+                        """, fixture.holdId(), paymentStatus, UUID.randomUUID(),
+                        reconciliationRequired, paymentStatus);
+            }
+            if (assignment) {
+                jdbc.update("update booth_holds set status = 'CONSUMED', consumed_at = current_timestamp "
+                        + "where booth_hold_id = ?", fixture.holdId());
+                jdbc.update("update booth_requests set status = 'COMPLETED', "
+                        + "completed_at = current_timestamp where booth_request_id = ?",
+                        fixture.selectedRequestId());
+                jdbc.update("""
+                        insert into booth_assignments(
+                            booth_hold_id, qr_token, status, assigned_at)
+                        values (?, ?, 'ACTIVE', current_timestamp)
+                        """, fixture.holdId(), UUID.randomUUID());
+            }
+
+            mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"A sufficiently long cancellation reason.\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value(expectedCode));
+
+            assertThat(eventStatus(eventId)).isEqualTo("PUBLISHED");
+            assertThat(jdbc.queryForObject(
+                    "select status from booth_requests where booth_request_id = ?",
+                    String.class, fixture.pendingRequestId())).isEqualTo("PENDING");
+            assertThat(jdbc.queryForObject(
+                    "select cancellation_reason from events where event_id = ?",
+                    String.class, eventId)).isNull();
+        } finally {
+            deleteCancellationFixture(fixture);
+        }
+    }
+
+    private CancellationFixture insertCancellationFixture(long eventId) {
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Cancellation partner " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at, reviewed_at)
+                values (?, ?, 'APPROVED', current_timestamp, current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, eventId);
+        long selectedBoothId = insertCancellationBooth("SELECTED");
+        long pendingBoothId = insertCancellationBooth("PENDING");
+        long selectedConfigId = insertCancellationConfig(eventId, selectedBoothId);
+        long pendingConfigId = insertCancellationConfig(eventId, pendingBoothId);
+        long selectedRequestId = jdbc.queryForObject("""
+                insert into booth_requests(
+                    application_id, booth_id, status, submitted_at, reviewed_at, selected_at)
+                values (?, ?, 'SELECTED', current_timestamp, current_timestamp, current_timestamp)
+                returning booth_request_id
+                """, Long.class, applicationId, selectedBoothId);
+        long pendingRequestId = jdbc.queryForObject("""
+                insert into booth_requests(application_id, booth_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp)
+                returning booth_request_id
+                """, Long.class, applicationId, pendingBoothId);
+        long holdId = jdbc.queryForObject("""
+                insert into booth_holds(
+                    event_booth_config_id, booth_request_id, locked_rental_price,
+                    status, created_at, expires_at)
+                values (?, ?, 10000, 'ACTIVE', current_timestamp,
+                    current_timestamp + interval '1 hour')
+                returning booth_hold_id
+                """, Long.class, selectedConfigId, selectedRequestId);
+        return new CancellationFixture(organizationId, applicationId,
+                selectedBoothId, pendingBoothId, selectedConfigId, pendingConfigId,
+                selectedRequestId, pendingRequestId, holdId);
+    }
+
+    private long insertCancellationBooth(String suffix) {
+        long boothId = jdbc.queryForObject("""
+                insert into locations(
+                    code, name, location_type, max_capacity, is_active, created_at, updated_at)
+                values (?, 'Cancellation Booth', 'BOOTH', 4, true,
+                    current_timestamp, current_timestamp)
+                returning location_id
+                """, Long.class, suffix + "-" + UUID.randomUUID().toString().substring(0, 12));
+        jdbc.update("insert into booths(booth_id, category_code) values (?, 'PUBLISHER')", boothId);
+        return boothId;
+    }
+
+    private ExternalParticipationFixture insertExternalParticipation(long eventId) {
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Operational patch partner " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, eventId);
+        return new ExternalParticipationFixture(organizationId, applicationId);
+    }
+
+    private void deleteExternalParticipation(ExternalParticipationFixture fixture) {
+        jdbc.update("delete from partner_event_applications where application_id = ?",
+                fixture.applicationId());
+        jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                fixture.organizationId());
+    }
+
+    private long insertCancellationConfig(long eventId, long boothId) {
+        return jdbc.queryForObject("""
+                insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
+                values (?, ?, 10000, true)
+                returning event_booth_config_id
+                """, Long.class, eventId, boothId);
+    }
+
+    private void deleteCancellationFixture(CancellationFixture fixture) {
+        jdbc.update("delete from booth_assignments where booth_hold_id = ?", fixture.holdId());
+        jdbc.update("delete from booth_payments where booth_hold_id = ?", fixture.holdId());
+        jdbc.update("delete from booth_holds where booth_hold_id = ?", fixture.holdId());
+        jdbc.update("delete from booth_requests where application_id = ?", fixture.applicationId());
+        jdbc.update("delete from event_booth_configs where event_booth_config_id in (?, ?)",
+                fixture.selectedConfigId(), fixture.pendingConfigId());
+        jdbc.update("delete from booths where booth_id in (?, ?)",
+                fixture.selectedBoothId(), fixture.pendingBoothId());
+        jdbc.update("delete from locations where location_id in (?, ?)",
+                fixture.selectedBoothId(), fixture.pendingBoothId());
+        jdbc.update("delete from partner_event_applications where application_id = ?",
+                fixture.applicationId());
+        jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                fixture.organizationId());
+    }
+
+    private record CancellationFixture(
+            long organizationId,
+            long applicationId,
+            long selectedBoothId,
+            long pendingBoothId,
+            long selectedConfigId,
+            long pendingConfigId,
+            long selectedRequestId,
+            long pendingRequestId,
+            long holdId) {
+    }
+
+    private record ExternalParticipationFixture(long organizationId, long applicationId) {
     }
 
     private void publish(long id) throws Exception {

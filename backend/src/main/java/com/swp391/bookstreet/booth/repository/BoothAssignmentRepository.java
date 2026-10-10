@@ -13,6 +13,13 @@ import org.springframework.data.repository.query.Param;
 public interface BoothAssignmentRepository extends JpaRepository<BoothAssignment, Long> {
     boolean existsByBoothHoldBoothHoldId(Long boothHoldId);
 
+    @Query("""
+            select case when count(assignment) > 0 then true else false end
+            from BoothAssignment assignment
+            where assignment.boothHold.eventBoothConfig.eventId = :eventId
+            """)
+    boolean existsByEventId(@Param("eventId") Long eventId);
+
     @EntityGraph(attributePaths = {
             "boothHold", "boothHold.boothRequest",
             "boothHold.boothRequest.application",

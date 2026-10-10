@@ -44,6 +44,20 @@ class EventPublicationTests {
         assertThatCode(() -> validation.validateForPublish(complete(), NOW)).doesNotThrowAnyException();
     }
     @Test
+    void boothPaymentWindowMayEndExactlyAtEventStart() {
+        Event event = complete();
+        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(3600));
+
+        assertThatCode(() -> validation.validateForPublish(event, NOW)).doesNotThrowAnyException();
+    }
+    @Test
+    void boothPaymentWindowCannotExtendPastEventStart() {
+        Event event = complete();
+        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(3599));
+
+        assertError(event, "EVENT_TIME_INVALID", "boothPaymentWindowMinutes");
+    }
+    @Test
     void timePassingBetweenDraftSaveAndPublishClosesPublication() {
         Event e = complete();
         validation.validate(e);
@@ -61,8 +75,8 @@ class EventPublicationTests {
     private Event complete() {
         Event e = new Event();
         e.setName("Publication test");
-        e.setStartAt(NOW.plusSeconds(3600));
-        e.setEndAt(NOW.plusSeconds(7200));
+        e.setStartAt(NOW.plusSeconds(7200));
+        e.setEndAt(NOW.plusSeconds(10800));
         e.setBoothPaymentWindowMinutes(60);
         e.setMaxBoothsPerPartner(1);
         e.setMaxActivitiesPerPartner(1);

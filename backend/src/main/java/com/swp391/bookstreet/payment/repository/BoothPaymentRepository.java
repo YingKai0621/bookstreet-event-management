@@ -67,19 +67,30 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             Long boothHoldId, Long boothPaymentId);
 
     @Query("""
-            select payment.boothHold.boothHoldId
+            select new com.swp391.bookstreet.payment.repository.PaymentLockRoot(
+                payment.boothHold.boothRequest.application.eventId,
+                payment.boothHold.boothHoldId)
             from BoothPayment payment
             where payment.boothPaymentId = :paymentId
             """)
-    Optional<Long> findBoothHoldIdByPaymentId(@Param("paymentId") Long paymentId);
+    Optional<PaymentLockRoot> findLockRootByPaymentId(@Param("paymentId") Long paymentId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"boothHold", "boothHold.boothRequest"})
     @Query("select payment from BoothPayment payment where payment.boothPaymentId = :paymentId")
     Optional<BoothPayment> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select payment
+            from BoothPayment payment
+            where payment.boothHold.eventBoothConfig.eventId = :eventId
+            order by payment.boothPaymentId
+            """)
+    List<BoothPayment> findByEventIdForUpdate(@Param("eventId") Long eventId);
+
     @Query(value = """
-            select *
+            select booth_payment_id
             from booth_payments
             where status = 'PENDING'
               and checkout_expires_at is not null
@@ -89,12 +100,12 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             order by checkout_expires_at, booth_payment_id
             limit 50
             """, nativeQuery = true)
-    List<BoothPayment> findReconciliationCandidates(
+    List<Long> findReconciliationCandidateIds(
             @Param("eligibleCheckoutExpiry") Instant eligibleCheckoutExpiry,
             @Param("eligibleLastQuery") Instant eligibleLastQuery);
 
     @Query(value = """
-            select *
+            select booth_payment_id
             from booth_payments
             where status = 'PENDING'
               and (checkout_url is null or checkout_expires_at is null)
@@ -102,6 +113,6 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
             order by created_at, booth_payment_id
             limit 50
             """, nativeQuery = true)
-    List<BoothPayment> findCheckoutCreationOrphans(
+    List<Long> findCheckoutCreationOrphanIds(
             @Param("eligibleCreatedAt") Instant eligibleCreatedAt);
 }

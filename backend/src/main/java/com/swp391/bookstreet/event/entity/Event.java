@@ -2,6 +2,7 @@ package com.swp391.bookstreet.event.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "events")
@@ -63,6 +64,12 @@ public class Event {
     @Column(name = "status", nullable = false, length = 20)
     private EventStatus status;
 
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "cancellation_reason", columnDefinition = "text")
+    private String cancellationReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -70,6 +77,37 @@ public class Event {
     private Instant updatedAt;
 
     public Event() {
+    }
+
+    public boolean advanceTimedLifecycle(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+
+        if (status == EventStatus.PUBLISHED) {
+            if (!now.isBefore(endAt)) {
+                status = EventStatus.COMPLETED;
+                return true;
+            }
+            if (!now.isBefore(startAt)) {
+                status = EventStatus.ONGOING;
+                return true;
+            }
+        } else if (status == EventStatus.ONGOING && !now.isBefore(endAt)) {
+            status = EventStatus.COMPLETED;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void cancel(String reason, Instant now) {
+        Objects.requireNonNull(reason, "reason must not be null");
+        Objects.requireNonNull(now, "now must not be null");
+        if (status != EventStatus.PUBLISHED) {
+            throw new IllegalStateException("Only a Published Event can be cancelled.");
+        }
+        status = EventStatus.CANCELLED;
+        cancelledAt = now;
+        cancellationReason = reason;
     }
 
     @PrePersist
@@ -135,6 +173,10 @@ public class Event {
 
     public EventStatus getStatus() { return status; }
     public void setStatus(EventStatus status) { this.status = status; }
+
+    public Instant getCancelledAt() { return cancelledAt; }
+
+    public String getCancellationReason() { return cancellationReason; }
 
     public Instant getCreatedAt() { return createdAt; }
 

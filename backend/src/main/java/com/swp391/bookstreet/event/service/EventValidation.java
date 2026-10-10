@@ -2,7 +2,10 @@ package com.swp391.bookstreet.event.service;
 
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.exception.EventException;
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -30,8 +33,46 @@ public class EventValidation {
         publishDeadline(event.getBoothCancellationCutoffAt(), "boothCancellationCutoffAt", now);
         publishDeadline(event.getActivityCancellationCutoffAt(), "activityCancellationCutoffAt", now);
         validateValues(event);
+        validateBoothPaymentBoundary(event);
         require(event.getStartAt().isAfter(now), "EVENT_TIME_INVALID", "startAt",
                 "Event must start after publication time.");
+    }
+
+    void validateForOperationalUpdate(Event event, Set<String> suppliedFields, Instant now) {
+        validateRequired(event, "EVENT_CONFIGURATION_INVALID");
+        validatePublishedDeadlinesPresent(event);
+        validateValues(event);
+        validateBoothPaymentBoundary(event);
+        require(event.getStartAt().isAfter(now), "EVENT_TIME_INVALID", "startAt",
+                "Event must start after operational update time.");
+
+        validateSuppliedDeadline(event.getPartnerApplicationDeadlineAt(),
+                "partnerApplicationDeadlineAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getBoothRequestDeadlineAt(),
+                "boothRequestDeadlineAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getActivityProposalDeadlineAt(),
+                "activityProposalDeadlineAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getParticipantRegistrationDeadlineAt(),
+                "participantRegistrationDeadlineAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getPartnerWithdrawalCutoffAt(),
+                "partnerWithdrawalCutoffAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getBoothCancellationCutoffAt(),
+                "boothCancellationCutoffAt", suppliedFields, now);
+        validateSuppliedDeadline(event.getActivityCancellationCutoffAt(),
+                "activityCancellationCutoffAt", suppliedFields, now);
+    }
+
+    void validateBoothPaymentBoundary(Event event) {
+        try {
+            Instant paymentDeadline = event.getBoothRequestDeadlineAt().plus(
+                    event.getBoothPaymentWindowMinutes(), ChronoUnit.MINUTES);
+            require(!paymentDeadline.isAfter(event.getStartAt()),
+                    "EVENT_TIME_INVALID", "boothPaymentWindowMinutes",
+                    "Booth request deadline plus payment window must not be after event start time.");
+        } catch (DateTimeException | ArithmeticException error) {
+            require(false, "EVENT_TIME_INVALID", "boothPaymentWindowMinutes",
+                    "Booth request deadline plus payment window is outside the supported time range.");
+        }
     }
 
     private void publishDeadline(Instant value, String field, Instant now) {
@@ -39,6 +80,32 @@ public class EventValidation {
                 field + " is required before publication.");
         require(value.isAfter(now), "EVENT_TIME_INVALID", field,
                 field + " must be after publication time.");
+    }
+
+    private void validatePublishedDeadlinesPresent(Event event) {
+        requirePresent(event.getPartnerApplicationDeadlineAt(), "partnerApplicationDeadlineAt");
+        requirePresent(event.getBoothRequestDeadlineAt(), "boothRequestDeadlineAt");
+        requirePresent(event.getActivityProposalDeadlineAt(), "activityProposalDeadlineAt");
+        requirePresent(event.getParticipantRegistrationDeadlineAt(),
+                "participantRegistrationDeadlineAt");
+        requirePresent(event.getPartnerWithdrawalCutoffAt(), "partnerWithdrawalCutoffAt");
+        requirePresent(event.getBoothCancellationCutoffAt(), "boothCancellationCutoffAt");
+        requirePresent(event.getActivityCancellationCutoffAt(), "activityCancellationCutoffAt");
+    }
+
+    private void requirePresent(Instant value, String field) {
+        require(value != null, "EVENT_CONFIGURATION_INVALID", field,
+                field + " cannot be cleared after publication.");
+    }
+
+    private void validateSuppliedDeadline(Instant value, String field,
+            Set<String> suppliedFields, Instant now) {
+        if (suppliedFields.contains(field)) {
+            require(value != null, "EVENT_CONFIGURATION_INVALID", field,
+                    field + " cannot be cleared after publication.");
+            require(value.isAfter(now), "EVENT_TIME_INVALID", field,
+                    field + " must remain after operational update time.");
+        }
     }
 
     private void validateRequired(Event event, String code) {

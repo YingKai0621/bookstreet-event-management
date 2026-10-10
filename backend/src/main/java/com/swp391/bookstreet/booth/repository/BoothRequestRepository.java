@@ -53,6 +53,17 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
             @Param("userId") Long userId
     );
 
+    @Query("""
+            select request.application.eventId
+            from BoothRequest request
+            where request.boothRequestId = :requestId
+              and request.application.partnerOrganization.representativeUserId = :userId
+            """)
+    Optional<Long> findOwnedEventIdById(
+            @Param("requestId") Long requestId,
+            @Param("userId") Long userId
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
             "application", "application.partnerOrganization", "booth", "booth.location"
@@ -156,4 +167,16 @@ public interface BoothRequestRepository extends JpaRepository<BoothRequest, Long
             @Param("eventId") Long eventId,
             @Param("boothId") Long boothId,
             @Param("status") BoothRequestStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select request
+            from BoothRequest request
+            where request.application.eventId = :eventId
+              and request.status in :statuses
+            order by request.boothRequestId
+            """)
+    List<BoothRequest> findByEventIdAndStatusInForUpdate(
+            @Param("eventId") Long eventId,
+            @Param("statuses") Collection<BoothRequestStatus> statuses);
 }

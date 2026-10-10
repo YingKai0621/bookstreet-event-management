@@ -8,6 +8,9 @@ import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
+import com.swp391.bookstreet.event.entity.Event;
+import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.payment.config.VnPayProperties;
 import com.swp391.bookstreet.payment.dto.VnPayAcknowledgement;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
@@ -33,15 +36,18 @@ public class PaymentSettlementService {
     private final BoothHoldRepository holdRepository;
     private final BoothRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
+    private final EventRootLockService eventRootLockService;
     private final VnPayProperties properties;
 
     public PaymentSettlementService(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
-            BoothAssignmentRepository assignmentRepository, VnPayProperties properties) {
+            BoothAssignmentRepository assignmentRepository,
+            EventRootLockService eventRootLockService, VnPayProperties properties) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
+        this.eventRootLockService = eventRootLockService;
         this.properties = properties;
     }
 
@@ -50,11 +56,11 @@ public class PaymentSettlementService {
         if (!result.signatureValid()) return VnPayAcknowledgement.invalidChecksum();
         Long paymentId = paymentId(result.txnRef());
         if (paymentId == null) return VnPayAcknowledgement.notFound();
-        Long holdId = paymentRepository.findBoothHoldIdByPaymentId(paymentId).orElse(null);
-        if (holdId == null) return VnPayAcknowledgement.notFound();
-        BoothHold hold = holdRepository.findByIdForUpdate(holdId).orElse(null);
-        if (hold == null) return VnPayAcknowledgement.notFound();
-        BoothPayment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
+        LockedPayment locked = lockPayment(paymentId);
+        if (locked == null) return VnPayAcknowledgement.notFound();
+        Event event = locked.event();
+        BoothHold hold = locked.hold();
+        BoothPayment payment = locked.payment();
         if (payment == null || !expectedTxnRef(payment).equals(result.txnRef())) {
             return VnPayAcknowledgement.notFound();
         }
@@ -67,7 +73,7 @@ public class PaymentSettlementService {
         if (isSuccess(result)) {
             if (payment.getStatus() == BoothPaymentStatus.TIMEOUT) {
                 if (canSafelySettleLate(payment, hold)) {
-                    settle(payment, hold, result, now);
+                    settle(event, payment, hold, result, now);
                 } else {
                     payment.recordUnsafeLateSuccess(result.transactionNo(), result.responseCode(),
                             result.transactionStatus(), now);
@@ -79,7 +85,7 @@ public class PaymentSettlementService {
                         result.transactionStatus(), now);
                 return VnPayAcknowledgement.success();
             }
-            settle(payment, hold, result, now);
+            settle(event, payment, hold, result, now);
             return VnPayAcknowledgement.success();
         }
         if (payment.getStatus() != BoothPaymentStatus.PENDING) {
@@ -101,12 +107,10 @@ public class PaymentSettlementService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PaymentQueryClaim claimQuery(Long paymentId, Instant now) {
-        Long holdId = paymentRepository.findBoothHoldIdByPaymentId(paymentId).orElse(null);
-        if (holdId == null) return null;
-        BoothHold hold = holdRepository.findByIdForUpdate(holdId).orElse(null);
-        if (hold == null) return null;
-        BoothPayment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
-        if (payment == null || payment.getStatus() != BoothPaymentStatus.PENDING
+        LockedPayment locked = lockPayment(paymentId);
+        if (locked == null) return null;
+        BoothPayment payment = locked.payment();
+        if (payment.getStatus() != BoothPaymentStatus.PENDING
                 || payment.getCheckoutUrl() == null || payment.getCheckoutExpiresAt() == null) {
             return null;
         }
@@ -123,12 +127,11 @@ public class PaymentSettlementService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failCheckoutCreationOrphan(Long paymentId, Instant eligibleCreatedAt,
             Instant now) {
-        Long holdId = paymentRepository.findBoothHoldIdByPaymentId(paymentId).orElse(null);
-        if (holdId == null) return;
-        BoothHold hold = holdRepository.findByIdForUpdate(holdId).orElse(null);
-        if (hold == null) return;
-        BoothPayment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
-        if (payment == null || payment.getStatus() != BoothPaymentStatus.PENDING
+        LockedPayment locked = lockPayment(paymentId);
+        if (locked == null) return;
+        BoothHold hold = locked.hold();
+        BoothPayment payment = locked.payment();
+        if (payment.getStatus() != BoothPaymentStatus.PENDING
                 || payment.getCreatedAt().isAfter(eligibleCreatedAt)
                 || (payment.getCheckoutUrl() != null
                     && payment.getCheckoutExpiresAt() != null)) {
@@ -142,12 +145,11 @@ public class PaymentSettlementService {
 
     private void applyQuery(Long paymentId, VnPayResult result, Instant now,
             boolean queryAlreadyClaimed) {
-        Long holdId = paymentRepository.findBoothHoldIdByPaymentId(paymentId).orElse(null);
-        if (holdId == null) return;
-        BoothHold hold = holdRepository.findByIdForUpdate(holdId).orElse(null);
-        if (hold == null) return;
-        BoothPayment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
-        if (payment == null) return;
+        LockedPayment locked = lockPayment(paymentId);
+        if (locked == null) return;
+        Event event = locked.event();
+        BoothHold hold = locked.hold();
+        BoothPayment payment = locked.payment();
 
         boolean trusted = result.signatureValid() && "00".equals(result.responseCode())
                 && expectedTxnRef(payment).equals(result.txnRef())
@@ -158,11 +160,14 @@ public class PaymentSettlementService {
         }
         if (isSuccess(result)) {
             if (payment.getStatus() == BoothPaymentStatus.PENDING) {
-                settle(payment, hold, result, now);
+                settle(event, payment, hold, result, now);
             } else if (payment.getStatus() == BoothPaymentStatus.TIMEOUT) {
-                if (canSafelySettleLate(payment, hold)) settle(payment, hold, result, now);
-                else payment.recordUnsafeLateSuccess(result.transactionNo(), result.responseCode(),
-                        result.transactionStatus(), now);
+                if (canSafelySettleLate(payment, hold)) {
+                    settle(event, payment, hold, result, now);
+                } else {
+                    payment.recordUnsafeLateSuccess(result.transactionNo(), result.responseCode(),
+                            result.transactionStatus(), now);
+                }
             } else if (payment.getStatus() == BoothPaymentStatus.FAILED) {
                 payment.recordUnsafeLateSuccess(result.transactionNo(), result.responseCode(),
                         result.transactionStatus(), now);
@@ -201,16 +206,16 @@ public class PaymentSettlementService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordQueryFailure(Long paymentId, String reason, Instant now) {
-        Long holdId = paymentRepository.findBoothHoldIdByPaymentId(paymentId).orElse(null);
-        if (holdId == null) return;
-        if (holdRepository.findByIdForUpdate(holdId).isEmpty()) return;
-        paymentRepository.findByIdForUpdate(paymentId).ifPresent(payment ->
-                retainForReconciliation(payment, reason, now));
+        LockedPayment locked = lockPayment(paymentId);
+        if (locked == null) return;
+        retainForReconciliation(locked.payment(), reason, now);
     }
 
-    private void settle(BoothPayment payment, BoothHold hold, VnPayResult result, Instant now) {
+    private void settle(Event event, BoothPayment payment, BoothHold hold,
+            VnPayResult result, Instant now) {
         BoothRequest request = hold.getBoothRequest();
-        if (hold.getStatus() != BoothHoldStatus.ACTIVE
+        if (!canCreateAssignment(event)
+                || hold.getStatus() != BoothHoldStatus.ACTIVE
                 || request.getStatus() != BoothRequestStatus.SELECTED
                 || assignmentRepository.existsByBoothHoldBoothHoldId(hold.getBoothHoldId())) {
             payment.recordUnsafeLateSuccess(result.transactionNo(), result.responseCode(),
@@ -226,6 +231,23 @@ public class PaymentSettlementService {
                         request.getApplication().getEventId(), request.getBooth().getBoothId(),
                         BoothRequestStatus.PENDING)
                 .forEach(competing -> competing.notSelected(now));
+    }
+
+    private LockedPayment lockPayment(Long paymentId) {
+        var root = paymentRepository.findLockRootByPaymentId(paymentId).orElse(null);
+        if (root == null) return null;
+        Event event = eventRootLockService.lock(root.eventId()).orElse(null);
+        if (event == null) return null;
+        BoothHold hold = holdRepository.findByIdForUpdate(root.boothHoldId()).orElse(null);
+        if (hold == null) return null;
+        BoothPayment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
+        if (payment == null) return null;
+        return new LockedPayment(event, hold, payment);
+    }
+
+    private static boolean canCreateAssignment(Event event) {
+        return event.getStatus() == EventStatus.PUBLISHED
+                || event.getStatus() == EventStatus.ONGOING;
     }
 
     private void applyNonSuccessCallback(BoothPayment payment, BoothHold hold,
@@ -286,5 +308,8 @@ public class PaymentSettlementService {
     private static String providerMessage(VnPayResult result) {
         return result.message() == null || result.message().isBlank()
                 ? "VNPay reported an unsuccessful transaction." : result.message();
+    }
+
+    private record LockedPayment(Event event, BoothHold hold, BoothPayment payment) {
     }
 }

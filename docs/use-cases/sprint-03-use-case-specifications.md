@@ -129,6 +129,10 @@ Given the owned request is not SELECTED or its Hold is not ACTIVE or is expired
 When the Partner attempts payment
 Then the system returns HTTP 409
 And creates no BoothPayment
+Given backend time has advanced the Event beyond PUBLISHED or the Event is CANCELLED
+When the Partner attempts payment with a new idempotency key
+Then the system returns EVENT_NOT_ACCEPTING_PAYMENTS
+And creates no BoothPayment
 ```
 
 **AC-E03-04 Failed attempt preserves the Hold**

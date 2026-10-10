@@ -59,6 +59,9 @@ public class BoothRequest {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
     @OneToOne(mappedBy = "boothRequest", fetch = FetchType.LAZY)
     private BoothHold hold;
 
@@ -120,6 +123,15 @@ public class BoothRequest {
         completedAt = now;
     }
 
+    public boolean cancel(Instant now) {
+        if (status != BoothRequestStatus.PENDING && status != BoothRequestStatus.SELECTED) {
+            return false;
+        }
+        status = BoothRequestStatus.CANCELLED;
+        cancelledAt = now;
+        return true;
+    }
+
     public Long getBoothRequestId() {
         return boothRequestId;
     }
@@ -166,6 +178,10 @@ public class BoothRequest {
 
     public Instant getWithdrawnAt() {
         return withdrawnAt;
+    }
+
+    public Instant getCancelledAt() {
+        return cancelledAt;
     }
 
     public BoothHold getHold() {

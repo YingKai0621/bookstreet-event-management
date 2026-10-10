@@ -22,6 +22,7 @@ public record BoothRequestResponse(
         Instant completedAt,
         Instant paymentExpiredAt,
         Instant withdrawnAt,
+        Instant cancelledAt,
         BoothHoldResponse hold
 ) {
     public static BoothRequestResponse from(BoothRequest request) {
@@ -42,6 +43,7 @@ public record BoothRequestResponse(
                 request.getCompletedAt(),
                 request.getPaymentExpiredAt(),
                 request.getWithdrawnAt(),
+                request.getCancelledAt(),
                 BoothHoldResponse.from(request.getHold())
         );
     }
@@ -64,6 +66,7 @@ public record BoothRequestResponse(
                 request.getCompletedAt(),
                 request.getPaymentExpiredAt(),
                 request.getWithdrawnAt(),
+                request.getCancelledAt(),
                 BoothHoldResponse.from(hold)
         );
     }

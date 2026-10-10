@@ -7,6 +7,7 @@ import com.swp391.bookstreet.payment.gateway.VnPayGateway;
 import com.swp391.bookstreet.payment.gateway.VnPayGatewayException;
 import com.swp391.bookstreet.payment.gateway.VnPayResult;
 import com.swp391.bookstreet.payment.service.PaymentSettlementService;
+import com.swp391.bookstreet.payment.service.VnPayReconciliationWorker;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -36,6 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -86,6 +88,7 @@ class PaymentSprint03IntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper mapper;
     @Autowired PaymentSettlementService settlementService;
+    @Autowired VnPayReconciliationWorker reconciliationWorker;
     @Autowired BoothHoldExpiryService expiryService;
     @MockitoBean VnPayGateway gateway;
     @MockitoBean BoothSelectionMailService mailService;
@@ -233,6 +236,30 @@ class PaymentSprint03IntegrationTests {
                 + "(select booth_hold_id from booth_holds where booth_request_id = ?)",
                 Integer.class, fixture.requestId())).isOne();
         verify(gateway).buildCheckout(eq(paymentId), any(), any(), any(), any());
+    }
+
+    @Test
+    void paymentInitiationAfterEventEndIsRejectedBeforeCreatingAnAttempt()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        Instant now = Instant.now();
+        jdbc.update("update events set start_at = ?, end_at = ?, status = 'PUBLISHED' "
+                        + "where event_id = ?", Timestamp.from(now.minus(Duration.ofHours(2))),
+                Timestamp.from(now.minus(Duration.ofHours(1))), fixture.eventId());
+
+        mvc.perform(post("/api/v1/partner/booth-requests/{requestId}/payments",
+                        fixture.requestId())
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .with(identity(partner, "PARTNER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_ACCEPTING_PAYMENTS"));
+
+        assertThat(jdbc.queryForObject("select count(*) from booth_payments payment "
+                + "join booth_holds hold on hold.booth_hold_id = payment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isZero();
+        verify(gateway, times(0)).buildCheckout(anyLong(), any(), any(), any(), any());
     }
 
     @Test
@@ -619,6 +646,87 @@ class PaymentSprint03IntegrationTests {
     }
 
     @Test
+    void reconciliationWorkerSettlesSuccessWhileEventIsOngoingWithoutNetworkTransaction()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update booth_payments set checkout_expires_at = ? "
+                        + "where booth_payment_id = ?",
+                Timestamp.from(now.minus(Duration.ofMinutes(10))), pending.paymentId());
+        jdbc.update("update events set start_at = ?, end_at = ?, status = 'PUBLISHED' "
+                        + "where event_id = ?", Timestamp.from(now.minus(Duration.ofHours(1))),
+                Timestamp.from(now.plus(Duration.ofHours(1))), fixture.eventId());
+        VnPayResult success = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "00", "00", "999996", "query success during event");
+        when(gateway.query(eq(pending.paymentId()), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    return success;
+                });
+
+        reconciliationWorker.reconcilePendingPayments();
+
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, fixture.eventId())).isEqualTo("ONGOING");
+        assertThat(jdbc.queryForObject("select status from booth_payments "
+                + "where booth_payment_id = ?", String.class, pending.paymentId()))
+                .isEqualTo("SUCCESS");
+        assertThat(jdbc.queryForObject("select status from booth_holds "
+                + "where booth_request_id = ?", String.class, fixture.requestId()))
+                .isEqualTo("CONSUMED");
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments assignment "
+                + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isOne();
+    }
+
+    @Test
+    void reconciliationWorkerRechecksEventAfterNetworkAndRetainsLateSuccess()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update booth_payments set checkout_expires_at = ? "
+                        + "where booth_payment_id = ?",
+                Timestamp.from(now.minus(Duration.ofMinutes(10))), pending.paymentId());
+        VnPayResult success = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "00", "00", "999995", "success after event completed");
+        when(gateway.query(eq(pending.paymentId()), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    assertThat(TransactionSynchronizationManager.isActualTransactionActive())
+                            .isFalse();
+                    Instant providerReturnedAt = Instant.now();
+                    jdbc.update("update events set start_at = ?, end_at = ?, "
+                                    + "status = 'PUBLISHED' where event_id = ?",
+                            Timestamp.from(providerReturnedAt.minus(Duration.ofHours(2))),
+                            Timestamp.from(providerReturnedAt.minus(Duration.ofHours(1))),
+                            fixture.eventId());
+                    return success;
+                });
+
+        reconciliationWorker.reconcilePendingPayments();
+
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, fixture.eventId())).isEqualTo("COMPLETED");
+        assertThat(jdbc.queryForObject("select status from booth_payments "
+                + "where booth_payment_id = ?", String.class, pending.paymentId()))
+                .isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+        assertThat(jdbc.queryForObject("select reconciliation_detail from booth_payments "
+                + "where booth_payment_id = ?", String.class, pending.paymentId()))
+                .isEqualTo("VERIFIED_LATE_SUCCESS_REQUIRES_MANUAL_REFUND");
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments assignment "
+                + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isZero();
+    }
+
+    @Test
     void lateSuccessAndHoldExpiryRaceNeverCreatesAnExpiredAssignedState() throws Exception {
         Fixture fixture = fixture(10_000, "SELECTED");
         insertHold(fixture.configId(), fixture.requestId(), 10_000);
@@ -713,6 +821,40 @@ class PaymentSprint03IntegrationTests {
         assertThat(jdbc.queryForObject("select reconciliation_detail from booth_payments "
                 + "where booth_payment_id = ?", String.class, pending.paymentId()))
                 .isEqualTo("VERIFIED_LATE_SUCCESS_REQUIRES_MANUAL_REFUND");
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments assignment "
+                + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
+                + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
+                .isZero();
+    }
+
+    @Test
+    void verifiedSuccessAfterEventEndIsRetainedWithoutCreatingAssignment()
+            throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update events set start_at = ?, end_at = ?, status = 'PUBLISHED' "
+                        + "where event_id = ?", Timestamp.from(now.minus(Duration.ofHours(2))),
+                Timestamp.from(now.minus(Duration.ofHours(1))), fixture.eventId());
+
+        VnPayResult success = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "00", "00", "999997", "success after event end");
+
+        assertThat(settlementService.acceptIpn(success, now).rspCode()).isEqualTo("00");
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, fixture.eventId())).isEqualTo("COMPLETED");
+        assertThat(jdbc.queryForObject("select status from booth_payments "
+                + "where booth_payment_id = ?", String.class, pending.paymentId()))
+                .isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+        assertThat(jdbc.queryForObject("select status from booth_holds "
+                + "where booth_request_id = ?", String.class, fixture.requestId()))
+                .isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("select status from booth_requests "
+                + "where booth_request_id = ?", String.class, fixture.requestId()))
+                .isEqualTo("SELECTED");
         assertThat(jdbc.queryForObject("select count(*) from booth_assignments assignment "
                 + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
                 + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))

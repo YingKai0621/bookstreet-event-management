@@ -1,7 +1,6 @@
 package com.swp391.bookstreet.payment.service;
 
 import com.swp391.bookstreet.payment.config.VnPayProperties;
-import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.gateway.VnPayGateway;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import java.time.Clock;
@@ -36,25 +35,24 @@ public class VnPayReconciliationWorker {
         Instant startedAt = clock.instant();
         Instant orphanCutoff = startedAt.minus(properties.getReconciliationDelaySeconds(),
                 ChronoUnit.SECONDS);
-        for (BoothPayment payment : paymentRepository.findCheckoutCreationOrphans(orphanCutoff)) {
-            settlementService.failCheckoutCreationOrphan(payment.getBoothPaymentId(),
-                    orphanCutoff, clock.instant());
+        for (Long paymentId : paymentRepository.findCheckoutCreationOrphanIds(orphanCutoff)) {
+            settlementService.failCheckoutCreationOrphan(paymentId, orphanCutoff,
+                    clock.instant());
         }
 
         Instant eligibleExpiry = startedAt.minus(properties.getReconciliationDelaySeconds(),
                 ChronoUnit.SECONDS);
         Instant eligibleLastQuery = startedAt.minus(properties.getQueryMinIntervalSeconds(),
                 ChronoUnit.SECONDS);
-        for (BoothPayment payment : paymentRepository.findReconciliationCandidates(
+        for (Long paymentId : paymentRepository.findReconciliationCandidateIds(
                 eligibleExpiry, eligibleLastQuery)) {
-            reconcileOne(payment);
+            reconcileOne(paymentId);
         }
     }
 
-    private void reconcileOne(BoothPayment payment) {
+    private void reconcileOne(Long paymentId) {
         Instant queriedAt = clock.instant();
-        PaymentQueryClaim claim = settlementService.claimQuery(payment.getBoothPaymentId(),
-                queriedAt);
+        PaymentQueryClaim claim = settlementService.claimQuery(paymentId, queriedAt);
         if (claim == null) return;
         try {
             var result = gateway.query(claim.paymentId(), claim.amount(), "127.0.0.1",
