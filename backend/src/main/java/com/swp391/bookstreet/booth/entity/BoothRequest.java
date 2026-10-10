@@ -59,6 +59,9 @@ public class BoothRequest {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
     @OneToOne(mappedBy = "boothRequest", fetch = FetchType.LAZY)
     private BoothHold hold;
 
@@ -166,6 +169,10 @@ public class BoothRequest {
 
     public Instant getWithdrawnAt() {
         return withdrawnAt;
+    }
+
+    public Instant getCancelledAt() {
+        return cancelledAt;
     }
 
     public BoothHold getHold() {

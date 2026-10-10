@@ -23,6 +23,8 @@ public record EventResponse(
         Integer maxActivitiesPerPartner,
         String bannerUrl,
         EventStatus status,
+        Instant cancelledAt,
+        String cancellationReason,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -43,7 +45,10 @@ public record EventResponse(
                 event.getMaxBoothsPerPartner(),
                 event.getMaxActivitiesPerPartner(),
                 event.getBannerUrl(),
-                event.getStatus(), event.getCreatedAt(), event.getUpdatedAt());
+                event.getStatus(),
+                event.getCancelledAt(),
+                event.getCancellationReason(),
+                event.getCreatedAt(), event.getUpdatedAt());
     }
 }
 

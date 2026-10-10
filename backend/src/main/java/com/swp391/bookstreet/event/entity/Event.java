@@ -63,6 +63,12 @@ public class Event {
     @Column(name = "status", nullable = false, length = 20)
     private EventStatus status;
 
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "cancellation_reason", columnDefinition = "text")
+    private String cancellationReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -135,6 +141,10 @@ public class Event {
 
     public EventStatus getStatus() { return status; }
     public void setStatus(EventStatus status) { this.status = status; }
+
+    public Instant getCancelledAt() { return cancelledAt; }
+
+    public String getCancellationReason() { return cancellationReason; }
 
     public Instant getCreatedAt() { return createdAt; }
 

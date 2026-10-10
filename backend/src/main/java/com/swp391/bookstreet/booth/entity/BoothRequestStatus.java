@@ -7,5 +7,6 @@ public enum BoothRequestStatus {
     PAYMENT_EXPIRED,
     NOT_SELECTED,
     REJECTED,
-    WITHDRAWN
+    WITHDRAWN,
+    CANCELLED
 }

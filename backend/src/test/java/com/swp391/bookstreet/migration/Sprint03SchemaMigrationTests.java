@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class Sprint03SchemaMigrationTests {
                 .defaultSchema(schema)
                 .schemas(schema)
                 .createSchemas(true)
+                .target(MigrationVersion.fromVersion("7"))
                 .load();
 
         flyway.migrate();

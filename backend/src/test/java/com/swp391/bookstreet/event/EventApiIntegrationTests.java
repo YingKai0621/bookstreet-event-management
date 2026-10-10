@@ -439,7 +439,16 @@ class EventApiIntegrationTests {
     void allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne() throws Exception {
         long id = createEvent();
         for (String eventStatus : List.of("ONGOING", "COMPLETED", "CANCELLED")) {
-            jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
+            if (eventStatus.equals("CANCELLED")) {
+                jdbc.update("""
+                        update events
+                        set status = ?, cancelled_at = current_timestamp,
+                            cancellation_reason = 'Cancelled integration-test fixture.'
+                        where event_id = ?
+                        """, eventStatus, id);
+            } else {
+                jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
+            }
             mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isNotFound());
             mvc.perform(get(PUBLIC)).andExpect(status().isOk())
                     .andExpect(jsonPath("$.totalElements").value(0));
