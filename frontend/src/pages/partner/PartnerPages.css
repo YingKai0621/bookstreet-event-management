@@ -1409,6 +1409,12 @@
   box-shadow: 0 4px 14px rgba(23, 36, 33, 0.06);
 }
 
+.event-app-summary-card.is-selected {
+  border-color: #17382E;
+  background: #FAFBFB;
+  box-shadow: 0 4px 12px rgba(23, 56, 46, 0.08);
+}
+
 .event-app-icon-wrap {
   width: 44px;
   height: 44px;
