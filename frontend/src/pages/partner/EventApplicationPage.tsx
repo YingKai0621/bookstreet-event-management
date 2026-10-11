@@ -8,7 +8,6 @@ import {
   MessageSquare,
   RefreshCw,
   Send,
-  Sparkles,
   Undo2,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -294,7 +293,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                       </div>
                     </div>
 
-                    {!existingApplication ? (
+                    {!existingApplication && (
                       <div className="event-app-form-box">
                         <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.85rem', color: '#1E293B' }}>
                           Ghi chú đăng ký (không bắt buộc)
@@ -324,11 +323,6 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                             <span style={{ color: '#B45309', fontSize: '0.82rem', fontWeight: 600 }}>Đã đóng đăng ký</span>
                           )}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="event-app-applied-banner">
-                        <Sparkles size={15} />
-                        <span>Bạn đã gửi hồ sơ tham gia sự kiện này (Trạng thái: {STATUS_LABELS[existingApplication.status]}).</span>
                       </div>
                     )}
                   </div>
