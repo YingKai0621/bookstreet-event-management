@@ -18,6 +18,7 @@ import { EventsExperience } from './pages/public/EventsExperience';
 import { HeritageExperience } from './pages/public/HeritageExperience';
 import { LoginPage } from './pages/public/LoginPage';
 import { RegisterPage } from './pages/public/RegisterPage';
+import { VnPayReturnPage } from './pages/public/VnPayReturnPage';
 import { PortalLoginPage } from './pages/organizer/PortalLoginPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
@@ -81,6 +82,7 @@ export function App() {
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isPartnerRoute = location.pathname.startsWith('/partner');
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isVnPayReturnRoute = location.pathname === '/payment/vnpay/return';
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
   const isPortalRoute = location.pathname === '/portal' || location.pathname === '/organizer';
   const isAuthenticated = authenticationStatus === 'authenticated';
@@ -427,6 +429,11 @@ export function App() {
         onRegisterSuccess={() => navigate('/login')}
       />
     );
+  }
+
+  // NẾU ĐANG TRUY CẬP ROUTE /payment/vnpay/return (XÁC THỰC KẾT QUẢ THANH TOÁN VNPAY)
+  if (isVnPayReturnRoute) {
+    return <VnPayReturnPage language={language} />;
   }
 
   // NẾU ĐANG TRUY CẬP KHU VỰC ĐỘC GIẢ / PARTICIPANT PORTAL (THEO BẢN PHÁC THẢO 9 MÀN HÌNH)

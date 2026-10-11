@@ -23,6 +23,7 @@ import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, EventBooth } from '../../types/booth';
 import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
 import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
+import { BoothPaymentCheckoutCard } from '../../components/partner/BoothPaymentCheckoutCard';
 import './PartnerPages.css';
 
 interface Props {
@@ -443,6 +444,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                       )}
                     </div>
                   )}
+
+                  {/* Sprint 3: Thanh toán giữ chỗ gian hàng qua VNPay (FE 1) */}
+                  <BoothPaymentCheckoutCard request={request} now={now} />
 
                   {request.reviewNote && (
                     <div className="s2-organizer-feedback">
