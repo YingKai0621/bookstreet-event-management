@@ -15,6 +15,7 @@ import com.swp391.bookstreet.event.security.EventCurrentUser;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,8 @@ public class EventService {
     private final BoothPaymentRepository boothPaymentRepository;
     private final BoothAssignmentRepository boothAssignmentRepository;
     private final BoothRequestRepository boothRequestRepository;
+    private final PartnerEventApplicationRepository partnerApplicationRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
@@ -61,6 +65,8 @@ public class EventService {
             BoothPaymentRepository boothPaymentRepository,
             BoothAssignmentRepository boothAssignmentRepository,
             BoothRequestRepository boothRequestRepository,
+            PartnerEventApplicationRepository partnerApplicationRepository,
+            ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.repository = repository;
         this.currentUser = currentUser;
@@ -71,6 +77,8 @@ public class EventService {
         this.boothPaymentRepository = boothPaymentRepository;
         this.boothAssignmentRepository = boothAssignmentRepository;
         this.boothRequestRepository = boothRequestRepository;
+        this.partnerApplicationRepository = partnerApplicationRepository;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -211,6 +219,10 @@ public class EventService {
                 .forEach(hold -> hold.release(now));
         event.cancel(reason, now);
         repository.flush();
+        eventPublisher.publishEvent(new EventCancellationMessageRequested(
+                event.getEventId(), event.getName(), event.getCancelledAt(),
+                event.getCancellationReason(), partnerApplicationRepository
+                        .findEventCancellationRecipientEmails(event.getEventId())));
         return EventResponse.from(event);
     }
 
