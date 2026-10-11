@@ -1,5 +1,8 @@
 package com.swp391.bookstreet.partner.service;
 
+import com.swp391.bookstreet.event.entity.Event;
+import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.partner.dto.OrganizerApplicationResponse;
 import com.swp391.bookstreet.partner.dto.ReviewPartnerApplicationRequest;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
@@ -8,17 +11,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.time.Clock;
 
 @Service
 public class OrganizerApplicationReviewService {
 
     private final PartnerEventApplicationRepository applicationRepository;
+    private final EventRootLockService eventRootLockService;
+    private final Clock clock;
 
     public OrganizerApplicationReviewService(
-            PartnerEventApplicationRepository applicationRepository
+            PartnerEventApplicationRepository applicationRepository,
+            EventRootLockService eventRootLockService,
+            Clock clock
     ) {
         this.applicationRepository = applicationRepository;
+        this.eventRootLockService = eventRootLockService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -55,24 +64,42 @@ public class OrganizerApplicationReviewService {
             ReviewPartnerApplicationRequest request,
             PartnerEventApplication.ApplicationStatus decision
     ) {
-        PartnerEventApplication application = applicationRepository
-                .findWithLockById(applicationId)
+        Long eventId = applicationRepository.findEventIdById(applicationId)
                 .orElseThrow(() -> new PartnerApiException(
                         HttpStatus.NOT_FOUND,
                         "APPLICATION_NOT_FOUND",
                         "Application was not found."
                 ));
 
-        if (!applicationRepository.existsByIdAndEventOrganizerUserId(
-                applicationId,
-                organizerUserId
-        )) {
+        Event event = eventRootLockService.lock(eventId)
+                .orElseThrow(() -> new PartnerApiException(
+                        HttpStatus.NOT_FOUND,
+                        "APPLICATION_NOT_FOUND",
+                        "Application was not found."
+                ));
+        if (!event.getOrganizerUserId().equals(organizerUserId)) {
             throw new PartnerApiException(
                     HttpStatus.FORBIDDEN,
                     "EVENT_ACCESS_DENIED",
                     "You do not have access to this Event."
             );
         }
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new PartnerApiException(
+                    HttpStatus.CONFLICT,
+                    "EVENT_NOT_ACCEPTING_APPLICATIONS",
+                    "Applications for a Cancelled Event can no longer be reviewed."
+            );
+        }
+
+        PartnerEventApplication application = applicationRepository
+                .findWithLockById(applicationId)
+                .filter(candidate -> candidate.getEventId().equals(eventId))
+                .orElseThrow(() -> new PartnerApiException(
+                        HttpStatus.NOT_FOUND,
+                        "APPLICATION_NOT_FOUND",
+                        "Application was not found."
+                ));
 
         if (application.getStatus() != PartnerEventApplication.ApplicationStatus.PENDING) {
             throw new PartnerApiException(
@@ -84,9 +111,9 @@ public class OrganizerApplicationReviewService {
 
         String reviewNote = request == null ? null : request.reviewNote();
         if (decision == PartnerEventApplication.ApplicationStatus.APPROVED) {
-            application.approve(reviewNote, Instant.now());
+            application.approve(reviewNote, clock.instant());
         } else {
-            application.reject(reviewNote, Instant.now());
+            application.reject(reviewNote, clock.instant());
         }
 
         return new OrganizerApplicationResponse(

@@ -15,6 +15,10 @@ import org.springframework.data.jpa.repository.EntityGraph;
 public interface PartnerEventApplicationRepository
         extends JpaRepository<PartnerEventApplication, Long> {
 
+    @Query("SELECT application.eventId FROM PartnerEventApplication application "
+            + "WHERE application.id = :applicationId")
+    Optional<Long> findEventIdById(@Param("applicationId") Long applicationId);
+
     @EntityGraph(attributePaths = "partnerOrganization")
     Optional<PartnerEventApplication> findByEventIdAndPartnerOrganization_RepresentativeUserId(
             Long eventId,

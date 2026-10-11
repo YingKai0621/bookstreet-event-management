@@ -143,6 +143,37 @@ class PartnerSprint01IntegrationTests {
     }
 
     @Test
+    void submissionRechecksTimedLifecycleUnderRootLock() throws Exception {
+        User partner = user(RoleCode.PARTNER);
+        User organizer = user(RoleCode.ORGANIZER);
+        organization(partner);
+        long eventId = jdbc.queryForObject("""
+                INSERT INTO events (organizer_user_id, name, start_at, end_at,
+                    partner_application_deadline_at, booth_payment_window_minutes,
+                    max_booths_per_partner, max_activities_per_partner, status, created_at, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP - INTERVAL '1 minute',
+                    CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '1 hour',
+                    60, 2, 5, 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING event_id
+                """, Long.class, organizer.getId(), "Started Test " + UUID.randomUUID());
+
+        mvc.perform(post("/api/v1/events/{eventId}/applications", eventId)
+                        .with(as(partner)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_ACCEPTING_APPLICATIONS"));
+
+        // The failed submit rolls back its transaction, including the in-memory lifecycle
+        // advance. The scheduler persists ONGOING separately; the request-time guard still
+        // rejects work from the effective ONGOING state.
+        assertThat(jdbc.queryForObject("SELECT status FROM events WHERE event_id = ?",
+                String.class, eventId)).isEqualTo("PUBLISHED");
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM partner_event_applications WHERE event_id = ?",
+                Long.class, eventId)).isZero();
+    }
+
+    @Test
     void organizerOwnershipReviewAndRepeatTransitionFollowAcceptanceCriteria() throws Exception {
         User organizer = user(RoleCode.ORGANIZER);
         User otherOrganizer = user(RoleCode.ORGANIZER);
@@ -196,6 +227,44 @@ class PartnerSprint01IntegrationTests {
                 .andExpect(jsonPath("$.status").value("APPROVED"));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM partner_event_applications WHERE event_id = ?",
                 Long.class, eventId)).isEqualTo(2);
+    }
+
+    @Test
+    void organizerCannotReviewApplicationAfterEventCancellation() throws Exception {
+        User organizer = user(RoleCode.ORGANIZER);
+        User partner = user(RoleCode.PARTNER);
+        organization(partner);
+        Long organizationId = jdbc.queryForObject("""
+                SELECT partner_organization_id
+                FROM partner_organizations
+                WHERE representative_user_id = ?
+                """, Long.class, partner.getId());
+        long eventId = jdbc.queryForObject("""
+                INSERT INTO events (organizer_user_id, name, start_at, end_at,
+                    partner_application_deadline_at, booth_payment_window_minutes,
+                    max_booths_per_partner, max_activities_per_partner, status,
+                    cancelled_at, cancellation_reason, created_at, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP + INTERVAL '10 days',
+                    CURRENT_TIMESTAMP + INTERVAL '11 days', CURRENT_TIMESTAMP + INTERVAL '5 days',
+                    60, 2, 5, 'CANCELLED', CURRENT_TIMESTAMP,
+                    'Cancelled for Partner review test.', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING event_id
+                """, Long.class, organizer.getId(), "Cancelled Test " + UUID.randomUUID());
+        long applicationId = jdbc.queryForObject("""
+                INSERT INTO partner_event_applications (partner_organization_id, event_id,
+                    status, application_note, submitted_at)
+                VALUES (?, ?, 'PENDING', 'Pending before cancellation', CURRENT_TIMESTAMP)
+                RETURNING application_id
+                """, Long.class, organizationId, eventId);
+
+        mvc.perform(post("/api/v1/organizer/applications/{id}/approve", applicationId)
+                        .with(as(organizer)).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_ACCEPTING_APPLICATIONS"));
+
+        assertThat(jdbc.queryForObject("""
+                SELECT status FROM partner_event_applications WHERE application_id = ?
+                """, String.class, applicationId)).isEqualTo("PENDING");
     }
 
     @Test
