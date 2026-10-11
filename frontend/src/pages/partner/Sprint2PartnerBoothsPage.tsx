@@ -309,6 +309,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           <div className="s2-request-list">
             {requests.map(request => {
               const isHoldActive = request.hold?.status === 'ACTIVE';
+              const boothInfo = booths.find(b => b.booth.boothId === request.boothId);
+              const boothName = boothInfo?.booth.name;
+
               return (
                 <article
                   className={`s2-request-card ${request.status === 'PENDING' ? 'is-pending' : ''} ${isHoldActive ? 'has-active-hold' : ''}`}
@@ -320,6 +323,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         <span className="s2-booth-tag">
                           <Store size={15} />
                           Gian {request.boothCode}
+                          {boothName ? ` • ${boothName}` : ''}
                         </span>
                         <span className={`s2-status request-${request.status.toLowerCase()}`}>
                           {requestStatusLabel[request.status]}
@@ -395,8 +399,12 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     </div>
                   )}
 
-                  {request.hold && (
-                    <div className={`s2-hold-box ${request.hold.status === 'ACTIVE' ? 'is-active' : 'is-inactive'}`}>
+                  {/* Khi gian hàng đã được chọn và đang trong thời gian giữ chỗ: Thẻ thanh toán chuyên nghiệp VNPay */}
+                  {request.status === 'SELECTED' && isHoldActive ? (
+                    <BoothPaymentCheckoutCard request={request} now={now} boothName={boothName} />
+                  ) : request.hold ? (
+                    /* Lịch sử giữ chỗ khi đã giải phóng hoặc hết hạn */
+                    <div className="s2-hold-box is-inactive">
                       <div className="s2-hold-box-header">
                         <div className="s2-hold-price-area">
                           <span className="s2-hold-price-label">Giá thuê giữ chỗ</span>
@@ -404,7 +412,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         </div>
                         <div className="s2-hold-status-badge">
                           <span className={`s2-hold-status-pill ${request.hold.status.toLowerCase()}`}>
-                            {request.hold.status === 'ACTIVE' ? 'Đang giữ chỗ (ACTIVE)' : `Giữ chỗ: ${request.hold.status}`}
+                            {request.hold.status === 'EXPIRED' ? 'Đã hết hạn giữ chỗ' : 'Đã giải phóng'}
                           </span>
                         </div>
                       </div>
@@ -421,38 +429,18 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         {request.hold.releasedAt && (
                           <div className="s2-hold-meta-item">
                             <Clock3 size={14} />
-                            <span>Giải phóng: <strong>{dateTime(request.hold.releasedAt)}</strong></span>
+                            <span>Giải phóng lúc: <strong>{dateTime(request.hold.releasedAt)}</strong></span>
                           </div>
                         )}
                       </div>
-
-                      {request.hold.status === 'ACTIVE' && (
-                        <div className="s2-hold-countdown-banner">
-                          <div className="s2-countdown-icon-box">
-                            <Timer size={22} className="s2-pulse" />
-                          </div>
-                          <div className="s2-countdown-info">
-                            <div className="s2-countdown-title">Thời gian giữ chỗ thanh toán còn lại:</div>
-                            <div className="s2-countdown-value">
-                              {now === 0 ? 'Đang đồng bộ thời gian…' : remainingTime(request.hold.expiresAt, now)}
-                            </div>
-                            <div className="s2-countdown-hint">
-                              Đồng hồ đếm ngược mang tính tham khảo; trạng thái ghi nhận trên hệ thống là quyết định cuối cùng.
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  )}
-
-                  {/* Sprint 3: Thanh toán giữ chỗ gian hàng qua VNPay (FE 1) */}
-                  <BoothPaymentCheckoutCard request={request} now={now} />
+                  ) : null}
 
                   {request.reviewNote && (
                     <div className="s2-organizer-feedback">
                       <div className="s2-feedback-header">
                         <CheckCircle2 size={15} />
-                        <span>Phản hồi từ Ban tổ chức (Organizer)</span>
+                        <span>Phản hồi từ Ban tổ chức</span>
                       </div>
                       <div className="s2-feedback-body">{request.reviewNote}</div>
                     </div>
