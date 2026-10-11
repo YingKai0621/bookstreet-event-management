@@ -3,7 +3,9 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ChevronRight,
   Clock3,
+  CreditCard,
   DollarSign,
   Info,
   Loader2,
@@ -15,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import '../../components/organizer/Sprint2Booth.css';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
@@ -83,7 +86,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     () => applications.filter(application => application.status === 'approved'),
     [applications],
   );
-  const [selectedEventId, _setSelectedEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [tab, setTab] = useState<'browse' | 'requests'>('browse');
   const [booths, setBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
@@ -242,6 +245,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         </button>
       </header>
 
+
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
       {success && <div className="s2-alert s2-alert-success" role="status"><Check size={18} />{success}</div>}
 
@@ -346,6 +350,16 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     </div>
                   )}
 
+                  {request.reviewNote && (
+                    <div className="s2-organizer-feedback">
+                      <div className="s2-feedback-header">
+                        <CheckCircle2 size={15} />
+                        <span>Phản hồi từ Ban tổ chức</span>
+                      </div>
+                      <div className="s2-feedback-body">{request.reviewNote}</div>
+                    </div>
+                  )}
+
                   {(request.reviewedAt || request.selectedAt || request.completedAt || request.paymentExpiredAt || request.withdrawnAt) && (
                     <div className="s2-timeline-chips">
                       {request.reviewedAt && (
@@ -399,7 +413,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         </div>
                         <div className="s2-hold-status-badge">
                           <span className={`s2-hold-status-pill ${request.hold.status.toLowerCase()}`}>
-                            {request.hold.status === 'EXPIRED' ? 'Đã hết hạn giữ chỗ' : 'Đã giải phóng'}
+                            {request.hold.status === 'CONSUMED' ? 'Đã cấp gian hàng' : request.hold.status === 'EXPIRED' ? 'Đã hết hạn giữ chỗ' : 'Đã giải phóng'}
                           </span>
                         </div>
                       </div>
@@ -423,13 +437,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     </div>
                   ) : null}
 
-                  {request.reviewNote && (
-                    <div className="s2-organizer-feedback">
-                      <div className="s2-feedback-header">
-                        <CheckCircle2 size={15} />
-                        <span>Phản hồi từ Ban tổ chức</span>
-                      </div>
-                      <div className="s2-feedback-body">{request.reviewNote}</div>
+                  {request.hold && (
+                    <div className="s3-payment-link-wrapper">
+                      <Link to={`/partner/booth-requests/${request.boothRequestId}/payment`} className="s3-payment-details-link">
+                        <CreditCard size={16} />
+                        <span>Xem chi tiết thanh toán & thông tin gian hàng</span>
+                        <ChevronRight size={15} />
+                      </Link>
                     </div>
                   )}
                 </article>

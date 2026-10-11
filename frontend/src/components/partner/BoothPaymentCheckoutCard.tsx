@@ -7,11 +7,11 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import {
   getOrCreatePaymentIdempotencyKey,
-  regeneratePaymentIdempotencyKey,
+  getRetryPaymentIdempotencyKey,
 } from '../../services/idempotency';
 import { paymentApi } from '../../services/paymentApi';
 import type { BoothRequest } from '../../types/booth';
@@ -22,6 +22,7 @@ interface Props {
   request: BoothRequest;
   now: number;
   boothName?: string;
+  onPaymentCreated?: () => void;
 }
 
 function money(value: number | null): string {
@@ -82,9 +83,12 @@ function mapErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Lỗi kết nối đến máy chủ thanh toán.';
 }
 
-export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothName }) => {
+export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothName, onPaymentCreated }) => {
   const [latestPayment, setLatestPayment] = useState<BoothPayment | null>(null);
-  const [isLoadingPayments, setIsLoadingPayments] = useState(false);
+  const [isLoadingPayments, setIsLoadingPayments] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
+  const [historyBlocked, setHistoryBlocked] = useState(false);
+  const attemptedKey = useRef<{ source: string; key: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reconcilingNotice, setReconcilingNotice] = useState<string | null>(null);
@@ -101,36 +105,44 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
   // Tải thông tin lần thanh toán gần nhất
   useEffect(() => {
     let active = true;
+    let timer: number | undefined;
     if (!isSelected) return;
-
-    setIsLoadingPayments(true);
-    paymentApi
-      .listPayments(request.boothRequestId, { page: 0, size: 1, sort: 'createdAt,desc' })
-      .then(res => {
+    function load() {
+      paymentApi
+      .listAllPayments(request.boothRequestId)
+      .then(payments => {
         if (!active) return;
-        if (res.content.length > 0) {
-          setLatestPayment(res.content[0]);
-        }
+        setLatestPayment(payments[0] ?? null);
+        setHistoryBlocked(payments.some(payment => payment.reconciliationRequired || payment.status === 'SUCCESS'));
+        setHistoryError(false);
       })
       .catch(() => {
-        // Bỏ qua lỗi danh sách nếu chưa có payment nào
+        if (active) setHistoryError(true);
       })
       .finally(() => {
-        if (active) setIsLoadingPayments(false);
+        if (active) {
+          setIsLoadingPayments(false);
+          timer = window.setTimeout(load, 5000);
+        }
       });
-
+    }
+    load();
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [request.boothRequestId, isSelected]);
 
   // Xác định xem đây là lần thanh toán đầu hay retry
   const isRetry =
     latestPayment?.status === 'FAILED' || latestPayment?.status === 'TIMEOUT';
+  const blocked = historyBlocked || latestPayment?.reconciliationRequired || latestPayment?.status === 'SUCCESS';
+  const cannotStart = isLoadingPayments || historyError || blocked || isExpired
+    || (isExpiringSoon && latestPayment?.status !== 'PENDING');
 
   const handleCheckout = async () => {
-    if (isSubmitting) return;
-    if (isExpiringSoon) {
+    if (isSubmitting || cannotStart) return;
+    if (isExpiringSoon && latestPayment?.status !== 'PENDING') {
       setErrorMessage('Thời gian giữ chỗ còn dưới 5 phút, không thể tạo phiên thanh toán mới.');
       return;
     }
@@ -145,11 +157,18 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
 
     try {
       // Idempotency: Retry sau FAILED/TIMEOUT sinh key mới; lần đầu / replay tái sử dụng key
-      const idempotencyKey = isRetry
-        ? regeneratePaymentIdempotencyKey(request.boothRequestId)
-        : getOrCreatePaymentIdempotencyKey(request.boothRequestId);
+      const source = `${request.boothRequestId}:${latestPayment?.boothPaymentId ?? 'new'}`;
+      if (attemptedKey.current?.source !== source) {
+        attemptedKey.current = { source, key: latestPayment?.status === 'PENDING'
+          ? latestPayment.idempotencyKey
+          : isRetry && latestPayment
+            ? getRetryPaymentIdempotencyKey(request.boothRequestId, latestPayment.boothPaymentId)
+            : getOrCreatePaymentIdempotencyKey(request.boothRequestId) };
+      }
+      const idempotencyKey = attemptedKey.current.key;
 
       const response = await paymentApi.initiatePayment(request.boothRequestId, idempotencyKey);
+      setLatestPayment(response.payment);
 
       // Nếu có checkoutUrl: chuyển hướng trình duyệt trực tiếp sang cổng VNPay
       if (response.checkoutUrl) {
@@ -158,7 +177,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
       }
 
       // Trường hợp 202 Accepted: backend đang đối soát (resolution = RECONCILING)
-      if (response.resolution === 'RECONCILING' || !response.checkoutUrl) {
+      if (response.payment.status === 'PENDING' && !response.checkoutUrl) {
         setReconcilingNotice(
           'Giao dịch trước đó đang được đối soát với cổng thanh toán VNPay. Vui lòng kiểm tra lại sau ít phút.',
         );
@@ -166,6 +185,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
           setLatestPayment(response.payment);
         }
       }
+      onPaymentCreated?.();
     } catch (error) {
       setErrorMessage(mapErrorMessage(error));
     } finally {
@@ -178,36 +198,30 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
   }
 
   const remainingText = formatRemainingTime(hold.expiresAt, now);
+  const pending = latestPayment?.status === 'PENDING';
+  const needsReview = historyBlocked && latestPayment?.status !== 'SUCCESS';
+  const statusLabel = isLoadingPayments ? 'Đang kiểm tra' : needsReview ? 'Đang đối soát'
+    : latestPayment?.status === 'SUCCESS' ? 'Đã thanh toán' : pending ? 'Chờ xác nhận'
+      : latestPayment?.status === 'FAILED' ? 'Thanh toán thất bại'
+        : latestPayment?.status === 'TIMEOUT' ? 'Phiên đã hết hạn' : 'Chưa thanh toán';
 
   return (
-    <div className="s3-checkout-card s2-hold-card" data-testid="booth-payment-checkout-card">
+    <div className="s3-checkout-card" data-testid="booth-payment-checkout-card">
       {/* Header thanh toán */}
       <div className="s3-checkout-header">
         <div className="s3-checkout-title-group">
-          <div className="s3-checkout-icon-badge">
-            <CreditCard size={20} />
-          </div>
           <div>
-            <h3 className="s3-checkout-title">Thanh toán giữ chỗ gian hàng</h3>
-            <p className="s3-checkout-subtitle">Cổng thanh toán điện tử VNPay</p>
+            <h3 className="s3-checkout-title">Thanh toán gian hàng</h3>
+            <p className="s3-checkout-subtitle">{request.boothCode}{boothName ? ` · ${boothName}` : ''}</p>
           </div>
         </div>
         <div className="s3-checkout-status-pill">
-          <span className="s3-status-dot" />
-          <span>Chờ thanh toán</span>
+          <span>{statusLabel}</span>
         </div>
       </div>
 
       {/* Chi tiết đơn thanh toán */}
       <div className="s3-checkout-invoice">
-        <div className="s3-invoice-row">
-          <span className="s3-invoice-label">Gian hàng đăng ký</span>
-          <span className="s3-invoice-value">
-            <strong>Gian {request.boothCode}</strong>
-            {boothName ? <span className="s3-booth-subname"> — {boothName}</span> : null}
-          </span>
-        </div>
-
         <div className="s3-invoice-row">
           <span className="s3-invoice-label">Hạn chót thanh toán</span>
           <span className="s3-invoice-value">{dateTime(hold.expiresAt)}</span>
@@ -225,11 +239,6 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
           <span className="s3-invoice-label">Phương thức thanh toán</span>
           <div className="s3-invoice-methods">
             <span className="s3-method-main">Cổng thanh toán VNPay</span>
-            <div className="s3-method-tags">
-              <span className="s3-method-tag">VNPAY-QR</span>
-              <span className="s3-method-tag">Thẻ ATM / Banking</span>
-              <span className="s3-method-tag">Visa / Mastercard</span>
-            </div>
           </div>
         </div>
 
@@ -238,7 +247,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
         <div className="s3-invoice-row s3-total-row">
           <div className="s3-total-label-wrap">
             <span className="s3-total-title">Tổng tiền thanh toán</span>
-            <span className="s3-total-subtitle">Giá giữ chỗ đã khóa</span>
+            <span className="s3-total-subtitle">Giá thuê được giữ nguyên theo thời điểm duyệt</span>
           </div>
           <div className="s3-total-price">
             {money(hold.lockedRentalPrice)}
@@ -247,28 +256,34 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
       </div>
 
       {/* Thông báo thanh toán trước đó nếu bị lỗi / gián đoạn */}
-      {latestPayment && !isLoadingPayments && latestPayment.status !== 'SUCCESS' && (
-        <div className="s3-checkout-alert s3-alert-warning" role="status">
+      {latestPayment && !isLoadingPayments && latestPayment.status !== 'SUCCESS' && !needsReview && !reconcilingNotice && (
+        <div className={`s3-checkout-alert ${isRetry ? 's3-alert-error' : 's3-alert-warning'}`} role="status">
           <AlertCircle size={16} />
           <span>
             {latestPayment.status === 'PENDING'
               ? 'Đang có một phiên thanh toán đang chờ xử lý. Nếu bạn đã hoàn tất, vui lòng đợi hệ thống cập nhật.'
-              : 'Giao dịch trước đó chưa hoàn tất hoặc bị gián đoạn. Nhấn "Thanh toán lại qua VNPay" để tiếp tục.'}
+              : latestPayment.status === 'TIMEOUT'
+                ? 'Phiên thanh toán trước đã hết hạn. Bạn có thể thử lại nếu thời gian giữ chỗ còn hiệu lực.'
+                : 'Thanh toán trước không thành công. Bạn có thể thử lại nếu thời gian giữ chỗ còn hiệu lực.'}
+            {pending && <small className="s3-pending-help">Tự cập nhật mỗi 5 giây. Chưa thể xác định còn bao nhiêu phút để thử lại; chỉ tạo lần thanh toán mới sau khi hệ thống xác nhận kết quả.</small>}
+            {isRetry && latestPayment.failureMessage && <small className="s3-pending-help">{latestPayment.failureMessage}</small>}
           </span>
         </div>
       )}
 
       {/* Cảnh báo khi thời gian còn dưới 5 phút */}
-      {isExpiringSoon && (
+      {isExpiringSoon && !pending && !needsReview && (
         <div className="s3-checkout-alert s3-alert-warning" role="alert">
           <AlertCircle size={16} />
           <span>
-            <strong>Chú ý:</strong> Thời gian giữ chỗ còn dưới 5 phút. Vui lòng thanh toán ngay để tránh mất vị trí gian hàng.
+              <strong>Chú ý:</strong> Thời gian giữ chỗ còn dưới 5 phút. Chỉ có thể tiếp tục một phiên thanh toán đang còn hiệu lực; không thể tạo phiên mới.
           </span>
         </div>
       )}
 
       {/* Thông báo đối soát */}
+      {historyError && <div className="s3-checkout-alert s3-alert-error" role="alert">Không thể kiểm tra giao dịch trước đó. Hệ thống sẽ thử lại trước khi cho phép thanh toán.</div>}
+      {historyBlocked && latestPayment?.status !== 'SUCCESS' && <div className="s3-checkout-alert s3-alert-warning" role="status">Giao dịch cần đối soát. Không thể thanh toán lại cho đến khi hệ thống xác định kết quả.</div>}
       {reconcilingNotice && (
         <div className="s3-checkout-alert s3-alert-info" role="status">
           <ShieldCheck size={16} />
@@ -295,7 +310,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
             type="button"
             className="s3-btn-checkout s3-btn-retry"
             onClick={handleCheckout}
-            disabled={isSubmitting || isExpiringSoon || isExpired}
+            disabled={isSubmitting || cannotStart}
             data-testid="retry-payment-button"
             data-testid-request={request.boothRequestId}
           >
@@ -316,7 +331,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
             type="button"
             className="s3-btn-checkout s3-btn-primary"
             onClick={handleCheckout}
-            disabled={isSubmitting || isExpiringSoon || isExpired}
+            disabled={isSubmitting || cannotStart}
             data-testid="pay-booth-button"
             data-testid-request={request.boothRequestId}
           >
@@ -328,7 +343,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
             ) : (
               <>
                 <CreditCard size={18} />
-                <span>Thanh toán ngay qua VNPay</span>
+                <span>{latestPayment?.status === 'PENDING' ? 'Tiếp tục phiên thanh toán' : 'Thanh toán ngay qua VNPay'}</span>
                 <ArrowRight size={16} />
               </>
             )}
