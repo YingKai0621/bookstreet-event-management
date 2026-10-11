@@ -16,6 +16,22 @@ function withQuery(path: string, values: Record<string, string | number | boolea
 }
 
 export const paymentApi = {
+  async listAllPayments(boothRequestId: number): Promise<BoothPayment[]> {
+    const items: BoothPayment[] = [];
+    let page = 0;
+    let totalPages = 1;
+    do {
+      const result = await apiClient.get<PageResponse<BoothPayment>>(
+        withQuery(`/partner/booth-requests/${boothRequestId}/payments`, {
+          page, size: 100, sort: 'createdAt,desc',
+        }),
+      );
+      items.push(...result.content);
+      totalPages = result.totalPages;
+      page++;
+    } while (page < totalPages);
+    return items;
+  },
   /**
    * Tạo phiên thanh toán mới hoặc replay idempotent cho yêu cầu gian hàng đã được chọn (SELECTED).
    * Gửi kèm UUID Idempotency-Key trong header.

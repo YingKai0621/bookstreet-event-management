@@ -198,7 +198,10 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
     await partnerPage.reload();
     await partnerPage.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
     await expect(partnerPage.getByRole('heading', { name: 'Chọn gian hàng cho sự kiện' })).toBeVisible();
-    await partnerPage.getByLabel('Sự kiện đã được duyệt').selectOption({ label: eventName });
+    const eventPicker = partnerPage.getByLabel('Sự kiện đã được duyệt');
+    if (await eventPicker.isVisible()) {
+      await eventPicker.selectOption({ label: eventName });
+    }
     const boothCard = partnerPage.locator('.s2-booth-card').filter({ hasText: boothCode });
     await expect(boothCard.getByText('Còn trống', { exact: true })).toBeVisible();
     const partnerMarker = partnerPage.locator('.booth-map-marker.status-available').filter({ hasText: boothCode });

@@ -40,6 +40,20 @@ export function regeneratePaymentIdempotencyKey(boothRequestId: number): string 
   return newKey;
 }
 
+// Keep one retry key per terminal source attempt, including after a network error or reload.
+export function getRetryPaymentIdempotencyKey(boothRequestId: number, paymentId: number): string {
+  const retryKey = `${storageKey(boothRequestId)}_retry_${paymentId}`;
+  try {
+    const existing = sessionStorage.getItem(retryKey);
+    if (existing && isValidUuid(existing)) return existing;
+    const key = generateUuidV4();
+    sessionStorage.setItem(retryKey, key);
+    return key;
+  } catch {
+    return generateUuidV4();
+  }
+}
+
 export function clearPaymentIdempotencyKey(boothRequestId: number): void {
   try {
     sessionStorage.removeItem(storageKey(boothRequestId));

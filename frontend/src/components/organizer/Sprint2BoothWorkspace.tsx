@@ -7,8 +7,10 @@ import {
   Layers,
   Loader2,
   MapPin,
+  MessageSquare,
   Plus,
   RefreshCw,
+  ShieldCheck,
   Store,
   X,
 } from 'lucide-react';
@@ -622,13 +624,29 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
                       </div>
 
                       {req.hold && (
-                        <div className="s2-hold-card" style={{ marginTop: '0.6rem' }}>
+                        <div className="s2-hold-card" style={{ marginTop: '0.4rem' }}>
                           <div className="s2-hold-summary">
-                            <Clock3 size={16} />
-                            <div>
-                              <strong>Giá giữ chỗ: {money(req.hold.lockedRentalPrice)}</strong>
-                              <span>Trạng thái giữ chỗ: {req.hold.status} · Tạo: {dateTime(req.hold.createdAt)} · Hạn thanh toán: {dateTime(req.hold.expiresAt)}</span>
-                              {req.hold.releasedAt && <span>Giải phóng: {dateTime(req.hold.releasedAt)}</span>}
+                            <div className="s2-hold-summary-main">
+                              <span className="s2-hold-price-label">Giá giữ chỗ:</span>
+                              <strong className="s2-hold-price-val">{money(req.hold.lockedRentalPrice)}</strong>
+                              <span className={`s2-hold-status-badge status-${req.hold.status.toLowerCase()}`}>
+                                Trạng thái: {req.hold.status}
+                              </span>
+                            </div>
+                            <div className="s2-hold-meta-row">
+                              <span className="s2-hold-meta-point">
+                                <Clock3 size={13} />
+                                <span>Tạo: {dateTime(req.hold.createdAt)}</span>
+                              </span>
+                              <span className="s2-hold-meta-point highlight">
+                                <Clock3 size={13} />
+                                <span>Hạn thanh toán: {dateTime(req.hold.expiresAt)}</span>
+                              </span>
+                              {req.hold.releasedAt && (
+                                <span className="s2-hold-meta-point">
+                                  <span>Giải phóng: {dateTime(req.hold.releasedAt)}</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -636,13 +654,21 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
 
                       {req.requestNote && (
                         <div className="s2-request-note-box">
-                          <strong>Ghi chú đăng ký:</strong> {req.requestNote}
+                          <div className="s2-note-header">
+                            <MessageSquare size={14} />
+                            <strong>Ghi chú đăng ký:</strong>
+                          </div>
+                          <div className="s2-note-text">{req.requestNote}</div>
                         </div>
                       )}
 
                       {req.reviewNote && (
                         <div className="s2-request-review-box">
-                          <strong>Phản hồi từ BQL:</strong> {req.reviewNote}
+                          <div className="s2-review-header">
+                            <ShieldCheck size={14} />
+                            <strong>Phản hồi từ BQL:</strong>
+                          </div>
+                          <div className="s2-review-text">{req.reviewNote}</div>
                         </div>
                       )}
                     </div>

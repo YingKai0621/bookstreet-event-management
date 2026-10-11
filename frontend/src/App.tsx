@@ -41,6 +41,8 @@ import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPa
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
 import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
+import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
+import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
@@ -79,7 +81,8 @@ export function App() {
   const isLoginRoute = location.pathname === '/login';
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
-  const isPartnerRoute = location.pathname.startsWith('/partner');
+  const isVnPayReturn = location.pathname === '/payment/vnpay/return';
+  const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
   const isPortalRoute = location.pathname === '/portal' || location.pathname === '/organizer';
@@ -591,7 +594,7 @@ export function App() {
       return (
         <PartnerLoginPage
           language={language}
-          onLoginSuccess={() => navigate('/partner')}
+          onLoginSuccess={() => navigate(location.pathname + location.search, { replace: true })}
         />
       );
     }
@@ -617,6 +620,8 @@ export function App() {
         onLogout={handlePartnerLogout}
       >
         <Routes>
+          <Route path="/payment/vnpay/return" element={<VnPayReturnPage key={location.search} />} />
+          <Route path="/partner/booth-requests/:requestId/payment" element={<BoothPaymentPage key={location.pathname} />} />
           <Route path="/partner" element={
             <PartnerDashboard
               language={language}

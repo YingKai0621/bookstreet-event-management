@@ -11,6 +11,7 @@
     "lint": "oxlint src tests playwright.config.ts vite.config.ts",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "test:sprint3": "playwright test tests/e2e/sprint3-payments-ui.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium"
