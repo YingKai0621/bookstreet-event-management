@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Store,
   Tag,
-  Timer,
   Users,
   X,
 } from 'lucide-react';
@@ -77,17 +76,6 @@ function dateTime(value: string | null): string {
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
-}
-
-function remainingTime(expiresAt: string, now: number): string {
-  const milliseconds = Math.max(0, new Date(expiresAt).getTime() - now);
-  if (milliseconds <= 0) return 'Đang chờ hệ thống cập nhật trạng thái';
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return days > 0 ? `${days} ngày ${hours} giờ ${minutes} phút` : `${hours} giờ ${minutes} phút ${seconds} giây`;
 }
 
 export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
@@ -303,7 +291,6 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           <div className="s2-panel-heading" style={{ marginBottom: '1.25rem' }}>
             <div>
               <h2>Yêu cầu của tôi</h2>
-              <p>Theo dõi quyết định của Ban tổ chức và thời hạn giữ chỗ thanh toán cho từng gian hàng.</p>
             </div>
           </div>
           <div className="s2-request-list">
