@@ -185,56 +185,6 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </div>
       )}
 
-      {/* Thanh thống kê nhanh (Click để chuyển nhanh đến tab tương ứng) */}
-      <div className="event-app-summary-grid">
-        <div
-          className={`event-app-summary-card ${activeTab === 'published_events' ? 'is-selected' : ''}`}
-          onClick={() => setActiveTab('published_events')}
-          style={{ cursor: 'pointer' }}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="event-app-icon-wrap teal">
-            <CalendarDays size={22} />
-          </div>
-          <div className="event-app-stat-info">
-            <span className="event-app-stat-value">{events.length}</span>
-            <span className="event-app-stat-label">Sự kiện đang công bố</span>
-          </div>
-        </div>
-
-        <div
-          className={`event-app-summary-card ${activeTab === 'approved_apps' ? 'is-selected' : ''}`}
-          onClick={() => setActiveTab('approved_apps')}
-          style={{ cursor: 'pointer' }}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="event-app-icon-wrap">
-            <CheckCircle2 size={22} />
-          </div>
-          <div className="event-app-stat-info">
-            <span className="event-app-stat-value">{approvedCount}</span>
-            <span className="event-app-stat-label">Hồ sơ đã được duyệt</span>
-          </div>
-        </div>
-
-        <div
-          className={`event-app-summary-card ${activeTab === 'pending_apps' ? 'is-selected' : ''}`}
-          onClick={() => setActiveTab('pending_apps')}
-          style={{ cursor: 'pointer' }}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="event-app-icon-wrap gold">
-            <Clock3 size={22} />
-          </div>
-          <div className="event-app-stat-info">
-            <span className="event-app-stat-value">{pendingCount}</span>
-            <span className="event-app-stat-label">Hồ sơ đang chờ duyệt</span>
-          </div>
-        </div>
-      </div>
 
       {/* 3 MỤC TABS (Giống như trang Danh sách hoạt động) */}
       <div className="partner-tabs-bar" role="tablist" style={{ marginBottom: '1.75rem' }}>
