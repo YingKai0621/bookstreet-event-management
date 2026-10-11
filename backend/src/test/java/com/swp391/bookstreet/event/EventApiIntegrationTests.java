@@ -31,6 +31,7 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -244,6 +245,86 @@ class EventApiIntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
         mvc.perform(get(PUBLIC)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void publicListUsesLifecycleDiscoveryStatusesAndSupportsHistoryFilter() throws Exception {
+        long publishedId = createEvent();
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long cancelledId = createEvent();
+        createEvent();
+
+        jdbc.update("update events set status = 'PUBLISHED' where event_id = ?", publishedId);
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", ongoingId);
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", completedId);
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled for public discovery test.'
+                where event_id = ?
+                """, cancelledId);
+
+        mvc.perform(get(PUBLIC).param("sort", "eventId,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].eventId",
+                        containsInAnyOrder((int) publishedId, (int) ongoingId)));
+
+        mvc.perform(get(PUBLIC).param("status", "PUBLISHED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(publishedId));
+        mvc.perform(get(PUBLIC).param("status", "ONGOING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(ongoingId));
+        mvc.perform(get(PUBLIC).param("status", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(completedId));
+    }
+
+    @Test
+    void publicListRejectsPrivateAndUnsupportedStatusFilters() throws Exception {
+        for (String requestedStatus : List.of("DRAFT", "CANCELLED", "UNKNOWN", "")) {
+            mvc.perform(get(PUBLIC).param("status", requestedStatus))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_EVENT_STATUS_FILTER"));
+        }
+    }
+
+    @Test
+    void publicDetailExposesPublishedHistoryButKeepsDraftPrivate() throws Exception {
+        long publishedId = createEvent();
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long cancelledId = createEvent();
+        long draftId = createEvent();
+
+        jdbc.update("update events set status = 'PUBLISHED' where event_id = ?", publishedId);
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", ongoingId);
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", completedId);
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled for public detail test.'
+                where event_id = ?
+                """, cancelledId);
+
+        mvc.perform(get(PUBLIC + "/" + publishedId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+        mvc.perform(get(PUBLIC + "/" + ongoingId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ONGOING"));
+        mvc.perform(get(PUBLIC + "/" + completedId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+        mvc.perform(get(PUBLIC + "/" + cancelledId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelledAt").isNotEmpty())
+                .andExpect(jsonPath("$.cancellationReason")
+                        .value("Cancelled for public detail test."));
+        mvc.perform(get(PUBLIC + "/" + draftId)).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
     }
 
     @Test
@@ -988,7 +1069,7 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne() throws Exception {
+    void postPublicationStatusesFollowPublicLifecycleAndCannotBeRepublished() throws Exception {
         long id = createEvent();
         for (String eventStatus : List.of("ONGOING", "COMPLETED", "CANCELLED")) {
             if (eventStatus.equals("CANCELLED")) {
@@ -1001,9 +1082,11 @@ class EventApiIntegrationTests {
             } else {
                 jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
             }
-            mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isNotFound());
+            mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(eventStatus));
             mvc.perform(get(PUBLIC)).andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalElements").value(0));
+                    .andExpect(jsonPath("$.totalElements")
+                            .value(eventStatus.equals("ONGOING") ? 1 : 0));
             mvc.perform(post(ORGANIZER + "/" + id + "/publish")
                             .with(authentication(identity(owner, true, "ORGANIZER"))).with(csrf()))
                     .andExpect(status().isConflict());

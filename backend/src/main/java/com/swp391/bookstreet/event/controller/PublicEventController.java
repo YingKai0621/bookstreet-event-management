@@ -18,8 +18,9 @@ public class PublicEventController {
     public EventPageResponse<EventSummaryResponse> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "startAt,asc") String sort) {
-        return service.listPublic(page, size, sort);
+            @RequestParam(defaultValue = "startAt,asc") String sort,
+            @RequestParam(required = false) String status) {
+        return service.listPublic(page, size, sort, status);
     }
 
     @GetMapping("/{eventId}")

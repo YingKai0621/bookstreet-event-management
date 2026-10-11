@@ -4,6 +4,7 @@ import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -16,7 +17,9 @@ import org.springframework.data.repository.query.Param;
 public interface EventRepository extends JpaRepository<Event, Long> {
     Page<Event> findByOrganizerUserId(Long organizerUserId, Pageable pageable);
     Page<Event> findByStatus(EventStatus status, Pageable pageable);
+    Page<Event> findByStatusIn(Collection<EventStatus> statuses, Pageable pageable);
     Optional<Event> findByEventIdAndStatus(Long eventId, EventStatus status);
+    Optional<Event> findByEventIdAndStatusIn(Long eventId, Collection<EventStatus> statuses);
     Optional<Event> findByEventIdAndOrganizerUserId(Long eventId, Long organizerUserId);
 
     /**

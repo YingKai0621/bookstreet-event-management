@@ -37,6 +37,11 @@ public class EventService {
             "boothCancellationCutoffAt", "activityCancellationCutoffAt",
             "boothPaymentWindowMinutes", "maxBoothsPerPartner",
             "maxActivitiesPerPartner");
+    private static final List<EventStatus> DEFAULT_PUBLIC_STATUSES =
+            List.of(EventStatus.PUBLISHED, EventStatus.ONGOING);
+    private static final List<EventStatus> PUBLIC_DETAIL_STATUSES = List.of(
+            EventStatus.PUBLISHED, EventStatus.ONGOING,
+            EventStatus.COMPLETED, EventStatus.CANCELLED);
 
     private final EventRepository repository;
     private final EventCurrentUser currentUser;
@@ -209,14 +214,30 @@ public class EventService {
         return EventResponse.from(event);
     }
 
-    public EventPageResponse<EventSummaryResponse> listPublic(int page, int size, String sort) {
-        return EventPageResponse.from(repository.findByStatus(EventStatus.PUBLISHED,
+    public EventPageResponse<EventSummaryResponse> listPublic(
+            int page, int size, String sort, String status) {
+        List<EventStatus> statuses = status == null
+                ? DEFAULT_PUBLIC_STATUSES
+                : List.of(publicStatusFilter(status));
+        return EventPageResponse.from(repository.findByStatusIn(statuses,
                 EventPagination.of(page, size, sort)).map(EventSummaryResponse::from));
     }
 
     public EventSummaryResponse getPublic(Long id) {
-        return EventSummaryResponse.from(repository.findByEventIdAndStatus(id, EventStatus.PUBLISHED)
+        return EventSummaryResponse.from(repository.findByEventIdAndStatusIn(
+                        id, PUBLIC_DETAIL_STATUSES)
                 .orElseThrow(EventService::notFound));
+    }
+
+    private static EventStatus publicStatusFilter(String status) {
+        return switch (status) {
+            case "PUBLISHED" -> EventStatus.PUBLISHED;
+            case "ONGOING" -> EventStatus.ONGOING;
+            case "COMPLETED" -> EventStatus.COMPLETED;
+            default -> throw new EventException(HttpStatus.BAD_REQUEST,
+                    "INVALID_EVENT_STATUS_FILTER",
+                    "Status must be PUBLISHED, ONGOING or COMPLETED.");
+        };
     }
 
     private Event ownedDraftForUpdate(Long id) {
