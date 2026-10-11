@@ -120,20 +120,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const apiClient = {
-  get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
-  post: <T>(endpoint: string, body?: unknown) => request<T>(endpoint, {
-    method: 'POST',
-    body: body === undefined ? undefined : JSON.stringify(body),
-  }),
-  put: <T>(endpoint: string, body?: unknown) => request<T>(endpoint, {
-    method: 'PUT',
-    body: body === undefined ? undefined : JSON.stringify(body),
-  }),
-  patch: <T>(endpoint: string, body?: unknown) => request<T>(endpoint, {
-    method: 'PATCH',
-    body: body === undefined ? undefined : JSON.stringify(body),
-  }),
-  delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+  get: <T>(endpoint: string, headers?: HeadersInit) =>
+    request<T>(endpoint, { method: 'GET', headers }),
+  post: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(endpoint, {
+      method: 'POST',
+      body: body === undefined ? undefined : JSON.stringify(body),
+      headers,
+    }),
+  put: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(endpoint, {
+      method: 'PUT',
+      body: body === undefined ? undefined : JSON.stringify(body),
+      headers,
+    }),
+  patch: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(endpoint, {
+      method: 'PATCH',
+      body: body === undefined ? undefined : JSON.stringify(body),
+      headers,
+    }),
+  delete: <T>(endpoint: string, headers?: HeadersInit) =>
+    request<T>(endpoint, { method: 'DELETE', headers }),
+  request,
   refreshCsrfToken: () => getCsrfToken(true),
   clearCsrfToken,
 };

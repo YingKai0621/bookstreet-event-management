@@ -396,5 +396,6 @@ export * from './booth';
 export * from './heritage';
 export * from './map';
 export * from './organizer';
+export * from './payment';
 
 

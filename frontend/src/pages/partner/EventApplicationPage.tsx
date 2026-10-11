@@ -4,7 +4,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  FileText,
+  MessageSquare,
   RefreshCw,
   Send,
   Undo2,
@@ -21,6 +21,8 @@ interface EventApplicationPageProps {
   organization: PartnerOrganization | null;
 }
 
+type TabType = 'published_events' | 'approved_apps' | 'pending_apps';
+
 const STATUS_LABELS: Record<PartnerEventApplication['status'], string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
@@ -29,9 +31,9 @@ const STATUS_LABELS: Record<PartnerEventApplication['status'], string> = {
 };
 
 function formatDateTime(value: string | null): string {
-  if (!value) return 'Chưa cấu hình';
+  if (!value) return '—';
   return new Date(value).toLocaleString('vi-VN', {
-    dateStyle: 'medium',
+    dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
@@ -62,6 +64,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
   language,
   organization,
 }) => {
+  const [activeTab, setActiveTab] = useState<TabType>('published_events');
   const [events, setEvents] = useState<PartnerAvailableEvent[]>([]);
   const [applications, setApplications] = useState<PartnerEventApplication[]>([]);
   const [applicationNotes, setApplicationNotes] = useState<Record<string, string>>({});
@@ -130,8 +133,14 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
     applications.map(application => [application.eventId, application]),
   );
 
+  const pendingApplications = applications.filter(a => a.status === 'pending');
+  const approvedApplications = applications.filter(a => a.status === 'approved');
+  const pendingCount = pendingApplications.length;
+  const approvedCount = approvedApplications.length;
+
   return (
     <div className="partner-page">
+      {/* Page Header */}
       <div className="partner-page-header" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
           <h1 className="partner-page-title">
@@ -149,6 +158,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </button>
       </div>
 
+      {/* Thông báo lỗi / thành công */}
       {errorMessage && (
         <div role="alert" className="partner-form-alert error">
           <AlertCircle size={18} />
@@ -175,172 +185,314 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </div>
       )}
 
-      <section style={{ marginBottom: '2rem' }} aria-labelledby="available-events-title">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-          <CalendarDays size={20} color="#17382E" />
-          <h2 id="available-events-title" style={{ margin: 0, fontSize: '1.2rem' }}>Sự kiện đang công bố</h2>
-        </div>
 
-        {isLoading ? (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {[1, 2].map(idx => (
-              <div key={idx} className="partner-card skeleton-card" style={{ padding: '1.25rem', pointerEvents: 'none' }}>
-                <div style={{ display: 'flex', gap: '1.25rem' }}>
-                  <div className="skeleton-box" style={{ width: 140, height: 100, borderRadius: 10, flexShrink: 0 }} />
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <div className="skeleton-box" style={{ width: '40%', height: '1.2rem', borderRadius: 4 }} />
-                    <div className="skeleton-box" style={{ width: '80%', height: '0.9rem', borderRadius: 4 }} />
-                    <div className="skeleton-box" style={{ width: '35%', height: '0.85rem', borderRadius: 4 }} />
+      {/* 3 MỤC TABS (Giống như trang Danh sách hoạt động) */}
+      <div className="partner-tabs-bar" role="tablist" style={{ marginBottom: '1.75rem' }}>
+        <button
+          type="button"
+          className={`partner-tab-btn ${activeTab === 'published_events' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('published_events')}
+          role="tab"
+          aria-selected={activeTab === 'published_events'}
+        >
+          {language === 'vi'
+            ? `Sự kiện đang công bố (${events.length})`
+            : `Published Events (${events.length})`}
+        </button>
+        <button
+          type="button"
+          className={`partner-tab-btn ${activeTab === 'approved_apps' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('approved_apps')}
+          role="tab"
+          aria-selected={activeTab === 'approved_apps'}
+        >
+          {language === 'vi'
+            ? `Hồ sơ đã được duyệt (${approvedCount})`
+            : `Approved Applications (${approvedCount})`}
+        </button>
+        <button
+          type="button"
+          className={`partner-tab-btn ${activeTab === 'pending_apps' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('pending_apps')}
+          role="tab"
+          aria-selected={activeTab === 'pending_apps'}
+        >
+          {language === 'vi'
+            ? `Hồ sơ đang chờ duyệt (${pendingCount})`
+            : `Pending Applications (${pendingCount})`}
+        </button>
+      </div>
+
+      {/* MỤC 1: Sự kiện đang công bố */}
+      {activeTab === 'published_events' && (
+        <section aria-labelledby="available-events-title">
+          <div className="event-app-section-header">
+            <div className="event-app-section-title-wrap">
+              <CalendarDays size={20} color="#17382E" />
+              <h2 id="available-events-title" className="event-app-section-title">
+                Sự kiện đang công bố
+              </h2>
+              <span className="event-app-counter-badge">{events.length}</span>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {[1, 2].map(idx => (
+                <div key={idx} className="partner-card skeleton-card" style={{ padding: '1.25rem', pointerEvents: 'none' }}>
+                  <div style={{ display: 'flex', gap: '1.25rem' }}>
+                    <div className="skeleton-box" style={{ width: 140, height: 100, borderRadius: 10, flexShrink: 0 }} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      <div className="skeleton-box" style={{ width: '40%', height: '1.2rem', borderRadius: 4 }} />
+                      <div className="skeleton-box" style={{ width: '80%', height: '0.9rem', borderRadius: 4 }} />
+                      <div className="skeleton-box" style={{ width: '35%', height: '0.85rem', borderRadius: 4 }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : !errorMessage && events.length === 0 ? (
-          <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-            <CalendarDays size={36} color="#B3862A" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
-            <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
-              {language === 'vi' ? 'Hiện chưa có sự kiện mở đăng ký' : 'No Events Open for Registration'}
-            </h3>
-            <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
-              {language === 'vi'
-                ? 'Ban Quản Lý Đường Sách sẽ sớm công bố lịch các sự kiện văn hóa và tuần lễ sách tiếp theo. Hãy đảm bảo hồ sơ tổ chức đã hoàn thiện để sẵn sàng gửi đăng ký.'
-                : 'Upcoming Book Street events will be published here soon. Please make sure your organization profile is completed to be ready.'}
-            </p>
-          </div>
-        ) : null}
+              ))}
+            </div>
+          ) : !errorMessage && events.length === 0 ? (
+            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+              <CalendarDays size={36} color="#B3862A" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
+                {language === 'vi' ? 'Hiện chưa có sự kiện mở đăng ký' : 'No Events Open for Registration'}
+              </h3>
+              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
+                {language === 'vi'
+                  ? 'Ban Quản Lý Đường Sách sẽ sớm công bố lịch các sự kiện văn hóa và tuần lễ sách tiếp theo. Hãy đảm bảo hồ sơ tổ chức đã hoàn thiện để sẵn sàng gửi đăng ký.'
+                  : 'Upcoming Book Street events will be published here soon. Please make sure your organization profile is completed to be ready.'}
+              </p>
+            </div>
+          ) : null}
 
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {events.map(event => {
-            const existingApplication = applicationByEventId.get(event.id);
-            const canSubmit = Boolean(organization)
-              && organization?.status === 'ACTIVE'
-              && event.acceptingApplications
-              && !existingApplication;
+          <div style={{ display: 'grid', gap: '1.15rem' }}>
+            {events.map(event => {
+              const existingApplication = applicationByEventId.get(event.id);
+              const canSubmit = Boolean(organization)
+                && organization?.status === 'ACTIVE'
+                && event.acceptingApplications
+                && !existingApplication;
 
-            return (
-              <article key={event.id} className="partner-card" style={{ padding: '1.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: event.bannerUrl ? '150px minmax(0, 1fr)' : '1fr', gap: '1.25rem' }}>
-                  {event.bannerUrl && (
-                    <img src={event.bannerUrl} alt={event.name} style={{ width: '150px', height: '110px', borderRadius: '10px', objectFit: 'cover' }} />
-                  )}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div>
-                        <h3 style={{ margin: 0, color: '#172421' }}>{event.name}</h3>
-                        <p style={{ margin: '0.5rem 0', color: '#556B65', lineHeight: 1.55 }}>{event.description || 'Không có mô tả.'}</p>
+              return (
+                <article key={event.id} className="event-card-article">
+                  <div style={{ display: 'grid', gridTemplateColumns: event.bannerUrl ? '150px minmax(0, 1fr)' : '1fr', gap: '1.25rem' }}>
+                    {event.bannerUrl && (
+                      <img src={event.bannerUrl} alt={event.name} style={{ width: '150px', height: '110px', borderRadius: '10px', objectFit: 'cover' }} />
+                    )}
+                    <div>
+                      <div className="event-card-topbar">
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <h3 className="event-card-name">{event.name}</h3>
+                          <p className="event-card-desc">{event.description || 'Không có mô tả.'}</p>
+                        </div>
+                        {existingApplication && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span className={`status-badge ${existingApplication.status}`}>
+                              {STATUS_LABELS[existingApplication.status]}
+                            </span>
+                            {existingApplication.status === 'pending' && (
+                              <button
+                                type="button"
+                                className="btn-part-secondary"
+                                onClick={() => void withdrawApplication(existingApplication)}
+                                disabled={processingId === existingApplication.id}
+                                style={{ color: '#B91C1C', borderColor: '#FECACA' }}
+                              >
+                                <Undo2 size={14} />
+                                <span>{processingId === existingApplication.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {existingApplication && (
-                        <span className={`status-badge ${existingApplication.status}`}>
-                          {STATUS_LABELS[existingApplication.status]}
-                        </span>
-                      )}
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', color: '#556B65', fontSize: '0.84rem', marginBottom: '0.85rem' }}>
-                      <span><CalendarDays size={14} /> {formatDateTime(event.startAt)} – {formatDateTime(event.endAt)}</span>
-                      <span><Clock3 size={14} /> Hạn đăng ký: {formatDateTime(event.partnerApplicationDeadlineAt)}</span>
-                    </div>
-
-                    {!existingApplication && (
-                      <div style={{ display: 'grid', gap: '0.65rem' }}>
-                        <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.82rem' }}>
-                          Ghi chú đăng ký (không bắt buộc)
-                        </label>
-                        <textarea
-                          id={`application-note-${event.id}`}
-                          rows={3}
-                          value={applicationNotes[event.id] || ''}
-                          onChange={changeEvent => setApplicationNotes(current => ({
-                            ...current,
-                            [event.id]: changeEvent.target.value,
-                          }))}
-                          placeholder="Giới thiệu ngắn nhu cầu tham gia sự kiện..."
-                          disabled={!canSubmit || processingId === event.id}
-                        />
-                        <div>
-                          <button
-                            type="button"
-                            className="btn-part-primary"
-                            onClick={() => void submitApplication(event)}
-                            disabled={!canSubmit || processingId === event.id}
-                          >
-                            <Send size={15} />
-                            <span>{processingId === event.id ? 'Đang gửi...' : 'Gửi hồ sơ đăng ký'}</span>
-                          </button>
-                          {!event.acceptingApplications && (
-                            <span style={{ marginLeft: '0.75rem', color: '#B45309', fontSize: '0.82rem' }}>Đã đóng đăng ký</span>
-                          )}
+                      <div className="event-meta-grid" style={{ marginTop: '0.85rem', marginBottom: '0.85rem' }}>
+                        <div className="event-meta-item">
+                          <CalendarDays size={15} />
+                          <span>Thời gian sự kiện: <strong>{formatDateTime(event.startAt)} – {formatDateTime(event.endAt)}</strong></span>
+                        </div>
+                        <div className="event-meta-item">
+                          <Clock3 size={15} />
+                          <span>Hạn nộp hồ sơ: <strong>{formatDateTime(event.partnerApplicationDeadlineAt)}</strong></span>
                         </div>
                       </div>
-                    )}
+
+                      {!existingApplication && (
+                        <div className="event-app-form-box">
+                          <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.85rem', color: '#1E293B' }}>
+                            Ghi chú đăng ký (không bắt buộc)
+                          </label>
+                          <textarea
+                            id={`application-note-${event.id}`}
+                            rows={3}
+                            value={applicationNotes[event.id] || ''}
+                            onChange={changeEvent => setApplicationNotes(current => ({
+                              ...current,
+                              [event.id]: changeEvent.target.value,
+                            }))}
+                            placeholder="Mô tả ngắn gọn về nhu cầu trưng bày, thể loại sách và nguyện vọng tham gia sự kiện..."
+                            disabled={!canSubmit || processingId === event.id}
+                          />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                            <button
+                              type="button"
+                              className="btn-part-primary"
+                              onClick={() => void submitApplication(event)}
+                              disabled={!canSubmit || processingId === event.id}
+                            >
+                              <Send size={15} />
+                              <span>{processingId === event.id ? 'Đang gửi...' : 'Gửi hồ sơ đăng ký'}</span>
+                            </button>
+                            {!event.acceptingApplications && (
+                              <span style={{ color: '#B45309', fontSize: '0.82rem', fontWeight: 600 }}>Đã đóng đăng ký</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section aria-labelledby="own-applications-title">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-          <FileText size={20} color="#17382E" />
-          <h2 id="own-applications-title" style={{ margin: 0, fontSize: '1.2rem' }}>Hồ sơ đã gửi</h2>
-        </div>
-
-        {!isLoading && applications.length === 0 && (
-          <div className="partner-card" style={{ padding: '2rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-            <FileText size={32} color="#7A8E87" style={{ margin: '0 auto 0.65rem', display: 'block' }} />
-            <h3 style={{ margin: '0 0 0.25rem', color: '#172421', fontSize: '1.05rem' }}>
-              {language === 'vi' ? 'Bạn chưa gửi hồ sơ tham gia sự kiện nào' : 'No Submitted Applications Yet'}
-            </h3>
-            <p style={{ margin: 0, color: '#637771', fontSize: '0.86rem' }}>
-              {language === 'vi'
-                ? 'Khi có sự kiện mở đăng ký ở danh mục phía trên, hãy chọn sự kiện và gửi hồ sơ để bắt đầu.'
-                : 'Apply for open events in the section above to track review status and approvals.'}
-            </p>
+                </article>
+              );
+            })}
           </div>
-        )}
+        </section>
+      )}
 
-        <div style={{ display: 'grid', gap: '0.85rem' }}>
-          {applications.map(application => (
-            <article key={application.id} className="partner-card" style={{ padding: '1.1rem 1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div>
-                  <h3 style={{ margin: 0 }}>{application.eventTitle}</h3>
-                  <p style={{ margin: '0.4rem 0', color: '#637771', fontSize: '0.82rem' }}>
-                    Nộp lúc: {application.submittedAt}
-                  </p>
-                  <p style={{ margin: '0.4rem 0', color: '#334943' }}>
-                    {application.applicationNote || 'Không có ghi chú đăng ký.'}
-                  </p>
+      {/* MỤC 2: Hồ sơ đã được duyệt */}
+      {activeTab === 'approved_apps' && (
+        <section aria-labelledby="approved-applications-title">
+          <div className="event-app-section-header">
+            <div className="event-app-section-title-wrap">
+              <CheckCircle2 size={20} color="#059669" />
+              <h2 id="approved-applications-title" className="event-app-section-title">
+                Hồ sơ đã được duyệt
+              </h2>
+              <span className="event-app-counter-badge" style={{ background: '#ECFDF5', color: '#047857' }}>
+                {approvedCount}
+              </span>
+            </div>
+          </div>
+
+          {approvedApplications.length === 0 ? (
+            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+              <CheckCircle2 size={36} color="#7A8E87" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
+                Chưa có hồ sơ nào được duyệt
+              </h3>
+              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem' }}>
+                Khi Ban Quản Lý phê duyệt hồ sơ tham gia sự kiện của bạn, thông tin chi tiết và phản hồi sẽ hiển thị tại đây.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {approvedApplications.map(application => (
+                <article key={application.id} className="event-card-article" style={{ gap: '0.75rem' }}>
+                  <div className="event-card-topbar">
+                    <div style={{ flex: 1, minWidth: '240px' }}>
+                      <h3 className="event-card-name">{application.eventTitle}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                        <Clock3 size={13} />
+                        <span>Nộp lúc: <strong>{formatDateTime(application.submittedAt)}</strong></span>
+                      </div>
+                    </div>
+                    <span className="status-badge approved">Đã duyệt</span>
+                  </div>
+
+                  {application.applicationNote && (
+                    <div className="app-card-note-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748B', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        <MessageSquare size={12} />
+                        <span>Ghi chú của bạn:</span>
+                      </div>
+                      <span>{application.applicationNote}</span>
+                    </div>
+                  )}
+
                   {application.reviewNote && (
-                    <p style={{ margin: '0.45rem 0 0', color: '#7C5E1B' }}>
-                      Phản hồi từ Ban Quản Lý: {application.reviewNote}
-                    </p>
+                    <div className="app-card-review-box">
+                      <CheckCircle2 size={16} style={{ color: '#CA8A04', flexShrink: 0, marginTop: '0.1rem' }} />
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+                          Phản hồi từ Ban Quản Lý:
+                        </strong>
+                        <span>{application.reviewNote}</span>
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span className={`status-badge ${application.status}`}>
-                    {STATUS_LABELS[application.status]}
-                  </span>
-                  {application.status === 'pending' && (
-                    <button
-                      type="button"
-                      className="btn-part-secondary"
-                      onClick={() => void withdrawApplication(application)}
-                      disabled={processingId === application.id}
-                    >
-                      <Undo2 size={15} />
-                      <span>{processingId === application.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
-                    </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* MỤC 3: Hồ sơ đang chờ duyệt */}
+      {activeTab === 'pending_apps' && (
+        <section aria-labelledby="pending-applications-title">
+          <div className="event-app-section-header">
+            <div className="event-app-section-title-wrap">
+              <Clock3 size={20} color="#B45309" />
+              <h2 id="pending-applications-title" className="event-app-section-title">
+                Hồ sơ đang chờ duyệt
+              </h2>
+              <span className="event-app-counter-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                {pendingCount}
+              </span>
+            </div>
+          </div>
+
+          {pendingApplications.length === 0 ? (
+            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
+              <Clock3 size={36} color="#7A8E87" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
+                Không có hồ sơ nào đang chờ duyệt
+              </h3>
+              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem' }}>
+                Bạn có thể đăng ký tham gia các sự kiện mới ở mục "Sự kiện đang công bố".
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {pendingApplications.map(application => (
+                <article key={application.id} className="event-card-article" style={{ gap: '0.75rem' }}>
+                  <div className="event-card-topbar">
+                    <div style={{ flex: 1, minWidth: '240px' }}>
+                      <h3 className="event-card-name">{application.eventTitle}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                        <Clock3 size={13} />
+                        <span>Nộp lúc: <strong>{formatDateTime(application.submittedAt)}</strong></span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span className="status-badge pending">Chờ duyệt</span>
+                      <button
+                        type="button"
+                        className="btn-part-secondary"
+                        onClick={() => void withdrawApplication(application)}
+                        disabled={processingId === application.id}
+                        style={{ color: '#B91C1C', borderColor: '#FECACA' }}
+                      >
+                        <Undo2 size={14} />
+                        <span>{processingId === application.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {application.applicationNote && (
+                    <div className="app-card-note-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748B', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        <MessageSquare size={12} />
+                        <span>Ghi chú của bạn:</span>
+                      </div>
+                      <span>{application.applicationNote}</span>
+                    </div>
                   )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };
