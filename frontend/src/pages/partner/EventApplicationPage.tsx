@@ -5,8 +5,10 @@ import {
   CheckCircle2,
   Clock3,
   FileText,
+  MessageSquare,
   RefreshCw,
   Send,
+  Sparkles,
   Undo2,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -29,9 +31,9 @@ const STATUS_LABELS: Record<PartnerEventApplication['status'], string> = {
 };
 
 function formatDateTime(value: string | null): string {
-  if (!value) return 'Chưa cấu hình';
+  if (!value) return '—';
   return new Date(value).toLocaleString('vi-VN', {
-    dateStyle: 'medium',
+    dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
@@ -130,8 +132,12 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
     applications.map(application => [application.eventId, application]),
   );
 
+  const pendingCount = applications.filter(a => a.status === 'pending').length;
+  const approvedCount = applications.filter(a => a.status === 'approved').length;
+
   return (
     <div className="partner-page">
+      {/* Page Header */}
       <div className="partner-page-header" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
           <h1 className="partner-page-title">
@@ -149,6 +155,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </button>
       </div>
 
+      {/* Thông báo lỗi / thành công */}
       {errorMessage && (
         <div role="alert" className="partner-form-alert error">
           <AlertCircle size={18} />
@@ -175,10 +182,49 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </div>
       )}
 
-      <section style={{ marginBottom: '2rem' }} aria-labelledby="available-events-title">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-          <CalendarDays size={20} color="#17382E" />
-          <h2 id="available-events-title" style={{ margin: 0, fontSize: '1.2rem' }}>Sự kiện đang công bố</h2>
+      {/* Thanh thống kê nhanh (Quick Stats) */}
+      <div className="event-app-summary-grid">
+        <div className="event-app-summary-card">
+          <div className="event-app-icon-wrap teal">
+            <CalendarDays size={22} />
+          </div>
+          <div className="event-app-stat-info">
+            <span className="event-app-stat-value">{events.length}</span>
+            <span className="event-app-stat-label">Sự kiện đang công bố</span>
+          </div>
+        </div>
+
+        <div className="event-app-summary-card">
+          <div className="event-app-icon-wrap">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="event-app-stat-info">
+            <span className="event-app-stat-value">{approvedCount}</span>
+            <span className="event-app-stat-label">Hồ sơ đã được duyệt</span>
+          </div>
+        </div>
+
+        <div className="event-app-summary-card">
+          <div className="event-app-icon-wrap gold">
+            <Clock3 size={22} />
+          </div>
+          <div className="event-app-stat-info">
+            <span className="event-app-stat-value">{pendingCount}</span>
+            <span className="event-app-stat-label">Hồ sơ đang chờ duyệt</span>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 1: Sự kiện đang công bố */}
+      <section style={{ marginBottom: '2.5rem' }} aria-labelledby="available-events-title">
+        <div className="event-app-section-header">
+          <div className="event-app-section-title-wrap">
+            <CalendarDays size={20} color="#17382E" />
+            <h2 id="available-events-title" className="event-app-section-title">
+              Sự kiện đang công bố
+            </h2>
+            <span className="event-app-counter-badge">{events.length}</span>
+          </div>
         </div>
 
         {isLoading ? (
@@ -210,7 +256,7 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
           </div>
         ) : null}
 
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div style={{ display: 'grid', gap: '1.15rem' }}>
           {events.map(event => {
             const existingApplication = applicationByEventId.get(event.id);
             const canSubmit = Boolean(organization)
@@ -219,16 +265,16 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
               && !existingApplication;
 
             return (
-              <article key={event.id} className="partner-card" style={{ padding: '1.25rem' }}>
+              <article key={event.id} className="event-card-article">
                 <div style={{ display: 'grid', gridTemplateColumns: event.bannerUrl ? '150px minmax(0, 1fr)' : '1fr', gap: '1.25rem' }}>
                   {event.bannerUrl && (
                     <img src={event.bannerUrl} alt={event.name} style={{ width: '150px', height: '110px', borderRadius: '10px', objectFit: 'cover' }} />
                   )}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div>
-                        <h3 style={{ margin: 0, color: '#172421' }}>{event.name}</h3>
-                        <p style={{ margin: '0.5rem 0', color: '#556B65', lineHeight: 1.55 }}>{event.description || 'Không có mô tả.'}</p>
+                    <div className="event-card-topbar">
+                      <div style={{ flex: 1, minWidth: '240px' }}>
+                        <h3 className="event-card-name">{event.name}</h3>
+                        <p className="event-card-desc">{event.description || 'Không có mô tả.'}</p>
                       </div>
                       {existingApplication && (
                         <span className={`status-badge ${existingApplication.status}`}>
@@ -237,14 +283,20 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', color: '#556B65', fontSize: '0.84rem', marginBottom: '0.85rem' }}>
-                      <span><CalendarDays size={14} /> {formatDateTime(event.startAt)} – {formatDateTime(event.endAt)}</span>
-                      <span><Clock3 size={14} /> Hạn đăng ký: {formatDateTime(event.partnerApplicationDeadlineAt)}</span>
+                    <div className="event-meta-grid" style={{ marginTop: '0.85rem', marginBottom: '0.85rem' }}>
+                      <div className="event-meta-item">
+                        <CalendarDays size={15} />
+                        <span>Thời gian sự kiện: <strong>{formatDateTime(event.startAt)} – {formatDateTime(event.endAt)}</strong></span>
+                      </div>
+                      <div className="event-meta-item">
+                        <Clock3 size={15} />
+                        <span>Hạn nộp hồ sơ: <strong>{formatDateTime(event.partnerApplicationDeadlineAt)}</strong></span>
+                      </div>
                     </div>
 
-                    {!existingApplication && (
-                      <div style={{ display: 'grid', gap: '0.65rem' }}>
-                        <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.82rem' }}>
+                    {!existingApplication ? (
+                      <div className="event-app-form-box">
+                        <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.85rem', color: '#1E293B' }}>
                           Ghi chú đăng ký (không bắt buộc)
                         </label>
                         <textarea
@@ -255,10 +307,10 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                             ...current,
                             [event.id]: changeEvent.target.value,
                           }))}
-                          placeholder="Giới thiệu ngắn nhu cầu tham gia sự kiện..."
+                          placeholder="Mô tả ngắn gọn về nhu cầu trưng bày, thể loại sách và nguyện vọng tham gia sự kiện..."
                           disabled={!canSubmit || processingId === event.id}
                         />
-                        <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                           <button
                             type="button"
                             className="btn-part-primary"
@@ -269,9 +321,14 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                             <span>{processingId === event.id ? 'Đang gửi...' : 'Gửi hồ sơ đăng ký'}</span>
                           </button>
                           {!event.acceptingApplications && (
-                            <span style={{ marginLeft: '0.75rem', color: '#B45309', fontSize: '0.82rem' }}>Đã đóng đăng ký</span>
+                            <span style={{ color: '#B45309', fontSize: '0.82rem', fontWeight: 600 }}>Đã đóng đăng ký</span>
                           )}
                         </div>
+                      </div>
+                    ) : (
+                      <div className="event-app-applied-banner">
+                        <Sparkles size={15} />
+                        <span>Bạn đã gửi hồ sơ tham gia sự kiện này (Trạng thái: {STATUS_LABELS[existingApplication.status]}).</span>
                       </div>
                     )}
                   </div>
@@ -282,10 +339,16 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
         </div>
       </section>
 
+      {/* SECTION 2: Hồ sơ đã gửi */}
       <section aria-labelledby="own-applications-title">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-          <FileText size={20} color="#17382E" />
-          <h2 id="own-applications-title" style={{ margin: 0, fontSize: '1.2rem' }}>Hồ sơ đã gửi</h2>
+        <div className="event-app-section-header">
+          <div className="event-app-section-title-wrap">
+            <FileText size={20} color="#17382E" />
+            <h2 id="own-applications-title" className="event-app-section-title">
+              Hồ sơ đã gửi
+            </h2>
+            <span className="event-app-counter-badge">{applications.length}</span>
+          </div>
         </div>
 
         {!isLoading && applications.length === 0 && (
@@ -302,23 +365,16 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
           </div>
         )}
 
-        <div style={{ display: 'grid', gap: '0.85rem' }}>
+        <div style={{ display: 'grid', gap: '1rem' }}>
           {applications.map(application => (
-            <article key={application.id} className="partner-card" style={{ padding: '1.1rem 1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div>
-                  <h3 style={{ margin: 0 }}>{application.eventTitle}</h3>
-                  <p style={{ margin: '0.4rem 0', color: '#637771', fontSize: '0.82rem' }}>
-                    Nộp lúc: {application.submittedAt}
-                  </p>
-                  <p style={{ margin: '0.4rem 0', color: '#334943' }}>
-                    {application.applicationNote || 'Không có ghi chú đăng ký.'}
-                  </p>
-                  {application.reviewNote && (
-                    <p style={{ margin: '0.45rem 0 0', color: '#7C5E1B' }}>
-                      Phản hồi từ Ban Quản Lý: {application.reviewNote}
-                    </p>
-                  )}
+            <article key={application.id} className="event-card-article" style={{ gap: '0.75rem' }}>
+              <div className="event-card-topbar">
+                <div style={{ flex: 1, minWidth: '240px' }}>
+                  <h3 className="event-card-name">{application.eventTitle}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                    <Clock3 size={13} />
+                    <span>Nộp lúc: <strong>{formatDateTime(application.submittedAt)}</strong></span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span className={`status-badge ${application.status}`}>
@@ -330,13 +386,36 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
                       className="btn-part-secondary"
                       onClick={() => void withdrawApplication(application)}
                       disabled={processingId === application.id}
+                      style={{ color: '#B91C1C', borderColor: '#FECACA' }}
                     >
-                      <Undo2 size={15} />
+                      <Undo2 size={14} />
                       <span>{processingId === application.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
                     </button>
                   )}
                 </div>
               </div>
+
+              {application.applicationNote && (
+                <div className="app-card-note-box">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748B', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                    <MessageSquare size={12} />
+                    <span>Ghi chú của bạn:</span>
+                  </div>
+                  <span>{application.applicationNote}</span>
+                </div>
+              )}
+
+              {application.reviewNote && (
+                <div className="app-card-review-box">
+                  <CheckCircle2 size={16} style={{ color: '#CA8A04', flexShrink: 0, marginTop: '0.1rem' }} />
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+                      Phản hồi từ Ban Quản Lý:
+                    </strong>
+                    <span>{application.reviewNote}</span>
+                  </div>
+                </div>
+              )}
             </article>
           ))}
         </div>

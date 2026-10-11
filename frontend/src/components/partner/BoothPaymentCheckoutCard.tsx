@@ -253,7 +253,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
           <span>
             {latestPayment.status === 'PENDING'
               ? 'Đang có một phiên thanh toán đang chờ xử lý. Nếu bạn đã hoàn tất, vui lòng đợi hệ thống cập nhật.'
-              : 'Giao dịch trước đó chưa hoàn tất hoặc bị gián đoạn. Bạn có thể nhấn "Thanh toán lại qua VNPay" bên dưới để tiếp tục.'}
+              : 'Giao dịch trước đó chưa hoàn tất hoặc bị gián đoạn. Nhấn "Thanh toán lại qua VNPay" để tiếp tục.'}
           </span>
         </div>
       )}
@@ -335,10 +335,6 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
           </button>
         )}
 
-        <div className="s3-checkout-security">
-          <ShieldCheck size={15} />
-          <span>Giao dịch được bảo mật an toàn qua Cổng thanh toán VNPay (Tiêu chuẩn PCI-DSS)</span>
-        </div>
       </div>
     </div>
   );
