@@ -51,9 +51,14 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockOrganizer(page: Page): Promise<() => { mapX: number; mapY: number } | null> {
+async function mockOrganizer(page: Page): Promise<{
+  getSavedBoothPosition: () => { mapX: number; mapY: number } | null;
+  getConfigurationRequests: () => Array<{ rentalPrice: number; enabled: boolean }>;
+}> {
   let physicalBooths = [physicalBooth];
   let savedBoothPosition: { mapX: number; mapY: number } | null = null;
+  let currentEventBooth = eventBooth;
+  const configurationRequests: Array<{ rentalPrice: number; enabled: boolean }> = [];
   let organizerRequests: Record<string, unknown>[] = [{
     boothRequestId: 77,
     eventId: 101,
@@ -98,14 +103,16 @@ async function mockOrganizer(page: Page): Promise<() => { mapX: number; mapY: nu
       physicalBooths = physicalBooths.map(booth => booth.boothId === 12 ? updated : booth);
       return json(route, updated);
     }
-    if (path.endsWith('/organizer/events/101/booth-configs') && method === 'GET') return json(route, [eventBooth]);
+    if (path.endsWith('/organizer/events/101/booth-configs') && method === 'GET') return json(route, [currentEventBooth]);
     if (path.endsWith('/organizer/events/101/booth-configs/11') && method === 'PUT') {
-      expect(route.request().postDataJSON()).toEqual({ rentalPrice: 5_500_000, enabled: true });
-      return json(route, { ...eventBooth, rentalPrice: 5_500_000 });
+      const body = route.request().postDataJSON() as { rentalPrice: number; enabled: boolean };
+      configurationRequests.push(body);
+      currentEventBooth = { ...currentEventBooth, ...body };
+      return json(route, currentEventBooth);
     }
     if (path.endsWith('/organizer/events/101/booth-requests') && method === 'GET') return json(route, { content: organizerRequests, page: 0, size: 200, totalElements: organizerRequests.length, totalPages: 1 });
     if (path.endsWith('/organizer/events/101/booth-requests/77/select') && method === 'POST') {
-      const selected = { ...organizerRequests[0], status: 'SELECTED', selectedAt: '2026-10-08T02:00:00Z', hold: { boothHoldId: 501, status: 'ACTIVE', lockedRentalPrice: 5_000_000, createdAt: '2026-10-08T02:00:00Z', expiresAt: '2026-10-09T02:00:00Z', releasedAt: null } };
+      const selected = { ...organizerRequests[0], status: 'SELECTED', selectedAt: '2026-10-08T02:00:00Z', hold: { boothHoldId: 501, status: 'ACTIVE', lockedRentalPrice: currentEventBooth.rentalPrice, createdAt: '2026-10-08T02:00:00Z', expiresAt: '2026-10-09T02:00:00Z', releasedAt: null } };
       organizerRequests = [selected];
       return json(route, selected);
     }
@@ -113,7 +120,10 @@ async function mockOrganizer(page: Page): Promise<() => { mapX: number; mapY: nu
     if (path.includes('/public/') || (path.endsWith('/events') && method === 'GET')) return json(route, emptyPage);
     return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
   });
-  return () => savedBoothPosition;
+  return {
+    getSavedBoothPosition: () => savedBoothPosition,
+    getConfigurationRequests: () => configurationRequests,
+  };
 }
 
 async function mockPartner(page: Page): Promise<void> {
@@ -200,7 +210,7 @@ async function mockPublicMap(page: Page): Promise<void> {
 }
 
 test('Organizer manages a physical Booth, Event price, and candidate selection', async ({ page }) => {
-  const getSavedBoothPosition = await mockOrganizer(page);
+  const { getSavedBoothPosition, getConfigurationRequests } = await mockOrganizer(page);
   await page.goto('/portal');
   await page.getByRole('button', { name: 'Yêu cầu gian hàng' }).click();
   await expect(page.getByRole('heading', { name: 'Sơ đồ & Quản lý vị trí gian hàng' })).toBeVisible();
@@ -219,12 +229,25 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await rentalPrice.fill('5500000');
   await rentalPrice.press('Tab');
   await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
+  const enabledToggle = configuredBooth.getByRole('checkbox');
+  await expect(enabledToggle).toBeEnabled();
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã tắt gian hàng A05');
+  await expect(rentalPrice).toHaveValue('5500000');
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã mở gian hàng A05');
+  await expect(enabledToggle).toBeChecked();
+  expect(getConfigurationRequests()).toEqual([
+    { rentalPrice: 5_500_000, enabled: true },
+    { rentalPrice: 5_500_000, enabled: false },
+    { rentalPrice: 5_500_000, enabled: true },
+  ]);
   await page.getByRole('button', { name: /Duyệt yêu cầu thuê gian hàng/ }).click();
   await expect(page.getByText('NXB Demo')).toBeVisible();
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
   await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
-  await expect(page.getByText(/5.000.000/)).toBeVisible();
+  await expect(page.getByText(/5.500.000/)).toBeVisible();
 
   await page.getByRole('button', { name: /Sơ đồ bản đồ gian hàng/ }).click();
   const mapLayer = page.locator('.booth-map-image-layer');
@@ -241,7 +264,9 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Lưu sơ đồ' }).click();
   await expect(page.getByRole('status')).toContainText('Đã lưu thành công tọa độ 1 gian hàng');
   await page.reload();
-  await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Điều hướng chức năng' })
+    .getByRole('button', { name: 'Yêu cầu gian hàng', exact: true })
+    .click();
   const persistedMarker = page.getByRole('button', { name: /B01.*Còn trống/ });
   await expect(persistedMarker).toBeVisible();
   const savedBoothPosition = getSavedBoothPosition();
@@ -286,9 +311,17 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByRole('heading', { name: 'Sơ đồ & Yêu cầu gian hàng' })).toBeVisible();
 });
 
-test('Public visitor sees only Booths with valid coordinates for the default published Event', async ({ page }) => {
+test('Public visitor switches published Events and sees only Booths with valid coordinates', async ({ page }) => {
+  const emptySourceWarnings: string[] = [];
+  page.on('console', message => {
+    if (message.type() === 'error' && message.text().includes('empty string')) {
+      emptySourceWarnings.push(message.text());
+    }
+  });
   await mockPublicMap(page);
   await page.goto('/');
+  const eventPicker = page.getByLabel('Sự kiện công khai').first();
+  await expect(eventPicker).toHaveValue('101');
   const marker = page.getByRole('button', { name: /A05.*Còn trống/ });
   await expect(marker).toBeVisible();
   await expect(page.getByRole('button', { name: /C03/ })).toHaveCount(0);
@@ -297,4 +330,11 @@ test('Public visitor sees only Booths with valid coordinates for the default pub
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('5.000.000');
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('Còn trống');
   await expect(page.getByRole('button', { name: /Gửi yêu cầu gian hàng/ })).toHaveCount(0);
+  await eventPicker.selectOption('102');
+  await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
+  await expect(page.getByText('Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.')).toBeVisible();
+  await eventPicker.selectOption('101');
+  await expect(marker).toBeVisible();
+  await expect(page.locator('img[src=""]')).toHaveCount(0);
+  expect(emptySourceWarnings).toEqual([]);
 });

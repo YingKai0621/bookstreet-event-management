@@ -191,6 +191,22 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
 
         {/* Search & Category Filter Bar */}
         <div className="figma-stalls-controls">
+          {events.length > 0 && onSelectEventId && (
+            <label className="public-event-picker">
+              <span>{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</span>
+              <select
+                value={selectedEventId}
+                onChange={event => onSelectEventId(event.target.value)}
+                aria-label={language === 'vi' ? 'Sự kiện công khai' : 'Published event'}
+              >
+                {events.map(event => (
+                  <option key={event.id} value={event.id}>
+                    {language === 'vi' ? event.title : event.titleEn}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="figma-search-bar">
             <Search size={18} className="search-ico" />
             <input

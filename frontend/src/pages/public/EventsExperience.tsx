@@ -163,7 +163,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 aria-label={`Khám phá ${featuredEvent.title}`}
               >
                 <img
-                  src={featuredEvent.image.url}
+                  src={featuredEvent.image.url || undefined}
                   alt={featuredEvent.image.alt}
                   fetchPriority="high"
                 />
@@ -248,7 +248,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="event-card-image">
-                    <img src={evt.image.url} alt={evt.title} />
+                    {evt.image.url && <img src={evt.image.url} alt={evt.title} />}
                     <span className="event-datetime-badge">{evt.dateStr}</span>
                   </div>
                   <div className="event-card-body">
@@ -292,7 +292,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
-                <img src={activeModalEvent.image.url} alt={activeModalEvent.image.alt} className="modal-top-img" />
+                {activeModalEvent.image.url && (
+                  <img src={activeModalEvent.image.url} alt={activeModalEvent.image.alt} className="modal-top-img" />
+                )}
                 <div className="modal-img-caption">
                   <span className="kiosk-number-badge">{activeModalEvent.dayOfWeek}</span>
                   <span className="photo-source-cite">{activeModalEvent.dateStr}</span>
@@ -397,7 +399,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   <div className="reg-event-card-preview">
                     <div className="reg-event-thumb-wrap">
                       <img 
-                        src={registeredEvent.image.url} 
+                        src={registeredEvent.image.url || undefined}
                         alt={registeredEvent.image.alt} 
                         className="reg-event-thumb" 
                       />

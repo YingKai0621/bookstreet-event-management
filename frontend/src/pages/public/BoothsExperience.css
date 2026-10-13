@@ -1,5 +1,30 @@
 /* Shared Heritage & Editorial Experience Styling for Booths and Events */
 
+.booths-experience-controls {
+  display: grid;
+  gap: 0.75rem;
+  min-width: min(100%, 320px);
+}
+
+.booths-experience-event-picker {
+  display: grid;
+  gap: 0.35rem;
+  color: #294c37;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.booths-experience-event-picker select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 2.5rem 0 0.85rem;
+  border: 1px solid rgba(41, 76, 55, 0.3);
+  border-radius: 8px;
+  background: #fff;
+  color: #294c37;
+  font: inherit;
+}
+
 /* Nút trở về không khung viền đặt trên đầu hàng Kicker */
 .exp-btn-return-frameless {
   display: inline-flex;
