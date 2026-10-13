@@ -176,24 +176,42 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               </span>
               <h2>{vi ? 'Danh mục các gian hàng' : 'All Bookstalls & Publishers'}</h2>
             </div>
-            <div className="heritage-search">
-              <Search size={16} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={vi ? 'Tìm tên gian hàng, sách, NXB...' : 'Search stall, books, publisher...'}
-                aria-label={vi ? 'Tìm kiếm gian hàng' : 'Search bookstalls'}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#66735e' }}
-                >
-                  <X size={15} />
-                </button>
+            <div className="booths-experience-controls">
+              {events.length > 0 && (
+                <label className="booths-experience-event-picker">
+                  <span>{vi ? 'Sự kiện công khai' : 'Published event'}</span>
+                  <select
+                    value={selectedEventId}
+                    onChange={event => onSelectEventId(event.target.value)}
+                    aria-label={vi ? 'Sự kiện công khai' : 'Published event'}
+                  >
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {vi ? event.title : event.titleEn}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               )}
+              <div className="heritage-search">
+                <Search size={16} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={vi ? 'Tìm tên gian hàng, sách, NXB...' : 'Search stall, books, publisher...'}
+                  aria-label={vi ? 'Tìm kiếm gian hàng' : 'Search bookstalls'}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#66735e' }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

@@ -193,8 +193,10 @@ export const publicApi = {
     return rows.map(toPublicBooth);
   },
   async getHeritages(): Promise<HeritageProfile[]> {
-    const heritages = await apiClient.get<Record<string, unknown>[]>('/public/heritages');
-    return heritages.map(toHeritageProfile);
+    // Heritage persistence/API belongs to a future module and is not part of the
+    // active backend schema. Keep current public screens empty instead of issuing
+    // a request that is guaranteed to return 401/404.
+    return [];
   },
   getActivities: () => apiClient.get<PublicActivity[]>('/public/activities'),
   getHeritageBySlug: (slug: string) => apiClient.get(`/public/heritages/${slug}`),

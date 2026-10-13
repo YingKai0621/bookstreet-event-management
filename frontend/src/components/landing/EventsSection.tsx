@@ -219,7 +219,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               <X size={20} />
             </button>
             <div className="modal-event-photo-header">
-              <img src={activeEventDetail.image.url} alt={activeEventDetail.image.alt} className="modal-top-img" />
+              {activeEventDetail.image.url && (
+                <img src={activeEventDetail.image.url} alt={activeEventDetail.image.alt} className="modal-top-img" />
+              )}
               <div className="modal-img-caption">
                 <span className="event-cat-tag">
                   {language === 'vi' ? activeEventDetail.typeLabelVi : activeEventDetail.typeLabelEn}
@@ -319,11 +321,13 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                 {/* Selected Event Context Card Preview */}
                 <div className="reg-event-card-preview">
                   <div className="reg-event-thumb-wrap">
-                    <img 
-                      src={showRegisterModal.image.url} 
-                      alt={showRegisterModal.image.alt} 
-                      className="reg-event-thumb" 
-                    />
+                    {showRegisterModal.image.url && (
+                      <img
+                        src={showRegisterModal.image.url}
+                        alt={showRegisterModal.image.alt}
+                        className="reg-event-thumb"
+                      />
+                    )}
                   </div>
                   <div className="reg-event-info">
                     <h4 className="reg-event-title">

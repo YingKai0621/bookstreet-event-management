@@ -105,6 +105,8 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyKey, setBusyKey] = useState('');
+  const [configurationPriceDrafts, setConfigurationPriceDrafts] = useState<Record<number, string>>({});
+  const [savingConfigurationIds, setSavingConfigurationIds] = useState<Set<number>>(() => new Set());
 
   // Map & Popover States
   const [draftCoords, setDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
@@ -138,24 +140,32 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
         const configurationByBoothId = new Map(
           configurations.map(configuration => [configuration.booth.boothId, configuration]),
         );
-        setEventBooths(physicalList.map(booth => configurationByBoothId.get(booth.boothId) || {
+        const configurationRows = physicalList.map(booth => configurationByBoothId.get(booth.boothId) || {
           eventBoothConfigId: null,
           eventId: Number(eventId),
           booth,
           rentalPrice: null,
           enabled: false,
           availability: 'AVAILABLE' as const,
-        }));
+        });
+        setEventBooths(configurationRows);
+        setConfigurationPriceDrafts(Object.fromEntries(
+          configurationRows.map(row => [row.booth.boothId, row.rentalPrice?.toString() ?? '']),
+        ));
         setRequests(eventRequests);
       } else {
-        setEventBooths(physicalList.map(booth => ({
+        const configurationRows: EventBooth[] = physicalList.map(booth => ({
           eventBoothConfigId: null,
           eventId: 0,
           booth,
           rentalPrice: null,
           enabled: booth.active,
           availability: booth.active ? 'AVAILABLE' : 'UNAVAILABLE',
-        })));
+        }));
+        setEventBooths(configurationRows);
+        setConfigurationPriceDrafts(Object.fromEntries(
+          configurationRows.map(row => [row.booth.boothId, '']),
+        ));
         setRequests([]);
       }
     } catch (caughtError) {
@@ -181,6 +191,76 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
     () => new Map(eventBooths.map(row => [row.booth.boothId, row])),
     [eventBooths],
   );
+
+  const setConfigurationSaving = (boothId: number, saving: boolean) => {
+    setSavingConfigurationIds(current => {
+      const next = new Set(current);
+      if (saving) next.add(boothId);
+      else next.delete(boothId);
+      return next;
+    });
+  };
+
+  const replaceEventBoothConfiguration = (updated: EventBooth) => {
+    setEventBooths(current => current.map(row =>
+      row.booth.boothId === updated.booth.boothId ? updated : row,
+    ));
+    setConfigurationPriceDrafts(current => ({
+      ...current,
+      [updated.booth.boothId]: updated.rentalPrice?.toString() ?? '',
+    }));
+  };
+
+  const handleConfigurationPriceBlur = async (row: EventBooth, rawValue: string) => {
+    const boothId = row.booth.boothId;
+    const rentalPrice = Number(rawValue);
+    if (!eventId || !Number.isFinite(rentalPrice) || rentalPrice < 0) {
+      setConfigurationPriceDrafts(current => ({
+        ...current,
+        [boothId]: row.rentalPrice?.toString() ?? '',
+      }));
+      setError('Giá thuê phải là một số không âm.');
+      return;
+    }
+    if (rentalPrice === row.rentalPrice) return;
+
+    setError('');
+    setConfigurationSaving(boothId, true);
+    try {
+      const updated = await boothApi.configureEventBooth(eventId, boothId, rentalPrice, row.enabled);
+      replaceEventBoothConfiguration(updated);
+      setSuccess(`Đã cập nhật giá thuê cho ${row.booth.code}.`);
+    } catch (caughtError) {
+      setConfigurationPriceDrafts(current => ({
+        ...current,
+        [boothId]: row.rentalPrice?.toString() ?? '',
+      }));
+      setError(apiMessage(caughtError));
+    } finally {
+      setConfigurationSaving(boothId, false);
+    }
+  };
+
+  const handleConfigurationEnabledChange = async (row: EventBooth, enabled: boolean) => {
+    const boothId = row.booth.boothId;
+    const rentalPrice = Number(configurationPriceDrafts[boothId] ?? row.rentalPrice ?? 0);
+    if (!eventId || !Number.isFinite(rentalPrice) || rentalPrice < 0) {
+      setError('Hãy nhập giá thuê hợp lệ trước khi thay đổi trạng thái gian hàng.');
+      return;
+    }
+
+    setError('');
+    setConfigurationSaving(boothId, true);
+    try {
+      const updated = await boothApi.configureEventBooth(eventId, boothId, rentalPrice, enabled);
+      replaceEventBoothConfiguration(updated);
+      setSuccess(`Đã ${enabled ? 'mở' : 'tắt'} gian hàng ${row.booth.code}.`);
+    } catch (caughtError) {
+      setError(apiMessage(caughtError));
+    } finally {
+      setConfigurationSaving(boothId, false);
+    }
+  };
 
   // Map request partner names by boothId
   const partnerByBoothId = useMemo(() => {
@@ -715,15 +795,14 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
                           type="number"
                           min="0"
                           step="100000"
-                          defaultValue={row.rentalPrice ?? ''}
+                          value={configurationPriceDrafts[row.booth.boothId] ?? row.rentalPrice ?? ''}
                           placeholder="2,000,000"
-                          onBlur={async e => {
-                            const val = Number(e.target.value);
-                            if (!isNaN(val) && val >= 0 && eventId) {
-                              await boothApi.configureEventBooth(eventId, row.booth.boothId, val, row.enabled);
-                              setSuccess(`Đã cập nhật giá thuê cho ${row.booth.code}.`);
-                            }
-                          }}
+                          disabled={savingConfigurationIds.has(row.booth.boothId)}
+                          onChange={e => setConfigurationPriceDrafts(current => ({
+                            ...current,
+                            [row.booth.boothId]: e.target.value,
+                          }))}
+                          onBlur={e => void handleConfigurationPriceBlur(row, e.target.value)}
                         />
                         <span className="s2-price-currency">₫</span>
                       </div>
@@ -734,13 +813,8 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
                         <input
                           type="checkbox"
                           checked={row.enabled}
-                          onChange={async e => {
-                            if (eventId) {
-                              await boothApi.configureEventBooth(eventId, row.booth.boothId, row.rentalPrice ?? 2000000, e.target.checked);
-                              setSuccess(`Đã ${e.target.checked ? 'mở' : 'tắt'} gian hàng ${row.booth.code}.`);
-                              await loadData();
-                            }
-                          }}
+                          disabled={savingConfigurationIds.has(row.booth.boothId)}
+                          onChange={e => void handleConfigurationEnabledChange(row, e.target.checked)}
                         />
                         <span className="s2-slider"></span>
                       </div>
