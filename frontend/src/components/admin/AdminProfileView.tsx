@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { AdminProfile } from '../../types/admin';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 
 interface AdminProfileViewProps {
   profile: AdminProfile;
@@ -47,6 +48,8 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
 
   // Logout confirm
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  useModalDismiss(isPwdModalOpen, () => setIsPwdModalOpen(false));
+  useModalDismiss(isLogoutConfirmOpen, () => setIsLogoutConfirmOpen(false));
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,6 +129,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
         {/* Header */}
         <div className="adm-page-header">
           <div>
+            <span className="admin-page-eyebrow">TÀI KHOẢN & BẢO MẬT</span>
             <h1 className="adm-page-title">Hồ sơ Quản trị viên</h1>
             <p className="adm-page-subtitle">
               Quản lý thông tin định danh quản trị và chính sách bảo mật tài khoản cá nhân.
@@ -143,7 +147,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
         {/* Profile Card */}
         <div className="adm-card adm-profile-card">
           <div className="adm-profile-header-band">
-            <div className="adm-profile-band-decor" />
+            <span className="admin-profile-card-label"><Shield size={15} /> Thông tin tài khoản</span>
           </div>
 
           <div className="adm-profile-body">

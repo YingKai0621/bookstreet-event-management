@@ -26,7 +26,7 @@ interface RegisterPageProps {
 export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegisterSuccess }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const returnTarget = (location.state as { from?: string })?.from || '/';
   
   // Form fields
@@ -113,7 +113,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
     setIsLoading(true);
 
     try {
-      await register({
+      const account = await register({
         username,
         fullName: fullName.trim(),
         password,
@@ -121,6 +121,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ language, onRegister
         email: email.trim() ? email.trim().toLowerCase() : null,
       });
 
+      if (account.email) {
+        // Registration has committed; a session enables authenticated resend.
+        try { await login({ username, password }); } catch { /* Account creation still succeeded. */ }
+        navigate('/verify-email?pending=1', { replace: true, state: { email: account.email } });
+        return;
+      }
       setIsSuccess(true);
       setTimeout(() => {
         if (onRegisterSuccess) {

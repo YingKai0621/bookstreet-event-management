@@ -448,11 +448,24 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 </p>
 
                 {selectedEventBooth && (
-                  <div className="public-map-booth-facts" aria-label={language === 'vi' ? 'Thông tin gian hàng theo sự kiện' : 'Event booth information'}>
-                    <span className={`public-map-status status-${selectedPoint.status}`}>{selectedPoint.statusLabelVi}</span>
-                    <span>{language === 'vi' ? 'Giá sự kiện' : 'Event price'}: <strong>{selectedEventBooth.rentalPrice === null
-                      ? (language === 'vi' ? 'Chưa cấu hình' : 'Not configured')
-                      : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedEventBooth.rentalPrice)}</strong></span>
+                  <div
+                    className="public-map-booth-facts"
+                    aria-label={language === 'vi' ? 'Thông tin gian hàng theo sự kiện' : 'Event booth information'}
+                  >
+                    <span className={`public-map-status status-${selectedPoint.status}`}>
+                      {selectedPoint.statusLabelVi}
+                    </span>
+                    <span>
+                      {language === 'vi' ? 'Giá sự kiện' : 'Event price'}:{' '}
+                      <strong>
+                        {selectedEventBooth.rentalPrice === null
+                          ? (language === 'vi' ? 'Chưa cấu hình' : 'Not configured')
+                          : new Intl.NumberFormat('vi-VN', {
+                              style: 'currency',
+                              currency: 'VND',
+                            }).format(selectedEventBooth.rentalPrice)}
+                      </strong>
+                    </span>
                   </div>
                 )}
 

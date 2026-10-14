@@ -1,5 +1,6 @@
 import { RefreshCw, Search, Store, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { bookingStatusLabels, boothStatusLabels, notifyBoothsChanged, type useBoothData } from '../../services/booths';
 import { apiRequest } from '../../services/facilities';
 import '../admin/FacilityManagementView.css';
@@ -17,6 +18,7 @@ export function BoothBookingView({ data, organization }: {
   const [status, setStatus] = useState('');
   const [action, setAction] = useState<Action | null>(null);
   const [saving, setSaving] = useState(false);
+  useModalDismiss(Boolean(action), () => { if (!saving) setAction(null); });
   const [actionError, setActionError] = useState('');
   const [notice, setNotice] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   Calendar,
@@ -97,6 +98,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [now, setNow] = useState(0);
+  useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
 
   const eventId = approvedApplications.some(application => application.eventId === selectedEventId)
     ? selectedEventId

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,7 +9,7 @@ import {
   Ticket,
   X
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { EventItem, Language, ParticipantProfile } from '../../types';
@@ -40,16 +41,11 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registeredEvent, setRegisteredEvent] = useState<EventItem | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  useModalDismiss(open, () => navigate('/'));
+  useModalDismiss(Boolean(activeModalEvent), () => setActiveModalEvent(null));
+  useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
 
-  // Prevent background scroll when sheet is open
-  useEffect(() => {
-    if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
+
 
   const eventTypes = [
     { id: 'all', labelVi: 'Tất cả sự kiện', labelEn: 'All Events', count: events.length },

@@ -1,0 +1,118 @@
+/* Admin workspace: quiet surfaces, clear hierarchy and focused actions. */
+.admin-app-shell { background: #f3f6f5; }
+.admin-app-shell .admin-main-viewport { background: #f3f6f5; }
+.admin-app-shell .admin-page-eyebrow { display: block; color: #7a8b82; font-size: .65rem; font-weight: 800; letter-spacing: .13em; margin-bottom: 6px; }
+.admin-booth-eyebrow { display: none; }
+.admin-app-shell .adm-page-header, .admin-app-shell .booth-crud-header { align-items: center; padding-bottom: 14px; border-bottom: 1px solid #e1e8e3; }
+.admin-app-shell .adm-page-title, .admin-app-shell .booth-crud-title-group h1 { font-size: 1.6rem; font-weight: 800; color: #233b31; letter-spacing: -.025em; }
+.admin-app-shell .adm-page-subtitle, .admin-app-shell .booth-crud-title-group p { font-size: .82rem; color: #7b8b83; }
+.admin-app-shell .adm-btn-primary, .admin-app-shell .btn-org-primary { background: #245c46; border-color: #245c46; color: #fff; border-radius: 9px; box-shadow: 0 3px 8px #245c4614; }
+.admin-app-shell .adm-btn-secondary, .admin-app-shell .btn-org-secondary { border: 1px solid #dce5df; background: #fff; color: #3a5547; border-radius: 9px; }
+.admin-app-shell button:focus-visible, .admin-app-shell input:focus-visible, .admin-app-shell select:focus-visible { outline: 3px solid #92bdab; outline-offset: 3px; }
+.admin-app-shell .adm-card, .admin-app-shell .booth-table-container, .admin-app-shell .booth-kpi-card { border: 1px solid #e0e8e2; box-shadow: 0 2px 8px #24463204; border-radius: 14px; }
+.admin-app-shell .admin-insight-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 16px; background: #fff; border: 1px solid #e0e8e2; border-radius: 14px; padding: 14px 8px; }
+.admin-app-shell .admin-insight-strip > div { display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+.admin-app-shell .admin-insight-strip > div + div { border-left: 1px solid #edf1ee; }
+.admin-app-shell .admin-insight-strip > div > div { display: flex; flex-direction: column; gap: 3px; }
+.admin-app-shell .admin-insight-strip span:not(.admin-insight-icon) { font-size: .76rem; color: #7a8b82; }
+.admin-app-shell .admin-insight-strip strong { font-size: 1.45rem; font-weight: 800; color: #294736; line-height: 1.2; }
+.admin-app-shell .admin-insight-strip small { font-size: .75rem; font-weight: 500; }
+.admin-app-shell .admin-insight-icon { width: 44px; height: 44px; display: grid; place-items: center; flex-shrink: 0; border-radius: 12px; background: #edf1f7; color: #60758e; }
+.admin-app-shell .admin-insight-icon.mint { background: #eaf4ed; color: #3e8a63; }
+.admin-app-shell .admin-insight-icon.amber { background: #fbf3e5; color: #ad8b44; }
+.admin-app-shell .admin-section-caption { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin: 0 0 14px; }
+.admin-app-shell .admin-section-caption h2 { margin: 0; font-size: .95rem; font-weight: 800; color: #2b4436; }
+.admin-app-shell .admin-section-caption p { margin: 4px 0 0; font-size: .76rem; color: #829088; }
+.admin-app-shell .admin-section-caption > span { font-size: .73rem; color: #688370; background: #e8efea; padding: 6px 10px; border-radius: 20px; white-space: nowrap; }
+.admin-app-shell .adm-badge-item-card { border: 1px solid #dfe8e1; background: #fff; border-radius: 16px; box-shadow: none; }
+.admin-app-shell .adm-badge-item-header { background: linear-gradient(110deg, #f1f6f0, #fff); padding: 20px; border-bottom: 0; }
+.admin-app-shell .adm-badge-emblem-wrap { width: 58px; height: 58px; background: #fff; border: 1px solid #e9e5d7; box-shadow: none; border-radius: 16px; }
+.admin-app-shell .adm-badge-item-body { padding: 0 20px 16px; }
+.admin-app-shell .adm-badge-item-name { font-size: 1.15rem; color: #294333; font-weight: 800; }
+.admin-app-shell .adm-badge-desc { font-size: .8rem; color: #8a968c; line-height: 1.6; margin: 8px 0 16px; }
+.admin-app-shell .adm-badge-threshold-box { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; background: #f4f7f3; border: 0; padding: 16px; border-radius: 10px; margin: 0; }
+.admin-app-shell .adm-threshold-label { font-size: .72rem; color: #7b8a80; }
+.admin-app-shell .adm-threshold-val { color: #385b42; font-size: 1.35rem; line-height: 1.3; }
+.admin-app-shell .adm-badge-item-footer { padding: 14px 20px; background: #fff; border-top: 1px solid #edf1ed; }
+.admin-app-shell .adm-footer-toggle-label { font-size: .77rem; color: #7c8c81; }
+.admin-app-shell .adm-filter-card { border: 0; background: transparent; box-shadow: none; padding: 0; margin: 14px 0; }
+.admin-app-shell .adm-filter-search, .admin-app-shell .adm-filter-select { min-height: 42px; background: #fff; border: 1px solid #dfe7e1; border-radius: 9px; }
+.admin-app-shell .adm-table-summary { padding: 14px 18px; color: #77887c; background: #fff; border-bottom: 1px solid #edf1ee; }
+.admin-app-shell .adm-table thead th { background: #f8faf8; color: #8c9990; font-weight: 700; padding: 12px 14px; letter-spacing: .05em; }
+.admin-app-shell .adm-table tbody td { padding: 12px 14px; border-bottom: 1px solid #edf2ee; }
+.admin-app-shell .adm-table tbody tr:hover { background: #f8fbf8; }
+.admin-app-shell .adm-actor-name { font-weight: 750; color: #34503e; }
+.admin-app-shell .adm-actor-role, .admin-app-shell .adm-ip-text { color: #93a095; font-size: .67rem; }
+.admin-app-shell .adm-badge-role, .admin-app-shell .adm-badge-status { border-radius: 6px; font-size: .68rem; font-weight: 700; }
+.admin-app-shell .booth-kpi-grid { background: #fff; border-radius: 14px; border: 1px solid #e0e8e2; gap: 0; padding: 14px 8px; }
+.admin-app-shell .booth-kpi-card { background: transparent; box-shadow: none; border: 0; border-radius: 0; padding: 0 18px; }
+.admin-app-shell .booth-kpi-card + .booth-kpi-card { border-left: 1px solid #edf1ee; }
+.admin-app-shell .booth-kpi-card:hover { transform: none; }
+.admin-app-shell .booth-kpi-icon-box { width: 44px; height: 44px; border-radius: 12px; }
+.admin-app-shell .booth-kpi-info strong { font-size: 1.45rem; }
+.admin-app-shell .booth-kpi-info span { font-size: .76rem; color: #7a8b82; }
+.admin-app-shell .booth-crud-toolbar { background: transparent; border: 0; box-shadow: none; padding: 0; }
+.admin-app-shell .booth-search-box, .admin-app-shell .booth-filter-select, .admin-app-shell .booth-view-toggle { background: #fff; border-color: #dfe7e1; border-radius: 9px; }
+.admin-app-shell .booth-table th { background: #f8faf8; color: #8c9990; font-size: .68rem; letter-spacing: .05em; }
+.admin-app-shell .booth-table td { border-bottom-color: #edf2ee; }
+.admin-app-shell .booth-code-pill { background: #edf5ee; color: #436448; border: 1px solid #dce8db; border-radius: 6px; }
+.admin-app-shell .booth-card-item { border-radius: 14px; border-color: #e0e8e2; box-shadow: none; }
+.admin-app-shell .adm-profile-container { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; }
+.admin-app-shell .adm-profile-header-band { height: 50px; display: flex; align-items: center; padding: 0 24px; background: radial-gradient(ellipse at 95% 0%, #b8d99855, transparent 60%), linear-gradient(110deg, #245c46, #4b7959 65%, #789764); border-bottom: 1px solid #5e8563; }
+.admin-app-shell .admin-profile-card-label { display: inline-flex; align-items: center; gap: 8px; color: #f5faef; font-size: .74rem; font-weight: 750; }
+.admin-app-shell .adm-profile-card { position: relative; background: #fff; }
+.admin-app-shell .adm-profile-card::before { content: ''; position: absolute; inset: 0 0 auto; height: 230px; background: radial-gradient(ellipse at 95% 0%, #b8d99855, transparent 60%), linear-gradient(110deg, #245c46, #4b7959 65%, #789764); pointer-events: none; }
+.admin-app-shell .adm-profile-header-band { position: relative; background: transparent; border-bottom: none; }
+.admin-app-shell .adm-profile-body { position: relative; background: transparent; }
+.admin-app-shell .adm-profile-info-block .adm-profile-name { color: #f5faef; }
+.admin-app-shell .adm-profile-info-block .adm-profile-dept { color: #e0edda; }
+.admin-app-shell .adm-profile-card .adm-profile-divider { margin-top: 24px; border-color: #e5ece2; background: #e5ece2; }
+.admin-app-shell .adm-profile-details-grid, .admin-app-shell .adm-profile-form { position: relative; background: #fff; border-radius: 12px; padding: 12px; }
+.admin-app-shell .adm-profile-body { padding: 20px 24px 24px; }
+.admin-app-shell .adm-profile-avatar-wrapper { margin-top: 0; }
+.admin-app-shell .adm-profile-avatar-large { border: 4px solid #f0f5ed; background: #e5eddf; color: #446139; box-shadow: none; width: 76px; height: 76px; }
+.admin-app-shell .adm-profile-top-bar { align-items: center; margin-bottom: 18px; }
+.admin-app-shell .adm-btn-edit-profile { background: #fff; color: #416149 !important; border: 1px solid #d9e5d6; box-shadow: none; border-radius: 8px; }
+.admin-app-shell .adm-btn-edit-profile:hover { background: #edf5e9; color: #345331 !important; box-shadow: none; }
+.admin-app-shell .adm-btn-edit-profile .btn-icon { color: #5d8055; }
+.admin-app-shell .adm-profile-name { color: #2c4935; font-size: 1.35rem; font-weight: 800; }
+.admin-app-shell .adm-profile-dept { color: #93a18f; font-size: .82rem; }
+.admin-app-shell .adm-profile-divider { margin: 18px 0; }
+.admin-app-shell .adm-profile-details-grid { gap: 0; }
+.admin-app-shell .adm-profile-field-box { border: 0; background: transparent; border-radius: 0; padding: 14px 6px; border-bottom: 1px solid #edf2ec; }
+.admin-app-shell .adm-profile-field-icon { background: #f0f5ed; border: 0; box-shadow: none; color: #7a9470; border-radius: 10px; }
+.admin-app-shell .adm-field-label { color: #657c68; letter-spacing: .02em; font-size: .67rem; }
+.admin-app-shell .adm-field-val { color: #42613d; font-size: .86rem; }
+.admin-app-shell .adm-profile-sec-card .adm-card-header { background: #f7faf6; padding: 16px 20px; border-bottom: 1px solid #eaf0e8; }
+.admin-app-shell .adm-profile-sec-body { padding: 12px 20px; }
+.admin-app-shell .adm-profile-sec-card .adm-card-title { font-size: .9rem; font-weight: 800; color: #46603f; }
+.admin-app-shell .adm-card-subtitle { color: #71806b; font-size: .74rem; }
+.admin-app-shell .adm-sec-item { padding: 10px 0; }
+.admin-app-shell .adm-sec-title { color: #47613e; font-size: .84rem; font-weight: 750; }
+.admin-app-shell .adm-sec-desc { color: #71806b; font-size: .76rem; }
+.admin-app-shell .compact-pagination { padding-top: 16px; }
+.admin-app-shell .adm-modal-header, .admin-app-shell .booth-modal-header { background: #f4f8f2; border-bottom-color: #e3ebe0; }
+.admin-app-shell .adm-modal-title, .admin-app-shell .booth-modal-header h2 { font-size: 1.15rem; color: #345438; }
+@media (max-width: 900px) {
+  .admin-app-shell .adm-profile-container { grid-template-columns: 1fr; }
+  .admin-app-shell .admin-insight-strip > div { padding: 0 10px; gap: 8px; }
+  .admin-app-shell .admin-insight-icon { width: 32px; height: 32px; }
+}
+/* Booth catalog: explicit content states instead of false empty results. */
+.booth-catalog-caption { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.booth-catalog-caption h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #294735; }
+.booth-catalog-caption p { margin: 4px 0 0; font-size: .78rem; color: #74877b; }
+.booth-catalog-caption > span { font-size: .75rem; color: #5a7962; background: #e8f0e8; padding: 6px 12px; border-radius: 20px; white-space: nowrap; }
+.booth-catalog-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; min-height: 260px; padding: 28px; background: #fff; border: 1px solid #e0e8e2; border-radius: 16px; }
+.booth-state-icon { display: grid; place-items: center; width: 66px; height: 66px; border-radius: 20px; background: #eef5ec; color: #628565; }
+.booth-catalog-state h2 { margin: 0; color: #2d4938; font-size: 1.2rem; font-weight: 800; }
+.booth-catalog-state p { margin: 0; max-width: 560px; color: #76897c; font-size: .86rem; line-height: 1.65; }
+.booth-catalog-state button { margin-top: 6px; }
+.booth-catalog-state.is-error .booth-state-icon { color: #a2783e; background: #faf1e3; }
+.admin-app-shell .booth-crud-header-actions button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.admin-app-shell .booth-kpi-grid { background: transparent; border: 0; padding: 0; gap: 14px; }
+.admin-app-shell .booth-kpi-card { padding: 16px 18px; border: 1px solid #e0e8e2; border-radius: 14px; background: #fff; }
+.admin-app-shell .booth-kpi-card + .booth-kpi-card { border: 1px solid #e0e8e2; }
+.admin-app-shell .booth-kpi-info span { font-size: .72rem; letter-spacing: .025em; }
+.admin-app-shell .booth-kpi-info strong { font-size: 1.6rem; }
+@media (max-height: 800px) { .booth-catalog-state { min-height: 210px; padding: 20px; } }

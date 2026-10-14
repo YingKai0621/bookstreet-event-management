@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
@@ -65,6 +66,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyKey, setBusyKey] = useState('');
+  useModalDismiss(Boolean(rejectingRequest), () => setRejectingRequest(null));
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
   const selectedEvent = events.find(event => event.id === eventId);

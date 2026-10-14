@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Award,
   CalendarDays,
@@ -174,22 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
   // Khi ở đỉnh trang (trước Giới thiệu): 0%. Khi ở Giới thiệu: 0%. Khi ở Gian hàng: 20%. Khi ở Sự kiện: 40%... Khi ở Góp ý: 100%.
   const progressPercent = activeIndex > 0 ? (activeIndex / (navLinks.length - 1)) * 100 : (activeIndex === 0 ? 0 : 0);
 
-  // Lock body scroll and listen for Escape key when mobile menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setMobileMenuOpen(false);
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    } else {
-      document.body.style.overflow = '';
-    }
-  }, [mobileMenuOpen]);
+  useModalDismiss(mobileMenuOpen, () => setMobileMenuOpen(false));
 
   return (
     <header className={`header-ticket-wrapper ${isHeaderVisible ? '' : 'header-ticket-hidden'}`}>
@@ -432,7 +418,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="mobile-user-info">
                     <strong>{participantProfile?.name || (language === 'vi' ? 'Tài khoản' : 'Account')}</strong>
-                    <span>{participantProfile?.email || 'nguyenvana@gmail.com'}</span>
+                    <span>{participantProfile?.email || ''}</span>
                   </div>
                 </div>
 

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,6 +37,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   const [overrideModalParticipant, setOverrideModalParticipant] = useState<OrganizerParticipantItem | null>(null);
   const [overrideStatus, setOverrideStatus] = useState<'attended' | 'not_attended' | 'cancelled'>('attended');
   const [overrideReason, setOverrideReason] = useState('');
+  useModalDismiss(Boolean(overrideModalParticipant), () => setOverrideModalParticipant(null));
 
   const filteredParticipants = participants.filter(p => {
     if (statusFilter !== 'all' && p.status !== statusFilter) return false;

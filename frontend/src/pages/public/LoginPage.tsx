@@ -32,6 +32,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   function resolveDestination(account: AccountResponse): string {
+    if (returnTarget === '/verify-email?pending=1' && account.email && !account.emailVerified) return returnTarget;
     if (returnTarget.startsWith('/admin') && account.roles.includes('ADMIN')) return returnTarget;
     if ((returnTarget.startsWith('/portal') || returnTarget.startsWith('/organizer')) && account.roles.includes('ORGANIZER')) return returnTarget;
     if (returnTarget.startsWith('/partner') && account.roles.includes('PARTNER')) return returnTarget;

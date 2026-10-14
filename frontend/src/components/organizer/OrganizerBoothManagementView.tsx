@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { CompactPagination } from '../ui/CompactPagination';
 import {
   AlertCircle,
   Check,
@@ -11,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldAlert,
   Sparkles,
   Store,
   X,
@@ -77,6 +81,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   const [busyBoothId, setBusyBoothId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Filter & Search States
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -97,10 +103,14 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
   // Detail Modal
   const [viewingBooth, setViewingBooth] = useState<PhysicalBooth | null>(null);
+  useModalDismiss(isFormModalOpen, () => { if (!formSubmitting) setIsFormModalOpen(false); });
+  useModalDismiss(Boolean(viewingBooth), () => setViewingBooth(null));
 
   const loadBoothData = useCallback(async () => {
     setLoading(true);
     setErrorMessage('');
+    setLoadError('');
+    setAccessDenied(false);
     try {
       const physicalBooths = await boothApi.listAllPhysicalBooths();
       setBooths(physicalBooths);
@@ -108,7 +118,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       setActivePopover(null);
     } catch (err) {
       console.warn('Could not load booth catalog data', err);
-      setErrorMessage(err instanceof Error ? err.message : 'Không thể tải danh sách gian hàng.');
+      setAccessDenied(err instanceof ApiError && err.status === 403);
+      setLoadError(err instanceof Error ? err.message : 'Không thể tải danh sách gian hàng.');
     } finally {
       setLoading(false);
     }
@@ -145,6 +156,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       return matchesSearch && matchesStatus;
     });
   }, [booths, searchKeyword, filterStatus]);
+  const pagination = useViewportPagination(filteredBooths, 510, viewMode === 'grid' ? 300 : 95, viewMode === 'grid' ? 3 : 1);
 
   const mapMarkers = useMemo<BoothMapMarker[]>(() => filteredBooths.flatMap(booth => {
     const draft = draftCoords[booth.boothId];
@@ -356,6 +368,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       {/* 1. HEADER SECTION */}
       <div className="booth-crud-header">
         <div className="booth-crud-title-group">
+          <span className="admin-page-eyebrow admin-booth-eyebrow">KHÔNG GIAN ĐƯỜNG SÁCH</span>
           <h1>{language === 'vi' ? 'Quản lý Gian hàng' : 'Booth Management Catalog'}</h1>
           <p>
             {language === 'vi'
@@ -401,6 +414,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             type="button"
             className="btn-org-primary"
             onClick={handleOpenCreateModal}
+            disabled={loading || Boolean(loadError)}
           >
             <Plus size={16} />
             <span>{language === 'vi' ? 'Thêm gian hàng mới' : 'Add New Booth'}</span>
@@ -416,7 +430,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           </div>
           <div className="booth-kpi-info">
             <span>{language === 'vi' ? 'Tổng số gian hàng' : 'Total Booths'}</span>
-            <strong>{totalBoothsCount}</strong>
+            <strong>{loading || loadError ? '—' : totalBoothsCount}</strong>
           </div>
         </div>
 
@@ -426,7 +440,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           </div>
           <div className="booth-kpi-info">
             <span>{language === 'vi' ? 'Đang hoạt động' : 'Active'}</span>
-            <strong style={{ color: '#166534' }}>{activeBoothsCount}</strong>
+            <strong style={{ color: '#166534' }}>{loading || loadError ? '—' : activeBoothsCount}</strong>
           </div>
         </div>
 
@@ -436,7 +450,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           </div>
           <div className="booth-kpi-info">
             <span>{language === 'vi' ? 'Tạm ngưng' : 'Inactive'}</span>
-            <strong style={{ color: '#991B1B' }}>{inactiveBoothsCount}</strong>
+            <strong style={{ color: '#991B1B' }}>{loading || loadError ? '—' : inactiveBoothsCount}</strong>
           </div>
         </div>
       </div>
@@ -471,6 +485,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       )}
 
       {/* 3. TOOLBAR & FILTERS */}
+      {!loading && !loadError && <div className="booth-catalog-caption"><div><h2>{language === 'vi' ? 'Danh mục gian hàng' : 'Booth catalog'}</h2><p>{language === 'vi' ? 'Tìm kiếm, xem thông tin và quản lý trạng thái từng gian hàng.' : 'Search, inspect and manage physical booths.'}</p></div><span>{filteredBooths.length} / {booths.length} {language === 'vi' ? 'gian hàng' : 'booths'}</span></div>}
+      {!loadError && (
       <div className="booth-crud-toolbar">
         <div className="booth-toolbar-left">
           {/* Search Box */}
@@ -480,7 +496,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               type="text"
               placeholder={language === 'vi' ? 'Tìm theo mã gian (A01), tên, ghi chú...' : 'Search by code, name, note...'}
               value={searchKeyword}
-              onChange={e => setSearchKeyword(e.target.value)}
+              onChange={e => { setSearchKeyword(e.target.value); pagination.reset(); }}
             />
           </div>
 
@@ -488,7 +504,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           <select
             className="booth-filter-select"
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as any)}
+            onChange={e => { setFilterStatus(e.target.value as 'all' | 'active' | 'inactive'); pagination.reset(); }}
           >
             <option value="all">{language === 'vi' ? 'Tất cả trạng thái' : 'All Statuses'}</option>
             <option value="active">{language === 'vi' ? 'Đang hoạt động' : 'Active Only'}</option>
@@ -501,7 +517,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             <button
               type="button"
               className={`booth-view-btn ${viewMode === 'table' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('table')}
+              onClick={() => { setViewMode('table'); pagination.reset(); }}
               title={language === 'vi' ? 'Dạng bảng' : 'Table View'}
             >
               <List size={16} />
@@ -509,7 +525,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             <button
               type="button"
               className={`booth-view-btn ${viewMode === 'grid' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('grid')}
+              onClick={() => { setViewMode('grid'); pagination.reset(); }}
               title={language === 'vi' ? 'Dạng thẻ lưới' : 'Grid Cards View'}
             >
               <Grid size={16} />
@@ -517,6 +533,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* 4. MAIN CONTENT LIST / TABLE */}
       {loading ? (
@@ -524,19 +541,21 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           <Loader2 size={32} className="s2-spin" />
           <p>{language === 'vi' ? 'Đang tải danh sách gian hàng...' : 'Loading booths...'}</p>
         </div>
+      ) : loadError ? (
+        <section className="booth-catalog-state is-error" role="alert">
+          <span className="booth-state-icon">{accessDenied ? <ShieldAlert size={30} /> : <AlertCircle size={30} />}</span>
+          <h2>{accessDenied ? (language === 'vi' ? 'Chưa có quyền truy cập danh mục' : 'Catalog access is not permitted') : (language === 'vi' ? 'Không thể tải danh mục gian hàng' : 'Could not load booth catalog')}</h2>
+          <p>{accessDenied ? (language === 'vi' ? 'Phiên đăng nhập hiện tại không được cấp quyền quản lý gian hàng. Nếu quyền tài khoản vừa thay đổi, hãy đăng xuất và đăng nhập lại.' : 'Your current session does not have booth management permission. Sign in again if your permissions recently changed.') : (language === 'vi' ? 'Dữ liệu chưa được tải. Vui lòng kiểm tra kết nối và thử lại.' : 'Data has not loaded. Check your connection and try again.')}</p>
+          <button type="button" className="btn-org-secondary" onClick={() => void loadBoothData()}><RefreshCw size={16} />{language === 'vi' ? 'Thử tải lại' : 'Retry'}</button>
+        </section>
       ) : filteredBooths.length === 0 ? (
-        <div className="s2-empty-state">
-          <Store size={48} />
-          <h3>{language === 'vi' ? 'Không tìm thấy gian hàng nào' : 'No booths found'}</h3>
+        <div className="booth-catalog-state">
+          <span className="booth-state-icon">{booths.length ? <Search size={30} /> : <Store size={30} />}</span>
+          <h2>{booths.length ? (language === 'vi' ? 'Không có kết quả phù hợp' : 'No matching results') : (language === 'vi' ? 'Danh mục chưa có gian hàng' : 'No booths in the catalog yet')}</h2>
           <p>
-            {language === 'vi'
-              ? 'Thử thay đổi từ khóa tìm kiếm, bộ lọc hoặc thêm gian hàng mới vào danh mục.'
-              : 'Try changing search keywords, filters, or create a new booth in catalog.'}
+            {booths.length ? (language === 'vi' ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ gian hàng.' : 'Try another keyword or clear your filters.') : (language === 'vi' ? 'Tạo gian hàng đầu tiên với mã, tên và vị trí để bắt đầu quản lý danh mục.' : 'Create your first booth with its code, name and location.')}
           </p>
-          <button type="button" className="btn-org-primary" onClick={handleOpenCreateModal}>
-            <Plus size={16} />
-            <span>{language === 'vi' ? 'Tạo gian hàng đầu tiên' : 'Create First Booth'}</span>
-          </button>
+          {booths.length ? <button type="button" className="btn-org-secondary" onClick={() => { setSearchKeyword(''); setFilterStatus('all'); pagination.reset(); }}><X size={16} />{language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}</button> : <button type="button" className="btn-org-primary" onClick={handleOpenCreateModal}><Plus size={16} /><span>{language === 'vi' ? 'Tạo gian hàng đầu tiên' : 'Create First Booth'}</span></button>}
         </div>
       ) : viewMode === 'table' ? (
         /* TABLE VIEW */
@@ -552,7 +571,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredBooths.map(booth => {
+              {pagination.items.map(booth => {
                 const isBusy = busyBoothId === booth.boothId;
 
                 return (
@@ -633,7 +652,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       ) : viewMode === 'grid' ? (
         /* GRID CARDS VIEW */
         <div className="booth-grid-cards">
-          {filteredBooths.map(booth => {
+          {pagination.items.map(booth => {
             const isBusy = busyBoothId === booth.boothId;
 
             return (
@@ -731,6 +750,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       )}
 
       {/* 5. CREATE / EDIT BOOTH MODAL */}
+      {!loading && !loadError && filteredBooths.length > 0 && <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />}
       {isFormModalOpen && (
         <div className="booth-modal-backdrop" onClick={() => !formSubmitting && setIsFormModalOpen(false)}>
           <div className="booth-modal-box" onClick={e => e.stopPropagation()}>
