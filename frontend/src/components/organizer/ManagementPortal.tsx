@@ -14,7 +14,7 @@ import {
 import { OrganizerTopBar } from './OrganizerTopBar';
 
 import { OrganizerBoothManagementView } from './OrganizerBoothManagementView';
-import { Sprint2BoothWorkspace } from './Sprint2BoothWorkspace';
+import { OrganizerBoothRequestsView } from './OrganizerBoothRequestsView';
 import { ActivityManagementView } from './ActivityManagementView';
 import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
 import { OrganizerCreateActivityModal } from './OrganizerCreateActivityModal';
@@ -112,37 +112,58 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, []);
 
   useEffect(() => {
+    let active = true;
     const targetEventId = selectedEventId || firstEventId;
     if (targetEventId) {
       setBoothsList([]);
       setBoothRequests([]);
-      organizerApi.getBooths(targetEventId).then(setBoothsList).catch(error => {
+      organizerApi.getBooths(targetEventId).then(rows => {
+        if (active) setBoothsList(rows);
+      }).catch(error => {
+        if (!active) return;
         setBoothsList([]);
         setActionError(error instanceof Error ? error.message : 'Không tải được gian hàng sự kiện.');
       });
-      boothApi.listAllOrganizerRequests(targetEventId).then(setBoothRequests).catch(error => {
+      boothApi.listAllOrganizerRequests(targetEventId).then(rows => {
+        if (active) setBoothRequests(rows);
+      }).catch(error => {
+        if (!active) return;
         setBoothRequests([]);
         setActionError(error instanceof Error ? error.message : 'Không tải được yêu cầu gian hàng.');
       });
+    } else {
+      setBoothsList([]);
+      setBoothRequests([]);
     }
 
     if (selectedEventId) {
       organizerApi.getEvent(selectedEventId).then(event => {
-        setEventsList(current => current.map(item => item.id === event.id ? event : item));
-      }).catch(error => setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.'));
+        if (active) setEventsList(current => current.map(item => item.id === event.id ? event : item));
+      }).catch(error => {
+        if (active) setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.');
+      });
     }
+
+    return () => {
+      active = false;
+    };
   }, [firstEventId, selectedEventId]);
 
   useEffect(() => {
+    let active = true;
     const targetEventId = selectedEventId || firstEventId;
     if (!targetEventId) {
+      setPartnerApplications([]);
       return;
     }
 
     const refreshApplications = () => {
       void organizerApi.getPartnerApplications(targetEventId)
-        .then(setPartnerApplications)
+        .then(rows => {
+          if (active) setPartnerApplications(rows);
+        })
         .catch(error => {
+          if (!active) return;
           setPartnerApplications([]);
           setActionError(error instanceof Error ? error.message : 'Không tải được hồ sơ đối tác.');
         });
@@ -154,6 +175,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     window.addEventListener('duongsach:data-changed', refreshApplications);
 
     return () => {
+      active = false;
       window.clearInterval(intervalId);
       window.removeEventListener('focus', refreshApplications);
       window.removeEventListener('duongsach:data-changed', refreshApplications);
@@ -455,13 +477,20 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             onNavigateToBoothsMap={() => {
               setActiveTab('booths');
             }}
+            onBoothConfigurationChanged={async () => {
+              try {
+                setBoothsList(await organizerApi.getBooths(currentSelectedEvent.id));
+              } catch (error) {
+                setActionError(error instanceof Error ? error.message : 'Không tải lại được cấu hình gian hàng.');
+              }
+            }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={handlePublishEvent}
           />
         )}
 
         {activeTab === 'booth_requests' && (
-          <Sprint2BoothWorkspace
+          <OrganizerBoothRequestsView
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}

@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../../components/organizer/Sprint2Booth.css';
 import { ApiError } from '../../services/apiClient';
@@ -47,8 +47,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 const availabilityLabel: Record<EventBooth['availability'], string> = {
   AVAILABLE: 'Còn trống',
   ON_HOLD: 'Đang giữ chỗ',
-  ASSIGNED: 'Đã phân bổ',
-  UNAVAILABLE: 'Chưa mở',
+  ASSIGNED: 'Đã thuê',
+  UNAVAILABLE: 'Không mở bán',
 };
 
 const requestStatusLabel: Record<BoothRequest['status'], string> = {
@@ -103,34 +103,58 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const eventId = approvedApplications.some(application => application.eventId === selectedEventId)
     ? selectedEventId
     : approvedApplications[0]?.eventId || '';
+  const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
+  const loadGenerationRef = useRef(0);
+  const currentEventIdRef = useRef(eventId);
 
-  const loadData = useCallback(async () => {
-    if (!eventId) {
+  useEffect(() => {
+    currentEventIdRef.current = eventId;
+  }, [eventId]);
+
+  const loadData = useCallback(async (clearCurrent = false) => {
+    const requestedEventId = eventId;
+    if (currentEventIdRef.current !== requestedEventId) return;
+    const generation = ++loadGenerationRef.current;
+
+    if (clearCurrent) {
       setBooths([]);
       setRequests([]);
+      setSelectedBooth(null);
+      setRequestNote('');
+      setSuccess('');
+    }
+    setError('');
+
+    if (!requestedEventId) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    setError('');
     try {
       const [eventBooths, ownRequests] = await Promise.all([
-        boothApi.listAllPublicEventBooths(eventId),
-        boothApi.listAllPartnerRequests(eventId),
+        boothApi.listAllPublicEventBooths(requestedEventId),
+        boothApi.listAllPartnerRequests(requestedEventId),
       ]);
+      if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths(eventBooths);
       setRequests(ownRequests);
     } catch (caughtError) {
+      if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths([]);
       setRequests([]);
       setError(apiMessage(caughtError));
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current && currentEventIdRef.current === requestedEventId) {
+        setLoading(false);
+      }
     }
   }, [eventId]);
 
   useEffect(() => {
-    void loadData();
+    void loadData(true);
+    return () => {
+      loadGenerationRef.current += 1;
+    };
   }, [loadData]);
 
   useEffect(() => {
@@ -185,10 +209,12 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const submitRequest = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
     if (!selectedBooth || !eventId || requestBlockedReason(selectedBooth)) return;
+    const requestedEventId = eventId;
     setBusy('submit');
     setError('');
     try {
-      await boothApi.submitRequest(eventId, selectedBooth.booth.boothId, requestNote.trim() || null);
+      await boothApi.submitRequest(requestedEventId, selectedBooth.booth.boothId, requestNote.trim() || null);
+      if (currentEventIdRef.current !== requestedEventId) return;
       setSelectedBooth(null);
       setRequestNote('');
       setSuccess(`Đã gửi yêu cầu đăng ký gian hàng ${selectedBooth.booth.code} thành công.`);
@@ -203,10 +229,12 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
 
   const withdraw = async (request: BoothRequest) => {
     if (!window.confirm(`Rút yêu cầu gian ${request.boothCode}?`)) return;
+    const requestedEventId = eventId;
     setBusy(`withdraw-${request.boothRequestId}`);
     setError('');
     try {
       await boothApi.withdrawRequest(request.boothRequestId);
+      if (currentEventIdRef.current !== requestedEventId) return;
       setSuccess('Đã rút yêu cầu gian hàng.');
       await loadData();
     } catch (caughtError) {
@@ -239,13 +267,30 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           <h1 id="partner-booth-title" className="partner-page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
             Sơ đồ & Yêu cầu gian hàng
           </h1>
-          <p className="partner-page-sub">Nhấn trực tiếp vào các gian hàng trên sơ đồ để xem thông tin và gửi yêu cầu đăng ký / đổi gian hàng.</p>
+          <p className="partner-page-sub">Chọn sự kiện, xem trạng thái từng gian hàng và gửi yêu cầu thuê trực tiếp trên sơ đồ.</p>
         </div>
         <button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
           <RefreshCw size={15} />
           Làm mới
         </button>
       </header>
+
+      <div className="s2-event-bar">
+        <label htmlFor="partner-booth-event">Sự kiện tham gia</label>
+        <select
+          id="partner-booth-event"
+          value={eventId}
+          onChange={event => {
+            currentEventIdRef.current = event.target.value;
+            setSelectedEventId(event.target.value);
+          }}
+        >
+          {approvedApplications.map(application => (
+            <option key={application.id} value={application.eventId}>{application.eventTitle}</option>
+          ))}
+        </select>
+        {selectedApplication && <span>{selectedApplication.dateRange}</span>}
+      </div>
 
 
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
@@ -555,7 +600,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     maxLength={1000}
                     value={requestNote}
                     onChange={event => setRequestNote(event.target.value)}
-                    placeholder="Mô tả nhu cầu trưng bày, diện tích hoặc mong muốn đổi gian..."
+                    placeholder="Mô tả nhu cầu trưng bày, diện tích hoặc yêu cầu dành cho gian hàng..."
                   />
                 </div>
 
@@ -581,7 +626,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     ) : (
                       <>
                         <Check size={16} />
-                        <span>Gửi yêu cầu thuê / đổi gian</span>
+                        <span>Gửi yêu cầu thuê gian</span>
                       </>
                     )}
                   </button>

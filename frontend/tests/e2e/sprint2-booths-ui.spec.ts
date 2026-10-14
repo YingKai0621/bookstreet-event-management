@@ -23,6 +23,14 @@ const event = {
   updatedAt: '2026-10-08T00:00:00Z',
 };
 
+const secondEvent = {
+  ...event,
+  eventId: 102,
+  name: 'Hội sách Mùa xuân',
+  startAt: '2027-02-10T02:00:00Z',
+  endAt: '2027-02-12T10:00:00Z',
+};
+
 const physicalBooth = {
   boothId: 11,
   code: 'A05',
@@ -94,6 +102,7 @@ async function mockOrganizer(page: Page): Promise<{
     }
     if (path.endsWith('/organizer/booths/12') && method === 'PATCH') {
       const body = route.request().postDataJSON();
+      expect(body.active).toBeUndefined();
       expect(body.mapX).toBeGreaterThanOrEqual(0);
       expect(body.mapX).toBeLessThanOrEqual(100);
       expect(body.mapY).toBeGreaterThanOrEqual(0);
@@ -127,6 +136,7 @@ async function mockOrganizer(page: Page): Promise<{
 }
 
 async function mockPartner(page: Page): Promise<void> {
+  let delayInitialEvent = true;
   let requests: Record<string, unknown>[] = [{
     boothRequestId: 80,
     eventId: 101,
@@ -158,6 +168,13 @@ async function mockPartner(page: Page): Promise<void> {
     booth: { ...physicalBooth, boothId: 12, code: 'B02', name: 'Gian văn học', mapX: 65, mapY: 45 },
     rentalPrice: 4_000_000,
   };
+  const secondEventBooth = {
+    ...eventBooth,
+    eventBoothConfigId: 73,
+    eventId: 102,
+    booth: { ...physicalBooth, boothId: 13, code: 'C09', name: 'Gian sự kiện mùa xuân', mapX: 50, mapY: 55 },
+    rentalPrice: 3_500_000,
+  };
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -165,10 +182,23 @@ async function mockPartner(page: Page): Promise<void> {
     if (path.endsWith('/auth/me')) return json(route, { userId: 2, username: 'partner', fullName: 'Partner Demo', email: 'partner@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'PARTNER'] });
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-token' });
     if (path.endsWith('/partner/organization')) return json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: 'Đối tác kiểm thử', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
-    if (path.endsWith('/partner/applications')) return json(route, { content: [{ applicationId: 31, eventId: 101, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-02T00:00:00Z', withdrawnAt: null }], page: 0, size: 100, totalElements: 1, totalPages: 1 });
-    if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event], page: 0, size: 100, totalElements: 1, totalPages: 1 });
-    if (path.endsWith('/events/101/booths') && method === 'GET') return json(route, { content: [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth], page: 0, size: 200, totalElements: 2, totalPages: 1 });
-    if (path.endsWith('/partner/booth-requests') && method === 'GET') return json(route, { content: requests, page: 0, size: 200, totalElements: requests.length, totalPages: requests.length ? 1 : 0 });
+    if (path.endsWith('/partner/applications')) return json(route, { content: [
+      { applicationId: 31, eventId: 101, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-02T00:00:00Z', withdrawnAt: null },
+      { applicationId: 32, eventId: 102, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-02T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', withdrawnAt: null },
+    ], page: 0, size: 100, totalElements: 2, totalPages: 1 });
+    if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, secondEvent], page: 0, size: 100, totalElements: 2, totalPages: 1 });
+    if (path.endsWith('/events/101/booths') && method === 'GET') {
+      if (delayInitialEvent) {
+        delayInitialEvent = false;
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+      return json(route, { content: [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth], page: 0, size: 200, totalElements: 2, totalPages: 1 });
+    }
+    if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: [secondEventBooth], page: 0, size: 200, totalElements: 1, totalPages: 1 });
+    if (path.endsWith('/partner/booth-requests') && method === 'GET') {
+      const eventRequests = url.searchParams.get('eventId') === '102' ? [] : requests;
+      return json(route, { content: eventRequests, page: 0, size: 200, totalElements: eventRequests.length, totalPages: eventRequests.length ? 1 : 0 });
+    }
     if (path.endsWith('/events/101/booth-requests') && method === 'POST') {
       const body = route.request().postDataJSON();
       expect(body).toEqual({ boothId: 12, requestNote: 'Ưu tiên trưng bày sách văn học.' });
@@ -212,47 +242,29 @@ async function mockPublicMap(page: Page): Promise<void> {
 test('Organizer manages a physical Booth, Event price, and candidate selection', async ({ page }) => {
   const { getSavedBoothPosition, getConfigurationRequests } = await mockOrganizer(page);
   await page.goto('/portal');
-  await page.getByRole('button', { name: 'Yêu cầu gian hàng' }).click();
-  await expect(page.getByRole('heading', { name: 'Sơ đồ & Quản lý vị trí gian hàng' })).toBeVisible();
+  await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quản lý Gian hàng' })).toBeVisible();
   await expect(page.getByText('A05', { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Thêm gian hàng' }).click();
+  await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
   await page.getByPlaceholder('Ví dụ: A01, B02, C10').fill('B01');
   await page.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill('Gian văn học');
+  await page.getByLabel('Tọa độ X trên sơ đồ (%)').fill('50');
+  await page.getByLabel('Tọa độ Y trên sơ đồ (%)').fill('50');
   await page.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Đã tạo gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã thêm mới thành công gian hàng');
   await expect(page.getByText('B01', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /Cấu hình sự kiện/ }).click();
-  const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
-  const rentalPrice = configuredBooth.locator('input[type="number"]');
-  await expect(rentalPrice).toHaveValue('5000000');
-  await expect(configuredBooth.getByText('Còn trống')).toBeVisible();
-  await rentalPrice.fill('5500000');
-  await rentalPrice.press('Tab');
-  await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
-  const enabledToggle = configuredBooth.getByRole('checkbox');
-  await expect(enabledToggle).toBeEnabled();
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã tắt gian hàng A05');
-  await expect(rentalPrice).toHaveValue('5500000');
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã mở gian hàng A05');
-  await expect(enabledToggle).toBeChecked();
-  expect(getConfigurationRequests()).toEqual([
-    { rentalPrice: 5_500_000, enabled: true },
-    { rentalPrice: 5_500_000, enabled: false },
-    { rentalPrice: 5_500_000, enabled: true },
-  ]);
-  await page.getByRole('button', { name: /Duyệt yêu cầu thuê gian hàng/ }).click();
-  await expect(page.getByText('NXB Demo')).toBeVisible();
-  page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
-  await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
-  await expect(page.getByText(/5.500.000/)).toBeVisible();
 
-  await page.getByRole('button', { name: /Sơ đồ bản đồ gian hàng/ }).click();
+  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
   const mapLayer = page.locator('.booth-map-image-layer');
-  const newBoothMarker = page.getByRole('button', { name: /B01.*Còn trống/ });
+  const newBoothMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(newBoothMarker).toBeVisible();
+  await newBoothMarker.click();
+  const mapPopover = page.locator('.booth-marker-popover');
+  await expect(mapPopover.getByText('Đang hoạt động', { exact: true })).toBeVisible();
+  await expect(mapPopover.getByLabel('Trạng thái vật lý')).toHaveCount(0);
+  await mapPopover.getByRole('button', { name: 'Hoàn tất & Đồng bộ' }).click();
+  expect(getConfigurationRequests()).toHaveLength(0);
+
   const mapBox = await mapLayer.boundingBox();
   const markerBox = await newBoothMarker.boundingBox();
   expect(mapBox).not.toBeNull();
@@ -262,12 +274,49 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.mouse.move(mapBox!.x + mapBox!.width * 0.625, mapBox!.y + mapBox!.height * 0.48, { steps: 8 });
   await page.mouse.up();
   await page.getByRole('button', { name: 'Lưu sơ đồ' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã lưu thành công tọa độ 1 gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 gian hàng');
+
+  await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem', exact: true }).click();
+  await page.locator('.org-tabs-bar').getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Cấu hình gian hàng & giá sự kiện' })).toBeVisible();
+  const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
+  const unconfiguredBooth = page.locator('.s2-config-row').filter({ hasText: 'B01' });
+  const rentalPrice = configuredBooth.locator('input[type="number"]');
+  await expect(rentalPrice).toHaveValue('5000000');
+  await expect(configuredBooth.getByText('Còn trống')).toBeVisible();
+  await expect(unconfiguredBooth.locator('.s2-config-status').getByText('Không mở bán', { exact: true })).toBeVisible();
+  await expect(unconfiguredBooth.locator('input[type="number"]')).toHaveValue('');
+  await rentalPrice.fill('5500000');
+  await rentalPrice.press('Tab');
+  await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
+  const enabledToggle = configuredBooth.getByRole('checkbox');
+  await expect(enabledToggle).toBeEnabled();
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã ngừng mở bán gian A05');
+  await expect(rentalPrice).toHaveValue('5500000');
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã mở bán gian A05');
+  await expect(enabledToggle).toBeChecked();
+  expect(getConfigurationRequests()).toEqual([
+    { rentalPrice: 5_500_000, enabled: true },
+    { rentalPrice: 5_500_000, enabled: false },
+    { rentalPrice: 5_500_000, enabled: true },
+  ]);
+
+  await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Yêu cầu gian hàng theo sự kiện' })).toBeVisible();
+  await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('101');
+  await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toHaveCount(0);
+  await expect(page.getByText('NXB Demo')).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
+  await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
+  await expect(page.getByText(/5.500.000/)).toBeVisible();
   await page.reload();
-  await page.getByRole('navigation', { name: 'Điều hướng chức năng' })
-    .getByRole('button', { name: 'Yêu cầu gian hàng', exact: true })
-    .click();
-  const persistedMarker = page.getByRole('button', { name: /B01.*Còn trống/ });
+  await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  const persistedMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(persistedMarker).toBeVisible();
   const savedBoothPosition = getSavedBoothPosition();
   expect(savedBoothPosition).not.toBeNull();
@@ -282,6 +331,14 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await mockPartner(page);
   await page.goto('/partner/booth-requests');
   await expect(page.getByRole('heading', { name: 'Sơ đồ & Yêu cầu gian hàng' })).toBeVisible();
+  const eventPicker = page.getByLabel('Sự kiện tham gia');
+  await expect(eventPicker).toHaveValue('101');
+  await eventPicker.selectOption('102');
+  await expect(page.getByRole('button', { name: /C09.*Còn trống/ })).toBeVisible();
+  await page.waitForTimeout(450);
+  await expect(page.getByRole('button', { name: /A05|B02/ })).toHaveCount(0);
+  await eventPicker.selectOption('101');
+  await expect(page.getByRole('button', { name: /B02.*Còn trống/ })).toBeVisible();
   await page.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
   await expect(page.getByText('Đã được chọn', { exact: true })).toBeVisible();
   await expect(page.getByText('Thời gian còn lại')).toBeVisible();
@@ -298,7 +355,7 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(availableMarker).toHaveAttribute('style', new RegExp(`left: ${markerLeft.replace('.', '\\.')}.*top: ${markerTop.replace('.', '\\.')}`));
   await availableMarker.click();
   await page.getByLabel('Ghi chú gửi Ban tổ chức').fill('Ưu tiên trưng bày sách văn học.');
-  await page.getByRole('button', { name: 'Gửi yêu cầu thuê / đổi gian' }).click();
+  await page.getByRole('button', { name: 'Gửi yêu cầu thuê gian' }).click();
   await expect(page.getByRole('status')).toContainText('Đã gửi yêu cầu');
   await expect(page.getByText('Chờ duyệt')).toBeVisible();
   await expect(page.getByText('Gian B02')).toBeVisible();
