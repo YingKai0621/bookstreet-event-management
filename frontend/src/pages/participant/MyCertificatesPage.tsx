@@ -162,30 +162,7 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
         </p>
       </div>
 
-      {/* 2. Top Summary Metrics */}
-      <div className="participant-summary-grid cert-summary-grid" style={{ marginBottom: '1.5rem' }}>
-        <div className="summary-stat-card">
-          <div className="stat-number-box gold">
-            <Award className="stat-badge-icon" size={24} />
-            <span>{certificates.length}</span>
-          </div>
-          <div className="stat-label-text">
-            {language === 'vi' ? 'Chứng nhận đã nhận' : 'Earned Certificates'}
-          </div>
-        </div>
-
-        <div className="summary-stat-card">
-          <div className="stat-number-box">
-            <Sparkles className="stat-star-icon" size={24} />
-            <span>{certificates.length > 0 ? 'Hoạt động' : 'Sẵn sàng'}</span>
-          </div>
-          <div className="stat-label-text">
-            {language === 'vi' ? 'Trạng thái xác thực số' : 'Digital Verification'}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Skeleton Loading State or Certificate List or Empty State */}
+      {/* 2. Skeleton Loading State or Certificate List or Empty State */}
       {isLoading ? (
         <div className="certificates-list-container" aria-label="Đang tải chứng nhận...">
           {[1, 2, 3].map((idx) => (
@@ -218,18 +195,6 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
               ? 'Hãy tham gia các buổi tọa đàm tác giả, triển lãm và workshop sáng tạo tại Đường Sách TP.HCM để hoàn tất điểm danh và nhận chứng nhận số chính thức được lưu vĩnh viễn trong hồ sơ.' 
               : 'Join author talks, exhibitions, and creative workshops at Ho Chi Minh City Book Street to complete check-in and earn official digital certificates.'}
           </p>
-
-          {/* 3 Step Guidance Cards */}
-          <div className="cert-guidance-heading">
-            <h3 className="cert-guidance-title">
-              {language === 'vi' ? 'Làm thế nào để nhận chứng nhận?' : 'How to Earn Your Certificate?'}
-            </h3>
-            <p className="cert-guidance-sub">
-              {language === 'vi'
-                ? 'Hoàn thành 3 bước đơn giản dưới đây để sở hữu chứng chỉ điện tử có giá trị lưu giữ vĩnh viễn'
-                : 'Follow 3 simple steps to receive and store your permanent verified certificate'}
-            </p>
-          </div>
 
           <div className="cert-empty-steps-grid">
             <div className="cert-step-card">
@@ -287,16 +252,16 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.65rem',
-                padding: '0.85rem 1.75rem',
+                gap: '0.5rem',
+                padding: '0.6rem 1.25rem',
                 borderRadius: '8px',
                 fontWeight: 700,
-                fontSize: '0.96rem'
+                fontSize: '0.88rem'
               }}
             >
-              <Calendar size={18} />
+              <Calendar size={16} />
               <span>{language === 'vi' ? 'Khám phá sự kiện sắp diễn ra' : 'Explore Upcoming Events'}</span>
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </Link>
 
             <Link
@@ -306,11 +271,11 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.85rem 1.5rem',
+                gap: '0.45rem',
+                padding: '0.6rem 1.15rem',
                 borderRadius: '8px',
                 fontWeight: 600,
-                fontSize: '0.95rem'
+                fontSize: '0.88rem'
               }}
             >
               <span>{language === 'vi' ? 'Xem hoạt động của tôi' : 'My Registered Activities'}</span>

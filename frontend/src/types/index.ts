@@ -200,6 +200,7 @@ export interface ActivityAuditItem {
    ========================================================================== */
 
 export interface ParticipantProfile {
+  emailVerified?: boolean;
   id: string;
   name: string;
   email: string;
@@ -299,6 +300,8 @@ export interface PartnerEventApplication {
   eventId: string;
   eventTitle: string;
   dateRange: string;
+  startAt?: string;
+  endAt?: string;
   location: string;
   imageUrl: string;
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn';

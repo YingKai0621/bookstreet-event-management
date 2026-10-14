@@ -9,13 +9,14 @@ import { apiClient } from './apiClient';
 
 export const participantApi = {
   async getProfile(): Promise<ParticipantProfile> {
-    const user = await apiClient.get<Record<string, unknown>>('/participant/profile');
+    const user = await apiClient.get<Record<string, unknown>>('/auth/profile');
     return {
       id: String(user.id),
       name: String(user.fullName),
-      email: String(user.email),
+      email: String(user.email || ''),
+      emailVerified: Boolean(user.emailVerified),
       phone: user.phone ? String(user.phone) : undefined,
-      role: String(user.primaryRole),
+      role: 'Participant',
       avatar: user.avatarUrl ? String(user.avatarUrl) : undefined,
       points: Number(user.totalPoints || 0),
       emailNotifications: Boolean(user.emailNotifications),
@@ -52,8 +53,8 @@ export const participantApi = {
   getNotifications: () => apiClient.get<Array<{ id: string; title: string; message: string; kind: string; isRead: boolean; link?: string; createdAt: string }>>('/participant/notifications'),
   markNotificationRead: (id: string) => apiClient.patch(`/participant/notifications/${id}/read`),
   markAllNotificationsRead: () => apiClient.patch('/participant/notifications/read-all'),
-  updateProfile: (data: { fullName: string; phone?: string; emailNotifications: boolean }) =>
-    apiClient.patch<Record<string, unknown>>('/participant/profile', data),
+  updateProfile: (data: { fullName: string; phone?: string; avatarUrl?: string }) =>
+    apiClient.put<Record<string, unknown>>('/auth/profile', data),
   submitFeedback: (data: { rating: number; comments: string; targetScope?: string; targetName?: string; heritageId?: string; boothId?: string }) =>
     apiClient.post<{ id: string }>('/participant/feedbacks', data),
   getMyFeedbacks: () => apiClient.get('/participant/feedbacks'),
