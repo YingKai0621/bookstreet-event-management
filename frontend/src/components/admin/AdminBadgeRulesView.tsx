@@ -7,11 +7,13 @@ import {
   Gift,
   Plus,
   Sprout,
-  TrendingUp,
   X
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { AdminBadgeRule } from '../../types/admin';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { CompactPagination } from '../ui/CompactPagination';
 
 interface AdminBadgeRulesViewProps {
   badgeRules: AdminBadgeRule[];
@@ -28,6 +30,8 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AdminBadgeRule | null>(null);
+  useModalDismiss(isModalOpen, () => setIsModalOpen(false));
+  const pagination = useViewportPagination(badgeRules, 300, 400, 3);
 
   // Form states
   const [formCode, setFormCode] = useState('');
@@ -124,7 +128,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title">Quy tắc Điểm & Huy hiệu</h1>
+          <span className="admin-page-eyebrow">CỘNG ĐỒNG ĐỘC GIẢ</span><h1 className="adm-page-title">Quy tắc Điểm & Huy hiệu</h1>
           <p className="adm-page-subtitle">
             Cấu hình tiêu chí xét danh hiệu, điểm sàn tích lũy và đặc quyền độc giả tại Đường Sách TP.HCM.
           </p>
@@ -137,39 +141,15 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
         </div>
       </div>
 
-      {/* Progression Banner */}
-      <div className="adm-card adm-progression-card">
-        <div className="adm-progression-head">
-          <div className="adm-progression-title">
-            <TrendingUp size={18} />
-            <span>Thang cấp bậc tích lũy điểm thưởng hiện hành</span>
-          </div>
-          <span className="adm-progression-note">
-            Độc giả nhận 20 điểm/lần tham dự tọa đàm, 50 điểm/lần hoàn thành tour di sản
-          </span>
-        </div>
-        <div className="adm-prog-stepper">
-          {badgeRules.map((b, index) => (
-            <div key={b.id} className="adm-prog-step-node">
-              <div className="adm-prog-node-header">
-                <div className={`adm-prog-line-left ${index === 0 ? 'is-edge' : ''}`} />
-                <div className="adm-prog-circle">
-                  <span className="adm-prog-points">{b.pointsThreshold}đ</span>
-                </div>
-                <div className={`adm-prog-line-right ${index === badgeRules.length - 1 ? 'is-edge' : ''}`} />
-              </div>
-              <div className="adm-prog-step-body">
-                <div className="adm-prog-step-name">{b.name}</div>
-                <div className="adm-prog-step-sub">{b.nameEn}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="admin-insight-strip" aria-label="Tổng quan quy tắc">
+        <div><span className="admin-insight-icon"><Award size={20} /></span><div><span>Tổng số quy tắc</span><strong>{badgeRules.length}</strong></div></div>
+        <div><span className="admin-insight-icon mint"><CheckCircle2 size={20} /></span><div><span>Đang áp dụng</span><strong>{badgeRules.filter(rule => rule.status === 'active').length}</strong></div></div>
+        <div><span className="admin-insight-icon amber"><BookOpen size={20} /></span><div><span>Ngưỡng điểm thấp nhất</span><strong>{badgeRules.length ? Math.min(...badgeRules.map(rule => rule.pointsThreshold)).toLocaleString('vi-VN') : '—'} <small>điểm</small></strong></div></div>
       </div>
-
+      <div className="admin-section-caption"><div><h2>Danh sách huy hiệu</h2><p>Điều chỉnh ngưỡng điểm và trạng thái áp dụng của từng huy hiệu.</p></div><span>{badgeRules.length} quy tắc</span></div>
       {/* Badges Grid */}
       <div className="adm-badge-cards-grid">
-        {badgeRules.map((rule) => {
+        {pagination.items.map((rule) => {
           const isActive = rule.status === 'active';
           return (
             <div key={rule.id} className={`adm-card adm-badge-item-card ${!isActive ? 'card-inactive' : ''}`}>
@@ -196,7 +176,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
                 <div className="adm-badge-name-row">
                   <h3 className="adm-badge-item-name">{rule.name}</h3>
                 </div>
-                <div className="adm-badge-name-en">{rule.nameEn}</div>
+                {rule.nameEn !== rule.name && <div className="adm-badge-name-en">{rule.nameEn}</div>}
                 <p className="adm-badge-desc">{rule.description}</p>
 
                 <div className="adm-badge-threshold-box">
@@ -204,7 +184,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
                   <span className="adm-threshold-val">{rule.pointsThreshold.toLocaleString('vi-VN')} điểm</span>
                 </div>
 
-                <div className="adm-badge-perks-section">
+                {rule.perks.length > 0 && <div className="adm-badge-perks-section">
                   <div className="adm-perks-title">
                     <Gift size={14} />
                     <span>Đặc quyền độc quyền:</span>
@@ -217,7 +197,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
                       </li>
                     ))}
                   </ul>
-                </div>
+                </div>}
               </div>
 
               <div className="adm-badge-item-footer">
@@ -240,6 +220,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
       </div>
 
       {/* Modal: Add or Edit Badge Rule */}
+      <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />
       {isModalOpen && (
         <div className="adm-modal-overlay">
           <div className="adm-modal-content">
@@ -372,4 +353,3 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
     </div>
   );
 };
-

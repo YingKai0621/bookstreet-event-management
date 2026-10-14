@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AdminAccountStatus,
   AdminRoleType,
@@ -45,6 +46,10 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
   const [lockTargetUser, setLockTargetUser] = useState<AdminUserAccount | null>(null);
   const [lockReason, setLockReason] = useState('');
   const [resetTargetUser, setResetTargetUser] = useState<AdminUserAccount | null>(null);
+  useModalDismiss(isAddModalOpen, () => setIsAddModalOpen(false));
+  useModalDismiss(Boolean(editingUser), () => setEditingUser(null));
+  useModalDismiss(Boolean(lockTargetUser), () => setLockTargetUser(null));
+  useModalDismiss(Boolean(resetTargetUser), () => setResetTargetUser(null));
 
   // New user form state
   const [newFullName, setNewFullName] = useState('');

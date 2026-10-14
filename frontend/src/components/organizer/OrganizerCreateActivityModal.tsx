@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   Building2,
@@ -46,6 +47,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
   const [thumbnail, setThumbnail] = useState('');
 
   const [error, setError] = useState<string | null>(null);
+  useModalDismiss(isOpen, onClose);
 
   React.useEffect(() => {
     if (!events.some(event => event.id === eventId)) setEventId(events[0]?.id || '');

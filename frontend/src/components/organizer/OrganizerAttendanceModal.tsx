@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   ArrowRight,
@@ -40,6 +41,7 @@ export const OrganizerAttendanceModal: React.FC<OrganizerAttendanceModalProps> =
   } | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useModalDismiss(isOpen, () => { if (!isSubmitting) onClose?.(); });
 
   if (!isOpen) return null;
 

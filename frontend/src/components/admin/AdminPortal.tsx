@@ -33,6 +33,7 @@ import {
 } from '../../types/admin';
 
 import './AdminPortal.css';
+import './AdminVisualRefresh.css';
 
 export interface AdminPortalProps {
   language: Language;

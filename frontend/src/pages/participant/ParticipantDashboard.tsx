@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   ArrowRight,
@@ -78,6 +79,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
   } | null>(null);
   const [confirmingEvent, setConfirmingEvent] = useState<CalendarEventItem | null>(null);
   const [registerSuccessToast, setRegisterSuccessToast] = useState<string | null>(null);
+  useModalDismiss(Boolean(selectedDayEvents), () => setSelectedDayEvents(null));
+  useModalDismiss(Boolean(confirmingEvent), () => setConfirmingEvent(null));
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -6,15 +7,11 @@ export function PartnerDialog({ title, children, onClose }: {
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
-  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useModalDismiss(true, onClose);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     dialogRef.current?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
       if (event.key !== 'Tab') return;
       const elements = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
         'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
@@ -30,7 +27,6 @@ export function PartnerDialog({ title, children, onClose }: {
     };
     document.addEventListener('keydown', handleKey);
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKey);
       previous?.focus();
     };

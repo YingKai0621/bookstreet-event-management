@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   Edit3,
@@ -36,6 +37,7 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
   };
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'need_changes' | 'cancelled'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useModalDismiss(isModalOpen, () => setIsModalOpen(false));
 
   // Comprehensive Form State matching EventApplicationPage
   const [title, setTitle] = useState('');

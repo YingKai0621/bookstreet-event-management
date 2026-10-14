@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { AdminAuditLogItem } from '../../types/admin';
+import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { CompactPagination } from '../ui/CompactPagination';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 
 interface AdminAuditLogsViewProps {
   logs: AdminAuditLogItem[];
@@ -20,6 +23,8 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedLog, setSelectedLog] = useState<AdminAuditLogItem | null>(null);
+  useModalDismiss(selectedLog !== null, () => setSelectedLog(null));
 
   const filteredLogs = useMemo(() => {
     return logs.filter(item => {
@@ -35,6 +40,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       return matchQuery && matchAction && matchStatus;
     });
   }, [logs, searchTerm, filterAction, filterStatus]);
+  const pagination = useViewportPagination(filteredLogs, 460, 140);
 
   const handleExportCSV = () => {
     const headers = ['Mã log', 'Thời gian', 'Người thực hiện', 'Vai trò', 'Hành động', 'Đối tượng', 'Chi tiết', 'Trạng thái', 'IP'];
@@ -91,6 +97,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       {/* Header */}
       <div className="adm-page-header">
         <div>
+          <span className="admin-page-eyebrow">GIÁM SÁT HỆ THỐNG</span>
           <h1 className="adm-page-title">Nhật ký Hoạt động (Audit Logs)</h1>
           <p className="adm-page-subtitle">
             Truy vết các thao tác quản trị, cấp quyền, cấu hình hệ thống và sự kiện an ninh.
@@ -105,6 +112,11 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       </div>
 
       {/* Filter and Search Bar */}
+      <div className="admin-insight-strip" aria-label="Tổng quan nhật ký">
+        <div><span className="admin-insight-icon"><Clock size={20} /></span><div><span>Tổng số bản ghi</span><strong>{logs.length}</strong></div></div>
+        <div><span className="admin-insight-icon mint"><CheckCircle size={20} /></span><div><span>Thao tác thành công</span><strong>{logs.filter(log => log.status === 'success').length}</strong></div></div>
+        <div><span className="admin-insight-icon amber"><AlertTriangle size={20} /></span><div><span>Cần chú ý</span><strong>{logs.filter(log => log.status === 'warning' || log.status === 'failed').length}</strong></div></div>
+      </div>
       <div className="adm-card adm-filter-card">
         <div className="adm-filter-bar">
           <div className="adm-search-input-wrap">
@@ -113,7 +125,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
               type="text"
               placeholder="Tìm theo người thực hiện, đối tượng, chi tiết hoặc IP..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); pagination.reset(); }}
               className="adm-filter-search"
             />
             {searchTerm && (
@@ -130,7 +142,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
             <Filter size={14} />
             <select 
               value={filterAction}
-              onChange={(e) => setFilterAction(e.target.value)}
+              onChange={(e) => { setFilterAction(e.target.value); pagination.reset(); }}
               className="adm-filter-select"
             >
               <option value="all">Tất cả hành động</option>
@@ -146,7 +158,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
             <Shield size={14} />
             <select 
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => { setFilterStatus(e.target.value); pagination.reset(); }}
               className="adm-filter-select"
             >
               <option value="all">Tất cả trạng thái</option>
@@ -185,7 +197,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
+                pagination.items.map((log) => (
                   <tr key={log.id}>
                     {/* Timestamp */}
                     <td>
@@ -217,7 +229,9 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
 
                     {/* Details */}
                     <td>
-                      <p className="adm-log-details">{log.details}</p>
+                      <button type="button" className="adm-log-detail-button" onClick={() => setSelectedLog(log)} aria-label={`Xem chi tiết nhật ký ${log.id}`}>
+                        <span className="adm-log-details">{log.details}</span><small>Xem chi tiết</small>
+                      </button>
                     </td>
 
                     {/* Status & IP */}
@@ -234,6 +248,14 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
           </table>
         </div>
       </div>
+      <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />
+      {selectedLog && <div className="adm-modal-overlay" onClick={() => setSelectedLog(null)}>
+        <section className="adm-modal-content" role="dialog" aria-modal="true" aria-labelledby="audit-log-detail-title" onClick={event => event.stopPropagation()}>
+          <div className="adm-modal-header"><h3 id="audit-log-detail-title">Chi tiết nhật ký #{selectedLog.id}</h3><button className="adm-modal-close" type="button" aria-label="Đóng chi tiết nhật ký" onClick={() => setSelectedLog(null)}><X size={20} /></button></div>
+          <div className="adm-modal-body"><dl className="audit-detail-fields"><dt>Thời gian</dt><dd>{selectedLog.timestamp}</dd><dt>Người thực hiện</dt><dd>{selectedLog.actorName} · {selectedLog.actorRole}</dd><dt>Hành động</dt><dd>{selectedLog.actionLabelVi}</dd><dt>Đối tượng</dt><dd>{selectedLog.targetObject}</dd><dt>IP</dt><dd>{selectedLog.ipAddress}</dd></dl><h4>Chi tiết thay đổi</h4><p className="audit-detail-text">{selectedLog.details}</p></div>
+          <div className="adm-modal-footer"><button className="adm-btn adm-btn-secondary" type="button" onClick={() => setSelectedLog(null)}>Đóng</button></div>
+        </section>
+      </div>}
     </div>
   );
 };

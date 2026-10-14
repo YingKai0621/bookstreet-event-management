@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
   ArrowRight,
@@ -5,7 +6,7 @@ import {
   Search,
   X
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
@@ -37,16 +38,10 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeModalBooth, setActiveModalBooth] = useState<Booth | null>(null);
+  useModalDismiss(open, () => navigate('/'));
+  useModalDismiss(Boolean(activeModalBooth), () => setActiveModalBooth(null));
 
-  // Prevent background scroll when sheet is open
-  useEffect(() => {
-    if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
+
 
   const categories = [
     { id: 'all', labelVi: 'Tất cả gian hàng', labelEn: 'All Stalls', count: booths.length },
