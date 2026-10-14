@@ -257,7 +257,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       <div className="partner-quick-actions-row">
         <Link to="/partner/events/apply" className="btn-part-secondary partner-quick-action-btn">
           <PlusCircle size={15} />
-          <span>{language === 'vi' ? 'Đăng ký tham gia sự kiện' : 'Apply for Event'}</span>
+          <span>{language === 'vi' ? 'Khám phá sự kiện' : 'Explore Events'}</span>
         </Link>
         <Link to="/partner/booth-requests" className="btn-part-secondary partner-quick-action-btn">
           <Store size={15} />

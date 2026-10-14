@@ -135,7 +135,7 @@ async function mockOrganizer(page: Page): Promise<{
   };
 }
 
-async function mockPartner(page: Page): Promise<void> {
+async function mockPartner(page: Page, options: { quotaExceeded?: boolean } = {}): Promise<void> {
   let delayInitialEvent = true;
   let requests: Record<string, unknown>[] = [{
     boothRequestId: 80,
@@ -202,9 +202,22 @@ async function mockPartner(page: Page): Promise<void> {
     if (path.endsWith('/events/101/booth-requests') && method === 'POST') {
       const body = route.request().postDataJSON();
       expect(body).toEqual({ boothId: 12, requestNote: 'Ưu tiên trưng bày sách văn học.' });
+      if (options.quotaExceeded) {
+        return json(route, {
+          code: 'BOOTH_QUOTA_EXCEEDED',
+          message: "The Partner has reached this Event's Booth quota.",
+        }, 409);
+      }
       const request = { boothRequestId: 88, eventId: 101, boothId: 12, boothCode: 'B02', partnerOrganizationId: 9, partnerOrganizationName: 'NXB Demo', status: 'PENDING', requestNote: body.requestNote, reviewNote: null, submittedAt: '2026-10-08T01:00:00Z', reviewedAt: null, selectedAt: null, completedAt: null, paymentExpiredAt: null, withdrawnAt: null, hold: null };
       requests = [request, ...requests];
       return json(route, request, 201);
+    }
+    if (path.endsWith('/partner/booth-requests/88/withdraw') && method === 'POST') {
+      expect(route.request().headers()['x-csrf-token']).toBe('test-token');
+      const request = requests.find(item => item.boothRequestId === 88)!;
+      const withdrawn = { ...request, status: 'WITHDRAWN', withdrawnAt: '2026-10-08T02:00:00Z' };
+      requests = requests.map(item => item.boothRequestId === 88 ? withdrawn : item);
+      return json(route, withdrawn);
     }
     if (path.includes('/public/')) return json(route, []);
     return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
@@ -330,9 +343,10 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await page.setViewportSize({ width: 390, height: 844 });
   await mockPartner(page);
   await page.goto('/partner/booth-requests');
-  await expect(page.getByRole('heading', { name: 'Sơ đồ & Yêu cầu gian hàng' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chọn & thuê gian hàng' })).toBeVisible();
   const eventPicker = page.getByLabel('Sự kiện tham gia');
   await expect(eventPicker).toHaveValue('101');
+  await page.screenshot({ path: test.info().outputPath('partner-booth-event-context.png'), fullPage: true });
   await eventPicker.selectOption('102');
   await expect(page.getByRole('button', { name: /C09.*Còn trống/ })).toBeVisible();
   await page.waitForTimeout(450);
@@ -359,13 +373,39 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByRole('status')).toContainText('Đã gửi yêu cầu');
   await expect(page.getByText('Chờ duyệt')).toBeVisible();
   await expect(page.getByText('Gian B02')).toBeVisible();
+  await page.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
+  const withdrawDialog = page.getByRole('dialog', { name: 'Xác nhận rút yêu cầu gian hàng' });
+  await expect(withdrawDialog).toContainText('không thể hoàn tác');
+  await withdrawDialog.getByRole('button', { name: 'Giữ yêu cầu' }).click();
+  await expect(withdrawDialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận rút yêu cầu' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã rút yêu cầu gian hàng');
 
   await page.goto('/partner/booths');
   await expect(page).toHaveURL(/\/partner\/booths$/);
   await expect(page.getByRole('heading', { name: 'Gian hàng của tôi' })).toBeVisible();
   await page.goto('/partner/booths/select');
   await expect(page).toHaveURL(/\/partner\/booth-requests$/);
-  await expect(page.getByRole('heading', { name: 'Sơ đồ & Yêu cầu gian hàng' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chọn & thuê gian hàng' })).toBeVisible();
+});
+
+test('Partner sees a dedicated modal after reaching the Event Booth quota', async ({ page }) => {
+  await mockPartner(page, { quotaExceeded: true });
+  await page.goto('/partner/booth-requests');
+  await page.getByRole('button', { name: /B02.*Còn trống/ }).click();
+  await page.getByLabel('Ghi chú gửi Ban tổ chức').fill('Ưu tiên trưng bày sách văn học.');
+  await page.getByRole('button', { name: 'Gửi yêu cầu thuê gian' }).click();
+
+  const quotaDialog = page.getByRole('dialog', { name: 'Đã đạt giới hạn gian hàng' });
+  await expect(quotaDialog).toBeVisible();
+  await expect(quotaDialog).toContainText('đã đạt số gian hàng tối đa');
+  await expect(quotaDialog).toContainText('Ngày hội Sách Sprint 2');
+  await expect(page.getByText("The Partner has reached this Event's Booth quota.")).toHaveCount(0);
+  await quotaDialog.getByRole('button', { name: 'Xem yêu cầu của tôi' }).click();
+  await expect(quotaDialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Yêu cầu của tôi/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Đã được chọn', { exact: true })).toBeVisible();
 });
 
 test('Public visitor switches published Events and sees only Booths with valid coordinates', async ({ page }) => {

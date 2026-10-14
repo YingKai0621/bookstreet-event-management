@@ -27,6 +27,7 @@ import type { BoothRequest, EventBooth } from '../../types/booth';
 import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
 import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
 import { BoothPaymentCheckoutCard } from '../../components/partner/BoothPaymentCheckoutCard';
+import { PartnerDialog } from '../../components/partner/PartnerDialog';
 import './PartnerPages.css';
 
 interface Props {
@@ -93,6 +94,8 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const [booths, setBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
   const [selectedBooth, setSelectedBooth] = useState<EventBooth | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<BoothRequest | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState<{ boothCode: string; eventTitle: string } | null>(null);
   const [requestNote, setRequestNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -244,6 +247,15 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       setTab('requests');
       await loadData();
     } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.code === 'BOOTH_QUOTA_EXCEEDED') {
+        setSelectedBooth(null);
+        setRequestNote('');
+        setQuotaExceeded({
+          boothCode: selectedBooth.booth.code,
+          eventTitle: selectedApplication?.eventTitle || 'Sự kiện đang chọn',
+        });
+        return;
+      }
       setError(apiMessage(caughtError));
     } finally {
       setBusy('');
@@ -251,7 +263,6 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   };
 
   const withdraw = async (request: BoothRequest) => {
-    if (!window.confirm(`Rút yêu cầu gian ${request.boothCode}?`)) return;
     const requestedEventId = eventId;
     setBusy(`withdraw-${request.boothRequestId}`);
     setError('');
@@ -259,6 +270,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       await boothApi.withdrawRequest(request.boothRequestId);
       if (currentEventIdRef.current !== requestedEventId) return;
       setSuccess('Đã rút yêu cầu gian hàng.');
+      setWithdrawTarget(null);
       await loadData();
     } catch (caughtError) {
       setError(apiMessage(caughtError));
@@ -277,7 +289,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <div className="s2-empty s2-panel">
           <Store size={34} />
           <strong>Chưa có sự kiện đủ điều kiện</strong>
-          <span>Hãy theo dõi trạng thái tại mục Sự kiện của tôi.</span>
+          <span>Hãy theo dõi trạng thái tại mục Sự kiện & đăng ký.</span>
         </div>
       </section>
     );
@@ -288,9 +300,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       <header className="s2-booth-header">
         <div>
           <h1 id="partner-booth-title" className="partner-page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
-            Sơ đồ & Yêu cầu gian hàng
+            Chọn & thuê gian hàng
           </h1>
-          <p className="partner-page-sub">Chọn sự kiện, xem trạng thái từng gian hàng và gửi yêu cầu thuê trực tiếp trên sơ đồ.</p>
+          <p className="partner-page-sub">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi toàn bộ hành trình thuê gian theo từng sự kiện.</p>
         </div>
         <button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
           <RefreshCw size={15} />
@@ -298,22 +310,39 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         </button>
       </header>
 
-      <div className="s2-event-bar">
-        <label htmlFor="partner-booth-event">Sự kiện tham gia</label>
-        <select
-          id="partner-booth-event"
-          value={eventId}
-          onChange={event => {
-            currentEventIdRef.current = event.target.value;
-            setSelectedEventId(event.target.value);
-          }}
-        >
-          {approvedApplications.map(application => (
-            <option key={application.id} value={application.eventId}>{application.eventTitle}</option>
-          ))}
-        </select>
-        {selectedApplication && <span>{selectedApplication.dateRange}</span>}
-      </div>
+      <section className="s2-event-context" aria-label="Ngữ cảnh sự kiện đang chọn">
+        <div className="s2-event-context-icon"><Calendar size={21} /></div>
+        <div className="s2-event-context-copy">
+          <span>Sự kiện đã được duyệt</span>
+          <strong>{selectedApplication?.eventTitle || 'Chọn sự kiện'}</strong>
+          <small>Chọn một sự kiện để xem đúng sơ đồ và trạng thái gian hàng.</small>
+        </div>
+        <div className="s2-event-context-control">
+          <label htmlFor="partner-booth-event">Chuyển sự kiện</label>
+          <select
+            id="partner-booth-event"
+            aria-label="Sự kiện tham gia"
+            value={eventId}
+            onChange={event => {
+              currentEventIdRef.current = event.target.value;
+              setSelectedEventId(event.target.value);
+            }}
+          >
+            {approvedApplications.map(application => (
+              <option key={application.id} value={application.eventId}>{application.eventTitle}</option>
+            ))}
+          </select>
+        </div>
+        <div className="s2-event-context-side">
+          <span className="s2-event-approved"><CheckCircle2 size={14} /> Đã duyệt</span>
+          {selectedApplication && <span className="s2-event-context-date"><Clock3 size={14} />{selectedApplication.dateRange}</span>}
+        </div>
+        <div className="s2-event-context-metrics">
+          <span><strong>{booths.length}</strong> gian được mở</span>
+          <span><strong>{booths.filter(booth => booth.availability === 'AVAILABLE').length}</strong> còn trống</span>
+          <span><strong>{requests.length}</strong> yêu cầu của bạn</span>
+        </div>
+      </section>
 
 
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
@@ -323,6 +352,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <button
           type="button"
           className={tab === 'browse' ? 'is-active' : ''}
+          aria-pressed={tab === 'browse'}
           onClick={() => setTab('browse')}
         >
           Sơ đồ gian hàng <span className="tab-count">{booths.length}</span>
@@ -330,6 +360,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <button
           type="button"
           className={tab === 'requests' ? 'is-active' : ''}
+          aria-pressed={tab === 'requests'}
           onClick={() => setTab('requests')}
         >
           Yêu cầu của tôi <span className="tab-count">{requests.length}</span>
@@ -401,7 +432,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                           type="button"
                           className="btn-request-reject"
                           disabled={busy === `withdraw-${request.boothRequestId}`}
-                          onClick={() => void withdraw(request)}
+                          onClick={() => setWithdrawTarget(request)}
                         >
                           <X size={14} />
                           {busy === `withdraw-${request.boothRequestId}` ? 'Đang rút…' : 'Rút yêu cầu'}
@@ -528,6 +559,67 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
             )}
           </div>
         </div>
+      )}
+
+      {withdrawTarget && (
+        <PartnerDialog
+          title="Xác nhận rút yêu cầu gian hàng"
+          onClose={() => !busy.startsWith('withdraw-') && setWithdrawTarget(null)}
+        >
+          <div className="partner-dialog-body s2-withdraw-dialog">
+            <span className="s2-withdraw-dialog-icon"><AlertCircle size={25} /></span>
+            <h3>Gian {withdrawTarget.boothCode}</h3>
+            <p>
+              Yêu cầu đang chờ Ban tổ chức xem xét. Sau khi rút, trạng thái này không thể hoàn tác.
+              Bạn có chắc muốn tiếp tục?
+            </p>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setWithdrawTarget(null)} disabled={busy.startsWith('withdraw-')}>
+                Giữ yêu cầu
+              </button>
+              <button type="button" className="btn-part-danger" onClick={() => void withdraw(withdrawTarget)} disabled={busy.startsWith('withdraw-')}>
+                <X size={15} />{busy.startsWith('withdraw-') ? 'Đang rút…' : 'Xác nhận rút yêu cầu'}
+              </button>
+            </div>
+          </div>
+        </PartnerDialog>
+      )}
+
+      {quotaExceeded && (
+        <PartnerDialog
+          title="Đã đạt giới hạn gian hàng"
+          onClose={() => setQuotaExceeded(null)}
+        >
+          <div className="partner-dialog-body s2-quota-dialog">
+            <span className="s2-quota-dialog-icon"><AlertCircle size={26} /></span>
+            <div className="s2-quota-dialog-copy">
+              <span className="s2-quota-dialog-eyebrow">Không thể đăng ký gian {quotaExceeded.boothCode}</span>
+              <h3>Sự kiện : {quotaExceeded.eventTitle}</h3>
+              <p>
+                Bạn đã đạt số gian hàng tối đa cho phép trong sự kiện này
+              </p>
+            </div>
+            <div className="s2-quota-dialog-note">
+              Hạn mức được tính theo các gian đang giữ chỗ hoặc đã được cấp. Bạn có thể kiểm tra lại
+              các yêu cầu hiện có, hoặc liên hệ Ban tổ chức nếu cần hỗ trợ.
+            </div>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setQuotaExceeded(null)}>
+                Đã hiểu
+              </button>
+              <button
+                type="button"
+                className="btn-part-primary"
+                onClick={() => {
+                  setQuotaExceeded(null);
+                  setTab('requests');
+                }}
+              >
+                Xem yêu cầu của tôi
+              </button>
+            </div>
+          </div>
+        </PartnerDialog>
       )}
 
       {/* POPUP XEM CHI TIẾT & GỬI YÊU CẦU GIAN HÀNG */}

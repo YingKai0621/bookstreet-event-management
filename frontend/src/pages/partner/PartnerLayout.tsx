@@ -82,8 +82,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     {
       id: 'events',
       path: '/partner/events',
-      labelVi: 'Sự kiện của tôi',
-      labelEn: 'My Events',
+      labelVi: 'Sự kiện & đăng ký',
+      labelEn: 'Events & Applications',
       icon: <CalendarDays size={18} />,
     },
     {
@@ -96,8 +96,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     {
       id: 'booth-requests',
       path: '/partner/booth-requests',
-      labelVi: 'Yêu cầu gian hàng',
-      labelEn: 'Booth Requests',
+      labelVi: 'Chọn & thuê gian hàng',
+      labelEn: 'Choose & Rent Booths',
       icon: <ClipboardList size={18} />,
     },
     {

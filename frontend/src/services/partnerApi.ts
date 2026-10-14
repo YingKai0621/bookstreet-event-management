@@ -192,7 +192,7 @@ export const partnerApi = {
         status: application.status.toLowerCase() as PartnerEventApplication['status'],
         applicationNote: application.applicationNote || '',
         reviewNote: application.reviewNote || '',
-        submittedAt: formatDateTime(application.submittedAt),
+        submittedAt: application.submittedAt,
         reviewedAt: formatDateTime(application.reviewedAt),
         withdrawnAt: formatDateTime(application.withdrawnAt),
         organizationName: organization?.name || '',

@@ -10,7 +10,7 @@ const application = { applicationId: 31, eventId: 101, partnerOrganizationId: 9,
   applicationNote: 'Sách thiếu nhi và văn học', reviewNote: 'Hồ sơ hợp lệ', submittedAt: stamp, reviewedAt: stamp, withdrawnAt: null };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
   await page.route('**/api/v1/**', async route => {
@@ -20,7 +20,17 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-csrf' });
     if (path.endsWith('/partner/organization')) return scenario.missingProfile ? json(route, { code: 'PARTNER_ORGANIZATION_NOT_FOUND', message: 'Chưa có hồ sơ' }, 404)
       : json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: '', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
-    if (path.endsWith('/partner/applications')) return json(route, paged(scenario.empty && state.submissions.length === 0 ? [] : [{ ...application, status: state.status }]));
+    if (path.endsWith('/partner/applications')) {
+      const applications = scenario.empty && state.submissions.length === 0 ? []
+        : Array.from({ length: scenario.applicationCount || 1 }, (_, index) => ({
+          ...application,
+          applicationId: application.applicationId + index,
+          eventId: index % 2 === 0 ? 101 : 102,
+          submittedAt: new Date(new Date(stamp).getTime() + index * 3_600_000).toISOString(),
+          status: state.status,
+        }));
+      return json(route, paged(applications));
+    }
     if (path.endsWith('/partner/booth-requests')) return json(route, paged([]));
     if (path.endsWith('/events/101/applications') && method === 'POST') {
       expect(route.request().headers()['x-csrf-token']).toBe('test-csrf');
@@ -93,9 +103,65 @@ test('registration submits notes through existing CSRF-protected API and display
   expect(state.unsupported).toEqual([]);
 });
 
+test('event hub searches published Events and exposes clear status filters', async ({ page }) => {
+  await setup(page, { empty: true });
+  await page.goto('/partner/events/apply');
+
+  await expect(page.getByRole('heading', { name: 'Sự kiện & đăng ký' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Quay lại hồ sơ của tôi/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Tất cả hồ sơ/ })).toHaveAttribute('aria-selected', 'false');
+  await page.getByLabel('Tìm kiếm sự kiện').fill('chưa tham gia');
+  await expect(page.getByRole('heading', { name: 'Sự kiện chưa tham gia' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath('partner-event-hub.png'), fullPage: true });
+  await page.getByRole('link', { name: /Quay lại hồ sơ của tôi/ }).click();
+  await expect(page).toHaveURL(/\/partner\/events$/);
+  await expect(page.getByRole('link', { name: /Đăng ký sự kiện mới/ })).toBeVisible();
+});
+
+test('application hub searches by application ID and applies real time filters', async ({ page }) => {
+  await setup(page, { applicationCount: 2 });
+  await page.goto('/partner/events');
+
+  const applicationCards = page.locator('.event-application-card');
+  await expect(applicationCards.first()).toContainText('Sự kiện chưa tham gia');
+  await page.getByLabel('Sắp xếp hồ sơ').selectOption('oldest');
+  await expect(applicationCards.first()).toContainText('Tuần lễ sách của gian hàng');
+  await page.getByLabel('Tìm kiếm sự kiện').fill('31');
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
+  await expect(page.getByLabel('Sự kiện Đường Sách chưa có ảnh')).toBeVisible();
+  await page.getByLabel('Lọc theo thời gian').selectOption('past');
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toHaveCount(0);
+  await page.getByLabel('Lọc theo thời gian').selectOption('active');
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
+  await expect(page.getByLabel('Sắp xếp hồ sơ')).toHaveValue('oldest');
+  await page.screenshot({ path: test.info().outputPath('partner-application-list.png'), fullPage: true });
+});
+
+test('application pagination runs after filtering and resets to the first page', async ({ page }) => {
+  await setup(page, { applicationCount: 23 });
+  await page.goto('/partner/events');
+
+  const cards = page.locator('.event-application-card');
+  await expect(cards).toHaveCount(10);
+  await expect(page.getByText('Hiển thị 1–10 trong tổng số 23 hồ sơ')).toBeVisible();
+  await page.getByRole('button', { name: 'Trang hồ sơ 3', exact: true }).click();
+  await expect(cards).toHaveCount(3);
+  await expect(page.getByText('Hiển thị 21–23 trong tổng số 23 hồ sơ')).toBeVisible();
+
+  await page.getByLabel('Tìm kiếm sự kiện').fill('31');
+  await expect(cards).toHaveCount(1);
+  await expect(page.getByText('Hiển thị 1–1 trong tổng số 1 hồ sơ')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Trang hồ sơ trước' })).toHaveCount(0);
+});
+
 test('pending withdrawal requires confirmation and uses existing withdrawal API', async ({ page }) => {
   const state = await setup(page, { status: 'PENDING' });
   await page.goto('/partner/events');
+  const pendingCard = page.locator('.event-application-card').first();
+  const statusBounds = await pendingCard.getByText('Chờ duyệt', { exact: true }).boundingBox();
+  const detailBounds = await pendingCard.getByRole('button', { name: 'Xem hồ sơ', exact: true }).boundingBox();
+  expect(statusBounds!.y + statusBounds!.height).toBeLessThanOrEqual(detailBounds!.y);
   await page.getByRole('button', { name: 'Rút hồ sơ', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('không thể đăng ký lại');
   await page.getByRole('button', { name: 'Giữ hồ sơ', exact: true }).click();
@@ -137,6 +203,15 @@ test('mobile registration keeps cards and detail within viewport', async ({ page
   await page.screenshot({ path: test.info().outputPath('partner-mobile-dialog.png'), fullPage: true });
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});
+
+test('mobile application list stacks without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  await page.goto('/partner/events');
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await page.screenshot({ path: test.info().outputPath('partner-mobile-application-list.png'), fullPage: true });
 });
 
 test('calendar reports loading failure without claiming an empty schedule', async ({ page }) => {

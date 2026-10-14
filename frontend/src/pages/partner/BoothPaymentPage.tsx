@@ -93,7 +93,7 @@ export function BoothPaymentPage() {
     <section className="partner-page s3-payment-page">
       <Link to="/partner/booth-requests" className="s3-back-link">
         <ArrowLeft size={16} />
-        <span>Quay lại Yêu cầu gian hàng</span>
+        <span>Quay lại Chọn & thuê gian hàng</span>
       </Link>
 
       <header className="s3-payment-heading">

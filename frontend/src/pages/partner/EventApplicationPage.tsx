@@ -1,16 +1,25 @@
 import {
   AlertCircle,
+  ArrowUpDown,
+  ArrowRight,
+  BookOpen,
   Building2,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock3,
+  FileText,
   MessageSquare,
   RefreshCw,
+  Search,
   Send,
   Undo2,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import '../../components/partner/PartnerEvents.css';
 import { ApiError } from '../../services/apiClient';
 import { PartnerAvailableEvent, partnerApi } from '../../services/partnerApi';
 import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
@@ -21,7 +30,10 @@ interface EventApplicationPageProps {
   organization: PartnerOrganization | null;
 }
 
-type TabType = 'published_events' | 'approved_apps' | 'pending_apps';
+type EventView = 'applications' | 'available' | PartnerEventApplication['status'];
+type SortOrder = 'newest' | 'oldest';
+type TimeFilter = 'all' | 'active' | 'past';
+const APPLICATIONS_PER_PAGE = 10;
 
 const STATUS_LABELS: Record<PartnerEventApplication['status'], string> = {
   pending: 'Chờ duyệt',
@@ -30,13 +42,58 @@ const STATUS_LABELS: Record<PartnerEventApplication['status'], string> = {
   withdrawn: 'Đã rút',
 };
 
-function formatDateTime(value: string | null): string {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('vi-VN', {
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return 'Đang cập nhật';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('vi-VN', {
     dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
+}
+
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function matchesTimeFilter(endAt: string | undefined, timeFilter: TimeFilter, now: number): boolean {
+  if (timeFilter === 'all') return true;
+  const endTimestamp = toTimestamp(endAt);
+  if (!endTimestamp) return timeFilter === 'active';
+  return timeFilter === 'past' ? endTimestamp < now : endTimestamp >= now;
+}
+
+function paginationItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages])]
+    .filter(page => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+  const items: Array<number | 'ellipsis'> = [];
+  pages.forEach((page, index) => {
+    if (index > 0 && page - pages[index - 1] > 1) items.push('ellipsis');
+    items.push(page);
+  });
+  return items;
+}
+
+function EventThumbnail({ imageUrl, title }: { imageUrl: string; title: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasImage = Boolean(imageUrl) && !imageFailed;
+
+  return (
+    <div className={`event-application-thumbnail ${hasImage ? 'has-image' : 'is-fallback'}`}>
+      {hasImage ? (
+        <img src={imageUrl} alt={`Ảnh sự kiện ${title}`} onError={() => setImageFailed(true)} />
+      ) : (
+        <div className="event-application-placeholder" aria-label="Sự kiện Đường Sách chưa có ảnh">
+          <BookOpen size={30} />
+        </div>
+      )}
+    </div>
+  );
 }
 
 function applicationErrorMessage(error: unknown): string {
@@ -60,20 +117,28 @@ function applicationErrorMessage(error: unknown): string {
   }
 }
 
-export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
-  language,
-  organization,
-}) => {
-  const [activeTab, setActiveTab] = useState<TabType>('published_events');
+export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({ language, organization }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isApplyRoute = location.pathname.endsWith('/apply');
+  const [activeView, setActiveView] = useState<EventView>(isApplyRoute ? 'available' : 'applications');
   const [events, setEvents] = useState<PartnerAvailableEvent[]>([]);
   const [applications, setApplications] = useState<PartnerEventApplication[]>([]);
-  const [applicationNotes, setApplicationNotes] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [applicationPage, setApplicationPage] = useState(1);
+  const [filterReferenceTime] = useState(() => Date.now());
+  const [applicationNote, setApplicationNote] = useState('');
+  const [applicationEvent, setApplicationEvent] = useState<PartnerAvailableEvent | null>(null);
+  const [detailApplication, setDetailApplication] = useState<PartnerEventApplication | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<PartnerEventApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage('');
     try {
@@ -83,415 +148,365 @@ export const EventApplicationPage: React.FC<EventApplicationPageProps> = ({
       ]);
       setEvents(publishedEvents);
       setApplications(ownApplications);
+      const requestedEventId = new URLSearchParams(location.search).get('event');
+      if (isApplyRoute && requestedEventId) {
+        const existingApplication = ownApplications.find(application => application.eventId === requestedEventId);
+        if (existingApplication) setDetailApplication(existingApplication);
+        else setApplicationEvent(publishedEvents.find(event => event.id === requestedEventId) || null);
+      }
     } catch (error) {
       setErrorMessage(applicationErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isApplyRoute, location.search]);
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [loadData]);
 
-  const submitApplication = async (event: PartnerAvailableEvent) => {
-    setProcessingId(event.id);
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      await partnerApi.submitApplication(event.id, applicationNotes[event.id]?.trim() || '');
-      setSuccessMessage(`Đã gửi hồ sơ tham gia “${event.name}”.`);
-      setApplications(await partnerApi.getApplications());
-    } catch (error) {
-      setErrorMessage(applicationErrorMessage(error));
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const withdrawApplication = async (application: PartnerEventApplication) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn rút hồ sơ tham gia “${application.eventTitle}”?`,
-    );
-    if (!confirmed) return;
-
-    setProcessingId(application.id);
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      await partnerApi.withdrawApplication(application.id);
-      setSuccessMessage(`Đã rút hồ sơ tham gia “${application.eventTitle}”.`);
-      setApplications(await partnerApi.getApplications());
-    } catch (error) {
-      setErrorMessage(applicationErrorMessage(error));
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const applicationByEventId = new Map(
-    applications.map(application => [application.eventId, application]),
+  const applicationByEventId = useMemo(
+    () => new Map(applications.map(application => [application.eventId, application])),
+    [applications],
   );
 
-  const pendingApplications = applications.filter(a => a.status === 'pending');
-  const approvedApplications = applications.filter(a => a.status === 'approved');
-  const pendingCount = pendingApplications.length;
-  const approvedCount = approvedApplications.length;
+  const counts = useMemo(() => ({
+    applications: applications.length,
+    available: events.filter(event => event.acceptingApplications && !applicationByEventId.has(event.id)).length,
+    pending: applications.filter(application => application.status === 'pending').length,
+    approved: applications.filter(application => application.status === 'approved').length,
+    rejected: applications.filter(application => application.status === 'rejected').length,
+    withdrawn: applications.filter(application => application.status === 'withdrawn').length,
+  }), [applicationByEventId, applications, events]);
+
+  const currentView: EventView = isApplyRoute
+    ? 'available'
+    : activeView === 'available' ? 'applications' : activeView;
+  const keyword = search.trim().toLocaleLowerCase('vi');
+  const visibleApplications = useMemo(() => applications
+    .filter(application => {
+      if (currentView !== 'applications' && currentView !== 'available' && application.status !== currentView) return false;
+      if (!matchesTimeFilter(application.endAt, timeFilter, filterReferenceTime)) return false;
+      return !keyword || [application.id, application.eventTitle, application.applicationNote, application.reviewNote]
+        .some(value => value.toLocaleLowerCase('vi').includes(keyword));
+    })
+    .sort((left, right) => {
+      const difference = toTimestamp(right.submittedAt) - toTimestamp(left.submittedAt);
+      return sortOrder === 'newest' ? difference : -difference;
+    }), [applications, currentView, filterReferenceTime, keyword, sortOrder, timeFilter]);
+  const visibleEvents = useMemo(() => events
+    .filter(event => event.acceptingApplications
+      && !applicationByEventId.has(event.id)
+      && matchesTimeFilter(event.endAt, timeFilter, filterReferenceTime)
+      && (!keyword || [event.id, event.name, event.description]
+        .some(value => value.toLocaleLowerCase('vi').includes(keyword))))
+    .sort((left, right) => {
+      const difference = toTimestamp(right.startAt) - toTimestamp(left.startAt);
+      return sortOrder === 'newest' ? difference : -difference;
+    }), [applicationByEventId, events, filterReferenceTime, keyword, sortOrder, timeFilter]);
+  const applicationPageCount = Math.ceil(visibleApplications.length / APPLICATIONS_PER_PAGE);
+  const currentApplicationPage = Math.min(applicationPage, Math.max(applicationPageCount, 1));
+  const applicationRangeStart = (currentApplicationPage - 1) * APPLICATIONS_PER_PAGE;
+  const paginatedApplications = visibleApplications.slice(
+    applicationRangeStart,
+    applicationRangeStart + APPLICATIONS_PER_PAGE,
+  );
+
+  const openApplicationModal = (event: PartnerAvailableEvent) => {
+    setApplicationNote('');
+    setApplicationEvent(event);
+  };
+
+  const submitApplication = async () => {
+    if (!applicationEvent) return;
+    setProcessingId(applicationEvent.id);
+    setErrorMessage('');
+    setSuccessMessage('');
+    try {
+      await partnerApi.submitApplication(applicationEvent.id, applicationNote.trim());
+      setSuccessMessage(`Đã gửi hồ sơ tham gia “${applicationEvent.name}”.`);
+      setApplications(await partnerApi.getApplications());
+      setApplicationEvent(null);
+      setApplicationNote('');
+      setActiveView('applications');
+      navigate('/partner/events');
+    } catch (error) {
+      setErrorMessage(applicationErrorMessage(error));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const withdrawApplication = async () => {
+    if (!withdrawTarget) return;
+    const target = withdrawTarget;
+    setProcessingId(target.id);
+    setErrorMessage('');
+    setSuccessMessage('');
+    try {
+      await partnerApi.withdrawApplication(target.id);
+      setSuccessMessage(`Đã rút hồ sơ tham gia “${target.eventTitle}”.`);
+      setApplications(await partnerApi.getApplications());
+      setWithdrawTarget(null);
+      setDetailApplication(null);
+    } catch (error) {
+      setErrorMessage(applicationErrorMessage(error));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const openWithdrawDialog = (application: PartnerEventApplication) => {
+    setDetailApplication(null);
+    setWithdrawTarget(application);
+  };
+
+  const filters: Array<{ value: Exclude<EventView, 'available'>; label: string; count: number }> = [
+    { value: 'applications', label: 'Tất cả hồ sơ', count: counts.applications },
+    { value: 'approved', label: 'Đã duyệt', count: counts.approved },
+    { value: 'pending', label: 'Chờ duyệt', count: counts.pending },
+    { value: 'rejected', label: 'Từ chối', count: counts.rejected },
+    { value: 'withdrawn', label: 'Đã rút', count: counts.withdrawn },
+  ];
+
+  const selectApplicationView = (view: Exclude<EventView, 'available'>) => {
+    setActiveView(view);
+    setApplicationPage(1);
+    if (isApplyRoute) navigate('/partner/events');
+  };
 
   return (
-    <div className="partner-page">
-      {/* Page Header */}
-      <div className="partner-page-header" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <h1 className="partner-page-title">
-            {language === 'vi' ? 'Đăng ký tham gia sự kiện' : 'Event Applications'}
-          </h1>
-          <p className="partner-page-sub">
-            {language === 'vi'
-              ? 'Chọn sự kiện đang nhận đăng ký và theo dõi kết quả xét duyệt của Ban Quản Lý.'
-              : 'Apply to published events and follow the Organizer review result.'}
-          </p>
+    <div className="partner-page partner-event-hub">
+      <header className="event-hub-hero">
+        <div className="event-hub-hero-copy">
+          <span className="event-hub-eyebrow">ĐỐI TÁC <ChevronRight size={13} /> SỰ KIỆN & ĐĂNG KÝ</span>
+          <h1>{language === 'vi' ? 'Sự kiện & đăng ký' : 'Events & applications'}</h1>
+          <p>Theo dõi hồ sơ đã gửi, tìm sự kiện phù hợp và đăng ký tham gia trong cùng một nơi.</p>
         </div>
-        <button type="button" className="btn-part-secondary" onClick={() => void loadData()} disabled={isLoading}>
-          <RefreshCw size={15} />
-          <span>Làm mới</span>
+        <div className="event-hub-hero-visual" aria-hidden="true" />
+        <button type="button" className="event-hub-refresh" onClick={() => void loadData()} disabled={isLoading}>
+          <RefreshCw size={16} className={isLoading ? 'event-hub-spin' : ''} />
+          {isLoading ? 'Đang cập nhật…' : 'Làm mới dữ liệu'}
         </button>
-      </div>
+      </header>
 
-      {/* Thông báo lỗi / thành công */}
-      {errorMessage && (
-        <div role="alert" className="partner-form-alert error">
-          <AlertCircle size={18} />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      {successMessage && (
-        <div role="status" className="partner-form-alert success">
-          <CheckCircle2 size={18} />
-          <span>{successMessage}</span>
-        </div>
-      )}
-
+      {errorMessage && <div role="alert" className="partner-form-alert error"><AlertCircle size={18} /><span>{errorMessage}</span></div>}
+      {successMessage && <div role="status" className="partner-form-alert success"><CheckCircle2 size={18} /><span>{successMessage}</span></div>}
       {!organization && (
-        <div className="partner-form-alert error" style={{ marginBottom: '1.5rem' }}>
-          <Building2 size={20} />
-          <div>
-            <strong>Chưa có hồ sơ tổ chức</strong>
-            <p style={{ margin: '0.25rem 0 0' }}>
-              Hãy <Link to="/partner/profile">tạo hồ sơ tổ chức</Link> trước khi gửi đăng ký tham gia sự kiện.
-            </p>
-          </div>
+        <div className="event-hub-profile-warning">
+          <Building2 size={22} />
+          <div><strong>Chưa có hồ sơ tổ chức</strong><p>Hãy <Link to="/partner/profile">hoàn thiện hồ sơ tổ chức</Link> trước khi đăng ký sự kiện.</p></div>
         </div>
       )}
 
-
-      {/* 3 MỤC TABS (Giống như trang Danh sách hoạt động) */}
-      <div className="partner-tabs-bar" role="tablist" style={{ marginBottom: '1.75rem' }}>
-        <button
-          type="button"
-          className={`partner-tab-btn ${activeTab === 'published_events' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('published_events')}
-          role="tab"
-          aria-selected={activeTab === 'published_events'}
-        >
-          {language === 'vi'
-            ? `Sự kiện đang công bố (${events.length})`
-            : `Published Events (${events.length})`}
-        </button>
-        <button
-          type="button"
-          className={`partner-tab-btn ${activeTab === 'approved_apps' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('approved_apps')}
-          role="tab"
-          aria-selected={activeTab === 'approved_apps'}
-        >
-          {language === 'vi'
-            ? `Hồ sơ đã được duyệt (${approvedCount})`
-            : `Approved Applications (${approvedCount})`}
-        </button>
-        <button
-          type="button"
-          className={`partner-tab-btn ${activeTab === 'pending_apps' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('pending_apps')}
-          role="tab"
-          aria-selected={activeTab === 'pending_apps'}
-        >
-          {language === 'vi'
-            ? `Hồ sơ đang chờ duyệt (${pendingCount})`
-            : `Pending Applications (${pendingCount})`}
-        </button>
-      </div>
-
-      {/* MỤC 1: Sự kiện đang công bố */}
-      {activeTab === 'published_events' && (
-        <section aria-labelledby="available-events-title">
-          <div className="event-app-section-header">
-            <div className="event-app-section-title-wrap">
-              <CalendarDays size={20} color="#17382E" />
-              <h2 id="available-events-title" className="event-app-section-title">
-                Sự kiện đang công bố
-              </h2>
-              <span className="event-app-counter-badge">{events.length}</span>
-            </div>
+      <section className="event-hub-controls" aria-label="Tìm kiếm và lọc sự kiện">
+        <div className={`event-hub-application-cta ${currentView === 'available' ? 'is-return' : ''}`}>
+          <div>
+            <strong>{currentView === 'available' ? 'Đang khám phá sự kiện mở' : 'Bạn muốn tham gia sự kiện mới?'}</strong>
+            <p>{currentView === 'available'
+              ? 'Chọn sự kiện phù hợp bên dưới để xem thông tin và gửi hồ sơ tham gia.'
+              : 'Khám phá các sự kiện đang mở đăng ký và gửi hồ sơ tham gia.'}</p>
           </div>
-
-          {isLoading ? (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {[1, 2].map(idx => (
-                <div key={idx} className="partner-card skeleton-card" style={{ padding: '1.25rem', pointerEvents: 'none' }}>
-                  <div style={{ display: 'flex', gap: '1.25rem' }}>
-                    <div className="skeleton-box" style={{ width: 140, height: 100, borderRadius: 10, flexShrink: 0 }} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      <div className="skeleton-box" style={{ width: '40%', height: '1.2rem', borderRadius: 4 }} />
-                      <div className="skeleton-box" style={{ width: '80%', height: '0.9rem', borderRadius: 4 }} />
-                      <div className="skeleton-box" style={{ width: '35%', height: '0.85rem', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                </div>
+          <Link
+            to={currentView === 'available' ? '/partner/events' : '/partner/events/apply'}
+            onClick={() => setApplicationPage(1)}
+          >
+            <BookOpen size={18} />
+            {currentView === 'available' ? 'Quay lại hồ sơ của tôi' : 'Đăng ký sự kiện mới'}
+            <ArrowRight size={17} />
+          </Link>
+        </div>
+        <div className="event-hub-search">
+          <Search size={18} />
+          <input type="search" value={search} onChange={event => { setSearch(event.target.value); setApplicationPage(1); }} placeholder="Tìm nhanh theo tên sự kiện, mã hồ sơ hoặc nội dung…" aria-label="Tìm kiếm sự kiện" />
+        </div>
+        <div className="event-hub-control-row">
+          <div className="event-hub-status-group">
+            <span className="event-hub-control-label">Trạng thái hồ sơ</span>
+            <div className="event-hub-filters" role="tablist" aria-label="Trạng thái hồ sơ">
+              {filters.map(filter => (
+                <button type="button" role="tab" aria-selected={currentView === filter.value} className={`event-hub-filter is-${filter.value} ${currentView === filter.value ? 'is-active' : ''}`} key={filter.value} onClick={() => selectApplicationView(filter.value)}>
+                  {filter.value !== 'applications' && <i aria-hidden="true" />}
+                  {filter.label}<span>{filter.count}</span>
+                </button>
               ))}
             </div>
-          ) : !errorMessage && events.length === 0 ? (
-            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-              <CalendarDays size={36} color="#B3862A" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
-              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
-                {language === 'vi' ? 'Hiện chưa có sự kiện mở đăng ký' : 'No Events Open for Registration'}
-              </h3>
-              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
-                {language === 'vi'
-                  ? 'Ban Quản Lý Đường Sách sẽ sớm công bố lịch các sự kiện văn hóa và tuần lễ sách tiếp theo. Hãy đảm bảo hồ sơ tổ chức đã hoàn thiện để sẵn sàng gửi đăng ký.'
-                  : 'Upcoming Book Street events will be published here soon. Please make sure your organization profile is completed to be ready.'}
-              </p>
-            </div>
-          ) : null}
+          </div>
+          <div className="event-hub-selectors">
+            <label className="event-hub-select-field">
+              <span>Sắp xếp theo</span>
+              <div><ArrowUpDown size={15} /><select value={sortOrder} onChange={event => { setSortOrder(event.target.value as SortOrder); setApplicationPage(1); }} aria-label="Sắp xếp hồ sơ"><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option></select><ChevronDown size={15} /></div>
+            </label>
+            <label className="event-hub-select-field">
+              <span>Thời gian</span>
+              <div><CalendarDays size={15} /><select value={timeFilter} onChange={event => { setTimeFilter(event.target.value as TimeFilter); setApplicationPage(1); }} aria-label="Lọc theo thời gian"><option value="all">Tất cả thời gian</option><option value="active">Sắp/đang diễn ra</option><option value="past">Đã kết thúc</option></select><ChevronDown size={15} /></div>
+            </label>
+          </div>
+        </div>
+      </section>
 
-          <div style={{ display: 'grid', gap: '1.15rem' }}>
-            {events.map(event => {
+      {isLoading ? (
+        <div className="event-hub-loading" role="status"><RefreshCw size={26} className="event-hub-spin" /><strong>Đang chuẩn bị không gian sự kiện…</strong></div>
+      ) : currentView === 'available' ? (
+        <section aria-labelledby="available-events-title">
+          <div className="event-hub-section-heading">
+            <div><span>SỰ KIỆN CÔNG KHAI</span><h2 id="available-events-title">Khám phá sự kiện đang công bố</h2></div>
+            <p>{visibleEvents.length} kết quả phù hợp</p>
+          </div>
+          <div className="event-hub-grid">
+            {visibleEvents.map(event => {
               const existingApplication = applicationByEventId.get(event.id);
-              const canSubmit = Boolean(organization)
-                && organization?.status === 'ACTIVE'
-                && event.acceptingApplications
-                && !existingApplication;
-
               return (
-                <article key={event.id} className="event-card-article">
-                  <div style={{ display: 'grid', gridTemplateColumns: event.bannerUrl ? '150px minmax(0, 1fr)' : '1fr', gap: '1.25rem' }}>
-                    {event.bannerUrl && (
-                      <img src={event.bannerUrl} alt={event.name} style={{ width: '150px', height: '110px', borderRadius: '10px', objectFit: 'cover' }} />
-                    )}
-                    <div>
-                      <div className="event-card-topbar">
-                        <div style={{ flex: 1, minWidth: '240px' }}>
-                          <h3 className="event-card-name">{event.name}</h3>
-                          <p className="event-card-desc">{event.description || 'Không có mô tả.'}</p>
-                        </div>
-                        {existingApplication && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <span className={`status-badge ${existingApplication.status}`}>
-                              {STATUS_LABELS[existingApplication.status]}
-                            </span>
-                            {existingApplication.status === 'pending' && (
-                              <button
-                                type="button"
-                                className="btn-part-secondary"
-                                onClick={() => void withdrawApplication(existingApplication)}
-                                disabled={processingId === existingApplication.id}
-                                style={{ color: '#B91C1C', borderColor: '#FECACA' }}
-                              >
-                                <Undo2 size={14} />
-                                <span>{processingId === existingApplication.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="event-meta-grid" style={{ marginTop: '0.85rem', marginBottom: '0.85rem' }}>
-                        <div className="event-meta-item">
-                          <CalendarDays size={15} />
-                          <span>Thời gian sự kiện: <strong>{formatDateTime(event.startAt)} – {formatDateTime(event.endAt)}</strong></span>
-                        </div>
-                        <div className="event-meta-item">
-                          <Clock3 size={15} />
-                          <span>Hạn nộp hồ sơ: <strong>{formatDateTime(event.partnerApplicationDeadlineAt)}</strong></span>
-                        </div>
-                      </div>
-
-                      {!existingApplication && (
-                        <div className="event-app-form-box">
-                          <label htmlFor={`application-note-${event.id}`} style={{ fontWeight: 650, fontSize: '0.85rem', color: '#1E293B' }}>
-                            Ghi chú đăng ký (không bắt buộc)
-                          </label>
-                          <textarea
-                            id={`application-note-${event.id}`}
-                            rows={3}
-                            value={applicationNotes[event.id] || ''}
-                            onChange={changeEvent => setApplicationNotes(current => ({
-                              ...current,
-                              [event.id]: changeEvent.target.value,
-                            }))}
-                            placeholder="Mô tả ngắn gọn về nhu cầu trưng bày, thể loại sách và nguyện vọng tham gia sự kiện..."
-                            disabled={!canSubmit || processingId === event.id}
-                          />
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                            <button
-                              type="button"
-                              className="btn-part-primary"
-                              onClick={() => void submitApplication(event)}
-                              disabled={!canSubmit || processingId === event.id}
-                            >
-                              <Send size={15} />
-                              <span>{processingId === event.id ? 'Đang gửi...' : 'Gửi hồ sơ đăng ký'}</span>
-                            </button>
-                            {!event.acceptingApplications && (
-                              <span style={{ color: '#B45309', fontSize: '0.82rem', fontWeight: 600 }}>Đã đóng đăng ký</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                <article className="event-discovery-card" key={event.id}>
+                  <div className={`event-discovery-cover ${event.bannerUrl ? 'has-image' : ''}`}>
+                    {event.bannerUrl && <img src={event.bannerUrl} alt="" />}
+                    <div className="event-discovery-cover-shade" />
+                    <span className={`event-discovery-state ${event.acceptingApplications ? 'is-open' : 'is-closed'}`}>
+                      {existingApplication ? STATUS_LABELS[existingApplication.status] : event.acceptingApplications ? 'Đang nhận đăng ký' : 'Đã đóng đăng ký'}
+                    </span>
+                    <CalendarDays size={34} />
+                  </div>
+                  <div className="event-discovery-content">
+                    <h3>{event.name}</h3>
+                    <p>{event.description || 'Thông tin mô tả sự kiện đang được cập nhật.'}</p>
+                    <div className="event-discovery-meta">
+                      <span><CalendarDays size={15} /><strong>{formatDateTime(event.startAt)}</strong> – {formatDateTime(event.endAt)}</span>
+                      <span><Clock3 size={15} />Hạn đăng ký: <strong>{formatDateTime(event.partnerApplicationDeadlineAt)}</strong></span>
                     </div>
+                    {existingApplication ? (
+                      <button type="button" className="event-card-secondary-action" onClick={() => setDetailApplication(existingApplication)}><FileText size={16} /> Xem hồ sơ <ArrowRight size={15} /></button>
+                    ) : (
+                      <button type="button" className="event-card-primary-action" onClick={() => openApplicationModal(event)} disabled={!event.acceptingApplications || !organization || organization.status !== 'ACTIVE'}>
+                        <Send size={16} /> Xem & đăng ký <ArrowRight size={15} />
+                      </button>
+                    )}
                   </div>
                 </article>
               );
             })}
           </div>
+          {visibleEvents.length === 0 && <div className="event-hub-empty"><Search size={30} /><h2>Không tìm thấy sự kiện phù hợp</h2><p>Hãy thử từ khóa khác hoặc quay lại sau khi Ban tổ chức công bố sự kiện mới.</p></div>}
         </section>
-      )}
-
-      {/* MỤC 2: Hồ sơ đã được duyệt */}
-      {activeTab === 'approved_apps' && (
-        <section aria-labelledby="approved-applications-title">
-          <div className="event-app-section-header">
-            <div className="event-app-section-title-wrap">
-              <CheckCircle2 size={20} color="#059669" />
-              <h2 id="approved-applications-title" className="event-app-section-title">
-                Hồ sơ đã được duyệt
-              </h2>
-              <span className="event-app-counter-badge" style={{ background: '#ECFDF5', color: '#047857' }}>
-                {approvedCount}
-              </span>
-            </div>
+      ) : (
+        <section aria-labelledby="applications-title">
+          <div className="event-hub-section-heading">
+            <div><span>HỒ SƠ THAM GIA</span><h2 id="applications-title">{currentView === 'applications' ? 'Sự kiện của bạn' : filters.find(item => item.value === currentView)?.label}</h2></div>
+            <p>{visibleApplications.length} hồ sơ phù hợp</p>
           </div>
-
-          {approvedApplications.length === 0 ? (
-            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-              <CheckCircle2 size={36} color="#7A8E87" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
-              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
-                Chưa có hồ sơ nào được duyệt
-              </h3>
-              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem' }}>
-                Khi Ban Quản Lý phê duyệt hồ sơ tham gia sự kiện của bạn, thông tin chi tiết và phản hồi sẽ hiển thị tại đây.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {approvedApplications.map(application => (
-                <article key={application.id} className="event-card-article" style={{ gap: '0.75rem' }}>
-                  <div className="event-card-topbar">
-                    <div style={{ flex: 1, minWidth: '240px' }}>
-                      <h3 className="event-card-name">{application.eventTitle}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                        <Clock3 size={13} />
-                        <span>Nộp lúc: <strong>{formatDateTime(application.submittedAt)}</strong></span>
-                      </div>
+          <div className="event-application-list">
+            {paginatedApplications.map(application => {
+              const previewNote = application.reviewNote || application.applicationNote;
+              const previewLabel = application.reviewNote ? 'Phản hồi từ Ban Quản Lý' : 'Ghi chú của bạn';
+              return (
+                <article className={`event-application-card is-${application.status}`} key={application.id}>
+                  <div className="event-application-status-rail" />
+                  <EventThumbnail imageUrl={application.imageUrl} title={application.eventTitle} />
+                  <div className="event-application-main">
+                    <div className="event-application-heading">
+                      <span className="event-application-kicker">Hồ sơ #{application.id}</span>
+                      <h3>{application.eventTitle}</h3>
                     </div>
-                    <span className="status-badge approved">Đã duyệt</span>
+                    <div className="event-application-timeline">
+                      <span><CalendarDays size={16} />{application.dateRange || 'Lịch sự kiện đang cập nhật'}</span>
+                      <span className="event-application-meta-divider" aria-hidden="true" />
+                      <span><Clock3 size={16} />Nộp lúc {formatDateTime(application.submittedAt)}</span>
+                    </div>
+                    {previewNote && <div className={`event-application-preview ${application.reviewNote ? 'is-review' : ''}`}><MessageSquare size={16} /><div><strong>{previewLabel}</strong><p>{previewNote}</p></div></div>}
                   </div>
-
-                  {application.applicationNote && (
-                    <div className="app-card-note-box">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748B', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                        <MessageSquare size={12} />
-                        <span>Ghi chú của bạn:</span>
-                      </div>
-                      <span>{application.applicationNote}</span>
-                    </div>
-                  )}
-
-                  {application.reviewNote && (
-                    <div className="app-card-review-box">
-                      <CheckCircle2 size={16} style={{ color: '#CA8A04', flexShrink: 0, marginTop: '0.1rem' }} />
-                      <div>
-                        <strong style={{ display: 'block', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                          Phản hồi từ Ban Quản Lý:
-                        </strong>
-                        <span>{application.reviewNote}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="event-application-actions">
+                    <span className={`event-status-pill is-${application.status}`}><span />{STATUS_LABELS[application.status]}</span>
+                    <button type="button" className="event-card-primary-action" onClick={() => setDetailApplication(application)}><FileText size={16} /> Xem hồ sơ <ArrowRight size={16} /></button>
+                    {application.status === 'pending' && <button type="button" className="event-card-danger-action" onClick={() => openWithdrawDialog(application)}><Undo2 size={15} /> Rút hồ sơ</button>}
+                  </div>
                 </article>
-              ))}
+              );
+            })}
+          </div>
+          {visibleApplications.length > 0 && (
+            <nav className="event-application-pagination" aria-label="Phân trang hồ sơ tham gia">
+              <p>
+                Hiển thị <strong>{applicationRangeStart + 1}–{Math.min(applicationRangeStart + APPLICATIONS_PER_PAGE, visibleApplications.length)}</strong>
+                {' '}trong tổng số <strong>{visibleApplications.length}</strong> hồ sơ
+              </p>
+              {applicationPageCount > 1 && (
+                <div className="event-pagination-controls">
+                  <button type="button" onClick={() => setApplicationPage(currentApplicationPage - 1)} disabled={currentApplicationPage === 1} aria-label="Trang hồ sơ trước">Trước</button>
+                  {paginationItems(currentApplicationPage, applicationPageCount).map((item, index) => item === 'ellipsis'
+                    ? <span key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                    : <button type="button" key={item} onClick={() => setApplicationPage(item)} className={item === currentApplicationPage ? 'is-active' : ''} aria-current={item === currentApplicationPage ? 'page' : undefined} aria-label={`Trang hồ sơ ${item}`}>{item}</button>)}
+                  <button type="button" onClick={() => setApplicationPage(currentApplicationPage + 1)} disabled={currentApplicationPage === applicationPageCount} aria-label="Trang hồ sơ tiếp theo">Tiếp</button>
+                </div>
+              )}
+            </nav>
+          )}
+          {visibleApplications.length === 0 && (
+            <div className="event-hub-empty">
+              <FileText size={30} /><h2>{search ? 'Không tìm thấy hồ sơ phù hợp' : 'Chưa có hồ sơ ở trạng thái này'}</h2>
+              <p>Khám phá các sự kiện đang mở để bắt đầu hành trình tham gia cùng Đường Sách.</p>
+              <button type="button" onClick={() => { setSearch(''); navigate('/partner/events/apply'); }}>Xem sự kiện đang mở <ArrowRight size={15} /></button>
             </div>
           )}
         </section>
       )}
 
-      {/* MỤC 3: Hồ sơ đang chờ duyệt */}
-      {activeTab === 'pending_apps' && (
-        <section aria-labelledby="pending-applications-title">
-          <div className="event-app-section-header">
-            <div className="event-app-section-title-wrap">
-              <Clock3 size={20} color="#B45309" />
-              <h2 id="pending-applications-title" className="event-app-section-title">
-                Hồ sơ đang chờ duyệt
-              </h2>
-              <span className="event-app-counter-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
-                {pendingCount}
-              </span>
+      {applicationEvent && (
+        <PartnerDialog title="Đăng ký tham gia sự kiện" onClose={() => !processingId && setApplicationEvent(null)}>
+          <div className="partner-dialog-body event-application-modal">
+            <span className="event-modal-eyebrow"><CalendarDays size={15} /> Sự kiện đang nhận đăng ký</span>
+            <h3 className="partner-dialog-event-title">{applicationEvent.name}</h3>
+            <p>{applicationEvent.description || 'Thông tin mô tả đang được cập nhật.'}</p>
+            <div className="event-modal-meta">
+              <span><CalendarDays size={15} />{formatDateTime(applicationEvent.startAt)} – {formatDateTime(applicationEvent.endAt)}</span>
+              <span><Clock3 size={15} />Hạn đăng ký: {formatDateTime(applicationEvent.partnerApplicationDeadlineAt)}</span>
+            </div>
+            <label htmlFor="event-application-note">Ghi chú đăng ký (không bắt buộc)</label>
+            <textarea id="event-application-note" rows={5} value={applicationNote} onChange={event => setApplicationNote(event.target.value)} placeholder="Mô tả nhu cầu trưng bày, thể loại sách và nguyện vọng tham gia sự kiện…" disabled={Boolean(processingId)} />
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setApplicationEvent(null)} disabled={Boolean(processingId)}>Để sau</button>
+              <button
+                type="button"
+                className="btn-part-primary"
+                onClick={() => void submitApplication()}
+                disabled={Boolean(processingId) || !applicationEvent.acceptingApplications || !organization || organization.status !== 'ACTIVE'}
+              >
+                <Send size={16} />{processingId ? 'Đang gửi…' : 'Gửi hồ sơ đăng ký'}
+              </button>
             </div>
           </div>
+        </PartnerDialog>
+      )}
 
-          {pendingApplications.length === 0 ? (
-            <div className="partner-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-              <Clock3 size={36} color="#7A8E87" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
-              <h3 style={{ margin: '0 0 0.35rem', color: '#172421', fontSize: '1.1rem' }}>
-                Không có hồ sơ nào đang chờ duyệt
-              </h3>
-              <p style={{ margin: 0, color: '#637771', fontSize: '0.88rem' }}>
-                Bạn có thể đăng ký tham gia các sự kiện mới ở mục "Sự kiện đang công bố".
-              </p>
+      {detailApplication && (
+        <PartnerDialog title="Chi tiết hồ sơ tham gia" onClose={() => setDetailApplication(null)}>
+          <div className="partner-dialog-body event-application-modal">
+            <span className={`event-status-pill is-${detailApplication.status}`}><span />{STATUS_LABELS[detailApplication.status]}</span>
+            <h3 className="partner-dialog-event-title">{detailApplication.eventTitle}</h3>
+            <div className="event-modal-meta">
+              <span><CalendarDays size={15} />{detailApplication.dateRange || 'Lịch sự kiện đang cập nhật'}</span>
+              <span><Clock3 size={15} />Nộp lúc: {formatDateTime(detailApplication.submittedAt)}</span>
             </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {pendingApplications.map(application => (
-                <article key={application.id} className="event-card-article" style={{ gap: '0.75rem' }}>
-                  <div className="event-card-topbar">
-                    <div style={{ flex: 1, minWidth: '240px' }}>
-                      <h3 className="event-card-name">{application.eventTitle}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                        <Clock3 size={13} />
-                        <span>Nộp lúc: <strong>{formatDateTime(application.submittedAt)}</strong></span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span className="status-badge pending">Chờ duyệt</span>
-                      <button
-                        type="button"
-                        className="btn-part-secondary"
-                        onClick={() => void withdrawApplication(application)}
-                        disabled={processingId === application.id}
-                        style={{ color: '#B91C1C', borderColor: '#FECACA' }}
-                      >
-                        <Undo2 size={14} />
-                        <span>{processingId === application.id ? 'Đang rút...' : 'Rút hồ sơ'}</span>
-                      </button>
-                    </div>
-                  </div>
+            <div className="event-modal-note"><span>Ghi chú đăng ký</span><p>{detailApplication.applicationNote || 'Không có ghi chú.'}</p></div>
+            <div className="event-modal-note is-review"><span>Phản hồi từ Ban Quản Lý</span><p>{detailApplication.reviewNote || 'Chưa có phản hồi.'}</p></div>
+            <div className="partner-dialog-actions">
+              {detailApplication.status === 'pending' && <button type="button" className="btn-part-danger" onClick={() => openWithdrawDialog(detailApplication)}><Undo2 size={15} />Rút hồ sơ</button>}
+              <button type="button" className="btn-part-primary" onClick={() => setDetailApplication(null)}>Đóng</button>
+            </div>
+          </div>
+        </PartnerDialog>
+      )}
 
-                  {application.applicationNote && (
-                    <div className="app-card-note-box">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748B', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                        <MessageSquare size={12} />
-                        <span>Ghi chú của bạn:</span>
-                      </div>
-                      <span>{application.applicationNote}</span>
-                    </div>
-                  )}
-                </article>
-              ))}
+      {withdrawTarget && (
+        <PartnerDialog title="Xác nhận rút hồ sơ" onClose={() => !processingId && setWithdrawTarget(null)}>
+          <div className="partner-dialog-body event-withdraw-dialog">
+            <span className="event-withdraw-icon"><AlertCircle size={25} /></span>
+            <h3>{withdrawTarget.eventTitle}</h3>
+            <p>Sau khi rút, hồ sơ sẽ không thể đăng ký lại cho cùng sự kiện. Bạn có chắc muốn tiếp tục?</p>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setWithdrawTarget(null)} disabled={Boolean(processingId)}>Giữ hồ sơ</button>
+              <button type="button" className="btn-part-danger" onClick={() => void withdrawApplication()} disabled={Boolean(processingId)}><Undo2 size={15} />{processingId ? 'Đang rút…' : 'Xác nhận rút hồ sơ'}</button>
             </div>
-          )}
-        </section>
+          </div>
+        </PartnerDialog>
       )}
     </div>
   );
