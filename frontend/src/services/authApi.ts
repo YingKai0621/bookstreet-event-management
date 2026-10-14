@@ -16,4 +16,6 @@ export const authApi = {
   getMe: () => apiClient.get<AccountResponse>('/auth/me'),
 
   logout: () => apiClient.post<void>('/auth/logout'),
+  resendEmailVerification: () => apiClient.post<void>('/auth/email-verification/resend'),
+  confirmEmailVerification: (token: string) => apiClient.post<void>('/auth/email-verification/confirm', { token }),
 };

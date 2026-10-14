@@ -346,7 +346,6 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                         ))}
                       </div>
                     </div>}
-                    {booth.availability && <p>{booth.availability === 'AVAILABLE' ? 'Còn trống' : booth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : booth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}{booth.rentalPrice !== null && booth.rentalPrice !== undefined ? ` · ${booth.rentalPrice.toLocaleString('vi-VN')} đ` : ''}</p>}
 
                     <div className="kiosk-card-footer">
                       <button
@@ -460,12 +459,10 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
             <p className="modal-body-desc">
               {language === 'vi' ? activeModalBooth.description : activeModalBooth.descriptionEn}
             </p>
-            <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
-              {activeModalBooth.maxCapacity !== undefined && <p><strong>{language === 'vi' ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
-              {activeModalBooth.availability && <p><strong>{language === 'vi' ? 'Tình trạng:' : 'Availability:'}</strong> {activeModalBooth.availability === 'AVAILABLE' ? 'Còn trống' : activeModalBooth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : activeModalBooth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</p>}
-              {activeModalBooth.rentalPrice !== undefined && <p><strong>{language === 'vi' ? 'Giá sự kiện:' : 'Event price:'}</strong> {activeModalBooth.rentalPrice === null ? 'Chưa cấu hình' : `${activeModalBooth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
-            </div>
+              <div className="modal-meta-box">
+                <p><strong>{language === 'vi' ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
+                {activeModalBooth.maxCapacity !== undefined && <p><strong>{language === 'vi' ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
+              </div>
             <button
               type="button"
               className="btn-figma-primary"

@@ -1,7 +1,9 @@
-import { Camera, Check, Edit3, Upload } from 'lucide-react';
+import { Camera, Check, Edit3, Mail, UserRound, X } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
+import './ProfileSettingsPage.css';
+import { authApi } from '../../services/authApi';
 
 interface ProfileSettingsPageProps {
   language: Language;
@@ -9,306 +11,137 @@ interface ProfileSettingsPageProps {
   onUpdateProfile: (updated: Partial<ParticipantProfile>) => void | Promise<void>;
 }
 
-export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({
-  language,
-  profile,
-  onUpdateProfile,
-}) => {
+export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ language, profile, onUpdateProfile }) => {
+  const vi = language === 'vi';
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(profile.name || '');
+  const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone || '');
-  const [avatar, setAvatar] = useState(profile.avatar || '');
-  const [emailNotifications, setEmailNotifications] = useState(profile.emailNotifications ?? true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [saveError, setSaveError] = useState('');
+  const [verificationMessage, setVerificationMessage] = useState('');
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [resendAfter, setResendAfter] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    setName(profile.name || '');
+    setName(profile.name);
     setPhone(profile.phone || '');
-    setAvatar(profile.avatar || '');
-    setEmailNotifications(profile.emailNotifications ?? true);
-  }, [profile.name, profile.phone, profile.avatar, profile.emailNotifications]);
+  }, [profile.name, profile.phone]);
 
-  const saveProfile = async () => {
+  const persist = async (updated: Partial<ParticipantProfile>) => {
     setIsSaving(true);
+    setSaveError('');
+    setSaveSuccess(false);
     try {
-      await onUpdateProfile({ name, phone, emailNotifications, avatar });
-      setIsEditing(false);
+      await onUpdateProfile(updated);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (e) {
-      console.error('Failed to save profile', e);
+      return true;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : (vi ? 'Không lưu được hồ sơ.' : 'Could not save profile.'));
+      return false;
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert(language === 'vi' ? 'Kích thước ảnh tối đa là 5MB.' : 'Image size must not exceed 5MB.');
+  const handleAvatarFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || isSaving) return;
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setSaveError(vi ? 'Chọn ảnh PNG, JPG, WebP hoặc GIF, tối đa 5MB.' : 'Choose a PNG, JPG, WebP or GIF image, up to 5MB.');
       return;
     }
-
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
-      if (base64) {
-        setAvatar(base64);
-        try {
-          await onUpdateProfile({ name, phone, emailNotifications, avatar: base64 });
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err) {
-          console.error('Failed to save uploaded avatar', err);
-        }
-      }
-    };
+    reader.onload = () => { if (typeof reader.result === 'string') void persist({ avatar: reader.result }); };
+    reader.onerror = () => setSaveError(vi ? 'Không đọc được ảnh. Vui lòng thử lại.' : 'Could not read image. Please try again.');
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
-  const handleToggleNotifications = () => {
-    const nextVal = !emailNotifications;
-    setEmailNotifications(nextVal);
-    void onUpdateProfile({ emailNotifications: nextVal });
+  const cancelEdit = () => {
+    setName(profile.name);
+    setPhone(profile.phone || '');
+    setSaveError('');
+    setIsEditing(false);
+  };
+
+  const requestVerification = async () => {
+    if (sendingVerification) return;
+    if (Date.now() < resendAfter) {
+      setVerificationMessage(vi ? 'Vui lòng chờ 60 giây giữa các lần gửi.' : 'Please wait 60 seconds between requests.');
+      return;
+    }
+    setSendingVerification(true);
+    setVerificationMessage('');
+    try {
+      await authApi.resendEmailVerification();
+      setResendAfter(Date.now() + 60000);
+      setVerificationMessage(vi ? 'Đã gửi email xác nhận. Kiểm tra hộp thư và thư rác; liên kết có hiệu lực 60 phút.' : 'Verification email sent. Check your inbox and spam folder; the link expires in 60 minutes.');
+    } catch (error) {
+      setVerificationMessage(error instanceof Error ? error.message : (vi ? 'Không gửi được email. Vui lòng thử lại.' : 'Could not send email. Please try again.'));
+    } finally {
+      setSendingVerification(false);
+    }
   };
 
   return (
-    <div className="profile-settings-page">
-      {/* 1. Header */}
-      <div className="participant-page-header">
-        <h1 className="participant-page-title">
-          {language === 'vi' ? 'Hồ sơ cá nhân & Cài đặt' : 'Profile & Settings'}
-        </h1>
-        <p className="participant-page-sub">
-          {language === 'vi' 
-            ? 'Quản lý thông tin tài khoản độc giả và tùy chọn nhận thông báo của bạn.' 
-            : 'Manage your reader profile information and notification preferences.'}
-        </p>
-      </div>
-
-      {saveSuccess && (
-        <div style={{
-          backgroundColor: '#E8F5EF',
-          border: '1px solid #B8E0CF',
-          color: '#1D6246',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '1.25rem',
-          fontSize: '0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          maxWidth: '680px'
-        }}>
-          <Check size={16} />
-          <span>{language === 'vi' ? 'Đã lưu thay đổi hồ sơ thành công!' : 'Profile changes saved successfully!'}</span>
-        </div>
-      )}
-
-      {/* 2. Main Profile Card matching Sketch Screen 9 */}
+    <div className="profile-settings-page reader-profile-page">
+      <header className="participant-page-header">
+        <h1 className="participant-page-title">{vi ? 'Hồ sơ cá nhân & Cài đặt' : 'Profile & Settings'}</h1>
+        <p className="participant-page-sub">{vi ? 'Cập nhật thông tin cá nhân và quản lý tài khoản của bạn.' : 'Update your personal information and manage your account.'}</p>
+      </header>
+      {saveError && <div className="reader-profile-notice error" role="alert">{saveError}</div>}
+      {saveSuccess && <div className="reader-profile-notice success" role="status"><Check size={18} />{vi ? 'Đã lưu thay đổi hồ sơ thành công!' : 'Profile changes saved successfully!'}</div>}
       <div className="profile-card-container">
-        {/* User summary header */}
-        <div className="profile-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+        <div className="profile-card-header">
           <div className="profile-user-summary">
-            {/* Avatar with Upload Icon */}
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <div 
-                className="profile-avatar-large"
-                style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: '2px solid #E9BC63',
-                  background: avatar ? '#14241F' : 'linear-gradient(135deg, #E9BC63 0%, #D4A359 100%)'
-                }}
-                onClick={() => fileInputRef.current?.click()}
-                title={language === 'vi' ? 'Bấm để đổi ảnh đại diện' : 'Click to change avatar'}
-              >
-                {avatar ? (
-                  <img 
-                    src={avatar} 
-                    alt={name || profile.name} 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  />
-                ) : (
-                  name ? name.slice(0, 2).toUpperCase() : 'DE'
-                )}
+            <div className="reader-avatar-wrapper">
+              <div className="profile-avatar-large">
+                {profile.avatar ? <img src={profile.avatar} alt={profile.name} /> : profile.name.slice(0, 2).toUpperCase()}
               </div>
-
-              {/* Camera Upload Badge */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                title={language === 'vi' ? 'Tải ảnh đại diện lên từ máy tính' : 'Upload photo from device'}
-                style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  right: '-2px',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  background: '#14241F',
-                  border: '2px solid #FFFFFF',
-                  display: 'grid',
-                  placeItems: 'center',
-                  cursor: 'pointer',
-                  color: '#E9BC63',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                  transition: 'transform 160ms ease, background 160ms ease'
-                }}
-              >
-                <Camera size={14} />
-              </button>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                style={{ display: 'none' }}
-                onChange={handleAvatarFileSelect}
-              />
+              <button className="reader-avatar-button" type="button" disabled={isSaving} onClick={() => fileInputRef.current?.click()}
+                aria-label={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'} title={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'}><Camera size={20} /></button>
+              <input type="file" ref={fileInputRef} accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={isSaving} onChange={handleAvatarFileSelect} />
             </div>
-
             <div className="profile-names">
-              <h2>{name || profile.name}</h2>
-              <p>{profile.email}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                <span className="activity-tag" style={{ background: '#E6F5EE', color: '#267A58', border: '1px solid #BFE8D6' }}>
-                  {profile.role || 'Participant'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#185E48',
-                    fontSize: '0.76rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.15rem 0.35rem',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  <Upload size={12} />
-                  <span>{language === 'vi' ? 'Tải ảnh mới' : 'Upload photo'}</span>
-                </button>
-              </div>
+              <span className="reader-profile-eyebrow">{vi ? 'TÀI KHOẢN CỦA BẠN' : 'YOUR ACCOUNT'}</span>
+              <h2>{profile.name}</h2>
+              <p>{profile.email || (vi ? 'Chưa có email' : 'No email added')}</p>
+              <span className="reader-role">{vi ? 'Độc giả' : 'Participant'}</span>
             </div>
           </div>
-
-          <button
-            type="button"
-            className={isEditing ? "btn-part-primary" : "btn-part-secondary"}
-            disabled={isSaving}
-            style={{ 
-              height: '38px', 
-              padding: '0 1.25rem', 
-              flex: '0 0 auto', 
-              width: 'auto', 
-              minWidth: 'auto',
-              borderRadius: '8px',
-              whiteSpace: 'nowrap'
-            }}
-            onClick={async () => {
-              if (isEditing) {
-                await saveProfile();
-              } else {
-                setIsEditing(true);
-              }
-            }}
-          >
-            {isEditing ? (
-              <>
-                <Check size={14} />
-                <span>{isSaving ? (language === 'vi' ? 'Đang lưu...' : 'Saving...') : (language === 'vi' ? 'Lưu' : 'Save')}</span>
-              </>
-            ) : (
-              <>
-                <Edit3 size={14} />
-                <span>{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</span>
-              </>
-            )}
-          </button>
+          {!isEditing && <button type="button" className="btn-part-secondary reader-edit-button" disabled={isSaving} onClick={() => { setIsEditing(true); setSaveSuccess(false); }}><Edit3 size={18} />{vi ? 'Chỉnh sửa' : 'Edit'}</button>}
         </div>
-
-        {/* User Details Table / Fields */}
-        <div className="profile-details-table">
-          <div className="profile-detail-row">
-            <span className="profile-detail-label">
-              {language === 'vi' ? 'Họ và tên:' : 'Full name:'}
-            </span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="part-select"
-                style={{ width: '100%' }}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            ) : (
-              <span className="profile-detail-val">{name}</span>
-            )}
-          </div>
-
-          <div className="profile-detail-row">
-            <span className="profile-detail-label">
-              {language === 'vi' ? 'Email:' : 'Email:'}
-            </span>
-            <span className="profile-detail-val" style={{ color: '#637771' }}>
-              {profile.email} (Không thay đổi)
-            </span>
-          </div>
-
-          <div className="profile-detail-row">
-            <span className="profile-detail-label">
-              {language === 'vi' ? 'Số điện thoại:' : 'Phone:'}
-            </span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="part-select"
-                style={{ width: '100%' }}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0900 000 000"
-              />
-            ) : (
-              <span className="profile-detail-val">{phone || (language === 'vi' ? 'Chưa cập nhật' : 'Not provided')}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Notification Settings Toggle matching Sketch Screen 9 */}
-        <div className="profile-settings-toggle-row">
-          <div className="settings-toggle-info">
-            <strong>{language === 'vi' ? 'Nhận thông báo qua Email' : 'Email Notifications'}</strong>
-            <span>
-              {language === 'vi' 
-                ? 'Nhận thông báo nhắc lịch hoạt động và sự kiện mới nhất' 
-                : 'Receive activity reminder alerts and new event notices'}
-            </span>
-          </div>
-
-          <label className="switch-label">
-            <input
-              type="checkbox"
-              checked={emailNotifications}
-              onChange={handleToggleNotifications}
-            />
-            <span className="switch-slider"></span>
-          </label>
+        <div className="reader-profile-body">
+          <section className="reader-profile-information" aria-labelledby="reader-information-title">
+            <div className="reader-section-heading"><UserRound size={20} /><h3 id="reader-information-title">{vi ? 'Thông tin cá nhân' : 'Personal information'}</h3></div>
+            <p className="reader-section-description">{vi ? 'Thông tin giúp chúng tôi liên hệ và nhận diện bạn tại sự kiện.' : 'Your information helps us contact and identify you at events.'}</p>
+            <form className="profile-details-table" onSubmit={async event => { event.preventDefault(); if (await persist({ name, phone })) setIsEditing(false); }}>
+              <div className="profile-detail-row"><label className="profile-detail-label" htmlFor="reader-full-name">{vi ? 'Họ và tên' : 'Full name'}</label>
+                {isEditing ? <input id="reader-full-name" className="part-select" value={name} onChange={e => setName(e.target.value)} required minLength={2} maxLength={50} autoComplete="name" autoFocus disabled={isSaving} /> : <span className="profile-detail-val">{profile.name}</span>}
+              </div>
+              <div className="profile-detail-row"><label className="profile-detail-label" htmlFor="reader-phone">{vi ? 'Số điện thoại' : 'Phone'}</label>
+                {isEditing ? <input id="reader-phone" type="tel" className="part-select" value={phone} onChange={e => setPhone(e.target.value)} maxLength={20} autoComplete="tel" placeholder="0900 000 000" disabled={isSaving} /> : <span className="profile-detail-val">{profile.phone || (vi ? 'Chưa cập nhật' : 'Not provided')}</span>}
+              </div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Email</span><div className="profile-detail-val">
+                <div className="reader-email-line"><span>{profile.email || (vi ? 'Chưa có email' : 'No email added')}</span>
+                  {profile.email && !profile.emailVerified && <button type="button" className="reader-verify-button" disabled={sendingVerification} onClick={() => void requestVerification()}><Mail size={15} />{sendingVerification ? (vi ? 'Đang gửi...' : 'Sending...') : (vi ? 'Xác nhận email' : 'Verify email')}</button>}
+                  {profile.emailVerified && <span className="reader-email-verified"><Check size={15} />{vi ? 'Đã xác nhận' : 'Verified'}</span>}
+                </div>
+                <small>{vi ? 'Email tài khoản không thể chỉnh sửa tại đây.' : 'Account email cannot be edited here.'}</small>
+                {!profile.emailVerified && verificationMessage && <small role="status">{verificationMessage}</small>}
+              </div></div>
+              {isEditing && <div className="reader-profile-actions"><button type="button" className="btn-part-secondary" disabled={isSaving} onClick={cancelEdit}><X size={17} />{vi ? 'Hủy' : 'Cancel'}</button><button type="submit" className="btn-part-primary" disabled={isSaving}><Check size={17} />{isSaving ? (vi ? 'Đang lưu...' : 'Saving...') : (vi ? 'Lưu' : 'Save')}</button></div>}
+            </form>
+          </section>
+          <section className="reader-profile-preferences" aria-labelledby="reader-preferences-title">
+            <div className="reader-section-heading"><Mail size={20} /><h3 id="reader-preferences-title">{vi ? 'Thông báo qua email' : 'Email notifications'}</h3></div>
+            <span className="reader-coming-soon">{vi ? 'Chưa khả dụng' : 'Not available yet'}</span>
+            <p className="reader-section-description">{vi ? 'Tùy chọn nhận lời nhắc hoạt động và thông tin sự kiện sẽ được mở khi tính năng sẵn sàng.' : 'Activity reminders and event updates will be available when this feature is ready.'}</p>
+          </section>
         </div>
       </div>
     </div>
   );
 };
-

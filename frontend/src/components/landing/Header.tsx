@@ -432,7 +432,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="mobile-user-info">
                     <strong>{participantProfile?.name || (language === 'vi' ? 'Tài khoản' : 'Account')}</strong>
-                    <span>{participantProfile?.email || 'nguyenvana@gmail.com'}</span>
+                    <span>{participantProfile?.email || ''}</span>
                   </div>
                 </div>
 
