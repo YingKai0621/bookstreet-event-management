@@ -228,8 +228,8 @@ class PartnerBoothRequestIntegrationTests {
                 .andExpect(jsonPath("$.withdrawnAt").exists());
         mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", pendingId)
                         .with(partner(partnerOne)).with(csrf()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("BOOTH_REQUEST_NOT_PENDING"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WITHDRAWN"));
         submit(partnerOne, eventId, firstBooth, null);
 
         insertRequest(applicationId, secondBooth, "REJECTED");

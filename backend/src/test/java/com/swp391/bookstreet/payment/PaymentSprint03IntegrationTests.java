@@ -38,11 +38,14 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -90,6 +93,7 @@ class PaymentSprint03IntegrationTests {
     @Autowired PaymentSettlementService settlementService;
     @Autowired VnPayReconciliationWorker reconciliationWorker;
     @Autowired BoothHoldExpiryService expiryService;
+    @Autowired PlatformTransactionManager transactionManager;
     @MockitoBean VnPayGateway gateway;
     @MockitoBean BoothSelectionMailService mailService;
 
@@ -859,6 +863,321 @@ class PaymentSprint03IntegrationTests {
                 + "join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id "
                 + "where hold.booth_request_id = ?", Integer.class, fixture.requestId()))
                 .isZero();
+    }
+
+    @Test
+    void selectedWithdrawalReleasesImmediatelyAndAllowsAnotherSelection() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        String originalResponse = withdraw(fixture.requestId(), 200, null);
+        var before = jdbc.queryForMap("select withdrawn_at from booth_requests where booth_request_id = ?",
+                fixture.requestId());
+        assertThat(withdraw(fixture.requestId(), 200, null)).isEqualTo(originalResponse);
+        assertThat(jdbc.queryForMap("select withdrawn_at from booth_requests where booth_request_id = ?",
+                fixture.requestId())).isEqualTo(before);
+        assertRequestAndHold(fixture.requestId(), "WITHDRAWN", "RELEASED");
+        assertThat(jdbc.queryForObject("select released_at = (select withdrawn_at from booth_requests "
+                        + "where booth_request_id = ?) from booth_holds where booth_request_id = ?",
+                Boolean.class, fixture.requestId(), fixture.requestId())).isTrue();
+        mvc.perform(get("/api/v1/events/{eventId}/booths/{boothId}", fixture.eventId(), fixture.boothId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.availability").value("AVAILABLE"));
+        long nextId = submitAgain(fixture);
+        mvc.perform(post("/api/v1/organizer/events/{eventId}/booth-requests/{id}/select",
+                        fixture.eventId(), nextId).with(identity(organizer, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SELECTED"));
+        assertRequestAndHold(nextId, "SELECTED", "ACTIVE");
+    }
+
+    @Test
+    void pendingWithdrawalIsIdempotentAndDoesNotCreateHold() throws Exception {
+        Fixture fixture = fixture(10_000, "PENDING");
+        withdraw(fixture.requestId(), 200, null);
+        Timestamp first = jdbc.queryForObject("select withdrawn_at from booth_requests where booth_request_id = ?",
+                Timestamp.class, fixture.requestId());
+        withdraw(fixture.requestId(), 200, null);
+        assertThat(jdbc.queryForObject("select withdrawn_at from booth_requests where booth_request_id = ?",
+                Timestamp.class, fixture.requestId())).isEqualTo(first);
+        assertThat(jdbc.queryForObject("select count(*) from booth_holds where booth_request_id = ?",
+                Integer.class, fixture.requestId())).isZero();
+    }
+
+    @Test
+    void pendingCheckoutAndUnknownPaymentPreventWithdrawalAndExpiry() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        withdraw(fixture.requestId(), 409, "PAYMENT_ATTEMPT_ALREADY_PENDING");
+        jdbc.update("update booth_payments set checkout_expires_at = current_timestamp - interval '1 minute' "
+                + "where booth_payment_id = ?", pending.paymentId());
+        withdraw(fixture.requestId(), 409, "PAYMENT_RESULT_UNKNOWN");
+        expiryService.expireDueHolds(Instant.now().plus(Duration.ofHours(1)));
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+    }
+
+    @Test
+    void terminalPaymentWithReconciliationEvidenceBlocksBothReleaseAndExpiry() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        settlementService.acceptIpn(result(pending, "02"), Instant.now());
+        settlementService.acceptIpn(result(pending, "00"), Instant.now());
+        withdraw(fixture.requestId(), 409, "PAYMENT_RESULT_UNKNOWN");
+        expiryService.expireDueHolds(Instant.now().plus(Duration.ofHours(1)));
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+    }
+
+    @Test
+    void verifiedFailureAllowsReleaseAndLateSuccessDoesNotAffectNewHold() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        settlementService.acceptIpn(result(pending, "02"), Instant.now());
+        withdraw(fixture.requestId(), 200, null);
+        long nextId = submitAgain(fixture);
+        mvc.perform(post("/api/v1/organizer/events/{eventId}/booth-requests/{id}/select",
+                        fixture.eventId(), nextId).with(identity(organizer, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk());
+        settlementService.acceptIpn(result(pending, "00"), Instant.now());
+        assertRequestAndHold(fixture.requestId(), "WITHDRAWN", "RELEASED");
+        assertRequestAndHold(nextId, "SELECTED", "ACTIVE");
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+        assertNoAssignment(fixture.requestId());
+        assertNoAssignment(nextId);
+    }
+
+    @Test
+    void verifiedTimeoutAllowsSelectedWithdrawal() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant first = pending.checkoutExpiresAt().plus(Duration.ofMinutes(6));
+        settlementService.acceptQuery(pending.paymentId(), result(pending, "01"), first);
+        settlementService.acceptQuery(pending.paymentId(), result(pending, "01"),
+                first.plus(Duration.ofMinutes(6)));
+        assertPaymentState(pending.paymentId(), "TIMEOUT", 2, false);
+        withdraw(fixture.requestId(), 200, null);
+        assertRequestAndHold(fixture.requestId(), "WITHDRAWN", "RELEASED");
+    }
+
+    @Test
+    void settlementRacingWithdrawalConsumesHoldAndRejectsWithdrawal() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<Integer> withdrawal = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", fixture.requestId())
+                                .with(identity(partner, "PARTNER")).with(csrf()))
+                        .andReturn().getResponse().getStatus();
+            });
+            Future<?> settlement = pool.submit(() -> {
+                await(start);
+                settlementService.acceptIpn(result(pending, "00"), Instant.now());
+            });
+            start.countDown();
+            assertThat(withdrawal.get(10, TimeUnit.SECONDS)).isEqualTo(409);
+            settlement.get(10, TimeUnit.SECONDS);
+        }
+        assertRequestAndHold(fixture.requestId(), "COMPLETED", "CONSUMED");
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments a join booth_holds h "
+                + "on a.booth_hold_id = h.booth_hold_id where h.booth_request_id = ?",
+                Integer.class, fixture.requestId())).isOne();
+    }
+
+    @Test
+    void lateContradictorySettlementRacingWithdrawalNeverSilentlyAssigns() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        settlementService.acceptIpn(result(pending, "02"), Instant.now());
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<Integer> withdrawal = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", fixture.requestId())
+                                .with(identity(partner, "PARTNER")).with(csrf()))
+                        .andReturn().getResponse().getStatus();
+            });
+            Future<?> settlement = pool.submit(() -> {
+                await(start);
+                settlementService.acceptIpn(result(pending, "00"), Instant.now());
+            });
+            start.countDown();
+            int response = withdrawal.get(10, TimeUnit.SECONDS);
+            settlement.get(10, TimeUnit.SECONDS);
+            assertThat(response).isIn(200, 409);
+            assertRequestAndHold(fixture.requestId(), response == 200 ? "WITHDRAWN" : "SELECTED",
+                    response == 200 ? "RELEASED" : "ACTIVE");
+        }
+        assertNoAssignment(fixture.requestId());
+        assertThat(jdbc.queryForObject("select reconciliation_required from booth_payments "
+                + "where booth_payment_id = ?", Boolean.class, pending.paymentId())).isTrue();
+    }
+
+    @Test
+    void cancellationRacingSubmissionLeavesNoOpenRequestInCancelledEvent() throws Exception {
+        Fixture fixture = fixture(10_000, "PENDING");
+        withdraw(fixture.requestId(), 200, null);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<Integer> submission = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/events/{id}/booth-requests", fixture.eventId())
+                                .with(identity(partner, "PARTNER")).with(csrf())
+                                .contentType("application/json").content("{\"boothId\":" + fixture.boothId() + "}"))
+                        .andReturn().getResponse().getStatus();
+            });
+            Future<?> cancellation = pool.submit(() -> {
+                await(start);
+                mvc.perform(post("/api/v1/organizer/events/{id}/cancel", fixture.eventId())
+                                .with(identity(organizer, "ORGANIZER")).with(csrf())
+                                .contentType("application/json").content("{\"reason\":\"Venue is unavailable for this event\"}"))
+                        .andExpect(status().isOk());
+                return null;
+            });
+            start.countDown();
+            assertThat(submission.get(10, TimeUnit.SECONDS)).isIn(201, 404);
+            cancellation.get(10, TimeUnit.SECONDS);
+        }
+        mvc.perform(post("/api/v1/events/{id}/booth-requests", fixture.eventId())
+                        .with(identity(partner, "PARTNER")).with(csrf()).contentType("application/json")
+                        .content("{\"boothId\":" + fixture.boothId() + "}"))
+                .andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("select count(*) from booth_requests r join partner_event_applications a "
+                        + "on r.application_id = a.application_id where a.event_id = ? and r.status in ('PENDING','SELECTED')",
+                Integer.class, fixture.eventId())).isZero();
+    }
+
+    @Test
+    void submissionWaitsForEventRootAndRechecksCancellationAfterCommit() throws Exception {
+        Fixture fixture = fixture(10_000, "PENDING");
+        withdraw(fixture.requestId(), 200, null);
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch commit = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<?> cancellation = pool.submit(() -> new TransactionTemplate(transactionManager)
+                    .executeWithoutResult(transaction -> {
+                        jdbc.queryForObject("select event_id from events where event_id = ? for update",
+                                Long.class, fixture.eventId());
+                        jdbc.update("update events set status = 'CANCELLED', cancelled_at = current_timestamp, "
+                                + "cancellation_reason = 'Venue unavailable' where event_id = ?", fixture.eventId());
+                        locked.countDown();
+                        await(commit);
+                    }));
+            await(locked);
+            Future<Integer> submission = pool.submit(() -> mvc.perform(
+                            post("/api/v1/events/{id}/booth-requests", fixture.eventId())
+                                    .with(identity(partner, "PARTNER")).with(csrf())
+                                    .contentType("application/json")
+                                    .content("{\"boothId\":" + fixture.boothId() + "}"))
+                    .andReturn().getResponse().getStatus());
+            try {
+                assertThatThrownBy(() -> submission.get(300, TimeUnit.MILLISECONDS))
+                        .isInstanceOf(java.util.concurrent.TimeoutException.class);
+            } finally {
+                commit.countDown();
+            }
+            cancellation.get(10, TimeUnit.SECONDS);
+            assertThat(submission.get(10, TimeUnit.SECONDS)).isEqualTo(404);
+        }
+    }
+
+    @Test
+    void expiryRacingWithdrawalConvergesOnOneTerminalHoldTransition() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<Integer> withdrawal = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", fixture.requestId())
+                                .with(identity(partner, "PARTNER")).with(csrf()))
+                        .andReturn().getResponse().getStatus();
+            });
+            Future<Integer> expiry = pool.submit(() -> {
+                await(start);
+                return expiryService.expireDueHolds(Instant.now().plus(Duration.ofHours(1)));
+            });
+            start.countDown();
+            int response = withdrawal.get(10, TimeUnit.SECONDS);
+            expiry.get(10, TimeUnit.SECONDS);
+            assertThat(response).isIn(200, 409);
+            assertRequestAndHold(fixture.requestId(), response == 200 ? "WITHDRAWN" : "PAYMENT_EXPIRED",
+                    response == 200 ? "RELEASED" : "EXPIRED");
+        }
+        assertNoAssignment(fixture.requestId());
+    }
+
+    @Test
+    void missingOrExpiredHoldAndTerminalRequestCannotBeWithdrawn() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        withdraw(fixture.requestId(), 409, "BOOTH_HOLD_NOT_ACTIVE");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        expiryService.expireDueHolds(Instant.now().plus(Duration.ofHours(1)));
+        withdraw(fixture.requestId(), 409, "BOOTH_REQUEST_NOT_WITHDRAWABLE");
+        assertRequestAndHold(fixture.requestId(), "PAYMENT_EXPIRED", "EXPIRED");
+    }
+
+    @Test
+    void reviewAndConfigurationRecheckEventLifecycle() throws Exception {
+        Fixture fixture = fixture(10_000, "PENDING");
+        jdbc.update("update events set start_at = current_timestamp - interval '1 minute' where event_id = ?",
+                fixture.eventId());
+        mvc.perform(post("/api/v1/organizer/events/{eventId}/booth-requests/{id}/select",
+                        fixture.eventId(), fixture.requestId()).with(identity(organizer, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+        mvc.perform(post("/api/v1/organizer/events/{eventId}/booth-requests/{id}/reject",
+                        fixture.eventId(), fixture.requestId()).with(identity(organizer, "ORGANIZER")).with(csrf())
+                        .contentType("application/json").content("{\"reviewNote\":\"Not eligible for selection\"}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+        mvc.perform(put("/api/v1/organizer/events/{eventId}/booth-configs/{boothId}",
+                        fixture.eventId(), fixture.boothId()).with(identity(organizer, "ORGANIZER")).with(csrf())
+                        .contentType("application/json").content("{\"rentalPrice\":20000,\"enabled\":true}"))
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, fixture.requestId())).isEqualTo("PENDING");
+    }
+
+    private String withdraw(long requestId, int expectedStatus, String code) throws Exception {
+        var response = mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", requestId)
+                .with(identity(partner, "PARTNER")).with(csrf())).andExpect(status().is(expectedStatus));
+        if (code != null) {
+            response.andExpect(jsonPath("$.code").value(code));
+        } else {
+            response.andExpect(jsonPath("$.status").value("WITHDRAWN"));
+        }
+        return response.andReturn().getResponse().getContentAsString();
+    }
+
+    private long submitAgain(Fixture fixture) throws Exception {
+        String body = mvc.perform(post("/api/v1/events/{id}/booth-requests", fixture.eventId())
+                        .with(identity(partner, "PARTNER")).with(csrf()).contentType("application/json")
+                        .content("{\"boothId\":" + fixture.boothId() + "}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return mapper.readTree(body).get("boothRequestId").asLong();
+    }
+
+    private void assertRequestAndHold(long requestId, String requestStatus, String holdStatus) {
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, requestId)).isEqualTo(requestStatus);
+        assertThat(jdbc.queryForObject("select status from booth_holds where booth_request_id = ?",
+                String.class, requestId)).isEqualTo(holdStatus);
+    }
+
+    private void assertNoAssignment(long requestId) {
+        assertThat(jdbc.queryForObject("select count(*) from booth_assignments a join booth_holds h "
+                        + "on a.booth_hold_id = h.booth_hold_id where h.booth_request_id = ?",
+                Integer.class, requestId)).isZero();
+    }
+
+    private VnPayResult result(PendingPayment payment, String transactionStatus) {
+        return new VnPayResult(true, "BSP" + payment.paymentId(), "1000000", "00",
+                transactionStatus, "S4" + payment.paymentId(), "Sprint 4 release verification");
     }
 
     private PendingPayment createPendingPayment(long requestId) throws Exception {
