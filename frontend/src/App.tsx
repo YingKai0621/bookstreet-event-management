@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
+import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
 import { AboutSection } from './components/landing/AboutSection';
 import { BoothsSection } from './components/landing/BoothsSection';

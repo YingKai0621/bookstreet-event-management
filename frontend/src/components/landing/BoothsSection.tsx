@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
@@ -75,22 +76,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
     return () => mediaQuery.removeEventListener('change', updateCarouselMode);
   }, []);
 
-  React.useEffect(() => {
-    if (!activeModalBooth) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeBoothModal();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeModalBooth, closeBoothModal]);
+  useModalDismiss(Boolean(activeModalBooth), closeBoothModal);
 
   // Khi người dùng bấm "Xem trong danh mục gian hàng" từ bản đồ hoặc mở chi tiết gian hàng
   React.useEffect(() => {

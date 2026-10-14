@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Calendar,
   Check,
@@ -40,6 +41,9 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
   const [editingItem, setEditingItem] = useState<ExtendedHeritageProfile | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  useModalDismiss(Boolean(previewItem), () => setPreviewItem(null));
+  useModalDismiss(Boolean(editingItem) || isCreating, () => { setEditingItem(null); setIsCreating(false); });
+  useModalDismiss(Boolean(deletingId), () => setDeletingId(null));
 
   // Form states for Editing / Creating
   const [formName, setFormName] = useState('');

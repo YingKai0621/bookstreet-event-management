@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   CheckCircle2,
@@ -28,6 +29,7 @@ export const ActivityAttendanceModal: React.FC<ActivityAttendanceModalProps> = (
   const [manualCode, setManualCode] = useState('');
   const [lastScanResult, setLastScanResult] = useState<AttendanceScanRecord | null>(null);
   const [scanError, setScanError] = useState('');
+  useModalDismiss(true, onClose);
 
   const activityScans = scans.filter(s => s.activityId === activity.id);
   const successfulScans = activityScans.filter(s => s.status === 'success');

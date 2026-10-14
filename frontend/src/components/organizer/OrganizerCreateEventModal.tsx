@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { AlertCircle, Check, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { ApiError } from '../../services/apiClient';
@@ -107,6 +108,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const [form, setForm] = useState<EventFormState>(() => formFromEvent(event));
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  useModalDismiss(isOpen, () => { if (!isSaving) onClose(); });
 
   if (!isOpen) return null;
 

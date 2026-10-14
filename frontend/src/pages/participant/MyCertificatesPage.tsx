@@ -1,5 +1,6 @@
 import { ArrowRight, Award, Calendar, Download, Eye, QrCode, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { Link } from 'react-router-dom';
 import { Language, ParticipantCertificate } from '../../types';
 import './ParticipantPages.css';
@@ -18,6 +19,7 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
   isLoading = false,
 }) => {
   const [selectedCert, setSelectedCert] = useState<ParticipantCertificate | null>(null);
+  useModalDismiss(Boolean(selectedCert), () => setSelectedCert(null));
 
   const handleDownloadCertificate = (cert: ParticipantCertificate) => {
     // Generate a printable certificate HTML in a new popup or trigger print

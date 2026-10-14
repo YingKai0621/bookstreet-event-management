@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
   ArrowRight,
@@ -68,14 +69,7 @@ export function HeritageExperience({
     return textMatch && categoryMatch;
   });
 
-  useLayoutEffect(() => {
-    if (!open) return;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = oldOverflow;
-    };
-  }, [open]);
+  useModalDismiss(open, () => navigate('/'));
 
   useLayoutEffect(() => {
     if (!open) return;

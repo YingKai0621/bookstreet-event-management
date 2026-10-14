@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Building2,
   CheckCircle2,
@@ -63,6 +64,7 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
   const [rating, setRating] = useState(5);
   const [comments, setComments] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useModalDismiss(isModalOpen, () => { if (!isSubmitting) setIsModalOpen(false); });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const filteredList = feedbackList.filter(item => {

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   Check,
@@ -122,6 +123,8 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
   const [requestFilter, setRequestFilter] = useState<'ALL' | 'PENDING' | 'SELECTED' | 'OTHER'>('ALL');
   const [rejectingRequest, setRejectingRequest] = useState<BoothRequest | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  useModalDismiss(showAddModal, () => { if (busyKey !== 'create-booth') setShowAddModal(false); });
+  useModalDismiss(Boolean(rejectingRequest), () => setRejectingRequest(null));
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
 

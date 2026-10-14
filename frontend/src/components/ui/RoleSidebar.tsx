@@ -1,6 +1,7 @@
 import { BookOpen, PanelLeft, X } from 'lucide-react';
 import { ReactNode, useEffect, useState } from 'react';
 import './RoleSidebar.css';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 
 export interface RoleSidebarItem {
   id: string;
@@ -32,6 +33,7 @@ export function RoleSidebar({
   onSelect,
 }: RoleSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  useModalDismiss(isOpenMobile, () => onCloseMobile?.());
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {

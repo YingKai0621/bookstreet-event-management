@@ -13,6 +13,7 @@ import {
   X
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
 import { participantApi } from '../../services/participantApi';
@@ -37,6 +38,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  useModalDismiss(userDropdownOpen, () => setUserDropdownOpen(false), { lockScroll: false });
+  useModalDismiss(notifDropdownOpen, () => setNotifDropdownOpen(false), { lockScroll: false });
   const [searchQuery, setSearchQuery] = useState('');
   const [notificationClock, setNotificationClock] = useState(0);
 

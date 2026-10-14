@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ArrowRight, Calendar, CheckCircle2, Download, MapPin, QrCode, Tag, User, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { Language, ParticipantEvent } from '../../types';
@@ -19,6 +20,8 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
   const [activeTab, setActiveTab] = useState<'ongoing' | 'ended' | 'left'>('ongoing');
   const [selectedDetailEvent, setSelectedDetailEvent] = useState<ParticipantEvent | null>(null);
   const [selectedQrEvent, setSelectedQrEvent] = useState<ParticipantEvent | null>(null);
+  useModalDismiss(Boolean(selectedDetailEvent), () => setSelectedDetailEvent(null));
+  useModalDismiss(Boolean(selectedQrEvent), () => setSelectedQrEvent(null));
 
   const ongoingCount = events.filter(e => e.status === 'ongoing' && e.isJoined).length;
   const endedCount = events.filter(e => e.status === 'ended' && e.isJoined).length;
