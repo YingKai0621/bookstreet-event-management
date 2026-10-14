@@ -14,7 +14,7 @@ import {
 import { OrganizerTopBar } from './OrganizerTopBar';
 
 import { OrganizerBoothManagementView } from './OrganizerBoothManagementView';
-import { Sprint2BoothWorkspace } from './Sprint2BoothWorkspace';
+import { OrganizerBoothRequestsView } from './OrganizerBoothRequestsView';
 import { ActivityManagementView } from './ActivityManagementView';
 import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
 import { OrganizerCreateActivityModal } from './OrganizerCreateActivityModal';
@@ -477,13 +477,20 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             onNavigateToBoothsMap={() => {
               setActiveTab('booths');
             }}
+            onBoothConfigurationChanged={async () => {
+              try {
+                setBoothsList(await organizerApi.getBooths(currentSelectedEvent.id));
+              } catch (error) {
+                setActionError(error instanceof Error ? error.message : 'Không tải lại được cấu hình gian hàng.');
+              }
+            }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={handlePublishEvent}
           />
         )}
 
         {activeTab === 'booth_requests' && (
-          <Sprint2BoothWorkspace
+          <OrganizerBoothRequestsView
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}

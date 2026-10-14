@@ -242,54 +242,29 @@ async function mockPublicMap(page: Page): Promise<void> {
 test('Organizer manages a physical Booth, Event price, and candidate selection', async ({ page }) => {
   const { getSavedBoothPosition, getConfigurationRequests } = await mockOrganizer(page);
   await page.goto('/portal');
-  await page.getByRole('button', { name: 'Yêu cầu gian hàng' }).click();
-  await expect(page.getByRole('heading', { name: 'Sơ đồ & Quản lý vị trí gian hàng' })).toBeVisible();
-  await expect(page.getByLabel('Sự kiện đang quản lý')).toHaveValue('101');
+  await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quản lý Gian hàng' })).toBeVisible();
   await expect(page.getByText('A05', { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Thêm gian hàng' }).click();
+  await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
   await page.getByPlaceholder('Ví dụ: A01, B02, C10').fill('B01');
   await page.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill('Gian văn học');
+  await page.getByLabel('Tọa độ X trên sơ đồ (%)').fill('50');
+  await page.getByLabel('Tọa độ Y trên sơ đồ (%)').fill('50');
   await page.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Đã tạo gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã thêm mới thành công gian hàng');
   await expect(page.getByText('B01', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /Cấu hình sự kiện/ }).click();
-  const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
-  const rentalPrice = configuredBooth.locator('input[type="number"]');
-  await expect(rentalPrice).toHaveValue('5000000');
-  await expect(configuredBooth.getByText('Còn trống')).toBeVisible();
-  await rentalPrice.fill('5500000');
-  await rentalPrice.press('Tab');
-  await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
-  const enabledToggle = configuredBooth.getByRole('checkbox');
-  await expect(enabledToggle).toBeEnabled();
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã tắt gian hàng A05');
-  await expect(rentalPrice).toHaveValue('5500000');
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã mở gian hàng A05');
-  await expect(enabledToggle).toBeChecked();
-  expect(getConfigurationRequests()).toEqual([
-    { rentalPrice: 5_500_000, enabled: true },
-    { rentalPrice: 5_500_000, enabled: false },
-    { rentalPrice: 5_500_000, enabled: true },
-  ]);
-  await page.getByRole('button', { name: /Duyệt yêu cầu thuê gian hàng/ }).click();
-  await expect(page.getByText('NXB Demo')).toBeVisible();
-  page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
-  await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
-  await expect(page.getByText(/5.500.000/)).toBeVisible();
 
-  await page.getByRole('button', { name: /Sơ đồ bản đồ gian hàng/ }).click();
+  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
   const mapLayer = page.locator('.booth-map-image-layer');
-  const newBoothMarker = page.getByRole('button', { name: /B01.*Không mở bán/ });
+  const newBoothMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(newBoothMarker).toBeVisible();
   await newBoothMarker.click();
   const mapPopover = page.locator('.booth-marker-popover');
-  await expect(mapPopover.getByText('Không mở bán', { exact: true })).toBeVisible();
-  await expect(mapPopover.getByLabel('Trạng thái theo sự kiện')).toHaveCount(0);
+  await expect(mapPopover.getByText('Đang hoạt động', { exact: true })).toBeVisible();
+  await expect(mapPopover.getByLabel('Trạng thái vật lý')).toHaveCount(0);
   await mapPopover.getByRole('button', { name: 'Hoàn tất & Đồng bộ' }).click();
-  expect(getConfigurationRequests()).toHaveLength(3);
+  expect(getConfigurationRequests()).toHaveLength(0);
+
   const mapBox = await mapLayer.boundingBox();
   const markerBox = await newBoothMarker.boundingBox();
   expect(mapBox).not.toBeNull();
@@ -299,12 +274,49 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.mouse.move(mapBox!.x + mapBox!.width * 0.625, mapBox!.y + mapBox!.height * 0.48, { steps: 8 });
   await page.mouse.up();
   await page.getByRole('button', { name: 'Lưu sơ đồ' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã lưu thành công tọa độ 1 gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 gian hàng');
+
+  await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem', exact: true }).click();
+  await page.locator('.org-tabs-bar').getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Cấu hình gian hàng & giá sự kiện' })).toBeVisible();
+  const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
+  const unconfiguredBooth = page.locator('.s2-config-row').filter({ hasText: 'B01' });
+  const rentalPrice = configuredBooth.locator('input[type="number"]');
+  await expect(rentalPrice).toHaveValue('5000000');
+  await expect(configuredBooth.getByText('Còn trống')).toBeVisible();
+  await expect(unconfiguredBooth.locator('.s2-config-status').getByText('Không mở bán', { exact: true })).toBeVisible();
+  await expect(unconfiguredBooth.locator('input[type="number"]')).toHaveValue('');
+  await rentalPrice.fill('5500000');
+  await rentalPrice.press('Tab');
+  await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
+  const enabledToggle = configuredBooth.getByRole('checkbox');
+  await expect(enabledToggle).toBeEnabled();
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã ngừng mở bán gian A05');
+  await expect(rentalPrice).toHaveValue('5500000');
+  await configuredBooth.locator('.s2-switch-wrapper').click();
+  await expect(page.getByRole('status')).toContainText('Đã mở bán gian A05');
+  await expect(enabledToggle).toBeChecked();
+  expect(getConfigurationRequests()).toEqual([
+    { rentalPrice: 5_500_000, enabled: true },
+    { rentalPrice: 5_500_000, enabled: false },
+    { rentalPrice: 5_500_000, enabled: true },
+  ]);
+
+  await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Yêu cầu gian hàng theo sự kiện' })).toBeVisible();
+  await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('101');
+  await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toHaveCount(0);
+  await expect(page.getByText('NXB Demo')).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
+  await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
+  await expect(page.getByText(/5.500.000/)).toBeVisible();
   await page.reload();
-  await page.getByRole('navigation', { name: 'Điều hướng chức năng' })
-    .getByRole('button', { name: 'Yêu cầu gian hàng', exact: true })
-    .click();
-  const persistedMarker = page.getByRole('button', { name: /B01.*Không mở bán/ });
+  await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
+  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  const persistedMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(persistedMarker).toBeVisible();
   const savedBoothPosition = getSavedBoothPosition();
   expect(savedBoothPosition).not.toBeNull();

@@ -7,6 +7,7 @@ import {
   Grid,
   List,
   Loader2,
+  MapPin,
   Plus,
   RefreshCw,
   Search,
@@ -18,6 +19,8 @@ import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
 import type { CreatePhysicalBoothInput, PhysicalBooth, UpdatePhysicalBoothInput } from '../../types/booth';
+import { BoothMapCanvas, type PopoverBoothData } from '../booth-map/BoothMapCanvas';
+import type { BoothMapMarker } from '../booth-map/boothMapModel';
 import './OrganizerBoothManagementView.css';
 
 interface Props {
@@ -78,7 +81,13 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   // Filter & Search States
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'map'>('table');
+
+  // Physical map state. Event availability and pricing deliberately do not live here.
+  const [draftCoords, setDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
+  const [activePopover, setActivePopover] = useState<PopoverBoothData | null>(null);
+  const [isSavingMap, setIsSavingMap] = useState(false);
+  const [customMapUrl, setCustomMapUrl] = useState<string | undefined>();
 
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -95,6 +104,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     try {
       const physicalBooths = await boothApi.listAllPhysicalBooths();
       setBooths(physicalBooths);
+      setDraftCoords({});
+      setActivePopover(null);
     } catch (err) {
       console.warn('Could not load booth catalog data', err);
       setErrorMessage(err instanceof Error ? err.message : 'Không thể tải danh sách gian hàng.');
@@ -134,6 +145,25 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       return matchesSearch && matchesStatus;
     });
   }, [booths, searchKeyword, filterStatus]);
+
+  const mapMarkers = useMemo<BoothMapMarker[]>(() => filteredBooths.flatMap(booth => {
+    const draft = draftCoords[booth.boothId];
+    const x = draft?.x ?? booth.mapX;
+    const y = draft?.y ?? booth.mapY;
+    if (
+      x === null || y === null || !Number.isFinite(x) || !Number.isFinite(y)
+      || x < 0 || x > 100 || y < 0 || y > 100
+    ) return [];
+    return [{
+      id: `booth-${booth.boothId}`,
+      boothId: booth.boothId,
+      code: booth.code,
+      name: booth.name,
+      x,
+      y,
+      status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+    }];
+  }), [draftCoords, filteredBooths]);
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
@@ -180,12 +210,12 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     const mapXVal = formData.mapX.trim() ? Number(formData.mapX) : null;
     const mapYVal = formData.mapY.trim() ? Number(formData.mapY) : null;
 
-    if (mapXVal !== null && isNaN(mapXVal)) {
-      setErrorMessage('Tọa độ X phải là số hợp lệ.');
+    if (mapXVal !== null && (!Number.isFinite(mapXVal) || mapXVal < 0 || mapXVal > 100)) {
+      setErrorMessage('Tọa độ X phải nằm trong khoảng 0–100.');
       return;
     }
-    if (mapYVal !== null && isNaN(mapYVal)) {
-      setErrorMessage('Tọa độ Y phải là số hợp lệ.');
+    if (mapYVal !== null && (!Number.isFinite(mapYVal) || mapYVal < 0 || mapYVal > 100)) {
+      setErrorMessage('Tọa độ Y phải nằm trong khoảng 0–100.');
       return;
     }
 
@@ -254,6 +284,73 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     }
   };
 
+  const handleMapPositionChange = (markerId: string, x: number, y: number) => {
+    const boothId = Number(markerId.replace('booth-', ''));
+    if (!Number.isFinite(boothId)) return;
+    setDraftCoords(current => ({ ...current, [boothId]: { x, y } }));
+    setActivePopover(current => current?.boothId === boothId ? { ...current, x, y } : current);
+  };
+
+  const handleOpenMapPopover = (marker: BoothMapMarker) => {
+    const booth = booths.find(item => item.boothId === marker.boothId);
+    if (!booth) return;
+    setActivePopover({
+      boothId: booth.boothId,
+      code: booth.code,
+      name: booth.name,
+      status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+      x: marker.x,
+      y: marker.y,
+    });
+  };
+
+  const handleSaveMapPopover = async (data: PopoverBoothData) => {
+    setErrorMessage('');
+    try {
+      await boothApi.updatePhysicalBooth(data.boothId, {
+        code: data.code,
+        name: data.name,
+        mapX: data.x,
+        mapY: data.y,
+      });
+      setSuccessMessage(`Đã cập nhật thông tin vật lý của gian "${data.code}".`);
+      await loadBoothData();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không thể cập nhật gian hàng trên sơ đồ.');
+    }
+  };
+
+  const handleSaveAllMap = async () => {
+    const boothIds = Object.keys(draftCoords).map(Number);
+    if (!boothIds.length) {
+      setSuccessMessage('Tất cả vị trí gian hàng đã được đồng bộ.');
+      return;
+    }
+    setIsSavingMap(true);
+    setErrorMessage('');
+    try {
+      await Promise.all(boothIds.map(boothId => boothApi.updatePhysicalBooth(boothId, {
+        mapX: draftCoords[boothId].x,
+        mapY: draftCoords[boothId].y,
+      })));
+      setSuccessMessage(`Đã lưu tọa độ của ${boothIds.length} gian hàng.`);
+      await loadBoothData();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không thể lưu tọa độ sơ đồ.');
+    } finally {
+      setIsSavingMap(false);
+    }
+  };
+
+  const handleUploadMapImage = (file: File) => {
+    setCustomMapUrl(URL.createObjectURL(file));
+    setSuccessMessage(`Đã tải bản đồ xem trước: ${file.name}`);
+  };
+
+  useEffect(() => () => {
+    if (customMapUrl) URL.revokeObjectURL(customMapUrl);
+  }, [customMapUrl]);
+
   return (
     <div className="booth-crud-page">
       {/* 1. HEADER SECTION */}
@@ -277,6 +374,16 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           >
             <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
             <span>{language === 'vi' ? 'Làm mới' : 'Refresh'}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`btn-org-secondary booth-map-action ${viewMode === 'map' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('map')}
+            aria-pressed={viewMode === 'map'}
+          >
+            <MapPin size={18} />
+            <span>{language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth Map'}</span>
           </button>
 
           {onOpenRequests && (
@@ -523,7 +630,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         /* GRID CARDS VIEW */
         <div className="booth-grid-cards">
           {filteredBooths.map(booth => {
@@ -593,6 +700,33 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               </div>
             );
           })}
+        </div>
+      ) : (
+        <div className="booth-physical-map-panel">
+          <div className="booth-physical-map-heading">
+            <div>
+              <h2>Sơ đồ gian hàng vật lý</h2>
+              <p>Kéo để cập nhật tọa độ. Trạng thái thuê và giá được cấu hình riêng trong từng sự kiện.</p>
+            </div>
+            <span>{mapMarkers.length}/{filteredBooths.length} gian đã có tọa độ</span>
+          </div>
+          <BoothMapCanvas
+            markers={mapMarkers}
+            activePopoverData={activePopover}
+            onOpenPopover={handleOpenMapPopover}
+            onClosePopover={() => setActivePopover(null)}
+            onSavePopover={handleSaveMapPopover}
+            onPositionChange={handleMapPositionChange}
+            onSaveAllMap={handleSaveAllMap}
+            onUploadMapImage={handleUploadMapImage}
+            isSavingAll={isSavingMap}
+            hasUnsavedChanges={Object.keys(draftCoords).length > 0}
+            editable
+            customMapUrl={customMapUrl}
+            statusScope="physical"
+            ariaLabel="Sơ đồ danh mục gian hàng vật lý"
+            emptyMessage="Chưa có gian hàng nào với tọa độ hợp lệ để hiển thị trên sơ đồ."
+          />
         </div>
       )}
 
@@ -670,6 +804,36 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   disabled={formSubmitting}
                   required
+                />
+              </div>
+
+              <div className="booth-form-group">
+                <label htmlFor="physical-booth-map-x">Tọa độ X trên sơ đồ (%)</label>
+                <input
+                  id="physical-booth-map-x"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0–100"
+                  value={formData.mapX}
+                  onChange={e => setFormData({ ...formData, mapX: e.target.value })}
+                  disabled={formSubmitting}
+                />
+              </div>
+
+              <div className="booth-form-group">
+                <label htmlFor="physical-booth-map-y">Tọa độ Y trên sơ đồ (%)</label>
+                <input
+                  id="physical-booth-map-y"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0–100"
+                  value={formData.mapY}
+                  onChange={e => setFormData({ ...formData, mapY: e.target.value })}
+                  disabled={formSubmitting}
                 />
               </div>
 

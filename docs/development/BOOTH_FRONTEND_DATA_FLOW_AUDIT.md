@@ -255,6 +255,21 @@ Implemented on `2026-10-14`:
 - Partner copy no longer promises an unsupported post-Assignment Booth-change flow;
 - Sprint 2 UI E2E now covers the selector, an unconfigured Booth and a delayed old-Event response.
 
-The component separation and Partner Assignment-list work in steps 3–7 remain intentionally out of
-scope for this slice.
+The Partner Assignment-list work in steps 6–7 remains intentionally out of scope for this slice.
+
+## 8. Organizer responsibility split status
+
+Implemented after the first coding slice:
+
+- `Gian hàng` now owns the shared physical catalog, physical active state and editable physical map;
+- the physical map uses only physical statuses and never exposes Event price, Hold or Assignment
+  controls;
+- Event detail now owns an explicit `Cấu hình gian hàng & giá sự kiện` panel containing all active
+  physical Booths, including unconfigured Booths as `Không mở bán`;
+- `Yêu cầu gian hàng` now loads only Event-scoped requests and exposes only select/reject review
+  actions;
+- the former mixed workspace no longer loads physical Booths or Event price configuration.
+
+This completes sequence steps 3–5. The next product slice is the owned Assignment list contract and
+the Partner `Gian hàng của tôi` experience.
 

@@ -223,6 +223,16 @@
   color: #0369A1;
 }
 
+.booth-map-marker.status-physical_inactive {
+  background: #E2E8F0;
+  border: 1.5px dashed #94A3B8;
+  color: #64748B;
+  opacity: 0.8;
+}
+
+.booth-map-legend-dot.physical { background: #0284C7; }
+.booth-map-legend-dot.physical-inactive { background: #94A3B8; }
+
 .booth-map-marker:hover,
 .booth-map-marker:focus-visible,
 .booth-map-marker.is-selected,

@@ -15,6 +15,7 @@ import { OrganizerPartnerApplication } from '../../services/organizerApi';
 import type { BoothRequest } from '../../types/booth';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
+import { EventBoothConfigurationPanel } from './EventBoothConfigurationPanel';
 
 interface EventDetailViewProps {
   language: Language;
@@ -31,6 +32,7 @@ interface EventDetailViewProps {
   onRejectProposal?: (proposalId: string) => void;
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
+  onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (eventId: string) => void | Promise<void>;
 }
@@ -50,6 +52,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onRejectProposal,
   onBack,
   onNavigateToBoothsMap,
+  onBoothConfigurationChanged,
   onEditEvent,
   onPublishEvent
 }) => {
@@ -281,7 +284,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   onClick={onNavigateToBoothsMap}
                 >
                   <Map size={15} color="#17382E" />
-                  <span>{language === 'vi' ? 'Xem bản đồ sự kiện' : 'View Event Map'}</span>
+                  <span>{language === 'vi' ? 'Quản lý sơ đồ vật lý' : 'Manage physical map'}</span>
                 </button>
               </div>
             </div>
@@ -377,48 +380,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
       {/* TAB: GIAN HÀNG */}
       {activeTab === 'booths' && (
-        <div className="organizer-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: 0 }}>
-              {language === 'vi' ? 'Gian hàng cấu hình cho sự kiện' : 'Event Booth Configurations'}
-            </h2>
-            <button
-              type="button"
-              className="btn-org-secondary"
-              onClick={onNavigateToBoothsMap}
-            >
-              <Map size={14} />
-              <span>{language === 'vi' ? 'Xem trên Bản đồ' : 'View on Map'}</span>
-            </button>
-          </div>
-
-          <div className="org-table-container">
-            <table className="org-table">
-              <thead>
-                <tr>
-                  <th>Mã</th>
-                  <th>Gian hàng</th>
-                  <th>Danh mục</th>
-                  <th>Giá sự kiện</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {booths.map((b) => (
-                  <tr key={b.id}>
-                    <td><strong>{b.code}</strong></td>
-                    <td>{b.name}</td>
-                    <td>{b.zone}</td>
-                    <td>{b.priceEstimate}</td>
-                    <td>
-                      <span className={`org-chip ${b.status}`}>{b.statusLabelVi}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <EventBoothConfigurationPanel
+          language={language}
+          event={event}
+          onChanged={onBoothConfigurationChanged}
+        />
       )}
 
       {/* TAB: HOẠT ĐỘNG */}
