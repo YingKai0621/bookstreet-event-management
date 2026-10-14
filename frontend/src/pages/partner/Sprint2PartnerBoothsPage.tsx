@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import '../../components/organizer/Sprint2Booth.css';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
@@ -83,11 +83,12 @@ function dateTime(value: string | null): string {
 }
 
 export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
+  const [searchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
   );
-  const [selectedEventId, setSelectedEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(() => searchParams.get('eventId') || '');
   const [tab, setTab] = useState<'browse' | 'requests'>('browse');
   const [booths, setBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
@@ -106,6 +107,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
   const loadGenerationRef = useRef(0);
   const currentEventIdRef = useRef(eventId);
+  const handledDeepLinkRef = useRef('');
 
   useEffect(() => {
     currentEventIdRef.current = eventId;
@@ -178,12 +180,17 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     return () => window.clearTimeout(timeout);
   }, [loadData, requests]);
 
+  const ownedBoothIds = useMemo(
+    () => new Set(requests.filter(request => request.status === 'COMPLETED').map(request => request.boothId)),
+    [requests],
+  );
+
   const mapMarkers = useMemo(
     () => booths.flatMap(row => {
       const marker = eventBoothToMarker(row);
-      return marker ? [marker] : [];
+      return marker ? [{ ...marker, status: ownedBoothIds.has(row.booth.boothId) ? 'OWNED' as const : marker.status }] : [];
     }),
-    [booths],
+    [booths, ownedBoothIds],
   );
 
   const requestByBooth = useMemo(() => {
@@ -193,10 +200,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   }, [requests]);
 
   const requestBlockedReason = (row: EventBooth): string | null => {
+    const history = requestByBooth.get(row.booth.boothId) || [];
+    if (history.some(request => request.status === 'COMPLETED')) {
+      return 'Đây là gian hàng đã được cấp cho bạn trong sự kiện này.';
+    }
     if (row.availability !== 'AVAILABLE') {
       return `Gian hàng hiện ${availabilityLabel[row.availability].toLowerCase()}.`;
     }
-    const history = requestByBooth.get(row.booth.boothId) || [];
     if (history.some(request => request.status === 'PENDING' || request.status === 'SELECTED')) {
       return 'Bạn đã có một yêu cầu đang mở cho gian hàng này.';
     }
@@ -205,6 +215,19 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     }
     return null;
   };
+
+  useEffect(() => {
+    const boothId = Number(searchParams.get('boothId'));
+    if (!Number.isInteger(boothId) || boothId <= 0 || loading) return;
+    const deepLinkKey = `${eventId}:${boothId}`;
+    if (handledDeepLinkRef.current === deepLinkKey) return;
+    const row = booths.find(item => item.booth.boothId === boothId);
+    if (!row) return;
+    handledDeepLinkRef.current = deepLinkKey;
+    setTab('browse');
+    setSelectedBooth(row);
+    setRequestNote('');
+  }, [booths, eventId, loading, searchParams]);
 
   const submitRequest = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
@@ -523,7 +546,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     {selectedBooth.booth.code}
                   </span>
                   <span className={`s2-status ${selectedBooth.availability.toLowerCase()}`}>
-                    {availabilityLabel[selectedBooth.availability]}
+                    {(requestByBooth.get(selectedBooth.booth.boothId) || []).some(request => request.status === 'COMPLETED')
+                      ? 'Gian của bạn'
+                      : availabilityLabel[selectedBooth.availability]}
                   </span>
                 </div>
                 <h2 className="s2-booth-modal-title">{selectedBooth.booth.name}</h2>

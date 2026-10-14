@@ -36,6 +36,7 @@ import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal
 import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
 import { EventApplicationPage } from './pages/partner/EventApplicationPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
+import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
@@ -682,7 +683,12 @@ export function App() {
               organization={partnerOrg}
             />
           } />
-          <Route path="/partner/booths" element={<Navigate to="/partner/booth-requests" replace />} />
+          <Route path="/partner/booths" element={
+            <PartnerAssignedBoothsPage
+              language={language}
+              applications={partnerApplications}
+            />
+          } />
           <Route path="/partner/booths/select" element={<Navigate to="/partner/booth-requests" replace />} />
           <Route path="/partner/booth-requests" element={
             <Sprint2PartnerBoothsPage

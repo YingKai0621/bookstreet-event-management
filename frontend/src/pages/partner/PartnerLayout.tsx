@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarDays,
   ChevronDown,
+  ClipboardList,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -86,11 +87,18 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       icon: <CalendarDays size={18} />,
     },
     {
+      id: 'booths',
+      path: '/partner/booths',
+      labelVi: 'Gian hàng của tôi',
+      labelEn: 'My Booths',
+      icon: <Store size={18} />,
+    },
+    {
       id: 'booth-requests',
       path: '/partner/booth-requests',
       labelVi: 'Yêu cầu gian hàng',
       labelEn: 'Booth Requests',
-      icon: <Store size={18} />,
+      icon: <ClipboardList size={18} />,
     },
     {
       id: 'activities',

@@ -117,6 +117,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   // Counts
   const availableCount = visibleMarkers.filter(m => m.status === 'AVAILABLE').length;
   const assignedCount = visibleMarkers.filter(m => m.status === 'ASSIGNED').length;
+  const ownedCount = visibleMarkers.filter(m => m.status === 'OWNED').length;
   const onHoldCount = visibleMarkers.filter(m => m.status === 'ON_HOLD').length;
   const physicalActiveCount = visibleMarkers.filter(m => m.status === 'PHYSICAL').length;
   const physicalInactiveCount = visibleMarkers.filter(m => m.status === 'PHYSICAL_INACTIVE').length;
@@ -263,6 +264,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
             <>
               <div className="booth-map-legend-item"><span className="booth-map-legend-dot available"></span><span>Còn trống ({availableCount})</span></div>
               <div className="booth-map-legend-item"><span className="booth-map-legend-dot assigned"></span><span>Đã thuê ({assignedCount})</span></div>
+              {ownedCount > 0 && <div className="booth-map-legend-item"><span className="booth-map-legend-dot owned"></span><span>Gian của bạn ({ownedCount})</span></div>}
               <div className="booth-map-legend-item"><span className="booth-map-legend-dot on_hold"></span><span>Đang giữ chỗ ({onHoldCount})</span></div>
             </>
           )}
@@ -378,7 +380,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                 title={`${marker.code}: ${marker.name} (${markerStatusLabel(marker.status)}) - Kéo để đổi vị trí, Click để chỉnh sửa`}
               >
                 <span>{marker.code}</span>
-                {marker.status === 'ASSIGNED' && <Lock size={11} className="booth-marker-lock" />}
+                {(marker.status === 'ASSIGNED' || marker.status === 'OWNED') && <Lock size={11} className="booth-marker-lock" />}
               </button>
             );
           })}

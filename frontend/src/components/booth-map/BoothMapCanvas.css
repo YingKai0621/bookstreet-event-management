@@ -56,6 +56,11 @@
   border: 2px solid #64748B;
 }
 
+.booth-map-legend-dot.owned {
+  background: #DDF6E8;
+  border: 2px solid #15835B;
+}
+
 .booth-map-legend-dot.on_hold {
   background: #FEF3C7;
   border: 2px solid #D97706;
@@ -200,6 +205,13 @@
   border: 1.5px solid #94A3B8;
   color: #334155;
   box-shadow: 0 2px 8px rgba(51, 65, 85, 0.2);
+}
+
+.booth-map-marker.status-owned {
+  background: #DDF6E8;
+  border: 2px solid #15835B;
+  color: #0D6847;
+  box-shadow: 0 0 0 3px rgba(233, 188, 99, 0.55), 0 3px 12px rgba(21, 131, 91, 0.28);
 }
 
 /* 3. On Hold / Pending: Soft Amber / Orange */

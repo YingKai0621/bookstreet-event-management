@@ -143,12 +143,12 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
         </Link>
 
         {/* Card 2: Assigned Booths */}
-        <Link to="/partner/booth-requests" className="partner-stat-card">
+        <Link to="/partner/booths" className="partner-stat-card">
           <div className="stat-num-box green">
-            {boothRequests?.length ?? '—'}
+            {boothRequests?.filter(request => request.status === 'COMPLETED').length ?? '—'}
           </div>
           <div className="stat-label-muted">
-            {language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth Requests'}
+            {language === 'vi' ? 'Gian hàng đã được cấp' : 'Assigned Booths'}
           </div>
         </Link>
 
