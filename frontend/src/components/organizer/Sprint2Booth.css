@@ -1209,6 +1209,9 @@
 }
 
 @media (max-width: 768px) {
+  .s2-booth-header, .s2-event-bar { align-items: stretch !important; flex-direction: column; }
+  .s2-event-bar select { min-width: 0; max-width: none; width: 100%; }
+  .s2-event-bar span { align-self: flex-start; }
   .s2-config-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .s2-config-identity { width: 100%; }
   .s2-config-status { justify-content: flex-start; }

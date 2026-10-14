@@ -3,18 +3,15 @@ import {
   Check,
   Clock3,
   DollarSign,
-  Edit3,
-  Layers,
   Loader2,
   MapPin,
   MessageSquare,
-  Plus,
   RefreshCw,
   ShieldCheck,
   Store,
   X,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
@@ -96,7 +93,7 @@ function dateTime(value: string | null): string {
   });
 }
 
-export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId }) => {
+export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId, onSelectEventId }) => {
   const [tab, setTab] = useState<'map' | 'requests' | 'configuration'>('map');
   const [physicalBooths, setPhysicalBooths] = useState<PhysicalBooth[]>([]);
   const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
@@ -124,44 +121,70 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
   const [reviewNote, setReviewNote] = useState('');
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
+  const selectedEvent = events.find(event => event.id === eventId);
+  const loadGenerationRef = useRef(0);
+  const currentEventIdRef = useRef(eventId);
 
-  const loadData = useCallback(async () => {
+  useEffect(() => {
+    currentEventIdRef.current = eventId;
+  }, [eventId]);
+
+  const loadData = useCallback(async (clearCurrent = false) => {
+    const requestedEventId = eventId;
+    if (currentEventIdRef.current !== requestedEventId) return;
+    const generation = ++loadGenerationRef.current;
+
+    if (clearCurrent) {
+      setPhysicalBooths([]);
+      setEventBooths([]);
+      setRequests([]);
+      setConfigurationPriceDrafts({});
+      setDraftCoords({});
+      setActivePopover(null);
+      setRejectingRequest(null);
+      setReviewNote('');
+      setSuccess('');
+    }
     setLoading(true);
     setError('');
     try {
       const physicalList = await boothApi.listAllPhysicalBooths();
-      setPhysicalBooths(physicalList);
 
-      if (eventId) {
+      if (requestedEventId) {
         const [configurations, eventRequests] = await Promise.all([
-          boothApi.listEventBoothConfigurations(eventId),
-          boothApi.listAllOrganizerRequests(eventId),
+          boothApi.listEventBoothConfigurations(requestedEventId),
+          boothApi.listAllOrganizerRequests(requestedEventId),
         ]);
+        if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
+
         const configurationByBoothId = new Map(
           configurations.map(configuration => [configuration.booth.boothId, configuration]),
         );
         const configurationRows = physicalList.map(booth => configurationByBoothId.get(booth.boothId) || {
           eventBoothConfigId: null,
-          eventId: Number(eventId),
+          eventId: Number(requestedEventId),
           booth,
           rentalPrice: null,
           enabled: false,
-          availability: 'AVAILABLE' as const,
+          availability: 'UNAVAILABLE' as const,
         });
+        setPhysicalBooths(physicalList);
         setEventBooths(configurationRows);
         setConfigurationPriceDrafts(Object.fromEntries(
           configurationRows.map(row => [row.booth.boothId, row.rentalPrice?.toString() ?? '']),
         ));
         setRequests(eventRequests);
       } else {
+        if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
         const configurationRows: EventBooth[] = physicalList.map(booth => ({
           eventBoothConfigId: null,
           eventId: 0,
           booth,
           rentalPrice: null,
-          enabled: booth.active,
-          availability: booth.active ? 'AVAILABLE' : 'UNAVAILABLE',
+          enabled: false,
+          availability: 'UNAVAILABLE',
         }));
+        setPhysicalBooths(physicalList);
         setEventBooths(configurationRows);
         setConfigurationPriceDrafts(Object.fromEntries(
           configurationRows.map(row => [row.booth.boothId, '']),
@@ -169,16 +192,24 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
         setRequests([]);
       }
     } catch (caughtError) {
+      if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setPhysicalBooths([]);
       setEventBooths([]);
       setRequests([]);
       setError(apiMessage(caughtError));
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current && currentEventIdRef.current === requestedEventId) {
+        setLoading(false);
+      }
     }
   }, [eventId]);
 
-  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => {
+    void loadData(true);
+    return () => {
+      loadGenerationRef.current += 1;
+    };
+  }, [loadData]);
 
   // Auto-dismiss success message
   useEffect(() => {
@@ -286,7 +317,7 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
         return [];
       }
 
-      let status: 'AVAILABLE' | 'ASSIGNED' | 'ON_HOLD' | 'UNAVAILABLE' = 'AVAILABLE';
+      let status: 'AVAILABLE' | 'ASSIGNED' | 'ON_HOLD' | 'UNAVAILABLE' = 'UNAVAILABLE';
       if (!booth.active) {
         status = 'UNAVAILABLE';
       } else if (configured) {
@@ -335,14 +366,15 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
       boothId: marker.boothId,
       code: marker.code,
       name: booth?.name || marker.name,
-      status: (configured?.availability || (booth?.active ? 'AVAILABLE' : 'UNAVAILABLE')) as any,
+      status: configured?.availability || 'UNAVAILABLE',
       partnerName,
       x: currentX,
       y: currentY,
     });
   };
 
-  // Save Popover form changes (name, status, partner)
+  // The map popover edits only physical identity and coordinates. Event availability
+  // remains owned by the event configuration and request workflows.
   const handleSavePopover = async (data: PopoverBoothData) => {
     setError('');
     setSuccess('');
@@ -352,20 +384,8 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
         name: data.name,
         mapX: data.x,
         mapY: data.y,
-        active: data.status !== 'UNAVAILABLE',
       };
       await boothApi.updatePhysicalBooth(data.boothId, updatePayload);
-
-      // If event configuration exists, update event availability/status
-      if (eventId && data.status) {
-        const existingConfig = configurationByBooth.get(data.boothId);
-        await boothApi.configureEventBooth(
-          eventId,
-          data.boothId,
-          existingConfig?.rentalPrice ?? 2000000,
-          data.status !== 'UNAVAILABLE',
-        );
-      }
 
       setSuccess(`Đã đồng bộ thông tin gian hàng "${data.code}" thành công.`);
       setActivePopover(null);
@@ -538,6 +558,25 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
           <span>+ Thêm gian hàng</span>
         </button>
       </header>
+
+      <div className="s2-event-bar">
+        <label htmlFor="organizer-booth-event">Sự kiện đang quản lý</label>
+        <select
+          id="organizer-booth-event"
+          value={eventId}
+          disabled={!events.length}
+          onChange={event => {
+            currentEventIdRef.current = event.target.value;
+            onSelectEventId(event.target.value);
+          }}
+        >
+          {!events.length && <option value="">Chưa có sự kiện</option>}
+          {events.map(event => (
+            <option key={event.id} value={event.id}>{event.title}</option>
+          ))}
+        </select>
+        {selectedEvent && <span>{selectedEvent.dateRange}</span>}
+      </div>
 
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
       {success && <div className="s2-alert s2-alert-success" role="status"><Check size={18} />{success}</div>}
@@ -784,7 +823,7 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
 
                     <div className="s2-config-status">
                       <span className={`s2-status ${row.availability.toLowerCase()}`}>
-                        {row.availability === 'AVAILABLE' ? 'Còn trống' : row.availability === 'ASSIGNED' ? 'Đã thuê' : row.availability === 'ON_HOLD' ? 'Chờ duyệt' : 'Tạm khóa'}
+                        {row.availability === 'AVAILABLE' ? 'Còn trống' : row.availability === 'ASSIGNED' ? 'Đã thuê' : row.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : 'Không mở bán'}
                       </span>
                     </div>
 
@@ -818,7 +857,7 @@ export const Sprint2BoothWorkspace: React.FC<Props> = ({ events, selectedEventId
                         />
                         <span className="s2-slider"></span>
                       </div>
-                      <span className="s2-switch-label">{row.enabled ? 'Mở đăng ký' : 'Tạm khóa'}</span>
+                      <span className="s2-switch-label">{row.enabled ? 'Mở đăng ký' : 'Không mở bán'}</span>
                     </label>
                   </div>
                 ))}

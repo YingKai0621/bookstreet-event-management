@@ -47,8 +47,8 @@ export function markerStatusLabel(status: BoothMapMarkerStatus): string {
   switch (status) {
     case 'AVAILABLE': return 'Còn trống';
     case 'ASSIGNED': return 'Đã thuê';
-    case 'ON_HOLD': return 'Chờ duyệt';
-    case 'UNAVAILABLE': return 'Tạm khóa';
+    case 'ON_HOLD': return 'Đang giữ chỗ';
+    case 'UNAVAILABLE': return 'Không mở bán';
     default: return 'Gian hàng vật lý';
   }
 }

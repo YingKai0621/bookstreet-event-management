@@ -379,6 +379,18 @@
   letter-spacing: 0.01em;
 }
 
+.popover-field strong {
+  min-height: 1.15rem;
+  padding: 0.5rem 0.65rem;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 9px;
+  background: #F8FAFC;
+  color: #1F2937;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .popover-field select,
 .popover-field input {
   width: 100%;

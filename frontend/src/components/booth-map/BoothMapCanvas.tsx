@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Check,
-  Download,
   Lock,
   Minus,
   Plus,
@@ -9,8 +8,6 @@ import {
   Trash2,
   Upload,
   X,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 import { DEFAULT_MAP_IMAGE } from '../../services/mapService';
 import type { BoothMapMarker } from './boothMapModel';
@@ -61,7 +58,6 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   onSaveAllMap,
   onUploadMapImage,
   isSavingAll = false,
-  hasUnsavedChanges = false,
   editable = true,
   ariaLabel,
   emptyMessage = 'Chưa có gian hàng nào trên bản đồ.',
@@ -77,13 +73,9 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   const [popoverForm, setPopoverForm] = useState<{
     code: string;
     name: string;
-    status: 'AVAILABLE' | 'ASSIGNED' | 'ON_HOLD' | 'UNAVAILABLE';
-    partnerName: string;
   }>({
     code: '',
     name: '',
-    status: 'AVAILABLE',
-    partnerName: '',
   });
   const [popoverSaving, setPopoverSaving] = useState(false);
 
@@ -100,8 +92,6 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
       setPopoverForm({
         code: activePopoverData.code || '',
         name: activePopoverData.name || '',
-        status: activePopoverData.status || 'AVAILABLE',
-        partnerName: activePopoverData.partnerName || '',
       });
     }
   }, [activePopoverData]);
@@ -222,8 +212,8 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
         ...activePopoverData,
         code: popoverForm.code.trim().toUpperCase() || activePopoverData.code,
         name: popoverForm.name.trim() || activePopoverData.name,
-        status: popoverForm.status,
-        partnerName: popoverForm.partnerName.trim(),
+        status: activePopoverData.status,
+        partnerName: activePopoverData.partnerName || '',
       });
       onClosePopover?.();
     } finally {
@@ -270,7 +260,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
           </div>
           <div className="booth-map-legend-item">
             <span className="booth-map-legend-dot on_hold"></span>
-            <span>Chờ duyệt ({onHoldCount})</span>
+            <span>Đang giữ chỗ ({onHoldCount})</span>
           </div>
         </div>
 
@@ -438,25 +428,13 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                 {/* Form Fields (2 columns) */}
                 <div className="popover-body-grid">
                   <div className="popover-field">
-                    <label>Trạng thái gian hàng</label>
-                    <select
-                      value={popoverForm.status}
-                      onChange={e => setPopoverForm({ ...popoverForm, status: e.target.value as any })}
-                    >
-                      <option value="AVAILABLE">Còn trống</option>
-                      <option value="ASSIGNED">Đã thuê</option>
-                      <option value="ON_HOLD">Chờ duyệt</option>
-                    </select>
+                    <label>Trạng thái theo sự kiện</label>
+                    <strong>{markerStatusLabel(activePopoverData.status)}</strong>
                   </div>
 
                   <div className="popover-field">
                     <label>Đơn vị tham gia (NXB / Đối tác)</label>
-                    <input
-                      type="text"
-                      placeholder="Nhập tên đơn vị..."
-                      value={popoverForm.partnerName}
-                      onChange={e => setPopoverForm({ ...popoverForm, partnerName: e.target.value })}
-                    />
+                    <strong>{activePopoverData.partnerName || 'Chưa có đơn vị được cấp'}</strong>
                   </div>
                 </div>
 
