@@ -37,9 +37,10 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
   };
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'need_changes' | 'cancelled'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formError, setFormError] = useState('');
   useModalDismiss(isModalOpen, () => setIsModalOpen(false));
 
-  // Comprehensive Form State matching EventApplicationPage
+  // Comprehensive activity proposal form state
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<'Workshop' | 'Talkshow' | 'Minigame' | 'Signings' | 'Exhibition'>('Workshop');
   const [targetDate, setTargetDate] = useState(vietnamDateKey);
@@ -73,13 +74,14 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      alert(language === 'vi' ? 'Vui lòng nhập tên hoạt động.' : 'Please enter activity title.');
+      setFormError(language === 'vi' ? 'Vui lòng nhập tên hoạt động.' : 'Please enter activity title.');
       return;
     }
     if (!agreedTerms) {
-      alert(language === 'vi' ? 'Vui lòng xác nhận cam kết quy chế tổ chức hoạt động.' : 'Please agree to terms.');
+      setFormError(language === 'vi' ? 'Vui lòng xác nhận cam kết quy chế tổ chức hoạt động.' : 'Please agree to terms.');
       return;
     }
+    setFormError('');
 
     const dateParts = targetDate.split('-');
     const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
@@ -95,7 +97,7 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
       });
       setIsModalOpen(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể gửi đề xuất hoạt động.' : 'Could not submit activity proposal.'));
+      setFormError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể gửi đề xuất hoạt động.' : 'Could not submit activity proposal.'));
       return;
     }
     // Reset form
@@ -123,7 +125,7 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
         <button
           type="button"
           className="btn-part-primary"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => { setFormError(''); setIsModalOpen(true); }}
           style={{
             padding: '0.65rem 1.25rem',
             fontWeight: 700,
@@ -368,6 +370,12 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
 
             {/* Form Body */}
             <form onSubmit={handleCreateActivity} style={{ padding: '1.5rem' }}>
+              {formError && (
+                <div className="partner-form-alert error" role="alert">
+                  <AlertCircle size={18} />
+                  <span>{formError}</span>
+                </div>
+              )}
               {/* PHẦN 1: CHI TIẾT HOẠT ĐỘNG ĐỀ XUẤT */}
               <div style={{
                 background: '#FFFFFF',

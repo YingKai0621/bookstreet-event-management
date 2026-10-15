@@ -1,5 +1,7 @@
 import {
+  AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   Edit3,
   FileText,
   QrCode,
@@ -10,6 +12,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { partnerApi } from '../../services/partnerApi';
 import { Language, PartnerActivityProposal } from '../../types';
+import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import '../../components/partner/PartnerEvents.css';
 import './PartnerPages.css';
 
 interface PartnerActivityDetailPageProps {
@@ -29,6 +33,11 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'info' | 'schedule' | 'registration' | 'documents'>('info');
   const [isEditing, setIsEditing] = useState(false);
+  const [requestKind, setRequestKind] = useState<'change' | 'cancellation' | null>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [requestError, setRequestError] = useState('');
+  const [requestSuccess, setRequestSuccess] = useState('');
+  const [requestBusy, setRequestBusy] = useState(false);
 
   const activity = activities.find(a => a.id === activityId) || activities[0];
 
@@ -58,20 +67,33 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
     setIsEditing(false);
   };
 
-  const requestChange = async () => {
-    if (!activity) return;
-    const reason = window.prompt(language === 'vi' ? 'Nhập nội dung cần thay đổi (ít nhất 10 ký tự):' : 'Describe the requested change (at least 10 characters):');
-    if (!reason) return;
-    try { await partnerApi.requestActivityChange(activity.id, reason); alert(language === 'vi' ? 'Đã gửi yêu cầu thay đổi đến Ban Quản Lý.' : 'Change request submitted.'); }
-    catch (error) { alert(error instanceof Error ? error.message : 'Không thể gửi yêu cầu'); }
+  const openRequestDialog = (kind: 'change' | 'cancellation') => {
+    setRequestKind(kind);
+    setRequestReason('');
+    setRequestError('');
+    setRequestSuccess('');
   };
 
-  const requestCancellation = async () => {
-    if (!activity) return;
-    const reason = window.prompt(language === 'vi' ? 'Nhập lý do hủy (ít nhất 10 ký tự):' : 'Enter cancellation reason (at least 10 characters):');
-    if (!reason) return;
-    try { await partnerApi.requestActivityCancellation(activity.id, reason); alert(language === 'vi' ? 'Đã gửi yêu cầu hủy đến Ban Quản Lý.' : 'Cancellation request submitted.'); }
-    catch (error) { alert(error instanceof Error ? error.message : 'Không thể gửi yêu cầu'); }
+  const submitRequest = async () => {
+    if (!activity || !requestKind) return;
+    const reason = requestReason.trim();
+    if (reason.length < 10) {
+      setRequestError('Nội dung cần có ít nhất 10 ký tự để Ban Quản Lý có đủ thông tin xử lý.');
+      return;
+    }
+    setRequestBusy(true);
+    setRequestError('');
+    try {
+      if (requestKind === 'change') await partnerApi.requestActivityChange(activity.id, reason);
+      else await partnerApi.requestActivityCancellation(activity.id, reason);
+      setRequestSuccess(requestKind === 'change'
+        ? 'Đã gửi yêu cầu thay đổi đến Ban Quản Lý.'
+        : 'Đã gửi yêu cầu hủy đến Ban Quản Lý.');
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu.');
+    } finally {
+      setRequestBusy(false);
+    }
   };
 
   if (!activity) return <div className="partner-activity-detail-page"><p className="app-loading-state">Không tìm thấy hoạt động.</p></div>;
@@ -295,7 +317,7 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
                   <button
                     type="button"
                     className="btn-part-secondary"
-                    onClick={() => void requestChange()}
+                    onClick={() => openRequestDialog('change')}
                   >
                     <RefreshCw size={15} />
                     <span>{language === 'vi' ? 'Yêu cầu thay đổi' : 'Request Change'}</span>
@@ -303,7 +325,7 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
                   <button
                     type="button"
                     className="btn-part-danger"
-                    onClick={() => void requestCancellation()}
+                    onClick={() => openRequestDialog('cancellation')}
                   >
                     <XCircle size={15} />
                     <span>{language === 'vi' ? 'Yêu cầu hủy' : 'Request Cancellation'}</span>
@@ -366,6 +388,45 @@ export const PartnerActivityDetailPage: React.FC<PartnerActivityDetailPageProps>
           </>
         )}
       </div>
+
+      {requestKind && (
+        <PartnerDialog
+          title={requestKind === 'change' ? 'Yêu cầu thay đổi hoạt động' : 'Yêu cầu hủy hoạt động'}
+          onClose={() => !requestBusy && setRequestKind(null)}
+        >
+          <div className="partner-dialog-body activity-request-dialog">
+            {requestSuccess ? (
+              <div className="activity-request-success" role="status">
+                <span><CheckCircle2 size={26} /></span>
+                <h3>Yêu cầu đã được gửi</h3>
+                <p>{requestSuccess}</p>
+                <button type="button" className="btn-part-primary" onClick={() => setRequestKind(null)}>Đóng</button>
+              </div>
+            ) : (
+              <>
+                <div className={`activity-request-intro ${requestKind === 'cancellation' ? 'is-danger' : ''}`}>
+                  {requestKind === 'cancellation' ? <AlertCircle size={22} /> : <RefreshCw size={22} />}
+                  <div>
+                    <strong>{activity.title}</strong>
+                    <p>{requestKind === 'change'
+                      ? 'Mô tả rõ nội dung cần điều chỉnh để Ban Quản Lý xem xét.'
+                      : 'Hãy nêu lý do cụ thể. Hoạt động chỉ bị hủy sau khi yêu cầu được xử lý.'}</p>
+                  </div>
+                </div>
+                {requestError && <div className="partner-form-alert error" role="alert"><AlertCircle size={17} /><span>{requestError}</span></div>}
+                <label htmlFor="activity-request-reason">{requestKind === 'change' ? 'Nội dung cần thay đổi' : 'Lý do yêu cầu hủy'}</label>
+                <textarea id="activity-request-reason" rows={5} value={requestReason} onChange={event => setRequestReason(event.target.value)} placeholder="Nhập ít nhất 10 ký tự…" disabled={requestBusy} />
+                <div className="partner-dialog-actions">
+                  <button type="button" className="btn-part-secondary" onClick={() => setRequestKind(null)} disabled={requestBusy}>Để sau</button>
+                  <button type="button" className={requestKind === 'cancellation' ? 'btn-part-danger' : 'btn-part-primary'} onClick={() => void submitRequest()} disabled={requestBusy}>
+                    {requestBusy ? 'Đang gửi…' : requestKind === 'change' ? 'Gửi yêu cầu thay đổi' : 'Gửi yêu cầu hủy'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </PartnerDialog>
+      )}
     </div>
   );
 };

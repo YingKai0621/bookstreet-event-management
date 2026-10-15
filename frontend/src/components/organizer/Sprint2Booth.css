@@ -14,15 +14,18 @@
 
 .s2-event-context {
   display: grid;
-  grid-template-columns: auto minmax(145px, auto) minmax(280px, 1fr) auto;
+  grid-template-columns: auto minmax(230px, 1fr) minmax(260px, 0.85fr) minmax(210px, auto);
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.95rem 1rem;
-  border: 1px solid #CFE0D8;
-  border-left: 4px solid #B48A3C;
-  border-radius: 14px;
-  background: linear-gradient(100deg, #F4F9F6 0%, #FFFFFF 72%);
-  box-shadow: 0 3px 12px rgba(20, 58, 47, 0.05);
+  gap: 1rem;
+  overflow: hidden;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #BFCFC8;
+  border-left: 5px solid #D4A84F;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 92% 15%, rgba(233, 188, 99, 0.16), transparent 25%),
+    linear-gradient(100deg, #EDF6F1 0%, #FFFFFF 72%);
+  box-shadow: 0 7px 22px rgba(20, 58, 47, 0.08);
 }
 
 .s2-event-context-icon {
@@ -37,7 +40,8 @@
 
 .s2-event-context-copy {
   display: grid;
-  gap: 0.15rem;
+  gap: 0.18rem;
+  min-width: 0;
 }
 
 .s2-event-context-copy span {
@@ -48,11 +52,19 @@
   text-transform: uppercase;
 }
 
-.s2-event-context-copy label {
+.s2-event-context-copy strong {
   color: #17382E;
-  font-size: 0.91rem;
-  font-weight: 800;
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.12rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.s2-event-context-copy small { color: #64766f; font-size: 0.73rem; line-height: 1.4; }
+.s2-event-context-control { display: grid; gap: 0.35rem; }
+.s2-event-context-control label { color: #60726b; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 
 .s2-event-context-control select {
   width: 100%;
@@ -84,6 +96,25 @@
   font-weight: 750;
   white-space: nowrap;
 }
+
+.s2-event-context-side { display: grid; justify-items: start; gap: 0.45rem; }
+.s2-event-approved { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.36rem 0.6rem; border: 1px solid #A9E1C7; border-radius: 999px; background: #EAF8F1; color: #08734A; font-size: 0.71rem; font-weight: 850; }
+.s2-event-context-metrics { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 0.55rem; padding-top: 0.75rem; border-top: 1px solid #DEE8E3; }
+.s2-event-context-metrics span { padding: 0.35rem 0.6rem; border-radius: 8px; background: rgba(255, 255, 255, 0.82); color: #62736d; font-size: 0.72rem; }
+.s2-event-context-metrics strong { margin-right: 0.22rem; color: #17382E; font-size: 0.83rem; }
+
+.s2-withdraw-dialog { text-align: center; }
+.s2-withdraw-dialog-icon { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 0.8rem; border-radius: 16px; background: #FFEBEB; color: #B52F2F; }
+.s2-withdraw-dialog h3 { margin: 0; color: #172421; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.3rem; }
+.s2-withdraw-dialog > p { max-width: 510px; margin: 0.65rem auto 0; color: #5E6E69; line-height: 1.6; }
+
+.s2-quota-dialog { display: grid; gap: 1rem; }
+.s2-quota-dialog-icon { display: grid; place-items: center; width: 58px; height: 58px; border: 1px solid #F2C7A7; border-radius: 17px; background: #FFF4E8; color: #B45309; }
+.s2-quota-dialog-copy { display: grid; gap: 0.35rem; }
+.s2-quota-dialog-eyebrow { color: #A66019; font-size: 0.72rem; font-weight: 850; letter-spacing: 0.06em; text-transform: uppercase; }
+.s2-quota-dialog h3 { margin: 0; color: #172421; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.35rem; line-height: 1.35; }
+.s2-quota-dialog p { margin: 0.15rem 0 0; color: #536660; line-height: 1.65; }
+.s2-quota-dialog-note { padding: 0.85rem 1rem; border: 1px solid #EADDC3; border-radius: 12px; background: #FFFBF3; color: #72562B; font-size: 0.82rem; line-height: 1.55; }
 
 .s2-alert { display: flex; align-items: center; gap: .55rem; padding: .8rem 1rem; border-radius: 10px; font-size: .9rem; }
 .s2-alert-error { background: #fff1ef; border: 1px solid #f4c6be; color: #a23b2a; }
@@ -1311,7 +1342,9 @@
   .s2-event-bar span { align-self: flex-start; }
   .s2-event-context { grid-template-columns: auto 1fr; }
   .s2-event-context-control { grid-column: 1 / -1; }
-  .s2-event-context-date { grid-column: 1 / -1; justify-self: start; white-space: normal; }
+  .s2-event-context-side { grid-column: 1 / -1; }
+  .s2-event-context-date { white-space: normal; }
+  .s2-event-context-metrics { grid-column: 1 / -1; }
   .s2-config-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .s2-config-identity { width: 100%; }
   .s2-config-status { justify-content: flex-start; }
