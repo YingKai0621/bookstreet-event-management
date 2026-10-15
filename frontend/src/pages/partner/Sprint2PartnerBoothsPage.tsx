@@ -35,6 +35,13 @@ interface Props {
   applications: PartnerEventApplication[];
 }
 
+interface WithdrawConflict {
+  title: string;
+  message: string;
+  requestId: number;
+  showPaymentLink: boolean;
+}
+
 const CATEGORY_LABEL: Record<string, string> = {
   MANGA_COMICS: 'Truyện tranh & Manga',
   LITERATURE: 'Văn học & Nghệ thuật',
@@ -69,6 +76,49 @@ function apiMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
 }
 
+function withdrawConflict(error: ApiError, requestId: number): WithdrawConflict | null {
+  switch (error.code) {
+    case 'PAYMENT_ATTEMPT_ALREADY_PENDING':
+      return {
+        title: 'Phiên thanh toán vẫn đang mở',
+        message: 'Gian hàng chưa thể được giải phóng vì bạn đang có một phiên thanh toán còn hiệu lực. Hãy tiếp tục thanh toán hoặc chờ hệ thống xác minh kết quả.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'PAYMENT_RESULT_UNKNOWN':
+      return {
+        title: 'Thanh toán đang được xác minh',
+        message: 'Hệ thống chưa thể xác định chắc chắn kết quả thanh toán. Giữ chỗ sẽ được bảo toàn để tránh mất tiền hoặc cấp gian hàng sai. Vui lòng kiểm tra lại chi tiết thanh toán sau.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'PAYMENT_ALREADY_COMPLETED':
+    case 'BOOTH_ALREADY_ASSIGNED':
+      return {
+        title: 'Gian hàng đã được cấp',
+        message: 'Yêu cầu này đã hoàn tất thanh toán hoặc đã được cấp gian hàng nên không còn thuộc luồng giải phóng trước thanh toán.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'BOOTH_HOLD_NOT_ACTIVE':
+      return {
+        title: 'Giữ chỗ không còn hiệu lực',
+        message: 'Trạng thái giữ chỗ vừa thay đổi. Hãy đóng thông báo và làm mới dữ liệu trước khi tiếp tục.',
+        requestId,
+        showPaymentLink: false,
+      };
+    case 'BOOTH_REQUEST_NOT_WITHDRAWABLE':
+      return {
+        title: 'Không thể rút yêu cầu',
+        message: 'Yêu cầu không còn ở trạng thái chờ duyệt hoặc chờ thanh toán nên không thể rút tại thời điểm này.',
+        requestId,
+        showPaymentLink: false,
+      };
+    default:
+      return null;
+  }
+}
+
 function money(value: number | null): string {
   if (value === null) return 'Chưa cấu hình';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -95,6 +145,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   const [requests, setRequests] = useState<BoothRequest[]>([]);
   const [selectedBooth, setSelectedBooth] = useState<EventBooth | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<BoothRequest | null>(null);
+  const [withdrawBlocked, setWithdrawBlocked] = useState<WithdrawConflict | null>(null);
   const [quotaExceeded, setQuotaExceeded] = useState<{ boothCode: string; eventTitle: string } | null>(null);
   const [requestNote, setRequestNote] = useState('');
   const [loading, setLoading] = useState(true);
@@ -125,6 +176,8 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       setBooths([]);
       setRequests([]);
       setSelectedBooth(null);
+      setWithdrawTarget(null);
+      setWithdrawBlocked(null);
       setRequestNote('');
       setSuccess('');
     }
@@ -266,13 +319,25 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     const requestedEventId = eventId;
     setBusy(`withdraw-${request.boothRequestId}`);
     setError('');
+    setSuccess('');
     try {
       await boothApi.withdrawRequest(request.boothRequestId);
       if (currentEventIdRef.current !== requestedEventId) return;
-      setSuccess('Đã rút yêu cầu gian hàng.');
+      setSuccess(request.status === 'SELECTED'
+        ? 'Đã rút yêu cầu và giải phóng giữ chỗ gian hàng.'
+        : 'Đã rút yêu cầu gian hàng.');
       setWithdrawTarget(null);
       await loadData();
     } catch (caughtError) {
+      if (caughtError instanceof ApiError) {
+        const conflict = withdrawConflict(caughtError, request.boothRequestId);
+        if (conflict) {
+          setWithdrawTarget(null);
+          setWithdrawBlocked(conflict);
+          return;
+        }
+      }
+      setWithdrawTarget(null);
       setError(apiMessage(caughtError));
     } finally {
       setBusy('');
@@ -426,7 +491,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                       </span>
                     </div>
 
-                    {request.status === 'PENDING' && (
+                    {(request.status === 'PENDING' || (request.status === 'SELECTED' && isHoldActive)) && (
                       <div className="s2-req-actions">
                         <button
                           type="button"
@@ -435,7 +500,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                           onClick={() => setWithdrawTarget(request)}
                         >
                           <X size={14} />
-                          {busy === `withdraw-${request.boothRequestId}` ? 'Đang rút…' : 'Rút yêu cầu'}
+                          {busy === `withdraw-${request.boothRequestId}`
+                            ? 'Đang xử lý…'
+                            : request.status === 'SELECTED' ? 'Rút & giải phóng' : 'Rút yêu cầu'}
                         </button>
                       </div>
                     )}
@@ -563,23 +630,59 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
 
       {withdrawTarget && (
         <PartnerDialog
-          title="Xác nhận rút yêu cầu gian hàng"
+          title={withdrawTarget.status === 'SELECTED'
+            ? 'Xác nhận giải phóng gian hàng'
+            : 'Xác nhận rút yêu cầu gian hàng'}
           onClose={() => !busy.startsWith('withdraw-') && setWithdrawTarget(null)}
         >
           <div className="partner-dialog-body s2-withdraw-dialog">
             <span className="s2-withdraw-dialog-icon"><AlertCircle size={25} /></span>
             <h3>Gian {withdrawTarget.boothCode}</h3>
-            <p>
-              Yêu cầu đang chờ Ban tổ chức xem xét. Sau khi rút, trạng thái này không thể hoàn tác.
-              Bạn có chắc muốn tiếp tục?
-            </p>
+            {withdrawTarget.status === 'SELECTED' ? (
+              <p>
+                Gian hàng đang được giữ cho bạn. Nếu chưa có kết quả thanh toán cần bảo toàn,
+                hệ thống sẽ rút yêu cầu và giải phóng giữ chỗ ngay để đối tác khác có thể đăng ký.
+                Thao tác này không thể hoàn tác.
+              </p>
+            ) : (
+              <p>
+                Yêu cầu đang chờ Ban tổ chức xem xét. Sau khi rút, trạng thái này không thể hoàn tác.
+                Bạn có chắc muốn tiếp tục?
+              </p>
+            )}
             <div className="partner-dialog-actions">
               <button type="button" className="btn-part-secondary" onClick={() => setWithdrawTarget(null)} disabled={busy.startsWith('withdraw-')}>
                 Giữ yêu cầu
               </button>
               <button type="button" className="btn-part-danger" onClick={() => void withdraw(withdrawTarget)} disabled={busy.startsWith('withdraw-')}>
-                <X size={15} />{busy.startsWith('withdraw-') ? 'Đang rút…' : 'Xác nhận rút yêu cầu'}
+                <X size={15} />{busy.startsWith('withdraw-')
+                  ? 'Đang xử lý…'
+                  : withdrawTarget.status === 'SELECTED' ? 'Rút và giải phóng' : 'Xác nhận rút yêu cầu'}
               </button>
+            </div>
+          </div>
+        </PartnerDialog>
+      )}
+
+      {withdrawBlocked && (
+        <PartnerDialog title={withdrawBlocked.title} onClose={() => setWithdrawBlocked(null)}>
+          <div className="partner-dialog-body s2-withdraw-dialog">
+            <span className="s2-withdraw-dialog-icon is-warning"><Info size={25} /></span>
+            <h3>Chưa thể giải phóng gian hàng</h3>
+            <p>{withdrawBlocked.message}</p>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setWithdrawBlocked(null)}>
+                Đóng
+              </button>
+              {withdrawBlocked.showPaymentLink && (
+                <Link
+                  className="btn-part-primary"
+                  to={`/partner/booth-requests/${withdrawBlocked.requestId}/payment`}
+                  onClick={() => setWithdrawBlocked(null)}
+                >
+                  <CreditCard size={16} /> Xem chi tiết thanh toán
+                </Link>
+              )}
             </div>
           </div>
         </PartnerDialog>

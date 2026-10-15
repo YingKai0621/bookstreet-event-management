@@ -1054,6 +1054,39 @@ class PaymentSprint03IntegrationTests {
     }
 
     @Test
+    void cancellationRacingSelectionLeavesNoSelectedRequestOrActiveHold() throws Exception {
+        Fixture fixture = fixture(10_000, "PENDING");
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<Integer> selection = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/organizer/events/{eventId}/booth-requests/{id}/select",
+                                fixture.eventId(), fixture.requestId())
+                                .with(identity(organizer, "ORGANIZER")).with(csrf()))
+                        .andReturn().getResponse().getStatus();
+            });
+            Future<Integer> cancellation = pool.submit(() -> {
+                await(start);
+                return mvc.perform(post("/api/v1/organizer/events/{id}/cancel", fixture.eventId())
+                                .with(identity(organizer, "ORGANIZER")).with(csrf())
+                                .contentType("application/json")
+                                .content("{\"reason\":\"Venue is unavailable for this event\"}"))
+                        .andReturn().getResponse().getStatus();
+            });
+            start.countDown();
+            assertThat(selection.get(10, TimeUnit.SECONDS)).isIn(200, 404);
+            assertThat(cancellation.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+        }
+
+        assertThat(jdbc.queryForObject("select status from events where event_id = ?",
+                String.class, fixture.eventId())).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, fixture.requestId())).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("select count(*) from booth_holds where booth_request_id = ? "
+                        + "and status = 'ACTIVE'", Integer.class, fixture.requestId())).isZero();
+    }
+
+    @Test
     void submissionWaitsForEventRootAndRechecksCancellationAfterCommit() throws Exception {
         Fixture fixture = fixture(10_000, "PENDING");
         withdraw(fixture.requestId(), 200, null);

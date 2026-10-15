@@ -105,6 +105,7 @@
 
 .s2-withdraw-dialog { text-align: center; }
 .s2-withdraw-dialog-icon { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 0.8rem; border-radius: 16px; background: #FFEBEB; color: #B52F2F; }
+.s2-withdraw-dialog-icon.is-warning { background: #FFF4E3; color: #A66019; }
 .s2-withdraw-dialog h3 { margin: 0; color: #172421; font-family: var(--font-serif, 'Playfair Display', serif); font-size: 1.3rem; }
 .s2-withdraw-dialog > p { max-width: 510px; margin: 0.65rem auto 0; color: #5E6E69; line-height: 1.6; }
 
