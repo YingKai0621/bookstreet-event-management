@@ -19,7 +19,9 @@ import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
+import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.repository.EventRepository;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import java.time.Clock;
@@ -36,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class OrganizerBoothRequestService {
     private final EventRepository eventRepository;
+    private final EventRootLockService eventRootLockService;
     private final BoothRepository boothRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
@@ -48,6 +51,7 @@ public class OrganizerBoothRequestService {
     private final Clock clock;
 
     public OrganizerBoothRequestService(EventRepository eventRepository,
+            EventRootLockService eventRootLockService,
             BoothRepository boothRepository,
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
@@ -59,6 +63,7 @@ public class OrganizerBoothRequestService {
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.eventRepository = eventRepository;
+        this.eventRootLockService = eventRootLockService;
         this.boothRepository = boothRepository;
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
@@ -92,8 +97,8 @@ public class OrganizerBoothRequestService {
     @Transactional
     public BoothRequestResponse reject(Long eventId, Long requestId,
             RejectBoothRequest command) {
-        ownedEvent(eventId);
         expiryService.expireDueHolds();
+        lockReviewableEvent(eventId);
         BoothRequest request = requestRepository
                 .findForOrganizerByIdForUpdate(requestId, eventId)
                 .orElseThrow(OrganizerBoothRequestService::requestNotFound);
@@ -104,8 +109,8 @@ public class OrganizerBoothRequestService {
 
     @Transactional
     public BoothRequestResponse select(Long eventId, Long requestId) {
-        Event event = ownedEvent(eventId);
         expiryService.expireDueHolds();
+        Event event = lockReviewableEvent(eventId);
 
         BoothRequest candidate = requestRepository.findForOrganizerById(requestId, eventId)
                 .orElseThrow(OrganizerBoothRequestService::requestNotFound);
@@ -116,9 +121,11 @@ public class OrganizerBoothRequestService {
         EventBoothConfig config = configRepository
                 .findByEventIdAndBoothIdForUpdate(eventId, boothId)
                 .orElseThrow(OrganizerBoothRequestService::boothNotAvailable);
-        BoothRequest request = requestRepository
-                .findForOrganizerByIdForUpdate(requestId, eventId)
-                .orElseThrow(OrganizerBoothRequestService::requestNotFound);
+        // Free selection also changes competing requests; lock the whole Pending set by id.
+        BoothRequest request = requestRepository.findCompetingForUpdate(
+                        eventId, boothId, BoothRequestStatus.PENDING).stream()
+                .filter(value -> value.getBoothRequestId().equals(requestId))
+                .findFirst().orElse(candidate);
 
         requirePending(request);
         PartnerEventApplication application = request.getApplication();
@@ -181,6 +188,16 @@ public class OrganizerBoothRequestService {
         Long organizerId = currentUser.requireOrganizerId();
         return eventRepository.findByEventIdAndOrganizerUserId(eventId, organizerId)
                 .orElseThrow(OrganizerBoothRequestService::eventNotFound);
+    }
+
+    private Event lockReviewableEvent(Long eventId) {
+        Event event = eventRootLockService.lockOwned(eventId, currentUser.requireOrganizerId())
+                .orElseThrow(OrganizerBoothRequestService::eventNotFound);
+        if (event.getStatus() != EventStatus.PUBLISHED
+                || !clock.instant().isBefore(event.getStartAt())) {
+            throw eventNotFound();
+        }
+        return event;
     }
 
     private BoothSelectionMessageRequested selectionMessage(BoothRequest request,

@@ -12,6 +12,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BoothHoldRepository extends JpaRepository<BoothHold, Long> {
+    @Query("""
+            select distinct hold.eventBoothConfig.eventId from BoothHold hold
+            where hold.status = com.swp391.bookstreet.booth.entity.BoothHoldStatus.ACTIVE
+              and hold.expiresAt <= :now
+            order by hold.eventBoothConfig.eventId
+            """)
+    List<Long> findDueEventIds(@Param("now") Instant now);
+
     @EntityGraph(attributePaths = {
             "boothRequest", "boothRequest.application",
             "boothRequest.application.partnerOrganization",
@@ -60,13 +68,4 @@ public interface BoothHoldRepository extends JpaRepository<BoothHold, Long> {
             """)
     List<BoothHold> findByEventIdForUpdate(@Param("eventId") Long eventId);
 
-    @Query(value = """
-            select *
-            from booth_holds
-            where status = 'ACTIVE'
-              and expires_at <= :now
-            order by expires_at, booth_hold_id
-            for update skip locked
-            """, nativeQuery = true)
-    List<BoothHold> findDueActiveForUpdate(@Param("now") Instant now);
 }

@@ -4,23 +4,32 @@ import com.swp391.bookstreet.booth.dto.BoothPageResponse;
 import com.swp391.bookstreet.booth.dto.BoothRequestResponse;
 import com.swp391.bookstreet.booth.dto.SubmitBoothRequest;
 import com.swp391.bookstreet.booth.entity.Booth;
+import com.swp391.bookstreet.booth.entity.BoothHold;
+import com.swp391.bookstreet.booth.entity.BoothHoldStatus;
 import com.swp391.bookstreet.booth.entity.BoothRequest;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.entity.EventBoothConfig;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
+import com.swp391.bookstreet.booth.repository.BoothRepository;
+import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
-import com.swp391.bookstreet.event.repository.EventRepository;
+import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.payment.entity.BoothPayment;
+import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
+import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
+import java.util.List;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -35,7 +44,10 @@ public class PartnerBoothRequestService {
             BoothRequestStatus.SELECTED
     );
 
-    private final EventRepository eventRepository;
+    private final EventRootLockService eventRootLockService;
+    private final BoothRepository boothRepository;
+    private final BoothHoldRepository holdRepository;
+    private final BoothPaymentRepository paymentRepository;
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
@@ -45,7 +57,10 @@ public class PartnerBoothRequestService {
     private final Clock clock;
 
     public PartnerBoothRequestService(
-            EventRepository eventRepository,
+            EventRootLockService eventRootLockService,
+            BoothRepository boothRepository,
+            BoothHoldRepository holdRepository,
+            BoothPaymentRepository paymentRepository,
             PartnerEventApplicationRepository applicationRepository,
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
@@ -54,7 +69,10 @@ public class PartnerBoothRequestService {
             BoothHoldExpiryService expiryService,
             Clock clock
     ) {
-        this.eventRepository = eventRepository;
+        this.eventRootLockService = eventRootLockService;
+        this.boothRepository = boothRepository;
+        this.holdRepository = holdRepository;
+        this.paymentRepository = paymentRepository;
         this.applicationRepository = applicationRepository;
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
@@ -68,7 +86,9 @@ public class PartnerBoothRequestService {
     public BoothRequestResponse submit(Long eventId, SubmitBoothRequest command) {
         Long partnerUserId = currentUser.requirePartnerId();
         expiryService.expireDueHolds();
-        Event event = eventRepository.findByEventIdAndStatus(eventId, EventStatus.PUBLISHED)
+        Event event = eventRootLockService.lock(eventId)
+                .filter(value -> value.getStatus() == EventStatus.PUBLISHED)
+                .filter(value -> clock.instant().isBefore(value.getStartAt()))
                 .orElseThrow(PartnerBoothRequestService::eventNotFound);
         PartnerEventApplication application = applicationRepository
                 .findByEventIdAndPartnerOrganization_RepresentativeUserId(
@@ -84,8 +104,10 @@ public class PartnerBoothRequestService {
                     "The Booth request deadline has passed.");
         }
 
+        boothRepository.findByBoothIdForUpdate(command.boothId())
+                .orElseThrow(PartnerBoothRequestService::eventBoothNotFound);
         EventBoothConfig config = configRepository
-                .findByEventIdAndBoothBoothId(eventId, command.boothId())
+                .findByEventIdAndBoothIdForUpdate(eventId, command.boothId())
                 .orElseThrow(PartnerBoothRequestService::eventBoothNotFound);
         Booth booth = config.getBooth();
         if (!config.isEnabled()) {
@@ -141,16 +163,63 @@ public class PartnerBoothRequestService {
     @Transactional
     public BoothRequestResponse withdraw(Long requestId) {
         Long partnerUserId = currentUser.requirePartnerId();
+        Long eventId = requestRepository.findOwnedEventIdById(requestId, partnerUserId)
+                .orElseThrow(PartnerBoothRequestService::requestNotFound);
+        eventRootLockService.lock(eventId)
+                .orElseThrow(PartnerBoothRequestService::requestNotFound);
+        // Discover and lock the optional Hold before loading/locking the request.
+        BoothHold hold = holdRepository.findOwnedByRequestIdForUpdate(requestId, partnerUserId)
+                .orElse(null);
+        List<BoothPayment> payments = hold == null ? List.of()
+                : paymentRepository.findByHoldIdForUpdate(hold.getBoothHoldId());
         BoothRequest request = requestRepository
                 .findOwnedByIdForUpdate(requestId, partnerUserId)
                 .orElseThrow(PartnerBoothRequestService::requestNotFound);
-        if (request.getStatus() != BoothRequestStatus.PENDING) {
-            throw new BoothApiException(HttpStatus.CONFLICT,
-                    "BOOTH_REQUEST_NOT_PENDING",
-                    "Only a Pending Booth request can be withdrawn.");
+        if (request.getStatus() == BoothRequestStatus.WITHDRAWN) {
+            return BoothRequestResponse.from(request, hold);
         }
-        request.withdraw(clock.instant());
-        return BoothRequestResponse.from(requestRepository.saveAndFlush(request));
+        if (request.getStatus() != BoothRequestStatus.PENDING
+                && request.getStatus() != BoothRequestStatus.SELECTED) {
+            throw new BoothApiException(HttpStatus.CONFLICT,
+                    "BOOTH_REQUEST_NOT_WITHDRAWABLE",
+                    "Only a Pending or eligible Selected Booth request can be withdrawn.");
+        }
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        if (request.getStatus() == BoothRequestStatus.SELECTED) {
+            requireReleasable(hold, payments, now);
+            hold.release(now);
+        }
+        request.withdraw(now);
+        requestRepository.flush();
+        return BoothRequestResponse.from(request, hold);
+    }
+
+    private void requireReleasable(BoothHold hold, List<BoothPayment> payments, Instant now) {
+        if (hold == null || hold.getStatus() != BoothHoldStatus.ACTIVE) {
+            throw conflict("BOOTH_HOLD_NOT_ACTIVE", "The Booth Hold is not Active.");
+        }
+        if (assignmentRepository.existsByBoothHoldBoothHoldId(hold.getBoothHoldId())) {
+            throw conflict("BOOTH_ALREADY_ASSIGNED", "The Booth already has an Assignment.");
+        }
+        if (payments.stream().anyMatch(BoothPayment::isReconciliationRequired)) {
+            throw conflict("PAYMENT_RESULT_UNKNOWN", "Payment evidence requires reconciliation.");
+        }
+        if (payments.stream().anyMatch(payment -> payment.getStatus() == BoothPaymentStatus.SUCCESS)) {
+            throw conflict("PAYMENT_ALREADY_COMPLETED", "Payment is already completed.");
+        }
+        for (BoothPayment payment : payments) {
+            if (payment.getStatus() == BoothPaymentStatus.PENDING) {
+                boolean usable = payment.getCheckoutUrl() != null
+                        && payment.getCheckoutExpiresAt() != null
+                        && now.isBefore(payment.getCheckoutExpiresAt());
+                throw conflict(usable ? "PAYMENT_ATTEMPT_ALREADY_PENDING" : "PAYMENT_RESULT_UNKNOWN",
+                        "A Pending Payment prevents release of this Hold.");
+            }
+        }
+    }
+
+    private static BoothApiException conflict(String code, String message) {
+        return new BoothApiException(HttpStatus.CONFLICT, code, message);
     }
 
     private boolean isEligible(PartnerEventApplication application) {
