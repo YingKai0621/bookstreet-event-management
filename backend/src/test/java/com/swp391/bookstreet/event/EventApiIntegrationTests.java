@@ -3,8 +3,12 @@ package com.swp391.bookstreet.event;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.event.dto.CancelEventRequest;
 import com.swp391.bookstreet.event.exception.EventException;
+import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.event.service.EventLifecycleService;
 import com.swp391.bookstreet.event.service.EventService;
+import com.swp391.bookstreet.partner.dto.SubmitPartnerApplicationRequest;
+import com.swp391.bookstreet.partner.service.PartnerApiException;
+import com.swp391.bookstreet.partner.service.PartnerApplicationService;
 import com.swp391.bookstreet.payment.service.PartnerPaymentService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.time.Duration;
@@ -27,10 +31,20 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.mail.MailSendException;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -65,7 +79,9 @@ class EventApiIntegrationTests {
     @Autowired ObjectMapper mapper;
     @Autowired EventService service;
     @Autowired EventLifecycleService lifecycleService;
+    @Autowired PartnerApplicationService partnerApplicationService;
     @Autowired PartnerPaymentService partnerPaymentService;
+    @MockitoBean EventCancellationMailService cancellationMailService;
     MockMvc mvc;
     Long owner;
     Long other;
@@ -82,6 +98,7 @@ class EventApiIntegrationTests {
         owner = insertUser();
         other = insertUser();
         validEventRequestJson = buildValidEventRequestJson();
+        reset(cancellationMailService);
     }
 
     @AfterEach
@@ -247,6 +264,86 @@ class EventApiIntegrationTests {
     }
 
     @Test
+    void publicListUsesLifecycleDiscoveryStatusesAndSupportsHistoryFilter() throws Exception {
+        long publishedId = createEvent();
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long cancelledId = createEvent();
+        createEvent();
+
+        jdbc.update("update events set status = 'PUBLISHED' where event_id = ?", publishedId);
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", ongoingId);
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", completedId);
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled for public discovery test.'
+                where event_id = ?
+                """, cancelledId);
+
+        mvc.perform(get(PUBLIC).param("sort", "eventId,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].eventId",
+                        containsInAnyOrder((int) publishedId, (int) ongoingId)));
+
+        mvc.perform(get(PUBLIC).param("status", "PUBLISHED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(publishedId));
+        mvc.perform(get(PUBLIC).param("status", "ONGOING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(ongoingId));
+        mvc.perform(get(PUBLIC).param("status", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].eventId").value(completedId));
+    }
+
+    @Test
+    void publicListRejectsPrivateAndUnsupportedStatusFilters() throws Exception {
+        for (String requestedStatus : List.of("DRAFT", "CANCELLED", "UNKNOWN", "")) {
+            mvc.perform(get(PUBLIC).param("status", requestedStatus))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_EVENT_STATUS_FILTER"));
+        }
+    }
+
+    @Test
+    void publicDetailExposesPublishedHistoryButKeepsDraftPrivate() throws Exception {
+        long publishedId = createEvent();
+        long ongoingId = createEvent();
+        long completedId = createEvent();
+        long cancelledId = createEvent();
+        long draftId = createEvent();
+
+        jdbc.update("update events set status = 'PUBLISHED' where event_id = ?", publishedId);
+        jdbc.update("update events set status = 'ONGOING' where event_id = ?", ongoingId);
+        jdbc.update("update events set status = 'COMPLETED' where event_id = ?", completedId);
+        jdbc.update("""
+                update events
+                set status = 'CANCELLED', cancelled_at = current_timestamp,
+                    cancellation_reason = 'Cancelled for public detail test.'
+                where event_id = ?
+                """, cancelledId);
+
+        mvc.perform(get(PUBLIC + "/" + publishedId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+        mvc.perform(get(PUBLIC + "/" + ongoingId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ONGOING"));
+        mvc.perform(get(PUBLIC + "/" + completedId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+        mvc.perform(get(PUBLIC + "/" + cancelledId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelledAt").isNotEmpty())
+                .andExpect(jsonPath("$.cancellationReason")
+                        .value("Cancelled for public detail test."));
+        mvc.perform(get(PUBLIC + "/" + draftId)).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
+    }
+
+    @Test
     void deleteDraftRemovesEventConfigurationButPreservesPhysicalBooth() throws Exception {
         long eventId = createEvent();
         long boothId = jdbc.queryForObject("""
@@ -330,6 +427,8 @@ class EventApiIntegrationTests {
         long eventId = createEvent();
         publish(eventId);
         CancellationFixture fixture = insertCancellationFixture(eventId);
+        String recipientEmail = jdbc.queryForObject(
+                "select email from users where user_id = ?", String.class, other);
 
         try {
             String response = mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
@@ -373,8 +472,80 @@ class EventApiIntegrationTests {
                     .andExpect(jsonPath("$.cancellationReason")
                             .value("Venue is no longer available."))
                     .andExpect(jsonPath("$.cancelledAt").value(cancelledAt));
+
+            verify(cancellationMailService, times(1)).sendCancellationMessage(
+                    eq(recipientEmail), eq("Book Street Festival"), any(Instant.class),
+                    eq("Venue is no longer available."));
         } finally {
             deleteCancellationFixture(fixture);
+        }
+    }
+
+    @Test
+    void cancellationEmailTargetsOnlyVerifiedPendingAndApprovedRepresentatives()
+            throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        var recipients = List.of(
+                insertCancellationRecipient(eventId, "PENDING", true),
+                insertCancellationRecipient(eventId, "APPROVED", true),
+                insertCancellationRecipient(eventId, "REJECTED", true),
+                insertCancellationRecipient(eventId, "WITHDRAWN", true),
+                insertCancellationRecipient(eventId, "PENDING", false));
+
+        try {
+            mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"Venue is unavailable for this Event.\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+            verify(cancellationMailService).sendCancellationMessage(
+                    eq(recipients.get(0).email()), eq("Book Street Festival"),
+                    any(Instant.class), eq("Venue is unavailable for this Event."));
+            verify(cancellationMailService).sendCancellationMessage(
+                    eq(recipients.get(1).email()), eq("Book Street Festival"),
+                    any(Instant.class), eq("Venue is unavailable for this Event."));
+            verifyNoMoreInteractions(cancellationMailService);
+        } finally {
+            deleteCancellationRecipients(recipients);
+        }
+    }
+
+    @Test
+    void cancellationEmailFailureDoesNotRollbackAndDoesNotSkipRemainingRecipients()
+            throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        var recipients = List.of(
+                insertCancellationRecipient(eventId, "PENDING", true),
+                insertCancellationRecipient(eventId, "APPROVED", true));
+
+        doThrow(new MailSendException("Simulated cancellation email failure"))
+                .when(cancellationMailService).sendCancellationMessage(
+                        eq(recipients.get(0).email()), eq("Book Street Festival"),
+                        any(Instant.class), eq("Venue is unavailable for this Event."));
+
+        try {
+            mvc.perform(post(ORGANIZER + "/" + eventId + "/cancel")
+                            .with(csrf())
+                            .with(authentication(identity(owner, true, "ORGANIZER")))
+                            .contentType("application/json")
+                            .content("{\"reason\":\"Venue is unavailable for this Event.\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+            assertThat(eventStatus(eventId)).isEqualTo("CANCELLED");
+            verify(cancellationMailService).sendCancellationMessage(
+                    eq(recipients.get(0).email()), eq("Book Street Festival"),
+                    any(Instant.class), eq("Venue is unavailable for this Event."));
+            verify(cancellationMailService).sendCancellationMessage(
+                    eq(recipients.get(1).email()), eq("Book Street Festival"),
+                    any(Instant.class), eq("Venue is unavailable for this Event."));
+        } finally {
+            deleteCancellationRecipients(recipients);
         }
     }
 
@@ -495,6 +666,82 @@ class EventApiIntegrationTests {
             }
         } finally {
             deleteCancellationFixture(fixture);
+        }
+    }
+
+    @Test
+    void concurrentCancellationAndPartnerApplicationSubmissionSerializeOnEventRoot() throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Race partner " + UUID.randomUUID());
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<String> cancellation = () -> {
+                SecurityContextHolder.getContext().setAuthentication(
+                        identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Start timeout");
+                    }
+                    service.cancel(eventId,
+                            new CancelEventRequest("Venue is no longer available."));
+                    return "CANCELLED";
+                } catch (EventException error) {
+                    return error.getCode();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Callable<String> submission = () -> {
+                ready.countDown();
+                if (!start.await(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Start timeout");
+                }
+                try {
+                    partnerApplicationService.submit(other, eventId,
+                            new SubmitPartnerApplicationRequest("Concurrent application"));
+                    return "APPLICATION_CREATED";
+                } catch (PartnerApiException error) {
+                    return error.getCode();
+                }
+            };
+
+            Future<String> cancellationResult = executor.submit(cancellation);
+            Future<String> submissionResult = executor.submit(submission);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(cancellationResult.get(15, TimeUnit.SECONDS)).isEqualTo("CANCELLED");
+            String submissionOutcome = submissionResult.get(15, TimeUnit.SECONDS);
+            // Applications do not block cancellation, so submission may commit first; once
+            // cancellation commits, the Event-root recheck must reject every later submission.
+            assertThat(submissionOutcome)
+                    .isIn("APPLICATION_CREATED", "EVENT_NOT_ACCEPTING_APPLICATIONS");
+            assertThat(eventStatus(eventId)).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("""
+                    select count(*) from partner_event_applications
+                    where partner_organization_id = ? and event_id = ?
+                    """, Long.class, organizationId, eventId))
+                    .isEqualTo(submissionOutcome.equals("APPLICATION_CREATED") ? 1L : 0L);
+
+            assertThatThrownBy(() -> partnerApplicationService.submit(other, eventId,
+                    new SubmitPartnerApplicationRequest("After cancellation")))
+                    .isInstanceOf(PartnerApiException.class)
+                    .extracting(error -> ((PartnerApiException) error).getCode())
+                    .isEqualTo("EVENT_NOT_ACCEPTING_APPLICATIONS");
+        } finally {
+            jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    organizationId);
         }
     }
 
@@ -988,7 +1235,7 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void allNonPublishedStatusesAreHiddenAndNotEditableInSprintOne() throws Exception {
+    void postPublicationStatusesFollowPublicLifecycleAndCannotBeRepublished() throws Exception {
         long id = createEvent();
         for (String eventStatus : List.of("ONGOING", "COMPLETED", "CANCELLED")) {
             if (eventStatus.equals("CANCELLED")) {
@@ -1001,9 +1248,11 @@ class EventApiIntegrationTests {
             } else {
                 jdbc.update("update events set status = ? where event_id = ?", eventStatus, id);
             }
-            mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isNotFound());
+            mvc.perform(get(PUBLIC + "/" + id)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(eventStatus));
             mvc.perform(get(PUBLIC)).andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalElements").value(0));
+                    .andExpect(jsonPath("$.totalElements")
+                            .value(eventStatus.equals("ONGOING") ? 1 : 0));
             mvc.perform(post(ORGANIZER + "/" + id + "/publish")
                             .with(authentication(identity(owner, true, "ORGANIZER"))).with(csrf()))
                     .andExpect(status().isConflict());
@@ -1135,6 +1384,45 @@ class EventApiIntegrationTests {
                 selectedRequestId, pendingRequestId, holdId);
     }
 
+    private CancellationRecipientFixture insertCancellationRecipient(
+            long eventId, String applicationStatus, boolean verified) {
+        String suffix = UUID.randomUUID().toString().replace("-", "");
+        String email = "cancel-" + suffix + "@example.test";
+        long userId = jdbc.queryForObject("""
+                insert into users(
+                    username, password_hash, full_name, email, email_verified_at, status)
+                values (?, ?, 'Cancellation Recipient', ?,
+                    case when ? then current_timestamp else null end, 'ACTIVE')
+                returning user_id
+                """, Long.class, "cancel_" + suffix.substring(0, 20),
+                new BCryptPasswordEncoder().encode(UUID.randomUUID().toString()),
+                email, verified);
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, userId, "Cancellation recipient " + suffix);
+        long applicationId = jdbc.queryForObject("""
+                insert into partner_event_applications(
+                    partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, ?, current_timestamp)
+                returning application_id
+                """, Long.class, organizationId, eventId, applicationStatus);
+        return new CancellationRecipientFixture(userId, organizationId, applicationId, email);
+    }
+
+    private void deleteCancellationRecipients(List<CancellationRecipientFixture> recipients) {
+        for (CancellationRecipientFixture recipient : recipients.reversed()) {
+            jdbc.update("delete from partner_event_applications where application_id = ?",
+                    recipient.applicationId());
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    recipient.organizationId());
+            jdbc.update("delete from users where user_id = ?", recipient.userId());
+        }
+    }
+
     private long insertCancellationBooth(String suffix) {
         long boothId = jdbc.queryForObject("""
                 insert into locations(
@@ -1209,6 +1497,10 @@ class EventApiIntegrationTests {
     }
 
     private record ExternalParticipationFixture(long organizationId, long applicationId) {
+    }
+
+    private record CancellationRecipientFixture(
+            long userId, long organizationId, long applicationId, String email) {
     }
 
     private void publish(long id) throws Exception {

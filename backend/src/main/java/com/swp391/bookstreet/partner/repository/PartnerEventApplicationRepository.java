@@ -9,11 +9,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface PartnerEventApplicationRepository
         extends JpaRepository<PartnerEventApplication, Long> {
+
+    @Query("SELECT application.eventId FROM PartnerEventApplication application "
+            + "WHERE application.id = :applicationId")
+    Optional<Long> findEventIdById(@Param("applicationId") Long applicationId);
 
     @EntityGraph(attributePaths = "partnerOrganization")
     Optional<PartnerEventApplication> findByEventIdAndPartnerOrganization_RepresentativeUserId(
@@ -86,6 +91,22 @@ public interface PartnerEventApplicationRepository
             Long partnerOrganizationId,
             Long eventId
     );
+
+    @Query(value = """
+            SELECT representative.email
+            FROM partner_event_applications application
+            JOIN partner_organizations organization
+              ON organization.partner_organization_id = application.partner_organization_id
+            JOIN users representative
+              ON representative.user_id = organization.representative_user_id
+            WHERE application.event_id = :eventId
+              AND application.status IN ('PENDING', 'APPROVED')
+              AND representative.email_verified_at IS NOT NULL
+              AND representative.email IS NOT NULL
+              AND BTRIM(representative.email) <> ''
+            ORDER BY application.application_id
+            """, nativeQuery = true)
+    List<String> findEventCancellationRecipientEmails(@Param("eventId") Long eventId);
 
     @Query(value = """
             SELECT a.application_id AS applicationId,

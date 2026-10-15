@@ -15,6 +15,7 @@ import com.swp391.bookstreet.event.security.EventCurrentUser;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,11 @@ public class EventService {
             "boothCancellationCutoffAt", "activityCancellationCutoffAt",
             "boothPaymentWindowMinutes", "maxBoothsPerPartner",
             "maxActivitiesPerPartner");
+    private static final List<EventStatus> DEFAULT_PUBLIC_STATUSES =
+            List.of(EventStatus.PUBLISHED, EventStatus.ONGOING);
+    private static final List<EventStatus> PUBLIC_DETAIL_STATUSES = List.of(
+            EventStatus.PUBLISHED, EventStatus.ONGOING,
+            EventStatus.COMPLETED, EventStatus.CANCELLED);
 
     private final EventRepository repository;
     private final EventCurrentUser currentUser;
@@ -47,6 +54,8 @@ public class EventService {
     private final BoothPaymentRepository boothPaymentRepository;
     private final BoothAssignmentRepository boothAssignmentRepository;
     private final BoothRequestRepository boothRequestRepository;
+    private final PartnerEventApplicationRepository partnerApplicationRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
@@ -56,6 +65,8 @@ public class EventService {
             BoothPaymentRepository boothPaymentRepository,
             BoothAssignmentRepository boothAssignmentRepository,
             BoothRequestRepository boothRequestRepository,
+            PartnerEventApplicationRepository partnerApplicationRepository,
+            ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.repository = repository;
         this.currentUser = currentUser;
@@ -66,6 +77,8 @@ public class EventService {
         this.boothPaymentRepository = boothPaymentRepository;
         this.boothAssignmentRepository = boothAssignmentRepository;
         this.boothRequestRepository = boothRequestRepository;
+        this.partnerApplicationRepository = partnerApplicationRepository;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -206,17 +219,37 @@ public class EventService {
                 .forEach(hold -> hold.release(now));
         event.cancel(reason, now);
         repository.flush();
+        eventPublisher.publishEvent(new EventCancellationMessageRequested(
+                event.getEventId(), event.getName(), event.getCancelledAt(),
+                event.getCancellationReason(), partnerApplicationRepository
+                        .findEventCancellationRecipientEmails(event.getEventId())));
         return EventResponse.from(event);
     }
 
-    public EventPageResponse<EventSummaryResponse> listPublic(int page, int size, String sort) {
-        return EventPageResponse.from(repository.findByStatus(EventStatus.PUBLISHED,
+    public EventPageResponse<EventSummaryResponse> listPublic(
+            int page, int size, String sort, String status) {
+        List<EventStatus> statuses = status == null
+                ? DEFAULT_PUBLIC_STATUSES
+                : List.of(publicStatusFilter(status));
+        return EventPageResponse.from(repository.findByStatusIn(statuses,
                 EventPagination.of(page, size, sort)).map(EventSummaryResponse::from));
     }
 
     public EventSummaryResponse getPublic(Long id) {
-        return EventSummaryResponse.from(repository.findByEventIdAndStatus(id, EventStatus.PUBLISHED)
+        return EventSummaryResponse.from(repository.findByEventIdAndStatusIn(
+                        id, PUBLIC_DETAIL_STATUSES)
                 .orElseThrow(EventService::notFound));
+    }
+
+    private static EventStatus publicStatusFilter(String status) {
+        return switch (status) {
+            case "PUBLISHED" -> EventStatus.PUBLISHED;
+            case "ONGOING" -> EventStatus.ONGOING;
+            case "COMPLETED" -> EventStatus.COMPLETED;
+            default -> throw new EventException(HttpStatus.BAD_REQUEST,
+                    "INVALID_EVENT_STATUS_FILTER",
+                    "Status must be PUBLISHED, ONGOING or COMPLETED.");
+        };
     }
 
     private Event ownedDraftForUpdate(Long id) {

@@ -1,10 +1,12 @@
 package com.swp391.bookstreet.partner.service;
 
+import com.swp391.bookstreet.event.entity.Event;
+import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.partner.dto.PartnerApplicationResponse;
 import com.swp391.bookstreet.partner.dto.SubmitPartnerApplicationRequest;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.entity.PartnerOrganization;
-import com.swp391.bookstreet.partner.repository.EventApplicationEligibilityReader;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
 import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,8 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
-import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -21,16 +23,19 @@ public class PartnerApplicationService {
 
     private final PartnerOrganizationRepository organizationRepository;
     private final PartnerEventApplicationRepository applicationRepository;
-    private final EventApplicationEligibilityReader eventReader;
+    private final EventRootLockService eventRootLockService;
+    private final Clock clock;
 
     public PartnerApplicationService(
             PartnerOrganizationRepository organizationRepository,
             PartnerEventApplicationRepository applicationRepository,
-            EventApplicationEligibilityReader eventReader
+            EventRootLockService eventRootLockService,
+            Clock clock
     ) {
         this.organizationRepository = organizationRepository;
         this.applicationRepository = applicationRepository;
-        this.eventReader = eventReader;
+        this.eventRootLockService = eventRootLockService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -49,15 +54,14 @@ public class PartnerApplicationService {
                         "An active Partner Organization is required to apply."
                 ));
 
-        EventApplicationEligibilityReader.EventApplicationEligibility event = eventReader
-                .findByEventId(eventId)
+        Event event = eventRootLockService.lock(eventId)
                 .orElseThrow(() -> new PartnerApiException(
                         HttpStatus.NOT_FOUND,
                         "EVENT_NOT_FOUND",
                         "Event was not found."
                 ));
 
-        if (!"PUBLISHED".equals(event.status())) {
+        if (event.getStatus() != EventStatus.PUBLISHED) {
             throw new PartnerApiException(
                     HttpStatus.CONFLICT,
                     "EVENT_NOT_ACCEPTING_APPLICATIONS",
@@ -65,8 +69,9 @@ public class PartnerApplicationService {
             );
         }
 
-        Instant now = Instant.now();
-        if (event.deadlineAt() != null && !now.isBefore(event.deadlineAt().toInstant())) {
+        Instant now = clock.instant();
+        if (event.getPartnerApplicationDeadlineAt() != null
+                && !now.isBefore(event.getPartnerApplicationDeadlineAt())) {
             throw new PartnerApiException(
                     HttpStatus.CONFLICT,
                     "APPLICATION_DEADLINE_PASSED",
