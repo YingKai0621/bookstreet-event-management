@@ -6,6 +6,9 @@ import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.event.service.EventLifecycleService;
 import com.swp391.bookstreet.event.service.EventService;
+import com.swp391.bookstreet.partner.dto.SubmitPartnerApplicationRequest;
+import com.swp391.bookstreet.partner.service.PartnerApiException;
+import com.swp391.bookstreet.partner.service.PartnerApplicationService;
 import com.swp391.bookstreet.payment.service.PartnerPaymentService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.time.Duration;
@@ -76,6 +79,7 @@ class EventApiIntegrationTests {
     @Autowired ObjectMapper mapper;
     @Autowired EventService service;
     @Autowired EventLifecycleService lifecycleService;
+    @Autowired PartnerApplicationService partnerApplicationService;
     @Autowired PartnerPaymentService partnerPaymentService;
     @MockitoBean EventCancellationMailService cancellationMailService;
     MockMvc mvc;
@@ -662,6 +666,82 @@ class EventApiIntegrationTests {
             }
         } finally {
             deleteCancellationFixture(fixture);
+        }
+    }
+
+    @Test
+    void concurrentCancellationAndPartnerApplicationSubmissionSerializeOnEventRoot() throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Race partner " + UUID.randomUUID());
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<String> cancellation = () -> {
+                SecurityContextHolder.getContext().setAuthentication(
+                        identity(owner, true, "ORGANIZER"));
+                ready.countDown();
+                try {
+                    if (!start.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Start timeout");
+                    }
+                    service.cancel(eventId,
+                            new CancelEventRequest("Venue is no longer available."));
+                    return "CANCELLED";
+                } catch (EventException error) {
+                    return error.getCode();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Callable<String> submission = () -> {
+                ready.countDown();
+                if (!start.await(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Start timeout");
+                }
+                try {
+                    partnerApplicationService.submit(other, eventId,
+                            new SubmitPartnerApplicationRequest("Concurrent application"));
+                    return "APPLICATION_CREATED";
+                } catch (PartnerApiException error) {
+                    return error.getCode();
+                }
+            };
+
+            Future<String> cancellationResult = executor.submit(cancellation);
+            Future<String> submissionResult = executor.submit(submission);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(cancellationResult.get(15, TimeUnit.SECONDS)).isEqualTo("CANCELLED");
+            String submissionOutcome = submissionResult.get(15, TimeUnit.SECONDS);
+            // Applications do not block cancellation, so submission may commit first; once
+            // cancellation commits, the Event-root recheck must reject every later submission.
+            assertThat(submissionOutcome)
+                    .isIn("APPLICATION_CREATED", "EVENT_NOT_ACCEPTING_APPLICATIONS");
+            assertThat(eventStatus(eventId)).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("""
+                    select count(*) from partner_event_applications
+                    where partner_organization_id = ? and event_id = ?
+                    """, Long.class, organizationId, eventId))
+                    .isEqualTo(submissionOutcome.equals("APPLICATION_CREATED") ? 1L : 0L);
+
+            assertThatThrownBy(() -> partnerApplicationService.submit(other, eventId,
+                    new SubmitPartnerApplicationRequest("After cancellation")))
+                    .isInstanceOf(PartnerApiException.class)
+                    .extracting(error -> ((PartnerApiException) error).getCode())
+                    .isEqualTo("EVENT_NOT_ACCEPTING_APPLICATIONS");
+        } finally {
+            jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    organizationId);
         }
     }
 
