@@ -56,6 +56,11 @@
   border: 2px solid #64748B;
 }
 
+.booth-map-legend-dot.owned {
+  background: #DDF6E8;
+  border: 2px solid #15835B;
+}
+
 .booth-map-legend-dot.on_hold {
   background: #FEF3C7;
   border: 2px solid #D97706;
@@ -202,6 +207,13 @@
   box-shadow: 0 2px 8px rgba(51, 65, 85, 0.2);
 }
 
+.booth-map-marker.status-owned {
+  background: #DDF6E8;
+  border: 2px solid #15835B;
+  color: #0D6847;
+  box-shadow: 0 0 0 3px rgba(233, 188, 99, 0.55), 0 3px 12px rgba(21, 131, 91, 0.28);
+}
+
 /* 3. On Hold / Pending: Soft Amber / Orange */
 .booth-map-marker.status-on_hold {
   background: #FEF3C7;
@@ -222,6 +234,16 @@
   border: 1.5px solid #0284C7;
   color: #0369A1;
 }
+
+.booth-map-marker.status-physical_inactive {
+  background: #E2E8F0;
+  border: 1.5px dashed #94A3B8;
+  color: #64748B;
+  opacity: 0.8;
+}
+
+.booth-map-legend-dot.physical { background: #0284C7; }
+.booth-map-legend-dot.physical-inactive { background: #94A3B8; }
 
 .booth-map-marker:hover,
 .booth-map-marker:focus-visible,
@@ -377,6 +399,18 @@
   color: #4B5563;
   white-space: nowrap;
   letter-spacing: 0.01em;
+}
+
+.popover-field strong {
+  min-height: 1.15rem;
+  padding: 0.5rem 0.65rem;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 9px;
+  background: #F8FAFC;
+  color: #1F2937;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .popover-field select,

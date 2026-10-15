@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
@@ -75,22 +76,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
     return () => mediaQuery.removeEventListener('change', updateCarouselMode);
   }, []);
 
-  React.useEffect(() => {
-    if (!activeModalBooth) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeBoothModal();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeModalBooth, closeBoothModal]);
+  useModalDismiss(Boolean(activeModalBooth), closeBoothModal);
 
   // Khi người dùng bấm "Xem trong danh mục gian hàng" từ bản đồ hoặc mở chi tiết gian hàng
   React.useEffect(() => {
@@ -191,6 +177,22 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
 
         {/* Search & Category Filter Bar */}
         <div className="figma-stalls-controls">
+          {events.length > 0 && onSelectEventId && (
+            <label className="public-event-picker">
+              <span>{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</span>
+              <select
+                value={selectedEventId}
+                onChange={event => onSelectEventId(event.target.value)}
+                aria-label={language === 'vi' ? 'Sự kiện công khai' : 'Published event'}
+              >
+                {events.map(event => (
+                  <option key={event.id} value={event.id}>
+                    {language === 'vi' ? event.title : event.titleEn}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="figma-search-bar">
             <Search size={18} className="search-ico" />
             <input
@@ -346,7 +348,6 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                         ))}
                       </div>
                     </div>}
-                    {booth.availability && <p>{booth.availability === 'AVAILABLE' ? 'Còn trống' : booth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : booth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}{booth.rentalPrice !== null && booth.rentalPrice !== undefined ? ` · ${booth.rentalPrice.toLocaleString('vi-VN')} đ` : ''}</p>}
 
                     <div className="kiosk-card-footer">
                       <button
@@ -460,12 +461,10 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
             <p className="modal-body-desc">
               {language === 'vi' ? activeModalBooth.description : activeModalBooth.descriptionEn}
             </p>
-            <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
-              {activeModalBooth.maxCapacity !== undefined && <p><strong>{language === 'vi' ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
-              {activeModalBooth.availability && <p><strong>{language === 'vi' ? 'Tình trạng:' : 'Availability:'}</strong> {activeModalBooth.availability === 'AVAILABLE' ? 'Còn trống' : activeModalBooth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : activeModalBooth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</p>}
-              {activeModalBooth.rentalPrice !== undefined && <p><strong>{language === 'vi' ? 'Giá sự kiện:' : 'Event price:'}</strong> {activeModalBooth.rentalPrice === null ? 'Chưa cấu hình' : `${activeModalBooth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
-            </div>
+              <div className="modal-meta-box">
+                <p><strong>{language === 'vi' ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
+                {activeModalBooth.maxCapacity !== undefined && <p><strong>{language === 'vi' ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
+              </div>
             <button
               type="button"
               className="btn-figma-primary"

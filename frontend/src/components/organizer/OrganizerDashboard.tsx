@@ -147,11 +147,20 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             flexDirection: 'column'
           }}>
             <div style={{ height: '170px', position: 'relative', overflow: 'hidden' }}>
-              <img 
-                src={activeEvent.imageUrl} 
-                alt={activeEvent.title}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              {activeEvent.imageUrl ? (
+                <img
+                  src={activeEvent.imageUrl}
+                  alt={activeEvent.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  aria-label="Sự kiện chưa có ảnh bìa"
+                  style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: '#E8EFEC', color: '#64748B' }}
+                >
+                  <Calendar size={42} aria-hidden="true" />
+                </div>
+              )}
               <div style={{
                 position: 'absolute',
                 top: '12px',

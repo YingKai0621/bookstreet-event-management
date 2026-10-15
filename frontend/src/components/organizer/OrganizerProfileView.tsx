@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Bell,
   Building2,
@@ -44,6 +45,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
 
   // Logout confirmation modal state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  useModalDismiss(showLogoutConfirm, () => setShowLogoutConfirm(false));
 
   useEffect(() => {
     setEditEmail(profile.email);

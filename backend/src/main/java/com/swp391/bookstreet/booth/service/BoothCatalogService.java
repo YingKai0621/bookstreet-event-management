@@ -81,15 +81,16 @@ public class BoothCatalogService {
         if (request.isEmpty()) {
             throw validation("At least one field must be supplied.", null);
         }
+        // Expiry takes Event locks in its own transactions, before this physical Booth lock.
+        if (request.contains("active") && Boolean.FALSE.equals(request.getActive())) {
+            expiryService.expireDueHolds();
+        }
         Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
                 .orElseThrow(() -> new BoothApiException(HttpStatus.NOT_FOUND,
                         "BOOTH_NOT_FOUND", "Booth not found."));
         Location location = booth.getLocation();
         boolean active = request.contains("active")
                 ? requiredBoolean(request.getActive(), "active") : location.isActive();
-        if (location.isActive() && !active) {
-            expiryService.expireDueHolds();
-        }
         if (location.isActive() && !active) {
             if (configRepository.existsCurrentActiveHoldForBooth(boothId)) {
                 throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_HAS_ACTIVE_HOLD",

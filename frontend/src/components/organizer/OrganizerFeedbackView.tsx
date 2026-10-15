@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { CheckCircle2, Mail, MessageSquare, Search, Star } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { OrganizerFeedback, OrganizerFeedbackStatus, organizerApi } from '../../services/organizerApi';
@@ -28,6 +29,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  useModalDismiss(Boolean(selected), () => { if (!saving) setSelected(null); });
 
   const loadFeedbacks = async () => {
     setLoading(true);

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
   ArrowRight,
@@ -5,7 +6,7 @@ import {
   Search,
   X
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
@@ -37,16 +38,10 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeModalBooth, setActiveModalBooth] = useState<Booth | null>(null);
+  useModalDismiss(open, () => navigate('/'));
+  useModalDismiss(Boolean(activeModalBooth), () => setActiveModalBooth(null));
 
-  // Prevent background scroll when sheet is open
-  useEffect(() => {
-    if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
+
 
   const categories = [
     { id: 'all', labelVi: 'Tất cả gian hàng', labelEn: 'All Stalls', count: booths.length },
@@ -176,24 +171,42 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               </span>
               <h2>{vi ? 'Danh mục các gian hàng' : 'All Bookstalls & Publishers'}</h2>
             </div>
-            <div className="heritage-search">
-              <Search size={16} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={vi ? 'Tìm tên gian hàng, sách, NXB...' : 'Search stall, books, publisher...'}
-                aria-label={vi ? 'Tìm kiếm gian hàng' : 'Search bookstalls'}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#66735e' }}
-                >
-                  <X size={15} />
-                </button>
+            <div className="booths-experience-controls">
+              {events.length > 0 && (
+                <label className="booths-experience-event-picker">
+                  <span>{vi ? 'Sự kiện công khai' : 'Published event'}</span>
+                  <select
+                    value={selectedEventId}
+                    onChange={event => onSelectEventId(event.target.value)}
+                    aria-label={vi ? 'Sự kiện công khai' : 'Published event'}
+                  >
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {vi ? event.title : event.titleEn}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               )}
+              <div className="heritage-search">
+                <Search size={16} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={vi ? 'Tìm tên gian hàng, sách, NXB...' : 'Search stall, books, publisher...'}
+                  aria-label={vi ? 'Tìm kiếm gian hàng' : 'Search bookstalls'}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#66735e' }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -240,7 +253,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                   <div className="heritage-card-image">
                     {booth.image.url && <img src={booth.image.url} alt={booth.image.alt} loading="lazy" />}
                     <span className="heritage-card-code">{booth.code}</span>
-                    {booth.availability && <span className="heritage-card-period">{booth.availability === 'AVAILABLE' ? 'Còn trống' : booth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : booth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</span>}
                   </div>
                   <div className="heritage-card-body">
                     <span className="heritage-card-cat">
@@ -248,7 +260,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                     </span>
                     <h3>{vi ? booth.name : booth.nameEn}</h3>
                     <p>{vi ? booth.tagline : booth.taglineEn}</p>
-                    {booth.rentalPrice !== undefined && <p>{vi ? 'Giá sự kiện: ' : 'Event price: '}{booth.rentalPrice === null ? (vi ? 'Chưa cấu hình' : 'Not configured') : `${booth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
                     <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span className="heritage-card-arrow-text">
                         {vi ? 'Xem chi tiết' : 'View details'}
@@ -293,8 +304,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               <div className="modal-meta-box">
                 <p><strong>{vi ? 'Danh mục:' : 'Category:'}</strong> {activeModalBooth.categoryLabelVi}</p>
                 {activeModalBooth.maxCapacity !== undefined && <p><strong>{vi ? 'Sức chứa:' : 'Capacity:'}</strong> {activeModalBooth.maxCapacity}</p>}
-                {activeModalBooth.availability && <p><strong>{vi ? 'Tình trạng:' : 'Availability:'}</strong> {activeModalBooth.availability === 'AVAILABLE' ? 'Còn trống' : activeModalBooth.availability === 'ON_HOLD' ? 'Đang giữ chỗ' : activeModalBooth.availability === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở'}</p>}
-                {activeModalBooth.rentalPrice !== undefined && <p><strong>{vi ? 'Giá sự kiện:' : 'Event price:'}</strong> {activeModalBooth.rentalPrice === null ? 'Chưa cấu hình' : `${activeModalBooth.rentalPrice.toLocaleString('vi-VN')} đ`}</p>}
               </div>
               <button
                 type="button"

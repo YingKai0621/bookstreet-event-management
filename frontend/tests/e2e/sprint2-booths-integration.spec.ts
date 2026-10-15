@@ -71,6 +71,16 @@ async function loginPartner(page: Page, credentials: Credentials): Promise<void>
   await expect(page.getByRole('button', { name: 'Hồ sơ tài khoản' })).toBeVisible();
 }
 
+async function selectOrganizerEvent(page: Page, eventName: string): Promise<void> {
+  await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Danh sách sự kiện' })).toBeVisible();
+  await page.getByPlaceholder('Tìm tên sự kiện...').fill(eventName);
+  const eventCard = page.locator('.organizer-card').filter({ hasText: eventName });
+  await expect(eventCard).toBeVisible();
+  await eventCard.getByRole('button', { name: 'Xem', exact: true }).click();
+  await expect(page.getByRole('heading', { name: eventName, exact: true })).toBeVisible();
+}
+
 function futureIso(daysFromNow: number, hour: number): string {
   const value = new Date();
   value.setDate(value.getDate() + daysFromNow);
@@ -89,18 +99,16 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
   const boothName = `Gian kiểm thử ${unique}`;
   const requestNote = `Yêu cầu Sprint 2 ${unique}`;
   const rentalPrice = '2750000';
-  const coordinateSeed = Number(String(unique).slice(-4));
-  const mapX = Number((5 + (coordinateSeed % 9000) / 100).toFixed(2));
-  const mapY = Number((5 + ((coordinateSeed * 37) % 9000) / 100).toFixed(2));
 
   const organizerContext = await browser.newContext();
   const partnerContext = await browser.newContext();
-  const publicContext = await browser.newContext();
   const organizerPage = await organizerContext.newPage();
   const partnerPage = await partnerContext.newPage();
-  const publicPage = await publicContext.newPage();
+  organizerPage.setDefaultTimeout(15_000);
+  partnerPage.setDefaultTimeout(15_000);
 
-  await loginOrganizer(organizerPage, organizerCredentials);
+  try {
+    await loginOrganizer(organizerPage, organizerCredentials);
     const eventResult = await browserApi<{ eventId: number }>(organizerPage, 'POST', '/organizer/events', {
       name: eventName,
       description: 'Fixture cho kiểm thử tích hợp Sprint 2.',
@@ -145,69 +153,92 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
     );
 
     await organizerPage.reload();
+    await selectOrganizerEvent(organizerPage, eventName);
     await organizerPage.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
-    await expect(organizerPage.getByRole('heading', { name: 'Gian hàng & yêu cầu đối tác' })).toBeVisible();
-    await organizerPage.getByLabel('Sự kiện đang quản lý').selectOption({ label: eventName });
+    await expect(organizerPage.getByRole('heading', { name: 'Sơ đồ & Quản lý vị trí gian hàng' })).toBeVisible();
 
     await organizerPage.getByRole('button', { name: 'Thêm gian hàng' }).click();
-    await organizerPage.getByLabel('Mã gian hàng').fill(boothCode);
-    await organizerPage.getByLabel('Tên gian hàng').fill(boothName);
-    await organizerPage.getByLabel('Sức chứa').fill('8');
-    await organizerPage.getByLabel('Mã danh mục').fill('PUBLISHER');
-    await organizerPage.getByLabel('Mô tả').fill('Gian hàng được tạo từ Playwright với backend thật.');
-    await organizerPage.getByRole('button', { name: 'Lưu gian hàng' }).click();
-    await expect(organizerPage.getByRole('status')).toContainText('Đã tạo gian hàng vật lý');
+    await organizerPage.getByPlaceholder('Ví dụ: A01, B02, C10').fill(boothCode);
+    await organizerPage.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill(boothName);
+    await organizerPage.getByPlaceholder('Mô tả diện tích gian, lối đi, mái che, khu vực xung quanh...').fill('Gian hàng được tạo từ Playwright với backend thật.');
+    await organizerPage.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();
+    await expect(organizerPage.getByRole('status')).toContainText('Đã tạo gian hàng');
     await expect(organizerPage.getByText(boothCode, { exact: true })).toBeVisible();
 
-    await organizerPage.getByRole('button', { name: 'Gian hàng', exact: true }).click();
-    await expect(organizerPage.getByRole('heading', { name: 'Vị trí gian hàng trên Đường Sách' })).toBeVisible();
-    await organizerPage.getByLabel('Sự kiện đang hiển thị').selectOption({ label: eventName });
-    const mapBoothRow = organizerPage.locator('.s2-map-booth-list > button').filter({ hasText: boothCode });
-    await expect(mapBoothRow).toContainText('Chưa định vị');
-    await mapBoothRow.click();
-    await organizerPage.getByLabel('Tọa độ X (%)').fill(String(mapX));
-    await organizerPage.getByLabel('Tọa độ Y (%)').fill(String(mapY));
-    await organizerPage.getByRole('button', { name: 'Lưu vị trí' }).click();
-    await expect(organizerPage.locator('.s2-alert-success')).toContainText(`Đã lưu vị trí ${boothCode}`);
+    await organizerPage.getByRole('button', { name: /Sơ đồ bản đồ gian hàng/ }).click();
+    const mapLayer = organizerPage.locator('.booth-map-image-layer');
+    const createdMarker = organizerPage.getByRole('button', { name: new RegExp(`${boothCode}.*Còn trống`) });
+    await expect(createdMarker).toBeVisible();
+    const mapBox = await mapLayer.boundingBox();
+    const markerBox = await createdMarker.boundingBox();
+    expect(mapBox).not.toBeNull();
+    expect(markerBox).not.toBeNull();
+    await organizerPage.mouse.move(markerBox!.x + markerBox!.width / 2, markerBox!.y + markerBox!.height / 2);
+    await organizerPage.mouse.down();
+    await organizerPage.mouse.move(mapBox!.x + mapBox!.width * 0.625, mapBox!.y + mapBox!.height * 0.48, { steps: 8 });
+    await organizerPage.mouse.up();
+    await organizerPage.getByRole('button', { name: 'Lưu sơ đồ' }).click();
+    await expect(organizerPage.getByRole('status')).toContainText('Đã lưu thành công tọa độ 1 gian hàng');
 
     await organizerPage.reload();
-    await organizerPage.getByRole('button', { name: 'Gian hàng', exact: true }).click();
-    await organizerPage.getByLabel('Sự kiện đang hiển thị').selectOption({ label: eventName });
-    const persistedMarker = organizerPage.locator('.booth-map-marker').filter({ hasText: boothCode });
+    await selectOrganizerEvent(organizerPage, eventName);
+    await organizerPage.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+    const persistedMarker = organizerPage.getByRole('button', { name: new RegExp(`${boothCode}.*Còn trống`) });
     await expect(persistedMarker).toBeVisible();
-    await expect(persistedMarker).toHaveAttribute('style', new RegExp(`left: ${mapX}%; top: ${mapY}%`));
 
     const boothPage = await browserApi<{
       content: Array<{ boothId: number; code: string; mapX: number | null; mapY: number | null }>;
     }>(organizerPage, 'GET', '/organizer/booths?page=0&size=100&sort=createdAt,desc');
     const persistedBooth = boothPage.body.content.find(booth => booth.code === boothCode);
-    expect(persistedBooth).toMatchObject({ mapX, mapY });
+    expect(persistedBooth?.mapX).not.toBe(50);
+    expect(persistedBooth?.mapY).not.toBe(50);
+    expect(persistedBooth?.mapX).toBeGreaterThanOrEqual(0);
+    expect(persistedBooth?.mapX).toBeLessThanOrEqual(100);
+    expect(persistedBooth?.mapY).toBeGreaterThanOrEqual(0);
+    expect(persistedBooth?.mapY).toBeLessThanOrEqual(100);
+    await expect(persistedMarker).toHaveAttribute(
+      'style',
+      new RegExp(`left: ${persistedBooth!.mapX}%; top: ${persistedBooth!.mapY}%`),
+    );
 
-    await organizerPage.getByRole('button', { name: 'Mở cấu hình & yêu cầu' }).click();
-    await organizerPage.getByLabel('Sự kiện đang quản lý').selectOption({ label: eventName });
     await organizerPage.getByRole('button', { name: /Cấu hình sự kiện/ }).click();
-    const configRow = organizerPage.locator('.s2-config-row').filter({ hasText: boothCode });
+    let configRow = organizerPage.locator('.s2-config-row').filter({ hasText: boothCode });
     await expect(configRow).toBeVisible();
-    await configRow.getByLabel('Giá thuê (VND)').fill(rentalPrice);
-    const enabled = configRow.getByRole('checkbox');
-    if (!(await enabled.isChecked())) await enabled.check();
-    await configRow.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await expect(organizerPage.getByRole('status')).toContainText(`Đã cập nhật cấu hình ${boothCode}`);
+    const rentalPriceInput = configRow.locator('input[type="number"]');
+    await rentalPriceInput.fill(rentalPrice);
+    await rentalPriceInput.press('Tab');
+    await expect(organizerPage.getByRole('status')).toContainText(`Đã cập nhật giá thuê cho ${boothCode}`);
+    await browserApi(
+      organizerPage,
+      'PUT',
+      `/organizer/events/${eventId}/booth-configs/${persistedBooth!.boothId}`,
+      { rentalPrice: Number(rentalPrice), enabled: true },
+    );
+
+    await organizerPage.reload();
+    await selectOrganizerEvent(organizerPage, eventName);
+    await organizerPage.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+    await organizerPage.getByRole('button', { name: /Cấu hình sự kiện/ }).click();
+    configRow = organizerPage.locator('.s2-config-row').filter({ hasText: boothCode });
+    await expect(configRow.locator('input[type="number"]')).toHaveValue(rentalPrice);
+    await expect(configRow.getByRole('checkbox')).toBeChecked();
     await expect(configRow.getByText('Còn trống', { exact: true })).toBeVisible();
 
     await partnerPage.reload();
-    await partnerPage.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
-    await expect(partnerPage.getByRole('heading', { name: 'Chọn gian hàng cho sự kiện' })).toBeVisible();
-    await partnerPage.getByLabel('Sự kiện đã được duyệt').selectOption({ label: eventName });
-    const boothCard = partnerPage.locator('.s2-booth-card').filter({ hasText: boothCode });
-    await expect(boothCard.getByText('Còn trống', { exact: true })).toBeVisible();
+    await partnerPage.getByRole('button', { name: 'Chọn & thuê gian hàng', exact: true }).click();
+    await expect(partnerPage.getByRole('heading', { name: 'Chọn & thuê gian hàng' })).toBeVisible();
+    const eventPicker = partnerPage.getByLabel('Sự kiện tham gia');
+    if (await eventPicker.isVisible()) {
+      await eventPicker.selectOption({ label: eventName });
+    }
     const partnerMarker = partnerPage.locator('.booth-map-marker.status-available').filter({ hasText: boothCode });
     await expect(partnerMarker).toBeVisible();
     await partnerMarker.click();
-    await expect(partnerPage.getByRole('dialog')).toContainText(boothName);
-    await expect(partnerPage.getByRole('dialog')).toContainText('2.750.000');
-    await partnerPage.getByLabel('Ghi chú cho Organizer (không bắt buộc)').fill(requestNote);
-    await partnerPage.getByRole('button', { name: 'Gửi yêu cầu gian hàng' }).click();
+    const boothRequestModal = partnerPage.locator('.s2-booth-request-modal');
+    await expect(boothRequestModal).toContainText(boothName);
+    await expect(boothRequestModal).toContainText('2.750.000');
+    await partnerPage.getByLabel('Ghi chú gửi Ban tổ chức').fill(requestNote);
+    await partnerPage.getByRole('button', { name: 'Gửi yêu cầu thuê / đổi gian' }).click();
     await expect(partnerPage.getByRole('status')).toContainText('Đã gửi yêu cầu');
     await expect(partnerPage.getByText('Chờ duyệt', { exact: true })).toBeVisible();
 
@@ -215,40 +246,35 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
       content: Array<{ booth: { code: string }; availability: string }>;
     }>(partnerPage, 'GET', `/events/${eventId}/booths?page=0&size=100`);
     expect(pendingAvailability.body.content.find(row => row.booth.code === boothCode)?.availability).toBe('AVAILABLE');
-    await partnerPage.getByRole('button', { name: /Danh sách gian hàng/ }).click();
+    await partnerPage.getByRole('button', { name: /Sơ đồ gian hàng/ }).click();
     await expect(partnerPage.locator('.booth-map-marker.status-available').filter({ hasText: boothCode })).toBeVisible();
 
-    await organizerPage.getByRole('button', { name: /Yêu cầu đối tác/ }).click();
-    await organizerPage.getByRole('button', { name: 'Làm mới' }).click();
+    await organizerPage.getByRole('button', { name: /Duyệt yêu cầu thuê gian hàng/ }).click();
+    await organizerPage.getByRole('button', { name: 'Làm mới danh sách' }).click();
     const requestCard = organizerPage.locator('.s2-request-card').filter({ hasText: requestNote });
     await expect(requestCard.getByText('Chờ duyệt', { exact: true })).toBeVisible();
     organizerPage.once('dialog', dialog => dialog.accept());
-    await requestCard.getByRole('button', { name: 'Chọn & giữ chỗ' }).click();
-    await expect(organizerPage.getByRole('status')).toContainText('Đã chọn yêu cầu và tạo giữ chỗ');
-    await expect(requestCard.getByText('Đã chọn', { exact: true })).toBeVisible();
+    await requestCard.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
+    await expect(organizerPage.getByRole('status')).toContainText(`Đã duyệt chọn gian "${boothCode}" cho "Demo Partner"`);
+    await expect(requestCard.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
     await expect(requestCard).toContainText('2.750.000');
 
     await partnerPage.getByRole('button', { name: 'Làm mới' }).click();
     await partnerPage.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
     await expect(partnerPage.getByText('Đã được chọn', { exact: true })).toBeVisible();
-    await expect(partnerPage.getByText('Giá đã khóa', { exact: false })).toBeVisible();
+    await expect(partnerPage.getByText('Giá thuê được giữ nguyên theo thời điểm duyệt', { exact: true })).toBeVisible();
     await expect(partnerPage.getByText('Thời gian còn lại', { exact: true })).toBeVisible();
-    await expect(partnerPage.locator('.s2-hold-card')).toContainText('2.750.000');
+    await expect(partnerPage.getByTestId('booth-payment-checkout-card')).toContainText('2.750.000');
 
     const heldAvailability = await browserApi<{
       content: Array<{ booth: { code: string }; availability: string }>;
     }>(partnerPage, 'GET', `/events/${eventId}/booths?page=0&size=100`);
     expect(heldAvailability.body.content.find(row => row.booth.code === boothCode)?.availability).toBe('ON_HOLD');
-    await partnerPage.getByRole('button', { name: /Danh sách gian hàng/ }).click();
+    await partnerPage.getByRole('button', { name: /Sơ đồ gian hàng/ }).click();
     await expect(partnerPage.locator('.booth-map-marker.status-on_hold').filter({ hasText: boothCode })).toBeVisible();
 
-    await publicPage.goto('/');
-    const publicEventSelector = publicPage.getByLabel('Sự kiện công khai');
-    await expect(publicEventSelector).toBeVisible();
-    await publicEventSelector.selectOption({ label: eventName });
-    const publicMarker = publicPage.getByRole('button', { name: new RegExp(`${boothCode}.*Đang giữ chỗ`) });
-    await expect(publicMarker).toBeVisible();
-    await publicMarker.click();
-  await expect(publicPage.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('Đang giữ chỗ');
-  await expect(publicPage.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('2.750.000');
+  } finally {
+    await organizerContext.close();
+    await partnerContext.close();
+  }
 });

@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,7 +9,7 @@ import {
   Ticket,
   X
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { EventItem, Language, ParticipantProfile } from '../../types';
@@ -40,16 +41,11 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registeredEvent, setRegisteredEvent] = useState<EventItem | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  useModalDismiss(open, () => navigate('/'));
+  useModalDismiss(Boolean(activeModalEvent), () => setActiveModalEvent(null));
+  useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
 
-  // Prevent background scroll when sheet is open
-  useEffect(() => {
-    if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
+
 
   const eventTypes = [
     { id: 'all', labelVi: 'Tất cả sự kiện', labelEn: 'All Events', count: events.length },
@@ -163,7 +159,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 aria-label={`Khám phá ${featuredEvent.title}`}
               >
                 <img
-                  src={featuredEvent.image.url}
+                  src={featuredEvent.image.url || undefined}
                   alt={featuredEvent.image.alt}
                   fetchPriority="high"
                 />
@@ -248,7 +244,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="event-card-image">
-                    <img src={evt.image.url} alt={evt.title} />
+                    {evt.image.url && <img src={evt.image.url} alt={evt.title} />}
                     <span className="event-datetime-badge">{evt.dateStr}</span>
                   </div>
                   <div className="event-card-body">
@@ -292,7 +288,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
-                <img src={activeModalEvent.image.url} alt={activeModalEvent.image.alt} className="modal-top-img" />
+                {activeModalEvent.image.url && (
+                  <img src={activeModalEvent.image.url} alt={activeModalEvent.image.alt} className="modal-top-img" />
+                )}
                 <div className="modal-img-caption">
                   <span className="kiosk-number-badge">{activeModalEvent.dayOfWeek}</span>
                   <span className="photo-source-cite">{activeModalEvent.dateStr}</span>
@@ -397,7 +395,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   <div className="reg-event-card-preview">
                     <div className="reg-event-thumb-wrap">
                       <img 
-                        src={registeredEvent.image.url} 
+                        src={registeredEvent.image.url || undefined}
                         alt={registeredEvent.image.alt} 
                         className="reg-event-thumb" 
                       />

@@ -63,6 +63,14 @@ public interface BoothPaymentRepository extends JpaRepository<BoothPayment, Long
 
     boolean existsByBoothHoldBoothHoldIdAndReconciliationRequiredTrue(Long boothHoldId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select payment from BoothPayment payment
+            where payment.boothHold.boothHoldId = :holdId
+            order by payment.boothPaymentId
+            """)
+    List<BoothPayment> findByHoldIdForUpdate(@Param("holdId") Long holdId);
+
     boolean existsByBoothHoldBoothHoldIdAndBoothPaymentIdGreaterThan(
             Long boothHoldId, Long boothPaymentId);
 

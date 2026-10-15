@@ -1,6 +1,6 @@
 import type { BoothAvailability, EventBooth, PhysicalBooth } from '../../types/booth';
 
-export type BoothMapMarkerStatus = BoothAvailability | 'PHYSICAL';
+export type BoothMapMarkerStatus = BoothAvailability | 'OWNED' | 'PHYSICAL' | 'PHYSICAL_INACTIVE';
 
 export interface BoothMapMarker {
   id: string;
@@ -34,7 +34,7 @@ export function physicalBoothToMarker(booth: PhysicalBooth): BoothMapMarker | nu
     name: booth.name,
     x: booth.mapX,
     y: booth.mapY,
-    status: 'PHYSICAL',
+    status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
   };
 }
 
@@ -47,8 +47,10 @@ export function markerStatusLabel(status: BoothMapMarkerStatus): string {
   switch (status) {
     case 'AVAILABLE': return 'Còn trống';
     case 'ASSIGNED': return 'Đã thuê';
-    case 'ON_HOLD': return 'Chờ duyệt';
-    case 'UNAVAILABLE': return 'Tạm khóa';
-    default: return 'Gian hàng vật lý';
+    case 'ON_HOLD': return 'Đang giữ chỗ';
+    case 'UNAVAILABLE': return 'Không mở bán';
+    case 'OWNED': return 'Gian của bạn';
+    case 'PHYSICAL_INACTIVE': return 'Tạm ngưng';
+    default: return 'Đang hoạt động';
   }
 }

@@ -1,9 +1,12 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
   Calendar,
   Check,
   CheckCircle2,
+  ChevronRight,
   Clock3,
+  CreditCard,
   DollarSign,
   Info,
   Loader2,
@@ -11,11 +14,11 @@ import {
   RefreshCw,
   Store,
   Tag,
-  Timer,
   Users,
   X,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import '../../components/organizer/Sprint2Booth.css';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
@@ -23,11 +26,20 @@ import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, EventBooth } from '../../types/booth';
 import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
 import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
+import { BoothPaymentCheckoutCard } from '../../components/partner/BoothPaymentCheckoutCard';
+import { PartnerDialog } from '../../components/partner/PartnerDialog';
 import './PartnerPages.css';
 
 interface Props {
   language: Language;
   applications: PartnerEventApplication[];
+}
+
+interface WithdrawConflict {
+  title: string;
+  message: string;
+  requestId: number;
+  showPaymentLink: boolean;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -43,8 +55,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 const availabilityLabel: Record<EventBooth['availability'], string> = {
   AVAILABLE: 'Còn trống',
   ON_HOLD: 'Đang giữ chỗ',
-  ASSIGNED: 'Đã phân bổ',
-  UNAVAILABLE: 'Chưa mở',
+  ASSIGNED: 'Đã thuê',
+  UNAVAILABLE: 'Không mở bán',
 };
 
 const requestStatusLabel: Record<BoothRequest['status'], string> = {
@@ -64,6 +76,49 @@ function apiMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
 }
 
+function withdrawConflict(error: ApiError, requestId: number): WithdrawConflict | null {
+  switch (error.code) {
+    case 'PAYMENT_ATTEMPT_ALREADY_PENDING':
+      return {
+        title: 'Phiên thanh toán vẫn đang mở',
+        message: 'Gian hàng chưa thể được giải phóng vì bạn đang có một phiên thanh toán còn hiệu lực. Hãy tiếp tục thanh toán hoặc chờ hệ thống xác minh kết quả.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'PAYMENT_RESULT_UNKNOWN':
+      return {
+        title: 'Thanh toán đang được xác minh',
+        message: 'Hệ thống chưa thể xác định chắc chắn kết quả thanh toán. Giữ chỗ sẽ được bảo toàn để tránh mất tiền hoặc cấp gian hàng sai. Vui lòng kiểm tra lại chi tiết thanh toán sau.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'PAYMENT_ALREADY_COMPLETED':
+    case 'BOOTH_ALREADY_ASSIGNED':
+      return {
+        title: 'Gian hàng đã được cấp',
+        message: 'Yêu cầu này đã hoàn tất thanh toán hoặc đã được cấp gian hàng nên không còn thuộc luồng giải phóng trước thanh toán.',
+        requestId,
+        showPaymentLink: true,
+      };
+    case 'BOOTH_HOLD_NOT_ACTIVE':
+      return {
+        title: 'Giữ chỗ không còn hiệu lực',
+        message: 'Trạng thái giữ chỗ vừa thay đổi. Hãy đóng thông báo và làm mới dữ liệu trước khi tiếp tục.',
+        requestId,
+        showPaymentLink: false,
+      };
+    case 'BOOTH_REQUEST_NOT_WITHDRAWABLE':
+      return {
+        title: 'Không thể rút yêu cầu',
+        message: 'Yêu cầu không còn ở trạng thái chờ duyệt hoặc chờ thanh toán nên không thể rút tại thời điểm này.',
+        requestId,
+        showPaymentLink: false,
+      };
+    default:
+      return null;
+  }
+}
+
 function money(value: number | null): string {
   if (value === null) return 'Chưa cấu hình';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -78,65 +133,86 @@ function dateTime(value: string | null): string {
   });
 }
 
-function remainingTime(expiresAt: string, now: number): string {
-  const milliseconds = Math.max(0, new Date(expiresAt).getTime() - now);
-  if (milliseconds <= 0) return 'Đang chờ hệ thống cập nhật trạng thái';
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return days > 0 ? `${days} ngày ${hours} giờ ${minutes} phút` : `${hours} giờ ${minutes} phút ${seconds} giây`;
-}
-
 export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
+  const [searchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
   );
-  const [selectedEventId, _setSelectedEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(() => searchParams.get('eventId') || '');
   const [tab, setTab] = useState<'browse' | 'requests'>('browse');
   const [booths, setBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
   const [selectedBooth, setSelectedBooth] = useState<EventBooth | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<BoothRequest | null>(null);
+  const [withdrawBlocked, setWithdrawBlocked] = useState<WithdrawConflict | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState<{ boothCode: string; eventTitle: string } | null>(null);
   const [requestNote, setRequestNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [now, setNow] = useState(0);
+  useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
 
   const eventId = approvedApplications.some(application => application.eventId === selectedEventId)
     ? selectedEventId
     : approvedApplications[0]?.eventId || '';
+  const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
+  const loadGenerationRef = useRef(0);
+  const currentEventIdRef = useRef(eventId);
+  const handledDeepLinkRef = useRef('');
 
-  const loadData = useCallback(async () => {
-    if (!eventId) {
+  useEffect(() => {
+    currentEventIdRef.current = eventId;
+  }, [eventId]);
+
+  const loadData = useCallback(async (clearCurrent = false) => {
+    const requestedEventId = eventId;
+    if (currentEventIdRef.current !== requestedEventId) return;
+    const generation = ++loadGenerationRef.current;
+
+    if (clearCurrent) {
       setBooths([]);
       setRequests([]);
+      setSelectedBooth(null);
+      setWithdrawTarget(null);
+      setWithdrawBlocked(null);
+      setRequestNote('');
+      setSuccess('');
+    }
+    setError('');
+
+    if (!requestedEventId) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    setError('');
     try {
       const [eventBooths, ownRequests] = await Promise.all([
-        boothApi.listAllPublicEventBooths(eventId),
-        boothApi.listAllPartnerRequests(eventId),
+        boothApi.listAllPublicEventBooths(requestedEventId),
+        boothApi.listAllPartnerRequests(requestedEventId),
       ]);
+      if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths(eventBooths);
       setRequests(ownRequests);
     } catch (caughtError) {
+      if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths([]);
       setRequests([]);
       setError(apiMessage(caughtError));
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current && currentEventIdRef.current === requestedEventId) {
+        setLoading(false);
+      }
     }
   }, [eventId]);
 
   useEffect(() => {
-    void loadData();
+    void loadData(true);
+    return () => {
+      loadGenerationRef.current += 1;
+    };
   }, [loadData]);
 
   useEffect(() => {
@@ -160,12 +236,17 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     return () => window.clearTimeout(timeout);
   }, [loadData, requests]);
 
+  const ownedBoothIds = useMemo(
+    () => new Set(requests.filter(request => request.status === 'COMPLETED').map(request => request.boothId)),
+    [requests],
+  );
+
   const mapMarkers = useMemo(
     () => booths.flatMap(row => {
       const marker = eventBoothToMarker(row);
-      return marker ? [marker] : [];
+      return marker ? [{ ...marker, status: ownedBoothIds.has(row.booth.boothId) ? 'OWNED' as const : marker.status }] : [];
     }),
-    [booths],
+    [booths, ownedBoothIds],
   );
 
   const requestByBooth = useMemo(() => {
@@ -175,10 +256,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   }, [requests]);
 
   const requestBlockedReason = (row: EventBooth): string | null => {
+    const history = requestByBooth.get(row.booth.boothId) || [];
+    if (history.some(request => request.status === 'COMPLETED')) {
+      return 'Đây là gian hàng đã được cấp cho bạn trong sự kiện này.';
+    }
     if (row.availability !== 'AVAILABLE') {
       return `Gian hàng hiện ${availabilityLabel[row.availability].toLowerCase()}.`;
     }
-    const history = requestByBooth.get(row.booth.boothId) || [];
     if (history.some(request => request.status === 'PENDING' || request.status === 'SELECTED')) {
       return 'Bạn đã có một yêu cầu đang mở cho gian hàng này.';
     }
@@ -188,19 +272,43 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     return null;
   };
 
+  useEffect(() => {
+    const boothId = Number(searchParams.get('boothId'));
+    if (!Number.isInteger(boothId) || boothId <= 0 || loading) return;
+    const deepLinkKey = `${eventId}:${boothId}`;
+    if (handledDeepLinkRef.current === deepLinkKey) return;
+    const row = booths.find(item => item.booth.boothId === boothId);
+    if (!row) return;
+    handledDeepLinkRef.current = deepLinkKey;
+    setTab('browse');
+    setSelectedBooth(row);
+    setRequestNote('');
+  }, [booths, eventId, loading, searchParams]);
+
   const submitRequest = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
     if (!selectedBooth || !eventId || requestBlockedReason(selectedBooth)) return;
+    const requestedEventId = eventId;
     setBusy('submit');
     setError('');
     try {
-      await boothApi.submitRequest(eventId, selectedBooth.booth.boothId, requestNote.trim() || null);
+      await boothApi.submitRequest(requestedEventId, selectedBooth.booth.boothId, requestNote.trim() || null);
+      if (currentEventIdRef.current !== requestedEventId) return;
       setSelectedBooth(null);
       setRequestNote('');
       setSuccess(`Đã gửi yêu cầu đăng ký gian hàng ${selectedBooth.booth.code} thành công.`);
       setTab('requests');
       await loadData();
     } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.code === 'BOOTH_QUOTA_EXCEEDED') {
+        setSelectedBooth(null);
+        setRequestNote('');
+        setQuotaExceeded({
+          boothCode: selectedBooth.booth.code,
+          eventTitle: selectedApplication?.eventTitle || 'Sự kiện đang chọn',
+        });
+        return;
+      }
       setError(apiMessage(caughtError));
     } finally {
       setBusy('');
@@ -208,14 +316,28 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
   };
 
   const withdraw = async (request: BoothRequest) => {
-    if (!window.confirm(`Rút yêu cầu gian ${request.boothCode}?`)) return;
+    const requestedEventId = eventId;
     setBusy(`withdraw-${request.boothRequestId}`);
     setError('');
+    setSuccess('');
     try {
       await boothApi.withdrawRequest(request.boothRequestId);
-      setSuccess('Đã rút yêu cầu gian hàng.');
+      if (currentEventIdRef.current !== requestedEventId) return;
+      setSuccess(request.status === 'SELECTED'
+        ? 'Đã rút yêu cầu và giải phóng giữ chỗ gian hàng.'
+        : 'Đã rút yêu cầu gian hàng.');
+      setWithdrawTarget(null);
       await loadData();
     } catch (caughtError) {
+      if (caughtError instanceof ApiError) {
+        const conflict = withdrawConflict(caughtError, request.boothRequestId);
+        if (conflict) {
+          setWithdrawTarget(null);
+          setWithdrawBlocked(conflict);
+          return;
+        }
+      }
+      setWithdrawTarget(null);
       setError(apiMessage(caughtError));
     } finally {
       setBusy('');
@@ -232,7 +354,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <div className="s2-empty s2-panel">
           <Store size={34} />
           <strong>Chưa có sự kiện đủ điều kiện</strong>
-          <span>Hãy theo dõi trạng thái tại mục Sự kiện của tôi.</span>
+          <span>Hãy theo dõi trạng thái tại mục Hồ sơ sự kiện của tôi.</span>
         </div>
       </section>
     );
@@ -243,15 +365,50 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
       <header className="s2-booth-header">
         <div>
           <h1 id="partner-booth-title" className="partner-page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
-            Sơ đồ & Yêu cầu gian hàng
+            Chọn & thuê gian hàng
           </h1>
-          <p className="partner-page-sub">Nhấn trực tiếp vào các gian hàng trên sơ đồ để xem thông tin và gửi yêu cầu đăng ký / đổi gian hàng.</p>
+          <p className="partner-page-sub">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi toàn bộ hành trình thuê gian theo từng sự kiện.</p>
         </div>
         <button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
           <RefreshCw size={15} />
           Làm mới
         </button>
       </header>
+
+      <section className="s2-event-context" aria-label="Ngữ cảnh sự kiện đang chọn">
+        <div className="s2-event-context-icon"><Calendar size={21} /></div>
+        <div className="s2-event-context-copy">
+          <span>Sự kiện đã được duyệt</span>
+          <strong>{selectedApplication?.eventTitle || 'Chọn sự kiện'}</strong>
+          <small>Chọn một sự kiện để xem đúng sơ đồ và trạng thái gian hàng.</small>
+        </div>
+        <div className="s2-event-context-control">
+          <label htmlFor="partner-booth-event">Chuyển sự kiện</label>
+          <select
+            id="partner-booth-event"
+            aria-label="Sự kiện tham gia"
+            value={eventId}
+            onChange={event => {
+              currentEventIdRef.current = event.target.value;
+              setSelectedEventId(event.target.value);
+            }}
+          >
+            {approvedApplications.map(application => (
+              <option key={application.id} value={application.eventId}>{application.eventTitle}</option>
+            ))}
+          </select>
+        </div>
+        <div className="s2-event-context-side">
+          <span className="s2-event-approved"><CheckCircle2 size={14} /> Đã duyệt</span>
+          {selectedApplication && <span className="s2-event-context-date"><Clock3 size={14} />{selectedApplication.dateRange}</span>}
+        </div>
+        <div className="s2-event-context-metrics">
+          <span><strong>{booths.length}</strong> gian được mở</span>
+          <span><strong>{booths.filter(booth => booth.availability === 'AVAILABLE').length}</strong> còn trống</span>
+          <span><strong>{requests.length}</strong> yêu cầu của bạn</span>
+        </div>
+      </section>
+
 
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
       {success && <div className="s2-alert s2-alert-success" role="status"><Check size={18} />{success}</div>}
@@ -260,6 +417,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <button
           type="button"
           className={tab === 'browse' ? 'is-active' : ''}
+          aria-pressed={tab === 'browse'}
           onClick={() => setTab('browse')}
         >
           Sơ đồ gian hàng <span className="tab-count">{booths.length}</span>
@@ -267,6 +425,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <button
           type="button"
           className={tab === 'requests' ? 'is-active' : ''}
+          aria-pressed={tab === 'requests'}
           onClick={() => setTab('requests')}
         >
           Yêu cầu của tôi <span className="tab-count">{requests.length}</span>
@@ -302,12 +461,14 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           <div className="s2-panel-heading" style={{ marginBottom: '1.25rem' }}>
             <div>
               <h2>Yêu cầu của tôi</h2>
-              <p>Theo dõi quyết định của Ban tổ chức và thời hạn giữ chỗ thanh toán cho từng gian hàng.</p>
             </div>
           </div>
           <div className="s2-request-list">
             {requests.map(request => {
               const isHoldActive = request.hold?.status === 'ACTIVE';
+              const boothInfo = booths.find(b => b.booth.boothId === request.boothId);
+              const boothName = boothInfo?.booth.name;
+
               return (
                 <article
                   className={`s2-request-card ${request.status === 'PENDING' ? 'is-pending' : ''} ${isHoldActive ? 'has-active-hold' : ''}`}
@@ -319,6 +480,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         <span className="s2-booth-tag">
                           <Store size={15} />
                           Gian {request.boothCode}
+                          {boothName ? ` • ${boothName}` : ''}
                         </span>
                         <span className={`s2-status request-${request.status.toLowerCase()}`}>
                           {requestStatusLabel[request.status]}
@@ -329,16 +491,18 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                       </span>
                     </div>
 
-                    {request.status === 'PENDING' && (
+                    {(request.status === 'PENDING' || (request.status === 'SELECTED' && isHoldActive)) && (
                       <div className="s2-req-actions">
                         <button
                           type="button"
                           className="btn-request-reject"
                           disabled={busy === `withdraw-${request.boothRequestId}`}
-                          onClick={() => void withdraw(request)}
+                          onClick={() => setWithdrawTarget(request)}
                         >
                           <X size={14} />
-                          {busy === `withdraw-${request.boothRequestId}` ? 'Đang rút…' : 'Rút yêu cầu'}
+                          {busy === `withdraw-${request.boothRequestId}`
+                            ? 'Đang xử lý…'
+                            : request.status === 'SELECTED' ? 'Rút & giải phóng' : 'Rút yêu cầu'}
                         </button>
                       </div>
                     )}
@@ -351,6 +515,16 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         <span>Ghi chú của bạn:</span>
                       </div>
                       <p className="s2-note-bubble-content">{request.requestNote}</p>
+                    </div>
+                  )}
+
+                  {request.reviewNote && (
+                    <div className="s2-organizer-feedback">
+                      <div className="s2-feedback-header">
+                        <CheckCircle2 size={15} />
+                        <span>Phản hồi từ Ban tổ chức</span>
+                      </div>
+                      <div className="s2-feedback-body">{request.reviewNote}</div>
                     </div>
                   )}
 
@@ -394,8 +568,12 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     </div>
                   )}
 
-                  {request.hold && (
-                    <div className={`s2-hold-box ${request.hold.status === 'ACTIVE' ? 'is-active' : 'is-inactive'}`}>
+                  {/* Khi gian hàng đã được chọn và đang trong thời gian giữ chỗ: Thẻ thanh toán chuyên nghiệp VNPay */}
+                  {request.status === 'SELECTED' && isHoldActive ? (
+                    <BoothPaymentCheckoutCard request={request} now={now} boothName={boothName} />
+                  ) : request.hold ? (
+                    /* Lịch sử giữ chỗ khi đã giải phóng hoặc hết hạn */
+                    <div className="s2-hold-box is-inactive">
                       <div className="s2-hold-box-header">
                         <div className="s2-hold-price-area">
                           <span className="s2-hold-price-label">Giá thuê giữ chỗ</span>
@@ -403,7 +581,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         </div>
                         <div className="s2-hold-status-badge">
                           <span className={`s2-hold-status-pill ${request.hold.status.toLowerCase()}`}>
-                            {request.hold.status === 'ACTIVE' ? 'Đang giữ chỗ (ACTIVE)' : `Giữ chỗ: ${request.hold.status}`}
+                            {request.hold.status === 'CONSUMED' ? 'Đã cấp gian hàng' : request.hold.status === 'EXPIRED' ? 'Đã hết hạn giữ chỗ' : 'Đã giải phóng'}
                           </span>
                         </div>
                       </div>
@@ -420,37 +598,20 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                         {request.hold.releasedAt && (
                           <div className="s2-hold-meta-item">
                             <Clock3 size={14} />
-                            <span>Giải phóng: <strong>{dateTime(request.hold.releasedAt)}</strong></span>
+                            <span>Giải phóng lúc: <strong>{dateTime(request.hold.releasedAt)}</strong></span>
                           </div>
                         )}
                       </div>
-
-                      {request.hold.status === 'ACTIVE' && (
-                        <div className="s2-hold-countdown-banner">
-                          <div className="s2-countdown-icon-box">
-                            <Timer size={22} className="s2-pulse" />
-                          </div>
-                          <div className="s2-countdown-info">
-                            <div className="s2-countdown-title">Thời gian giữ chỗ thanh toán còn lại:</div>
-                            <div className="s2-countdown-value">
-                              {now === 0 ? 'Đang đồng bộ thời gian…' : remainingTime(request.hold.expiresAt, now)}
-                            </div>
-                            <div className="s2-countdown-hint">
-                              Đồng hồ đếm ngược mang tính tham khảo; trạng thái ghi nhận trên hệ thống là quyết định cuối cùng.
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  )}
+                  ) : null}
 
-                  {request.reviewNote && (
-                    <div className="s2-organizer-feedback">
-                      <div className="s2-feedback-header">
-                        <CheckCircle2 size={15} />
-                        <span>Phản hồi từ Ban tổ chức (Organizer)</span>
-                      </div>
-                      <div className="s2-feedback-body">{request.reviewNote}</div>
+                  {request.hold && (
+                    <div className="s3-payment-link-wrapper">
+                      <Link to={`/partner/booth-requests/${request.boothRequestId}/payment`} className="s3-payment-details-link">
+                        <CreditCard size={16} />
+                        <span>Xem chi tiết thanh toán & thông tin gian hàng</span>
+                        <ChevronRight size={15} />
+                      </Link>
                     </div>
                   )}
                 </article>
@@ -465,6 +626,103 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
             )}
           </div>
         </div>
+      )}
+
+      {withdrawTarget && (
+        <PartnerDialog
+          title={withdrawTarget.status === 'SELECTED'
+            ? 'Xác nhận giải phóng gian hàng'
+            : 'Xác nhận rút yêu cầu gian hàng'}
+          onClose={() => !busy.startsWith('withdraw-') && setWithdrawTarget(null)}
+        >
+          <div className="partner-dialog-body s2-withdraw-dialog">
+            <span className="s2-withdraw-dialog-icon"><AlertCircle size={25} /></span>
+            <h3>Gian {withdrawTarget.boothCode}</h3>
+            {withdrawTarget.status === 'SELECTED' ? (
+              <p>
+                Gian hàng đang được giữ cho bạn. Nếu chưa có kết quả thanh toán cần bảo toàn,
+                hệ thống sẽ rút yêu cầu và giải phóng giữ chỗ ngay để đối tác khác có thể đăng ký.
+                Thao tác này không thể hoàn tác.
+              </p>
+            ) : (
+              <p>
+                Yêu cầu đang chờ Ban tổ chức xem xét. Sau khi rút, trạng thái này không thể hoàn tác.
+                Bạn có chắc muốn tiếp tục?
+              </p>
+            )}
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setWithdrawTarget(null)} disabled={busy.startsWith('withdraw-')}>
+                Giữ yêu cầu
+              </button>
+              <button type="button" className="btn-part-danger" onClick={() => void withdraw(withdrawTarget)} disabled={busy.startsWith('withdraw-')}>
+                <X size={15} />{busy.startsWith('withdraw-')
+                  ? 'Đang xử lý…'
+                  : withdrawTarget.status === 'SELECTED' ? 'Rút và giải phóng' : 'Xác nhận rút yêu cầu'}
+              </button>
+            </div>
+          </div>
+        </PartnerDialog>
+      )}
+
+      {withdrawBlocked && (
+        <PartnerDialog title={withdrawBlocked.title} onClose={() => setWithdrawBlocked(null)}>
+          <div className="partner-dialog-body s2-withdraw-dialog">
+            <span className="s2-withdraw-dialog-icon is-warning"><Info size={25} /></span>
+            <h3>Chưa thể giải phóng gian hàng</h3>
+            <p>{withdrawBlocked.message}</p>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setWithdrawBlocked(null)}>
+                Đóng
+              </button>
+              {withdrawBlocked.showPaymentLink && (
+                <Link
+                  className="btn-part-primary"
+                  to={`/partner/booth-requests/${withdrawBlocked.requestId}/payment`}
+                  onClick={() => setWithdrawBlocked(null)}
+                >
+                  <CreditCard size={16} /> Xem chi tiết thanh toán
+                </Link>
+              )}
+            </div>
+          </div>
+        </PartnerDialog>
+      )}
+
+      {quotaExceeded && (
+        <PartnerDialog
+          title="Đã đạt giới hạn gian hàng"
+          onClose={() => setQuotaExceeded(null)}
+        >
+          <div className="partner-dialog-body s2-quota-dialog">
+            <span className="s2-quota-dialog-icon"><AlertCircle size={26} /></span>
+            <div className="s2-quota-dialog-copy">
+              <span className="s2-quota-dialog-eyebrow">Không thể đăng ký gian {quotaExceeded.boothCode}</span>
+              <h3>Sự kiện : {quotaExceeded.eventTitle}</h3>
+              <p>
+                Bạn đã đạt số gian hàng tối đa cho phép trong sự kiện này
+              </p>
+            </div>
+            <div className="s2-quota-dialog-note">
+              Hạn mức được tính theo các gian đang giữ chỗ hoặc đã được cấp. Bạn có thể kiểm tra lại
+              các yêu cầu hiện có, hoặc liên hệ Ban tổ chức nếu cần hỗ trợ.
+            </div>
+            <div className="partner-dialog-actions">
+              <button type="button" className="btn-part-secondary" onClick={() => setQuotaExceeded(null)}>
+                Đã hiểu
+              </button>
+              <button
+                type="button"
+                className="btn-part-primary"
+                onClick={() => {
+                  setQuotaExceeded(null);
+                  setTab('requests');
+                }}
+              >
+                Xem yêu cầu của tôi
+              </button>
+            </div>
+          </div>
+        </PartnerDialog>
       )}
 
       {/* POPUP XEM CHI TIẾT & GỬI YÊU CẦU GIAN HÀNG */}
@@ -483,7 +741,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     {selectedBooth.booth.code}
                   </span>
                   <span className={`s2-status ${selectedBooth.availability.toLowerCase()}`}>
-                    {availabilityLabel[selectedBooth.availability]}
+                    {(requestByBooth.get(selectedBooth.booth.boothId) || []).some(request => request.status === 'COMPLETED')
+                      ? 'Gian của bạn'
+                      : availabilityLabel[selectedBooth.availability]}
                   </span>
                 </div>
                 <h2 className="s2-booth-modal-title">{selectedBooth.booth.name}</h2>
@@ -560,7 +820,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     maxLength={1000}
                     value={requestNote}
                     onChange={event => setRequestNote(event.target.value)}
-                    placeholder="Mô tả nhu cầu trưng bày, diện tích hoặc mong muốn đổi gian..."
+                    placeholder="Mô tả nhu cầu trưng bày, diện tích hoặc yêu cầu dành cho gian hàng..."
                   />
                 </div>
 
@@ -586,7 +846,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                     ) : (
                       <>
                         <Check size={16} />
-                        <span>Gửi yêu cầu thuê / đổi gian</span>
+                        <span>Gửi yêu cầu thuê gian</span>
                       </>
                     )}
                   </button>

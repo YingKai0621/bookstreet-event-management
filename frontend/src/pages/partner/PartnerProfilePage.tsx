@@ -1,7 +1,8 @@
-import { AlertCircle, Building2, CheckCircle2, Save, Upload, UserRound, X } from 'lucide-react';
+import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { Language, PartnerOrganization } from '../../types';
+import '../participant/ParticipantPages.css';
 import './PartnerPages.css';
 
 interface PartnerProfilePageProps {
@@ -15,6 +16,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
   organization,
   onUpdateOrg,
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(organization.name);
   const [description, setDescription] = useState(organization.shortDesc);
   const [categoryCode, setCategoryCode] = useState(organization.categoryCode || 'OTHER');
@@ -37,11 +39,26 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64 = event.target?.result as string;
       if (base64) {
         setLogoUrl(base64);
         setErrorMessage('');
+        try {
+          await onUpdateOrg({
+            name: name.trim(),
+            shortDesc: description.trim(),
+            categoryCode: categoryCode.trim().toUpperCase(),
+            logoUrl: base64,
+            email: contactEmail.trim(),
+            phone: contactPhone.trim(),
+            address: address.trim(),
+          });
+          setSuccessMessage(language === 'vi' ? 'Đã cập nhật ảnh đại diện tổ chức thành công!' : 'Logo updated successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (err) {
+          console.error('Failed to save uploaded logo', err);
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -58,8 +75,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     setAddress(organization.address);
   }, [organization]);
 
-  const handleSave = async (submitEvent: React.FormEvent) => {
-    submitEvent.preventDefault();
+  const saveProfile = async () => {
     setIsSaving(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -74,11 +90,13 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
         phone: contactPhone.trim(),
         address: address.trim(),
       });
+      setIsEditing(false);
       setSuccessMessage(
         organization.id
-          ? 'Đã cập nhật hồ sơ tổ chức.'
-          : 'Đã tạo hồ sơ tổ chức. Bạn có thể đăng ký tham gia sự kiện.',
+          ? (language === 'vi' ? 'Đã lưu thay đổi hồ sơ tổ chức thành công!' : 'Organization profile saved successfully!')
+          : (language === 'vi' ? 'Đã tạo hồ sơ tổ chức thành công!' : 'Organization profile created successfully!'),
       );
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length > 0) {
         setErrorMessage(error.fieldErrors.map(item => item.message).join(' '));
@@ -91,233 +109,334 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
   };
 
   return (
-    <div className="partner-profile-page">
-      <div className="partner-page-header">
-        <h1 className="partner-page-title">
-          {language === 'vi' ? 'Hồ sơ tổ chức' : 'Organization Profile'}
+    <div className="partner-profile-page profile-settings-page">
+      {/* 1. Header */}
+      <div className="participant-page-header">
+        <h1 className="participant-page-title">
+          {language === 'vi' ? 'Hồ sơ tổ chức & Cài đặt' : 'Organization Profile & Settings'}
         </h1>
-        <p className="partner-page-sub">
+        <p className="participant-page-sub">
           {language === 'vi'
-            ? 'Thông tin này được dùng khi tổ chức gửi hồ sơ tham gia sự kiện.'
-            : 'This information identifies the organization in Event applications.'}
+            ? 'Quản lý thông tin hồ sơ doanh nghiệp / nhà xuất bản và thông tin liên hệ.'
+            : 'Manage your organization profile, representative, and contact information.'}
         </p>
       </div>
 
       {errorMessage && (
-        <div className="partner-form-alert error" role="alert">
+        <div className="partner-form-alert error" role="alert" style={{ maxWidth: '680px', marginBottom: '1.25rem' }}>
           <AlertCircle size={18} />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="partner-form-alert success" role="status">
-          <CheckCircle2 size={18} />
+        <div
+          role="status"
+          style={{
+            backgroundColor: '#E8F5EF',
+            border: '1px solid #B8E0CF',
+            color: '#1D6246',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+            marginBottom: '1.25rem',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            maxWidth: '680px',
+          }}
+        >
+          <CheckCircle2 size={16} />
           <span>{successMessage}</span>
         </div>
       )}
 
-      <div className="partner-profile-grid-layout">
-        <aside className="partner-card" style={{ padding: '1.5rem', background: '#FAF8F5', border: '1px solid #EAE5DC' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(23, 56, 46, 0.08)', display: 'grid', placeItems: 'center', color: '#17382E', marginBottom: '0.75rem' }}>
-            <Building2 size={26} />
-          </div>
-          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#8C6519', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-            {organization.id ? 'HỒ SƠ ĐỐI TÁC' : 'THIẾT LẬP BAN ĐẦU'}
-          </div>
-          <h2 style={{ margin: '0 0 0.45rem', color: '#172421', fontSize: '1.25rem', fontFamily: 'var(--font-serif)' }}>
-            {organization.id ? organization.name : (language === 'vi' ? 'Chưa có hồ sơ tổ chức' : 'No Organization Profile')}
-          </h2>
-          <p style={{ margin: 0, color: '#556B65', lineHeight: 1.55, fontSize: '0.88rem' }}>
-            {organization.id
-              ? `Trạng thái: ${organization.status}`
-              : (language === 'vi'
-                ? 'Hoàn thiện thông tin bên phải để kích hoạt hồ sơ tổ chức và đủ điều kiện đăng ký sự kiện.'
-                : 'Complete the form on the right to activate your organization profile for event applications.')}
-          </p>
+      {/* 2. Main Profile Card matching Participant Role design */}
+      <div className="profile-card-container">
+        {/* User summary header */}
+        <div className="profile-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div className="profile-user-summary">
+            {/* Logo / Avatar with Upload Badge */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <div
+                className="profile-avatar-large"
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  border: '2px solid #E9BC63',
+                  background: logoUrl ? '#FFFFFF' : 'linear-gradient(135deg, #E9BC63 0%, #D4A359 100%)',
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                title={language === 'vi' ? 'Bấm để đổi logo tổ chức' : 'Click to change logo'}
+              >
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={name || organization.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+                  />
+                ) : (
+                  name ? name.slice(0, 2).toUpperCase() : 'PT'
+                )}
+              </div>
 
-          <div style={{ marginTop: '1.25rem', paddingTop: '1.15rem', borderTop: '1px solid #E2EAE5' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#172421', fontSize: '0.88rem' }}>
-              <UserRound size={16} color="#17382E" />
-              <strong>{language === 'vi' ? 'Người đại diện tài khoản' : 'Account Representative'}</strong>
-            </div>
-            <p style={{ margin: '0.35rem 0 0.5rem', color: '#334943', fontWeight: 600, fontSize: '0.92rem' }}>
-              {organization.representativeName || (language === 'vi' ? 'Tài khoản Partner hiện tại' : 'Current Partner Account')}
-            </p>
-            <small style={{ color: '#7A8E87', display: 'block', lineHeight: 1.45, fontSize: '0.78rem' }}>
-              {language === 'vi'
-                ? 'Người đại diện được đồng bộ tự động từ phiên đăng nhập tài khoản.'
-                : 'Representative is automatically linked from your authenticated session.'}
-            </small>
-          </div>
-        </aside>
-
-        <form className="partner-card" style={{ padding: '1.4rem' }} onSubmit={handleSave}>
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-name">Tên tổ chức *</label>
-            <input
-              id="partner-organization-name"
-              type="text"
-              maxLength={150}
-              required
-              value={name}
-              onChange={changeEvent => setName(changeEvent.target.value)}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-description">Mô tả</label>
-            <textarea
-              id="partner-organization-description"
-              rows={4}
-              value={description}
-              onChange={changeEvent => setDescription(changeEvent.target.value)}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-category">Mã loại hình *</label>
-            <input
-              id="partner-organization-category"
-              type="text"
-              maxLength={50}
-              required
-              value={categoryCode}
-              onChange={changeEvent => setCategoryCode(changeEvent.target.value)}
-              placeholder="Ví dụ: PUBLISHER"
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-email">Email liên hệ</label>
-            <input
-              id="partner-organization-email"
-              type="email"
-              maxLength={255}
-              value={contactEmail}
-              onChange={changeEvent => setContactEmail(changeEvent.target.value)}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-phone">Số điện thoại liên hệ</label>
-            <input
-              id="partner-organization-phone"
-              type="tel"
-              maxLength={20}
-              value={contactPhone}
-              onChange={changeEvent => setContactPhone(changeEvent.target.value)}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-address">Địa chỉ</label>
-            <input
-              id="partner-organization-address"
-              type="text"
-              value={address}
-              onChange={changeEvent => setAddress(changeEvent.target.value)}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="partner-organization-logo">URL logo</label>
-            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-              <input
-                id="partner-organization-logo"
-                type="text"
-                placeholder="https://... hoặc tải ảnh từ máy tính"
-                value={logoUrl}
-                onChange={changeEvent => setLogoUrl(changeEvent.target.value)}
-                style={{ flex: 1 }}
-              />
+              {/* Camera Upload Badge */}
               <button
                 type="button"
-                className="btn-part-secondary"
                 onClick={() => fileInputRef.current?.click()}
+                title={language === 'vi' ? 'Tải logo lên từ máy tính' : 'Upload photo from device'}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0 0.9rem',
-                  height: '38px',
-                  whiteSpace: 'nowrap',
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: '#14241F',
+                  border: '2px solid #FFFFFF',
+                  display: 'grid',
+                  placeItems: 'center',
                   cursor: 'pointer',
-                  flex: '0 0 auto',
-                  borderRadius: '8px'
+                  color: '#E9BC63',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                  transition: 'transform 160ms ease, background 160ms ease',
                 }}
               >
-                <Upload size={14} />
-                <span>Tải ảnh lên</span>
+                <Camera size={14} />
               </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                style={{ display: 'none' }}
+                onChange={handleLogoUpload}
+              />
             </div>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-              style={{ display: 'none' }}
-              onChange={handleLogoUpload}
-            />
-
-            {logoUrl && (
-              <div style={{
-                marginTop: '0.65rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.55rem 0.85rem',
-                background: '#F8FAF9',
-                borderRadius: '8px',
-                border: '1px solid #E2EAE5'
-              }}>
-                <img
-                  src={logoUrl}
-                  alt="Logo preview"
-                  style={{
-                    width: '42px',
-                    height: '42px',
-                    objectFit: 'contain',
-                    borderRadius: '6px',
-                    background: '#FFFFFF',
-                    border: '1px solid #E2EAE5',
-                    padding: '2px'
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.78rem', color: '#172421', display: 'block' }}>Xem trước Logo</strong>
-                  <span style={{ fontSize: '0.72rem', color: '#637771', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                    {logoUrl.startsWith('data:') ? 'Ảnh đã tải từ máy tính' : logoUrl}
-                  </span>
-                </div>
+            <div className="profile-names">
+              <h2>{name || organization.name || (language === 'vi' ? 'Chưa đặt tên tổ chức' : 'Untitled Organization')}</h2>
+              <p>{contactEmail || organization.email || (language === 'vi' ? 'Chưa cập nhật email' : 'No email')}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <span
+                  className="activity-tag"
+                  style={{ background: '#E6F5EE', color: '#267A58', border: '1px solid #BFE8D6' }}
+                >
+                  {organization.status === 'ACTIVE'
+                    ? (language === 'vi' ? 'ĐỐI TÁC HOẠT ĐỘNG' : 'ACTIVE PARTNER')
+                    : (organization.status || 'PARTNER')}
+                </span>
                 <button
                   type="button"
-                  onClick={() => setLogoUrl('')}
-                  title="Xóa logo"
+                  onClick={() => fileInputRef.current?.click()}
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: '#DC2626',
+                    color: '#185E48',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    display: 'grid',
-                    placeItems: 'center',
-                    padding: '0.25rem'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.15rem 0.35rem',
+                    textDecoration: 'underline',
                   }}
                 >
-                  <X size={16} />
+                  <Upload size={12} />
+                  <span>{language === 'vi' ? 'Tải logo mới' : 'Upload logo'}</span>
                 </button>
               </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className={isEditing ? 'btn-part-primary' : 'btn-part-secondary'}
+            disabled={isSaving}
+            style={{
+              height: '38px',
+              padding: '0 1.25rem',
+              flex: '0 0 auto',
+              width: 'auto',
+              minWidth: 'auto',
+              borderRadius: '8px',
+              whiteSpace: 'nowrap',
+            }}
+            onClick={async () => {
+              if (isEditing) {
+                await saveProfile();
+              } else {
+                setIsEditing(true);
+              }
+            }}
+          >
+            {isEditing ? (
+              <>
+                <Check size={14} />
+                <span>{isSaving ? (language === 'vi' ? 'Đang lưu...' : 'Saving...') : (language === 'vi' ? 'Lưu thay đổi' : 'Save')}</span>
+              </>
+            ) : (
+              <>
+                <Edit3 size={14} />
+                <span>{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Organization Details Table / Fields */}
+        <div className="profile-details-table">
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Tên tổ chức *:' : 'Organization name *:'}
+            </span>
+            {isEditing ? (
+              <input
+                id="partner-organization-name"
+                aria-label="Tên tổ chức *"
+                type="text"
+                className="part-select"
+                style={{ width: '100%' }}
+                required
+                maxLength={150}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            ) : (
+              <span className="profile-detail-val">{name || organization.name}</span>
             )}
           </div>
 
-          <button type="submit" className="btn-part-primary" disabled={isSaving}>
-            <Save size={16} />
-            <span>{isSaving ? 'Đang lưu...' : organization.id ? 'Lưu thay đổi' : 'Tạo hồ sơ tổ chức'}</span>
-          </button>
-        </form>
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Mô tả:' : 'Description:'}
+            </span>
+            {isEditing ? (
+              <textarea
+                id="partner-organization-description"
+                aria-label="Mô tả"
+                className="part-select"
+                style={{ width: '100%', minHeight: '75px', padding: '0.5rem 0.85rem' }}
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            ) : (
+              <span className="profile-detail-val">{description || (language === 'vi' ? 'Chưa cập nhật' : 'Not provided')}</span>
+            )}
+          </div>
+
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Mã loại hình *:' : 'Category code *:'}
+            </span>
+            {isEditing ? (
+              <input
+                id="partner-organization-category"
+                aria-label="Mã loại hình *"
+                type="text"
+                className="part-select"
+                style={{ width: '100%' }}
+                required
+                maxLength={50}
+                value={categoryCode}
+                onChange={(e) => setCategoryCode(e.target.value)}
+                placeholder="Ví dụ: PUBLISHER"
+              />
+            ) : (
+              <span className="profile-detail-val">{categoryCode || 'OTHER'}</span>
+            )}
+          </div>
+
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Người đại diện:' : 'Representative:'}
+            </span>
+            <span className="profile-detail-val" style={{ color: '#637771' }}>
+              {organization.representativeName || (language === 'vi' ? 'Tài khoản Partner hiện tại' : 'Current Partner')} ({language === 'vi' ? 'Đồng bộ từ tài khoản' : 'Synced from account'})
+            </span>
+          </div>
+
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Email liên hệ:' : 'Contact email:'}
+            </span>
+            {isEditing ? (
+              <input
+                id="partner-organization-email"
+                aria-label="Email liên hệ"
+                type="email"
+                className="part-select"
+                style={{ width: '100%' }}
+                maxLength={255}
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+              />
+            ) : (
+              <span className="profile-detail-val">{contactEmail || (language === 'vi' ? 'Chưa cập nhật' : 'Not provided')}</span>
+            )}
+          </div>
+
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Số điện thoại:' : 'Phone number:'}
+            </span>
+            {isEditing ? (
+              <input
+                id="partner-organization-phone"
+                aria-label="Số điện thoại liên hệ"
+                type="tel"
+                className="part-select"
+                style={{ width: '100%' }}
+                maxLength={20}
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="0900 000 000"
+              />
+            ) : (
+              <span className="profile-detail-val">{contactPhone || (language === 'vi' ? 'Chưa cập nhật' : 'Not provided')}</span>
+            )}
+          </div>
+
+          <div className="profile-detail-row">
+            <span className="profile-detail-label">
+              {language === 'vi' ? 'Địa chỉ:' : 'Address:'}
+            </span>
+            {isEditing ? (
+              <input
+                id="partner-organization-address"
+                aria-label="Địa chỉ"
+                type="text"
+                className="part-select"
+                style={{ width: '100%' }}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
+            ) : (
+              <span className="profile-detail-val">{address || (language === 'vi' ? 'Chưa cập nhật' : 'Not provided')}</span>
+            )}
+          </div>
+
+          {isEditing && (
+            <div className="profile-detail-row">
+              <span className="profile-detail-label">
+                {language === 'vi' ? 'URL Logo:' : 'Logo URL:'}
+              </span>
+              <input
+                id="partner-organization-logo"
+                aria-label="URL logo"
+                type="text"
+                className="part-select"
+                style={{ width: '100%' }}
+                placeholder="https://... hoặc bấm nút Tải ảnh lên"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

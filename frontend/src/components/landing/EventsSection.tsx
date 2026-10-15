@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -74,25 +75,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
     window.setTimeout(finishClose, 260);
   }, [closingSheet]);
 
-  React.useEffect(() => {
-    const hasOpenDialog = Boolean(activeEventDetail || showRegisterModal);
-    if (!hasOpenDialog) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (activeEventDetail) closeEventSheet('detail');
-      else closeEventSheet('register');
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeEventDetail, closeEventSheet, showRegisterModal]);
+  useModalDismiss(Boolean(activeEventDetail), () => closeEventSheet('detail'));
+  useModalDismiss(Boolean(showRegisterModal), () => closeEventSheet('register'));
 
   const { displayedEvents, weekEventIds } = React.useMemo(() => {
     const today = new Date();
@@ -219,7 +203,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               <X size={20} />
             </button>
             <div className="modal-event-photo-header">
-              <img src={activeEventDetail.image.url} alt={activeEventDetail.image.alt} className="modal-top-img" />
+              {activeEventDetail.image.url && (
+                <img src={activeEventDetail.image.url} alt={activeEventDetail.image.alt} className="modal-top-img" />
+              )}
               <div className="modal-img-caption">
                 <span className="event-cat-tag">
                   {language === 'vi' ? activeEventDetail.typeLabelVi : activeEventDetail.typeLabelEn}
@@ -319,11 +305,13 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                 {/* Selected Event Context Card Preview */}
                 <div className="reg-event-card-preview">
                   <div className="reg-event-thumb-wrap">
-                    <img 
-                      src={showRegisterModal.image.url} 
-                      alt={showRegisterModal.image.alt} 
-                      className="reg-event-thumb" 
-                    />
+                    {showRegisterModal.image.url && (
+                      <img
+                        src={showRegisterModal.image.url}
+                        alt={showRegisterModal.image.alt}
+                        className="reg-event-thumb"
+                      />
+                    )}
                   </div>
                   <div className="reg-event-info">
                     <h4 className="reg-event-title">

@@ -1,5 +1,6 @@
 import { Building2, MapPin, Package, Pencil, Plus, RefreshCw, Search, Store, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { boothStatusLabels, notifyBoothsChanged } from '../../services/booths';
 import { facilityRequest, type Facility, type FacilityInput, type FacilityKind } from '../../services/facilities';
 import '../landing/BoothBookingView.css';
@@ -20,6 +21,7 @@ export function FacilityManagementView({ kind }: { kind: FacilityKind }) {
   const [editing, setEditing] = useState<Facility | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Facility | null>(null);
   const [saving, setSaving] = useState(false);
+  useModalDismiss(Boolean(editing || deleting), () => { if (!saving) { setEditing(null); setDeleting(null); } });
   const [formError, setFormError] = useState('');
   const [form, setForm] = useState({ name: '', campus: '', amount: '' });
   const dialog = useRef<HTMLDialogElement>(null);

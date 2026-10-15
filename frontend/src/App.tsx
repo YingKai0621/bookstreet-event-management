@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
+import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
 import { AboutSection } from './components/landing/AboutSection';
 import { BoothsSection } from './components/landing/BoothsSection';
@@ -18,6 +19,7 @@ import { EventsExperience } from './pages/public/EventsExperience';
 import { HeritageExperience } from './pages/public/HeritageExperience';
 import { LoginPage } from './pages/public/LoginPage';
 import { RegisterPage } from './pages/public/RegisterPage';
+import { VerifyEmailPage } from './pages/public/VerifyEmailPage';
 import { PortalLoginPage } from './pages/organizer/PortalLoginPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
@@ -32,8 +34,10 @@ import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
 import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
 import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
-import { EventApplicationPage } from './pages/partner/EventApplicationPage';
+import { PartnerEventApplicationsPage } from './pages/partner/PartnerEventApplicationsPage';
+import { PartnerEventDiscoveryPage } from './pages/partner/PartnerEventDiscoveryPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
+import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
@@ -41,6 +45,8 @@ import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPa
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
 import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
+import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
+import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
@@ -79,7 +85,8 @@ export function App() {
   const isLoginRoute = location.pathname === '/login';
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
-  const isPartnerRoute = location.pathname.startsWith('/partner');
+  const isVnPayReturn = location.pathname === '/payment/vnpay/return';
+  const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
   const isPortalRoute = location.pathname === '/portal' || location.pathname === '/organizer';
@@ -88,6 +95,9 @@ export function App() {
   const isParticipantAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
   const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
   const isAdminAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ADMIN'));
+  const currentParticipantId = useRef<number | undefined>(undefined);
+  const participantUserId = isParticipantAuthenticated ? authenticatedUser?.userId : undefined;
+  useEffect(() => { currentParticipantId.current = participantUserId; }, [participantUserId]);
 
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
@@ -100,6 +110,9 @@ export function App() {
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
   const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
+  const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
+  const [partnerOverviewError, setPartnerOverviewError] = useState('');
+  const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
   const [attendanceScans, setAttendanceScans] = useState<AttendanceScanRecord[]>([]);
   const [activeAttendanceActivityId, setActiveAttendanceActivityId] = useState<string | null>(null);
 
@@ -225,58 +238,97 @@ export function App() {
     return () => { active = false; };
   }, [publicEventId, dataRevision]);
 
-  const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(() => {
-    try {
-      const saved = localStorage.getItem('duongsach_participant_profile');
-      return saved ? JSON.parse(saved) : EMPTY_PARTICIPANT_PROFILE;
-    } catch {
-      return EMPTY_PARTICIPANT_PROFILE;
-    }
-  });
+  const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
+  const [participantProfileError, setParticipantProfileError] = useState('');
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
 
-  // Sprint 1 exposes the authenticated account, combined with locally saved participant preferences.
+  // Never display a profile belonging to a previous session/account.
   const participantProfile: ParticipantProfile = isParticipantAuthenticated && authenticatedUser
     ? {
-      ...storedParticipantProfile,
+      ...(storedParticipantProfile.id === String(authenticatedUser.userId)
+        ? storedParticipantProfile : EMPTY_PARTICIPANT_PROFILE),
       id: String(authenticatedUser.userId),
-      name: storedParticipantProfile.name || authenticatedUser.fullName,
-      email: authenticatedUser.email || storedParticipantProfile.email || '',
-      phone: storedParticipantProfile.phone || '',
-      emailNotifications: storedParticipantProfile.emailNotifications ?? true,
+      name: storedParticipantProfile.id === String(authenticatedUser.userId)
+        ? storedParticipantProfile.name : authenticatedUser.fullName,
+      email: authenticatedUser.email || '',
       role: 'Participant',
     }
-    : storedParticipantProfile;
+    : EMPTY_PARTICIPANT_PROFILE;
+
+  useEffect(() => {
+    let active = true;
+    setParticipantProfile(EMPTY_PARTICIPANT_PROFILE);
+    setParticipantProfileError('');
+    setParticipantEvents([]);
+    setParticipantActivities([]);
+    setParticipantBadges([]);
+    setParticipantCertificates([]);
+    const refreshProfile = () => {
+      if (participantUserId === undefined) return;
+      const userId = String(participantUserId);
+      participantApi.getProfile().then(profile => {
+        if (!active) return;
+        if (profile.id !== userId) throw new Error('Hồ sơ không khớp tài khoản đang đăng nhập.');
+        setParticipantProfile(profile);
+        setParticipantProfileError('');
+      }).catch(error => {
+        if (active) setParticipantProfileError(error instanceof Error ? error.message : 'Không tải được hồ sơ.');
+      });
+    };
+    refreshProfile();
+    window.addEventListener('focus', refreshProfile);
+    window.addEventListener('email:verified', refreshProfile);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', refreshProfile);
+      window.removeEventListener('email:verified', refreshProfile);
+    };
+  }, [participantUserId]);
 
   useEffect(() => {
     if (!isPartnerAuthenticated) return;
-    Promise.all([
+    // This effect synchronizes authenticated Partner data from external APIs.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setPartnerOverviewError('');
+    setPartnerBoothRequestsError('');
+    setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
+    _setPartnerReports(null); setPartnerEventLocations([]);
+    void Promise.allSettled([
       partnerApi.getProfile(),
       partnerApi.getApplications(),
-    ])
-      .then(([organization, applications]) => {
-        setPartnerOrg(organization ? {
-          ...organization,
-          representativeName: authenticatedUser?.fullName || '',
-        } : null);
-        setPartnerApplications(applications);
-        setPartnerApp(applications.find(application => application.status === 'approved') || applications[0] || null);
-        setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
-        _setPartnerReports(null); setPartnerEventLocations([]);
-        void boothApi.listAllPartnerRequests()
-          .then(setPartnerBoothRequests)
-          .catch(error => { console.warn('Could not fetch partner booth requests', error); setPartnerBoothRequests(null); });
-      })
-      .catch(error => {
-        console.warn('Could not fetch partner data', error);
+      boothApi.listAllPartnerRequests(),
+    ]).then(([profileResult, applicationsResult, boothResult]) => {
+      const partnerErrors: string[] = [];
+      if (profileResult.status === 'fulfilled') {
+        setPartnerOrg(profileResult.value ? { ...profileResult.value, representativeName: authenticatedUser?.fullName || '' } : null);
+      } else {
+        console.warn('Could not fetch partner profile', profileResult.reason);
         setPartnerOrg(null);
+        partnerErrors.push(profileResult.reason instanceof Error ? profileResult.reason.message : 'Không thể tải hồ sơ tổ chức.');
+      }
+
+      if (applicationsResult.status === 'fulfilled') {
+        setPartnerApplications(applicationsResult.value);
+        setPartnerApp(applicationsResult.value.find(application => application.status === 'approved') || null);
+      } else {
+        console.warn('Could not fetch partner applications', applicationsResult.reason);
         setPartnerApplications([]);
         setPartnerApp(null);
+        partnerErrors.push(applicationsResult.reason instanceof Error ? applicationsResult.reason.message : 'Không thể tải hồ sơ sự kiện.');
+      }
+      setPartnerOverviewError(partnerErrors.join(' '));
+
+      if (boothResult.status === 'fulfilled') {
+        setPartnerBoothRequests(boothResult.value);
+      } else {
+        console.warn('Could not fetch partner booth requests', boothResult.reason);
         setPartnerBoothRequests(null);
-      });
+        setPartnerBoothRequestsError(boothResult.reason instanceof Error ? boothResult.reason.message : 'Không thể tải dữ liệu gian hàng.');
+      }
+    }).finally(() => setPartnerOverviewLoading(false));
   }, [authenticatedUser?.fullName, isPartnerAuthenticated, dataRevision]);
 
   // Participant Action Handlers
@@ -327,17 +379,18 @@ export function App() {
       phone: updated.phone !== undefined ? updated.phone : participantProfile.phone,
       emailNotifications: updated.emailNotifications !== undefined ? updated.emailNotifications : participantProfile.emailNotifications,
     };
-    setParticipantProfile(newProfile);
-    try {
-      localStorage.setItem('duongsach_participant_profile', JSON.stringify(newProfile));
-      await participantApi.updateProfile({
+    if (!isParticipantAuthenticated || !authenticatedUser) throw new Error('Vui lòng đăng nhập.');
+    const userId = authenticatedUser.userId;
+    const saved = await participantApi.updateProfile({
         fullName: newProfile.name,
         phone: newProfile.phone,
-        emailNotifications: newProfile.emailNotifications,
-      });
-    } catch (e) {
-      console.warn('Backend sync not available in Sprint 1, saved profile locally', e);
-    }
+        avatarUrl: newProfile.avatar,
+    });
+    if (currentParticipantId.current !== userId) return;
+    if (String(saved.id) !== String(userId)) throw new Error('Hồ sơ không khớp tài khoản đang đăng nhập.');
+    setParticipantProfile({ ...newProfile, id: String(saved.id), name: String(saved.fullName),
+      emailVerified: Boolean(saved.emailVerified),
+      phone: saved.phone ? String(saved.phone) : '', avatar: saved.avatarUrl ? String(saved.avatarUrl) : undefined });
     window.dispatchEvent(new Event('participant:data-changed'));
   };
 
@@ -408,6 +461,8 @@ export function App() {
   }
 
   // NẾU ĐANG TRUY CẬP ROUTE /login (TRANG ĐĂNG NHẬP ĐỘC GIẢ)
+  if (location.pathname === '/verify-email') return <VerifyEmailPage language={language} key={location.key} />;
+
   if (isLoginRoute) {
     return (
       <LoginPage 
@@ -437,6 +492,11 @@ export function App() {
 
     if (!isParticipantAuthenticated) {
       return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    }
+
+    if (participantProfileError) return <p role="alert">Không tải được hồ sơ: {participantProfileError}</p>;
+    if (storedParticipantProfile.id !== String(authenticatedUser?.userId)) {
+      return <p className="app-loading-state">Đang tải hồ sơ...</p>;
     }
 
     return (
@@ -591,7 +651,7 @@ export function App() {
       return (
         <PartnerLoginPage
           language={language}
-          onLoginSuccess={() => navigate('/partner')}
+          onLoginSuccess={() => navigate(location.pathname + location.search, { replace: true })}
         />
       );
     }
@@ -617,30 +677,37 @@ export function App() {
         onLogout={handlePartnerLogout}
       >
         <Routes>
+          <Route path="/payment/vnpay/return" element={<VnPayReturnPage key={location.search} />} />
+          <Route path="/partner/booth-requests/:requestId/payment" element={<BoothPaymentPage key={location.pathname} />} />
           <Route path="/partner" element={
             <PartnerDashboard
               language={language}
               organization={visiblePartnerOrg}
-              activeEvent={partnerApp}
               applications={partnerApplications}
               boothRequests={partnerBoothRequests}
               todos={partnerTodos}
-              onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
+              isLoading={partnerOverviewLoading}
+              dataError={partnerOverviewError}
+              boothRequestsError={partnerBoothRequestsError}
             />
           } />
           <Route path="/partner/events" element={
-            <EventApplicationPage
+            <PartnerEventApplicationsPage
               language={language}
-              organization={partnerOrg}
             />
           } />
           <Route path="/partner/events/apply" element={
-            <EventApplicationPage
+            <PartnerEventDiscoveryPage
               language={language}
               organization={partnerOrg}
             />
           } />
-          <Route path="/partner/booths" element={<Navigate to="/partner/booth-requests" replace />} />
+          <Route path="/partner/booths" element={
+            <PartnerAssignedBoothsPage
+              language={language}
+              applications={partnerApplications}
+            />
+          } />
           <Route path="/partner/booths/select" element={<Navigate to="/partner/booth-requests" replace />} />
           <Route path="/partner/booth-requests" element={
             <Sprint2PartnerBoothsPage

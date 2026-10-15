@@ -14,6 +14,7 @@ import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.repository.EventRepository;
+import com.swp391.bookstreet.event.service.EventRootLockService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ public class EventBoothService {
     private static final BigDecimal MINIMUM_PAID_RENTAL_PRICE = new BigDecimal("5000");
 
     private final EventRepository eventRepository;
+    private final EventRootLockService eventRootLockService;
     private final BoothRepository boothRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothAssignmentRepository assignmentRepository;
@@ -43,10 +45,12 @@ public class EventBoothService {
     private final Clock clock;
 
     public EventBoothService(EventRepository eventRepository, BoothRepository boothRepository,
+            EventRootLockService eventRootLockService,
             EventBoothConfigRepository configRepository, BoothCurrentUser currentUser,
             BoothAssignmentRepository assignmentRepository,
             BoothHoldExpiryService expiryService, Clock clock) {
         this.eventRepository = eventRepository;
+        this.eventRootLockService = eventRootLockService;
         this.boothRepository = boothRepository;
         this.configRepository = configRepository;
         this.assignmentRepository = assignmentRepository;
@@ -69,8 +73,15 @@ public class EventBoothService {
     @Transactional
     public EventBoothResponse configure(Long eventId, Long boothId,
             EventBoothConfigRequest request) {
-        Event event = ownedEvent(eventId);
         expiryService.expireDueHolds();
+        Event event = eventRootLockService.lockOwned(eventId, currentUser.requireOrganizerId())
+                .orElseThrow(EventBoothService::eventNotFound);
+        if (event.getStatus() != EventStatus.DRAFT
+                && (event.getStatus() != EventStatus.PUBLISHED
+                    || !clock.instant().isBefore(event.getStartAt()))) {
+            throw new BoothApiException(HttpStatus.CONFLICT, "EVENT_NOT_EDITABLE",
+                    "Booth configuration requires a Draft or a Published Event before its start.");
+        }
         requireSupportedPrice(request.rentalPrice());
         Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
                 .orElseThrow(EventBoothService::boothNotFound);

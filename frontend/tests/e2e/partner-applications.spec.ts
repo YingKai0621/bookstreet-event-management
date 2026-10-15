@@ -84,7 +84,8 @@ async function createPublishedEvent(page: Page, eventName: string): Promise<void
 
 async function savePartnerOrganization(page: Page, organizationName: string): Promise<void> {
   await page.getByRole('button', { name: 'Hồ sơ tài khoản' }).click();
-  await expect(page.getByRole('heading', { name: 'Hồ sơ tổ chức', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hồ sơ tổ chức & Cài đặt', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
 
   await page.getByLabel('Tên tổ chức *').fill(organizationName);
   await page.getByLabel('Mô tả').fill('Tổ chức được cập nhật trong kiểm thử E2E.');
@@ -94,16 +95,20 @@ async function savePartnerOrganization(page: Page, organizationName: string): Pr
   await page.getByLabel('Địa chỉ').fill('Đường Sách TP.HCM');
   await page.getByRole('button', { name: /Lưu thay đổi|Tạo hồ sơ tổ chức/ }).click();
 
-  await expect(page.getByRole('status')).toContainText(/Đã cập nhật|Đã tạo/);
+  await expect(page.getByRole('status')).toContainText(/Đã lưu thay đổi|Đã tạo/);
 }
 
 async function submitApplication(page: Page, eventName: string, note: string): Promise<void> {
+  await page.getByRole('button', { name: 'Khám phá & đăng ký' }).click();
   const eventCard = page.locator('article').filter({ hasText: eventName }).first();
   await expect(eventCard).toBeVisible();
-  await eventCard.getByLabel('Ghi chú đăng ký (không bắt buộc)').fill(note);
-  await eventCard.getByRole('button', { name: 'Gửi hồ sơ đăng ký' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã gửi hồ sơ');
-  await expect(eventCard.getByText('Chờ duyệt')).toBeVisible();
+  await eventCard.getByRole('button', { name: /Xem & đăng ký/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Ghi chú đăng ký (không bắt buộc)').fill(note);
+  await dialog.getByRole('button', { name: 'Gửi hồ sơ đăng ký' }).click();
+  await expect(page.getByRole('status')).toContainText('Gửi hồ sơ đăng ký thành công');
+  await page.getByRole('link', { name: /Xem hồ sơ của tôi/ }).click();
+  await expect(page.locator('article').filter({ hasText: eventName }).getByText('Chờ duyệt')).toBeVisible();
 }
 
 test('Partner submits, withdraws, and receives Organizer approval', async ({ browser }) => {
@@ -137,8 +142,8 @@ test('Partner submits, withdraws, and receives Organizer approval', async ({ bro
 
     await loginPartner(partnerPage, partnerCredentials);
     await savePartnerOrganization(partnerPage, organizationName);
-    await partnerPage.getByRole('button', { name: 'Sự kiện của tôi' }).click();
-    await expect(partnerPage.getByRole('heading', { name: 'Đăng ký tham gia sự kiện' })).toBeVisible();
+    await partnerPage.getByRole('button', { name: 'Hồ sơ sự kiện của tôi' }).click();
+    await expect(partnerPage.getByRole('heading', { name: 'Hồ sơ sự kiện của tôi' })).toBeVisible();
 
     await submitApplication(partnerPage, approvalEventName, 'Hồ sơ dùng để kiểm thử thao tác duyệt.');
     await submitApplication(partnerPage, withdrawalEventName, 'Hồ sơ dùng để kiểm thử thao tác rút.');
@@ -146,8 +151,8 @@ test('Partner submits, withdraws, and receives Organizer approval', async ({ bro
     const withdrawalApplication = partnerPage.locator('article').filter({
       hasText: withdrawalEventName,
     }).last();
-    partnerPage.once('dialog', dialog => dialog.accept());
     await withdrawalApplication.getByRole('button', { name: 'Rút hồ sơ' }).click();
+    await partnerPage.getByRole('dialog').getByRole('button', { name: 'Xác nhận rút hồ sơ' }).click();
     await expect(partnerPage.getByRole('status')).toContainText('Đã rút hồ sơ');
     await expect(withdrawalApplication.getByText('Đã rút')).toBeVisible();
 
@@ -166,6 +171,7 @@ test('Partner submits, withdraws, and receives Organizer approval', async ({ bro
     await expect(applicationRow).toContainText('Hồ sơ phù hợp với sự kiện.');
 
     await partnerPage.getByRole('button', { name: 'Làm mới' }).click();
+    await partnerPage.getByRole('tab', { name: /Đã duyệt/ }).click();
     const approvedApplication = partnerPage.locator('article').filter({
       hasText: approvalEventName,
     }).last();

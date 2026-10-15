@@ -1,3 +1,4 @@
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertTriangle,
   Check,
@@ -43,6 +44,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<OrganizerActivityItem | null>(null);
   const [formData, setFormData] = useState<OrganizerActivityItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  useModalDismiss(Boolean(selectedActivity), () => { setSelectedActivity(null); setFormData(null); setShowDeleteConfirm(false); });
 
   const handleOpenDetail = (act: OrganizerActivityItem) => {
     setSelectedActivity(act);

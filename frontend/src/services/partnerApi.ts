@@ -42,7 +42,7 @@ interface PublicEventResponse {
   endAt: string;
   partnerApplicationDeadlineAt: string | null;
   bannerUrl: string | null;
-  status: 'PUBLISHED';
+  status: 'PUBLISHED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
 }
 
 export interface PartnerAvailableEvent {
@@ -150,35 +150,51 @@ export const partnerApi = {
   async getApplications(): Promise<PartnerEventApplication[]> {
     const query = new URLSearchParams({ page: '0', size: '100', sort: 'submittedAt,desc' });
     const first = await apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${query.toString()}`);
-    const [eventsResult, organizationResult] = await Promise.allSettled([
-      loadPublishedEvents(),
-      partnerApi.getProfile(),
-    ]);
-    const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
-    const organization = organizationResult.status === 'fulfilled' ? organizationResult.value : null;
     const remaining = first.totalPages > 1
       ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
         const nextQuery = new URLSearchParams({ page: String(index + 1), size: '100', sort: 'submittedAt,desc' });
         return apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${nextQuery.toString()}`);
       }))
       : [];
+    const applications = [first, ...remaining].flatMap(page => page.content);
+    const eventIds = [...new Set(applications.map(application => application.eventId))];
+    const [metadataResults, eventDetailResults] = await Promise.all([
+      Promise.allSettled([
+        loadPublishedEvents(),
+        partnerApi.getProfile(),
+      ]),
+      Promise.allSettled(eventIds.map(eventId =>
+        apiClient.get<PublicEventResponse>(`/events/${encodeURIComponent(eventId)}`),
+      )),
+    ]);
+    const [eventsResult, organizationResult] = metadataResults;
+    const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
+    const organization = organizationResult.status === 'fulfilled' ? organizationResult.value : null;
     const eventById = new Map(events.map(event => [event.id, event]));
 
-    return [first, ...remaining].flatMap(page => page.content).map(application => {
+    eventDetailResults.forEach(result => {
+      if (result.status !== 'fulfilled') return;
+      const event = toAvailableEvent(result.value);
+      eventById.set(event.id, event);
+    });
+
+    return applications.map(application => {
       const event = eventById.get(String(application.eventId));
       return {
         id: String(application.applicationId),
         eventId: String(application.eventId),
         eventTitle: event?.name || `Sự kiện #${application.eventId}`,
         dateRange: event ? `${formatDateTime(event.startAt)} - ${formatDateTime(event.endAt)}` : '',
+        startAt: event?.startAt,
+        endAt: event?.endAt,
         location: '',
         imageUrl: event?.bannerUrl || '',
         status: application.status.toLowerCase() as PartnerEventApplication['status'],
         applicationNote: application.applicationNote || '',
         reviewNote: application.reviewNote || '',
-        submittedAt: formatDateTime(application.submittedAt),
-        reviewedAt: formatDateTime(application.reviewedAt),
-        withdrawnAt: formatDateTime(application.withdrawnAt),
+        submittedAt: application.submittedAt,
+        reviewedAt: application.reviewedAt || '',
+        withdrawnAt: application.withdrawnAt || '',
         organizationName: organization?.name || '',
         shortDesc: organization?.shortDesc || '',
         representativeName: organization?.representativeName || '',
