@@ -10,7 +10,6 @@ import {
   QrCode,
   RefreshCw,
   Search,
-  Sparkles,
   Store,
   X,
 } from 'lucide-react';
@@ -31,18 +30,22 @@ interface Props {
   applications: PartnerEventApplication[];
 }
 
-type EventPhase = 'upcoming' | 'ongoing' | 'past';
-type PhaseFilter = 'all' | EventPhase;
+type TimedEventPhase = 'upcoming' | 'ongoing' | 'past';
+type EventPhase = TimedEventPhase | 'unknown';
+type PhaseFilter = 'all' | TimedEventPhase;
 
 interface AssignedBoothItem {
   request: BoothRequest;
   assignment: BoothAssignment;
 }
 
+const timedPhases: TimedEventPhase[] = ['upcoming', 'ongoing', 'past'];
+
 const phaseMeta: Record<EventPhase, { label: string; description: string }> = {
-  upcoming: { label: 'Sắp diễn ra', description: 'Chuẩn bị nội dung và kế hoạch vận hành' },
-  ongoing: { label: 'Đang diễn ra', description: 'Gian hàng đang trong thời gian sự kiện' },
-  past: { label: 'Đã kết thúc', description: 'Lịch sử các gian hàng đã được cấp' },
+  upcoming: { label: 'Sắp diễn ra', description: 'Gian hàng thuộc các sự kiện sắp tổ chức' },
+  ongoing: { label: 'Đang diễn ra', description: 'Gian hàng thuộc các sự kiện đang diễn ra' },
+  past: { label: 'Đã kết thúc', description: 'Lịch sử gian hàng tại các sự kiện đã kết thúc' },
+  unknown: { label: 'Chưa xác định', description: 'Lịch sự kiện đang được cập nhật' },
 };
 
 function messageFrom(error: unknown): string {
@@ -52,14 +55,17 @@ function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : 'Không thể tải danh sách gian hàng đã được cấp.';
 }
 
-function money(value: number): string {
+function money(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'Chưa có thông tin';
   if (value === 0) return 'Miễn phí';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 }
 
 function dateTime(value: string | null | undefined): string {
   if (!value) return 'Đang cập nhật';
-  return new Date(value).toLocaleString('vi-VN', {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Đang cập nhật';
+  return parsed.toLocaleString('vi-VN', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -72,14 +78,19 @@ function phaseFor(application: PartnerEventApplication | undefined, now: number)
 
   if (Number.isFinite(endAt) && endAt < now) return 'past';
   if (Number.isFinite(startAt) && startAt > now) return 'upcoming';
-  return 'ongoing';
+  if (Number.isFinite(startAt) && Number.isFinite(endAt) && startAt <= now && endAt >= now) return 'ongoing';
+  return 'unknown';
 }
 
 function eventDate(application: PartnerEventApplication | undefined): string {
-  if (application?.startAt && application.endAt) {
+  const hasValidStart = application?.startAt && Number.isFinite(new Date(application.startAt).getTime());
+  const hasValidEnd = application?.endAt && Number.isFinite(new Date(application.endAt).getTime());
+  if (hasValidStart && hasValidEnd) {
     return `${dateTime(application.startAt)} – ${dateTime(application.endAt)}`;
   }
-  return application?.dateRange || 'Lịch sự kiện đang cập nhật';
+  if (hasValidStart) return `Bắt đầu ${dateTime(application?.startAt)}`;
+  if (hasValidEnd) return `Kết thúc ${dateTime(application?.endAt)}`;
+  return application?.dateRange?.trim() || 'Lịch sự kiện đang cập nhật';
 }
 
 export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applications }) => {
@@ -173,9 +184,9 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
     <section className="partner-page my-booths-page" aria-labelledby="my-booths-title">
       <header className="my-booths-hero">
         <div className="my-booths-hero-copy">
-          <span className="my-booths-eyebrow"><Sparkles size={14} /> Không gian của đối tác</span>
+          <span className="my-booths-eyebrow">Đối tác <b>/</b> Quản lý gian hàng</span>
           <h1 id="my-booths-title">{language === 'vi' ? 'Gian hàng của tôi' : 'My booths'}</h1>
-          <p>Theo dõi các gian hàng đã được cấp, mở mã QR và truy cập nhanh công cụ vận hành theo từng sự kiện.</p>
+          <p>Quản lý gian hàng đã được cấp, xem mã QR và theo dõi hoạt động tại từng sự kiện.</p>
         </div>
         <button type="button" className="my-booths-refresh" onClick={() => void loadAssignments()} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'my-booths-spin' : ''} />
@@ -184,7 +195,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
       </header>
 
       <div className="my-booths-summary" aria-label="Tổng quan gian hàng theo thời gian sự kiện">
-        {(Object.keys(phaseMeta) as EventPhase[]).map(phase => (
+        {timedPhases.map(phase => (
           <button
             type="button"
             key={phase}
@@ -220,15 +231,30 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             type="search"
             value={search}
             onChange={event => setSearch(event.target.value)}
-            placeholder="Tìm theo mã gian hoặc tên sự kiện..."
+            placeholder="Tìm theo mã gian hàng hoặc tên sự kiện..."
             aria-label="Tìm gian hàng đã được cấp"
           />
           {search && <button type="button" onClick={() => setSearch('')} aria-label="Xóa từ khóa tìm kiếm"><X size={15} /></button>}
         </div>
-        <div className="my-booths-filter-label">
-          <span>{filter === 'all' ? 'Tất cả thời gian' : phaseMeta[filter].label}</span>
-          <strong>{visibleItems.length} gian</strong>
+        <label className="my-booths-time-filter">
+          <span>Thời gian sự kiện</span>
+          <select
+            aria-label="Lọc theo thời gian sự kiện"
+            value={filter}
+            onChange={event => setFilter(event.target.value as PhaseFilter)}
+          >
+            <option value="all">Tất cả thời gian</option>
+            {timedPhases.map(phase => <option value={phase} key={phase}>{phaseMeta[phase].label}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="my-booths-list-heading">
+        <div>
+          <span className="my-booths-section-kicker">Danh sách quản lý</span>
+          <h2>Gian hàng đã được cấp</h2>
         </div>
+        <p><strong>{visibleItems.length}</strong> / {items.length} gian hàng</p>
       </div>
 
       {loading && !items.length ? (
@@ -261,46 +287,54 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             const mapLink = `/partner/booth-requests?eventId=${item.assignment.eventId}&boothId=${item.assignment.boothId}`;
             return (
               <article className={`my-booth-card is-${item.phase}`} key={item.assignment.boothAssignmentId}>
-                <div className={`my-booth-cover ${application?.imageUrl ? 'has-image' : ''}`}>
-                  {application?.imageUrl && <img src={application.imageUrl} alt="" />}
-                  <div className="my-booth-cover-overlay" />
-                  <span className={`my-booth-phase is-${item.phase}`}>{phaseMeta[item.phase].label}</span>
-                  <span className="my-booth-code">{item.assignment.boothCode}</span>
-                </div>
-
                 <div className="my-booth-content">
                   <div className="my-booth-title-row">
                     <div>
-                      <span className="my-booth-kicker">Gian hàng đã được cấp</span>
+                      <span className="my-booth-kicker">Mã gian hàng</span>
                       <h2>Gian {item.assignment.boothCode}</h2>
                     </div>
-                    <span className="my-booth-active-status"><CheckCircle2 size={14} /> Đã cấp</span>
+                    <div className="my-booth-statuses">
+                      <span className={`my-booth-active-status is-${item.assignment.status.toLocaleLowerCase('vi')}`}>
+                        {item.assignment.status === 'ACTIVE' ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}
+                        {item.assignment.status === 'ACTIVE' ? 'Đã cấp' : 'Đã giải phóng'}
+                      </span>
+                      <span className={`my-booth-phase is-${item.phase}`}>{phaseMeta[item.phase].label}</span>
+                    </div>
                   </div>
 
                   <div className="my-booth-event">
+                    <span className="my-booth-event-label">Sự kiện</span>
                     <strong>{eventTitle}</strong>
                     <span><CalendarDays size={14} />{eventDate(application)}</span>
                   </div>
 
                   <dl className="my-booth-details">
                     <div><dt>Giá thuê đã khóa</dt><dd>{money(item.assignment.lockedRentalPrice)}</dd></div>
-                    <div><dt>Thời điểm cấp</dt><dd>{dateTime(item.assignment.assignedAt)}</dd></div>
+                    <div><dt>Ngày được cấp gian hàng</dt><dd>{dateTime(item.assignment.assignedAt)}</dd></div>
                   </dl>
 
                   <div className="my-booth-actions">
                     <button type="button" className="my-booth-qr-button" onClick={() => setSelectedItem(item)}>
                       <QrCode size={16} /> Xem QR
                     </button>
-                    <Link to={`/partner/booth-requests/${item.request.boothRequestId}/payment`}>
+                    <Link
+                      className={item.phase === 'past' || item.phase === 'unknown' ? 'is-primary' : ''}
+                      to={`/partner/booths/${item.request.boothRequestId}`}
+                    >
                       Chi tiết <ExternalLink size={14} />
                     </Link>
-                    <Link to={mapLink}><MapPin size={14} /> Bản đồ</Link>
-                  </div>
-                  {item.phase !== 'past' && (
-                    <Link to={`/partner/activities?eventId=${item.assignment.eventId}`} className="my-booth-activity-link">
-                      Quản lý hoạt động tại sự kiện <ArrowRight size={15} />
+                    <Link className={item.phase === 'upcoming' ? 'is-primary' : ''} to={mapLink}>
+                      <MapPin size={14} /> Bản đồ
                     </Link>
-                  )}
+                    {item.phase !== 'past' && (
+                      <Link
+                        to={`/partner/activities?eventId=${item.assignment.eventId}`}
+                        className={`my-booth-activity-link ${item.phase === 'ongoing' ? 'is-primary' : ''}`}
+                      >
+                        Quản lý hoạt động <ArrowRight size={15} />
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </article>
             );
@@ -335,7 +369,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
               <CheckCircle2 size={17} />
               <span>Mã QR gắn với đúng Assignment #{selectedItem.assignment.boothAssignmentId}. Không chia sẻ ngoài phạm vi vận hành gian hàng.</span>
             </div>
-            <Link to={`/partner/booth-requests/${selectedItem.request.boothRequestId}/payment`} className="my-booths-modal-detail">
+            <Link to={`/partner/booths/${selectedItem.request.boothRequestId}`} className="my-booths-modal-detail">
               Xem đầy đủ thông tin cấp gian <ArrowRight size={16} />
             </Link>
           </section>
