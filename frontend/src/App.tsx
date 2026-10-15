@@ -34,7 +34,8 @@ import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
 import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
 import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
-import { EventApplicationPage } from './pages/partner/EventApplicationPage';
+import { PartnerEventApplicationsPage } from './pages/partner/PartnerEventApplicationsPage';
+import { PartnerEventDiscoveryPage } from './pages/partner/PartnerEventDiscoveryPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
 import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
@@ -672,13 +673,12 @@ export function App() {
             />
           } />
           <Route path="/partner/events" element={
-            <EventApplicationPage
+            <PartnerEventApplicationsPage
               language={language}
-              organization={partnerOrg}
             />
           } />
           <Route path="/partner/events/apply" element={
-            <EventApplicationPage
+            <PartnerEventDiscoveryPage
               language={language}
               organization={partnerOrg}
             />

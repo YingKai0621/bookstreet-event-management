@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardList,
+  Compass,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -82,9 +83,18 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     {
       id: 'events',
       path: '/partner/events',
-      labelVi: 'Sự kiện & đăng ký',
-      labelEn: 'Events & Applications',
+      exact: true,
+      labelVi: 'Hồ sơ sự kiện của tôi',
+      labelEn: 'My Event Applications',
       icon: <CalendarDays size={18} />,
+    },
+    {
+      id: 'event-discovery',
+      path: '/partner/events/apply',
+      exact: true,
+      labelVi: 'Khám phá & đăng ký',
+      labelEn: 'Discover & Apply',
+      icon: <Compass size={18} />,
     },
     {
       id: 'booths',

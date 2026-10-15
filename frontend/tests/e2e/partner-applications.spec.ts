@@ -99,14 +99,15 @@ async function savePartnerOrganization(page: Page, organizationName: string): Pr
 }
 
 async function submitApplication(page: Page, eventName: string, note: string): Promise<void> {
-  await page.getByRole('link', { name: /Đăng ký sự kiện mới/ }).click();
+  await page.getByRole('button', { name: 'Khám phá & đăng ký' }).click();
   const eventCard = page.locator('article').filter({ hasText: eventName }).first();
   await expect(eventCard).toBeVisible();
   await eventCard.getByRole('button', { name: /Xem & đăng ký/ }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Ghi chú đăng ký (không bắt buộc)').fill(note);
   await dialog.getByRole('button', { name: 'Gửi hồ sơ đăng ký' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã gửi hồ sơ');
+  await expect(page.getByRole('status')).toContainText('Gửi hồ sơ đăng ký thành công');
+  await page.getByRole('link', { name: /Xem hồ sơ của tôi/ }).click();
   await expect(page.locator('article').filter({ hasText: eventName }).getByText('Chờ duyệt')).toBeVisible();
 }
 
@@ -141,8 +142,8 @@ test('Partner submits, withdraws, and receives Organizer approval', async ({ bro
 
     await loginPartner(partnerPage, partnerCredentials);
     await savePartnerOrganization(partnerPage, organizationName);
-    await partnerPage.getByRole('button', { name: 'Sự kiện & đăng ký' }).click();
-    await expect(partnerPage.getByRole('heading', { name: 'Sự kiện & đăng ký' })).toBeVisible();
+    await partnerPage.getByRole('button', { name: 'Hồ sơ sự kiện của tôi' }).click();
+    await expect(partnerPage.getByRole('heading', { name: 'Hồ sơ sự kiện của tôi' })).toBeVisible();
 
     await submitApplication(partnerPage, approvalEventName, 'Hồ sơ dùng để kiểm thử thao tác duyệt.');
     await submitApplication(partnerPage, withdrawalEventName, 'Hồ sơ dùng để kiểm thử thao tác rút.');

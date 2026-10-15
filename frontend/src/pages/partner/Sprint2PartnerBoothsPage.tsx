@@ -289,7 +289,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
         <div className="s2-empty s2-panel">
           <Store size={34} />
           <strong>Chưa có sự kiện đủ điều kiện</strong>
-          <span>Hãy theo dõi trạng thái tại mục Sự kiện & đăng ký.</span>
+          <span>Hãy theo dõi trạng thái tại mục Hồ sơ sự kiện của tôi.</span>
         </div>
       </section>
     );

@@ -40,7 +40,7 @@ export const ActivityProposalPage: React.FC<ActivityProposalPageProps> = ({
   const [formError, setFormError] = useState('');
   useModalDismiss(isModalOpen, () => setIsModalOpen(false));
 
-  // Comprehensive Form State matching EventApplicationPage
+  // Comprehensive activity proposal form state
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<'Workshop' | 'Talkshow' | 'Minigame' | 'Signings' | 'Exhibition'>('Workshop');
   const [targetDate, setTargetDate] = useState(vietnamDateKey);
