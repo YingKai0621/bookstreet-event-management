@@ -135,7 +135,10 @@ async function mockOrganizer(page: Page): Promise<{
   };
 }
 
-async function mockPartner(page: Page, options: { quotaExceeded?: boolean } = {}): Promise<void> {
+async function mockPartner(page: Page, options: {
+  quotaExceeded?: boolean;
+  selectedWithdrawalError?: 'PAYMENT_ATTEMPT_ALREADY_PENDING' | 'PAYMENT_RESULT_UNKNOWN';
+} = {}): Promise<void> {
   let delayInitialEvent = true;
   let requests: Record<string, unknown>[] = [{
     boothRequestId: 80,
@@ -211,6 +214,25 @@ async function mockPartner(page: Page, options: { quotaExceeded?: boolean } = {}
       const request = { boothRequestId: 88, eventId: 101, boothId: 12, boothCode: 'B02', partnerOrganizationId: 9, partnerOrganizationName: 'NXB Demo', status: 'PENDING', requestNote: body.requestNote, reviewNote: null, submittedAt: '2026-10-08T01:00:00Z', reviewedAt: null, selectedAt: null, completedAt: null, paymentExpiredAt: null, withdrawnAt: null, hold: null };
       requests = [request, ...requests];
       return json(route, request, 201);
+    }
+    if (path.endsWith('/partner/booth-requests/80/withdraw') && method === 'POST') {
+      expect(route.request().headers()['x-csrf-token']).toBe('test-token');
+      if (options.selectedWithdrawalError) {
+        return json(route, {
+          code: options.selectedWithdrawalError,
+          message: 'Raw backend payment blocker message.',
+        }, 409);
+      }
+      const request = requests.find(item => item.boothRequestId === 80)!;
+      const releasedAt = '2026-10-08T02:00:00Z';
+      const withdrawn = {
+        ...request,
+        status: 'WITHDRAWN',
+        withdrawnAt: releasedAt,
+        hold: { ...(request.hold as Record<string, unknown>), status: 'RELEASED', releasedAt },
+      };
+      requests = requests.map(item => item.boothRequestId === 80 ? withdrawn : item);
+      return json(route, withdrawn);
     }
     if (path.endsWith('/partner/booth-requests/88/withdraw') && method === 'POST') {
       expect(route.request().headers()['x-csrf-token']).toBe('test-token');
@@ -373,12 +395,13 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByRole('status')).toContainText('Đã gửi yêu cầu');
   await expect(page.getByText('Chờ duyệt')).toBeVisible();
   await expect(page.getByText('Gian B02')).toBeVisible();
-  await page.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
+  const pendingRequest = page.locator('.s2-request-card').filter({ hasText: 'Gian B02' });
+  await pendingRequest.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
   const withdrawDialog = page.getByRole('dialog', { name: 'Xác nhận rút yêu cầu gian hàng' });
   await expect(withdrawDialog).toContainText('không thể hoàn tác');
   await withdrawDialog.getByRole('button', { name: 'Giữ yêu cầu' }).click();
   await expect(withdrawDialog).toHaveCount(0);
-  await page.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
+  await pendingRequest.getByRole('button', { name: 'Rút yêu cầu', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận rút yêu cầu' }).click();
   await expect(page.getByRole('status')).toContainText('Đã rút yêu cầu gian hàng');
 
@@ -388,6 +411,42 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await page.goto('/partner/booths/select');
   await expect(page).toHaveURL(/\/partner\/booth-requests$/);
   await expect(page.getByRole('heading', { name: 'Chọn & thuê gian hàng' })).toBeVisible();
+});
+
+test('Selected Partner request can be withdrawn and releases its active Hold', async ({ page }) => {
+  await mockPartner(page);
+  await page.goto('/partner/booth-requests');
+  await page.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
+
+  const selectedRequest = page.locator('.s2-request-card').filter({ hasText: 'Gian A05' });
+  await expect(selectedRequest.getByText('Đã được chọn', { exact: true })).toBeVisible();
+  await selectedRequest.getByRole('button', { name: 'Rút & giải phóng' }).click();
+
+  const releaseDialog = page.getByRole('dialog', { name: 'Xác nhận giải phóng gian hàng' });
+  await expect(releaseDialog).toContainText('giải phóng giữ chỗ ngay');
+  await releaseDialog.getByRole('button', { name: 'Rút và giải phóng' }).click();
+
+  await expect(page.getByRole('status')).toContainText('Đã rút yêu cầu và giải phóng giữ chỗ');
+  await expect(selectedRequest.getByText('Đã rút', { exact: true })).toBeVisible();
+  await expect(selectedRequest.getByText('Đã giải phóng', { exact: true })).toBeVisible();
+  await expect(selectedRequest.getByRole('button', { name: 'Rút & giải phóng' })).toHaveCount(0);
+});
+
+test('Selected withdrawal payment blocker is explained in a dedicated modal', async ({ page }) => {
+  await mockPartner(page, { selectedWithdrawalError: 'PAYMENT_ATTEMPT_ALREADY_PENDING' });
+  await page.goto('/partner/booth-requests');
+  await page.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
+
+  const selectedRequest = page.locator('.s2-request-card').filter({ hasText: 'Gian A05' });
+  await selectedRequest.getByRole('button', { name: 'Rút & giải phóng' }).click();
+  await page.getByRole('dialog', { name: 'Xác nhận giải phóng gian hàng' })
+    .getByRole('button', { name: 'Rút và giải phóng' }).click();
+
+  const blockerDialog = page.getByRole('dialog', { name: 'Phiên thanh toán vẫn đang mở' });
+  await expect(blockerDialog).toContainText('phiên thanh toán còn hiệu lực');
+  await expect(blockerDialog.getByRole('link', { name: 'Xem chi tiết thanh toán' }))
+    .toHaveAttribute('href', '/partner/booth-requests/80/payment');
+  await expect(page.getByText('Raw backend payment blocker message.')).toHaveCount(0);
 });
 
 test('Partner sees a dedicated modal after reaching the Event Booth quota', async ({ page }) => {
