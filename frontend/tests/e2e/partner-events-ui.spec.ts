@@ -8,9 +8,15 @@ const event = { eventId: 101, name: 'Tuần lễ sách của gian hàng', descri
 const otherEvent = { ...event, eventId: 102, name: 'Sự kiện chưa tham gia', startAt: '2026-10-25T02:00:00Z', endAt: '2026-10-25T05:00:00Z' };
 const application = { applicationId: 31, eventId: 101, partnerOrganizationId: 9, status: 'APPROVED',
   applicationNote: 'Sách thiếu nhi và văn học', reviewNote: 'Hồ sơ hợp lệ', submittedAt: stamp, reviewedAt: stamp, withdrawnAt: null };
+const activeBoothHold = { boothHoldId: 7, status: 'ACTIVE', lockedRentalPrice: 2_000_000,
+  createdAt: '2026-10-14T03:00:00Z', expiresAt: '2026-10-15T03:00:00Z', releasedAt: null };
+const selectedBoothRequest = { boothRequestId: 51, eventId: 101, boothId: 11, boothCode: 'A01', partnerOrganizationId: 9,
+  partnerOrganizationName: 'NXB Demo', status: 'SELECTED', requestNote: null, reviewNote: null, submittedAt: stamp,
+  reviewedAt: stamp, selectedAt: '2026-10-14T03:00:00Z', completedAt: null, paymentExpiredAt: null, withdrawnAt: null,
+  hold: activeBoothHold };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
   await page.route('**/api/v1/**', async route => {
@@ -21,6 +27,7 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
     if (path.endsWith('/partner/organization')) return scenario.missingProfile ? json(route, { code: 'PARTNER_ORGANIZATION_NOT_FOUND', message: 'Chưa có hồ sơ' }, 404)
       : json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: '', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
     if (path.endsWith('/partner/applications')) {
+      if (scenario.applicationsFailure) return json(route, { code: 'UNAVAILABLE', message: 'Không thể tải dữ liệu đối tác' }, 503);
       const applications = scenario.empty && state.submissions.length === 0 ? []
         : Array.from({ length: scenario.applicationCount || 1 }, (_, index) => ({
           ...application,
@@ -31,7 +38,9 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
         }));
       return json(route, paged(applications));
     }
-    if (path.endsWith('/partner/booth-requests')) return json(route, paged([]));
+    if (path.endsWith('/partner/booth-requests')) return scenario.boothFailure
+      ? json(route, { code: 'UNAVAILABLE', message: 'Không thể tải dữ liệu gian hàng' }, 503)
+      : json(route, paged(scenario.boothRequests || []));
     if (path.endsWith('/events/101/applications') && method === 'POST') {
       expect(route.request().headers()['x-csrf-token']).toBe('test-csrf');
       state.submissions.push(route.request().postDataJSON()); state.status = 'PENDING';
@@ -50,27 +59,35 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
   return state;
 }
 
-test('dashboard hides completed tasks and shows actual multi-day schedule', async ({ page }) => {
+test('partner workspace shows real overview, upcoming event, actionable task, and recent record', async ({ page }) => {
   await setup(page);
   await page.goto('/partner');
-  await expect(page.getByRole('heading', { name: 'Việc cần làm' })).toHaveCount(0);
-  const calendar = page.getByRole('region', { name: 'Lịch sự kiện' });
-  await expect(calendar.getByRole('button', { name: /09:00 Tuần lễ sách/ })).toHaveCount(3);
-  await page.screenshot({ path: test.info().outputPath('partner-calendar.png'), fullPage: true });
-  await calendar.getByRole('button', { name: 'Xem lịch ngày 2026-10-19', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Tuần lễ sách của gian hàng');
-  await page.getByRole('button', { name: 'Đóng', exact: true }).click();
-  await calendar.getByRole('button', { name: 'Tháng sau' }).click();
-  await expect(calendar).toContainText('tháng 11');
-  await calendar.getByRole('button', { name: 'Hôm nay', exact: true }).click();
-  await expect(calendar).toContainText('tháng 10');
+  await expect(page.getByRole('heading', { name: 'Xin chào, NXB Demo!' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Đăng ký sự kiện mới/ })).toHaveAttribute('href', '/partner/events/apply');
+  await expect(page.getByRole('link', { name: /Tìm gian hàng trên bản đồ/ })).toHaveAttribute('href', '/partner/booth-requests');
+  await expect(page.getByRole('heading', { name: 'Tổng quan nhanh' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Hồ sơ sự kiện/ })).toContainText('1');
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chọn gian hàng cho sự kiện đã duyệt' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hoạt động gần đây' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Hồ sơ sự kiện được duyệt' })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('partner-workspace.png'), fullPage: true });
 });
 
 test('dashboard shows profile action only when profile is missing', async ({ page }) => {
   await setup(page, { missingProfile: true, empty: true });
   await page.goto('/partner');
-  await expect(page.getByRole('heading', { name: 'Việc cần làm' })).toBeVisible();
-  await expect(page.getByText('Hoàn thiện hồ sơ gian hàng', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Công việc cần xử lý' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hoàn thiện hồ sơ tổ chức' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Hoàn thiện hồ sơ/ })).toHaveAttribute('href', '/partner/profile');
+});
+
+test('dashboard does not turn an application waiting for management into a partner task', async ({ page }) => {
+  await setup(page, { status: 'PENDING' });
+  await page.goto('/partner');
+  await expect(page.getByRole('heading', { name: 'Chọn gian hàng cho sự kiện đã duyệt' })).toHaveCount(0);
+  await expect(page.getByText('Hiện tại bạn không có công việc cần xử lý.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toHaveCount(0);
 });
 
 test('my events contains owned applications only, with correctly formatted historical detail', async ({ page }) => {
@@ -239,6 +256,11 @@ test('separated event pages avoid horizontal overflow at target breakpoints', as
 
   for (const width of [1440, 1280, 768, 375]) {
     await page.setViewportSize({ width, height: 900 });
+    await page.goto('/partner');
+    await expect(page.getByRole('heading', { name: 'Xin chào, NXB Demo!' })).toBeVisible();
+    expect(await page.locator('.partner-main-viewport').evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
+    if (width === 375) await page.screenshot({ path: test.info().outputPath('partner-workspace-mobile.png'), fullPage: true });
+
     await page.goto('/partner/events');
     await expect(page.getByRole('heading', { name: 'Hồ sơ sự kiện của tôi' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
@@ -249,19 +271,18 @@ test('separated event pages avoid horizontal overflow at target breakpoints', as
   }
 });
 
-test('calendar reports loading failure without claiming an empty schedule', async ({ page }) => {
-  await setup(page, { failure: true });
+test('dashboard reports independent partner and booth loading failures truthfully', async ({ page }) => {
+  await setup(page, { applicationsFailure: true, boothFailure: true });
   await page.goto('/partner');
-  const calendar = page.getByRole('region', { name: 'Lịch sự kiện' });
-  await expect(calendar.getByRole('alert')).toContainText('Không thể tải sự kiện');
-  await expect(calendar.getByText('Chưa có sự kiện phù hợp trong tháng này.', { exact: false })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toContainText('Không thể tải dữ liệu đối tác');
+  await expect(page.getByText('Không thể tải dữ liệu gian hàng', { exact: true })).toBeVisible();
 });
 
-test('dashboard add button opens proposal preview with the selected calendar date', async ({ page }) => {
-  const state = await setup(page);
+test('dashboard shows an expiring booth hold as a genuine payment task', async ({ page }) => {
+  await setup(page, { boothRequests: [selectedBoothRequest] });
   await page.goto('/partner');
-  await page.getByRole('button', { name: 'Thêm đề xuất ngày 2026-10-23', exact: true }).click();
-  await page.getByRole('link', { name: 'Thêm đề xuất vào ngày này', exact: true }).click();
-  await expect(page.getByRole('dialog').getByLabel('Ngày đề xuất', { exact: true })).toHaveValue('2026-10-23');
-  expect(state.unsupported).toEqual([]);
+  await expect(page.getByRole('link', { name: /Giữ chỗ còn hiệu lực/ })).toContainText('1');
+  await expect(page.getByRole('heading', { name: 'Hoàn tất thanh toán gian A01' })).toBeVisible();
+  await expect(page.getByText(/Giữ chỗ đến/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Thanh toán ngay/ })).toHaveAttribute('href', '/partner/booth-requests/51/payment');
 });

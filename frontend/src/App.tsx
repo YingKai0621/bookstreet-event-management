@@ -110,6 +110,9 @@ export function App() {
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
   const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
+  const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
+  const [partnerOverviewError, setPartnerOverviewError] = useState('');
+  const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
   const [attendanceScans, setAttendanceScans] = useState<AttendanceScanRecord[]>([]);
   const [activeAttendanceActivityId, setActiveAttendanceActivityId] = useState<string | null>(null);
 
@@ -287,30 +290,45 @@ export function App() {
 
   useEffect(() => {
     if (!isPartnerAuthenticated) return;
-    Promise.all([
+    // This effect synchronizes authenticated Partner data from external APIs.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setPartnerOverviewError('');
+    setPartnerBoothRequestsError('');
+    setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
+    _setPartnerReports(null); setPartnerEventLocations([]);
+    void Promise.allSettled([
       partnerApi.getProfile(),
       partnerApi.getApplications(),
-    ])
-      .then(([organization, applications]) => {
-        setPartnerOrg(organization ? {
-          ...organization,
-          representativeName: authenticatedUser?.fullName || '',
-        } : null);
-        setPartnerApplications(applications);
-        setPartnerApp(applications.find(application => application.status === 'approved') || applications[0] || null);
-        setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
-        _setPartnerReports(null); setPartnerEventLocations([]);
-        void boothApi.listAllPartnerRequests()
-          .then(setPartnerBoothRequests)
-          .catch(error => { console.warn('Could not fetch partner booth requests', error); setPartnerBoothRequests(null); });
-      })
-      .catch(error => {
-        console.warn('Could not fetch partner data', error);
+      boothApi.listAllPartnerRequests(),
+    ]).then(([profileResult, applicationsResult, boothResult]) => {
+      const partnerErrors: string[] = [];
+      if (profileResult.status === 'fulfilled') {
+        setPartnerOrg(profileResult.value ? { ...profileResult.value, representativeName: authenticatedUser?.fullName || '' } : null);
+      } else {
+        console.warn('Could not fetch partner profile', profileResult.reason);
         setPartnerOrg(null);
+        partnerErrors.push(profileResult.reason instanceof Error ? profileResult.reason.message : 'Không thể tải hồ sơ tổ chức.');
+      }
+
+      if (applicationsResult.status === 'fulfilled') {
+        setPartnerApplications(applicationsResult.value);
+        setPartnerApp(applicationsResult.value.find(application => application.status === 'approved') || null);
+      } else {
+        console.warn('Could not fetch partner applications', applicationsResult.reason);
         setPartnerApplications([]);
         setPartnerApp(null);
+        partnerErrors.push(applicationsResult.reason instanceof Error ? applicationsResult.reason.message : 'Không thể tải hồ sơ sự kiện.');
+      }
+      setPartnerOverviewError(partnerErrors.join(' '));
+
+      if (boothResult.status === 'fulfilled') {
+        setPartnerBoothRequests(boothResult.value);
+      } else {
+        console.warn('Could not fetch partner booth requests', boothResult.reason);
         setPartnerBoothRequests(null);
-      });
+        setPartnerBoothRequestsError(boothResult.reason instanceof Error ? boothResult.reason.message : 'Không thể tải dữ liệu gian hàng.');
+      }
+    }).finally(() => setPartnerOverviewLoading(false));
   }, [authenticatedUser?.fullName, isPartnerAuthenticated, dataRevision]);
 
   // Participant Action Handlers
@@ -665,11 +683,12 @@ export function App() {
             <PartnerDashboard
               language={language}
               organization={visiblePartnerOrg}
-              activeEvent={partnerApp}
               applications={partnerApplications}
               boothRequests={partnerBoothRequests}
               todos={partnerTodos}
-              onOpenAttendanceModal={() => setActiveAttendanceActivityId(partnerActivities[0]?.id || '')}
+              isLoading={partnerOverviewLoading}
+              dataError={partnerOverviewError}
+              boothRequestsError={partnerBoothRequestsError}
             />
           } />
           <Route path="/partner/events" element={
