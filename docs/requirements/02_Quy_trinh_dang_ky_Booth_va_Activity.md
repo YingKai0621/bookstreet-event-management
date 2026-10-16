@@ -24,7 +24,7 @@ MVP Baseline — cập nhật 09/10/2026
 | BoothChangeRequest    | Yêu cầu đổi từ Booth đang được cấp sang Booth khác.       | Request chưa tạo Hold; Booth cũ vẫn ACTIVE đến khi payment/settlement Booth mới thành công.                                                                                                                                          |
 | ActivityProposal      | Đề xuất Activity do Partner gửi.                          | Chưa phải Activity chính thức cho đến khi Organizer Approve.                                                                                                                                                                         |
 | Activity              | Hoạt động chính thức trong Event.                         | Có exact time, exact Location và capacity; Publish là bước riêng sau Approve.                                                                                                                                                        |
-| ActivityChangeRequest | Yêu cầu Partner đổi Activity đã Approved/Published.       | Dùng khi đổi time/location hoặc thay đổi đáng kể cần Organizer xác nhận.                                                                                                                                                             |
+| ActivityChangeRequest | Yêu cầu Partner đổi Activity chính thức DRAFT/PUBLISHED.   | Dùng khi đổi nội dung/time/location/capacity/image và cần Organizer xác nhận.                                                                                                                                                         |
 | BoothPayment          | Giao dịch thanh toán Booth qua Payment Gateway.           | Active MVP lưu mỗi initial PAYMENT attempt thành record riêng; FAILED hoặc attempt TIMEOUT chỉ retry khi backend time còn trước Hold `expiresAt`. Evidence chưa rõ tiếp tục giữ Hold nhưng chặn retry; backend-verified SUCCESS chỉ tạo Assignment theo lifecycle guard BR-83. REFUND/swap là Post-MVP. |
 | EventBoothConfig      | Cấu hình một Booth được cung cấp trong một Event.         | Một record duy nhất cho mỗi Event–Booth; lưu rentalPrice/isEnabled. isEnabled chỉ mở Booth trong Event, không phải availability runtime; không được disable khi có Active Hold/Assignment overlap.                                   |
 
@@ -158,79 +158,109 @@ BoothAssignment ACTIVE → BoothCancellationRequest → Organizer Confirm → As
 
 ## 7.1 Partner tạo ActivityProposal
 
-- Partner mở Event mà PartnerEventApplication đã APPROVED.
-
-- Nhập title, description/type, exact start time, exact end time, exact Location và capacity.
-
-- Location có thể là Booth đã được assign cho Partner hoặc Location hợp lệ khác như Main Stage/Workshop Area.
-
-- Gửi ActivityProposal và theo dõi trạng thái PENDING / NEED_CHANGES / APPROVED / REJECTED / WITHDRAWN.
+- Partner mở Event `PUBLISHED` mà PartnerEventApplication đã `APPROVED`.
+- Hệ thống không lưu Draft Proposal. Lệnh tạo hợp lệ ghi ngay Proposal `PENDING`, `submittedAt`
+  và `updatedAt`; lần submit đầu chấp nhận đến đúng `activityProposalDeadlineAt`.
+- Partner nhập title, description/type, exact start/end, exact Location và capacity. Thời gian phải
+  ở tương lai, nằm trọn trong Event và dùng UTC Instant.
+- Location dùng chung có thể là `STAGE`, `WORKSHOP` hoặc `AREA`. Partner không cần có Booth để đề
+  xuất Activity. Nếu chọn `BOOTH`, Booth phải có Assignment `ACTIVE` của đúng Partner trong cùng
+  Event ở cả lúc submit và approve.
+- Proposal theo dõi một trong các trạng thái `PENDING`, `NEED_CHANGES`, `APPROVED`, `REJECTED`,
+  `WITHDRAWN`, `CANCELLED`.
 
 ## 7.2 Validation trước khi duyệt
 
-- ActivityProposal PENDING không hard-lock Location/time slot.
-
-- Hệ thống kiểm tra capacity không vượt capacity của Location.
-
-- Hard conflict: cùng physical Location và thời gian overlap thì bị chặn, kể cả Activity thuộc Event khác.
-
-- Ngay trước khi Approve, hệ thống phải check conflict/capacity lại để tránh dữ liệu thay đổi trong thời gian chờ duyệt.
+- Title sau normalize dài 1–200; activityType 1–50; description tối đa 5.000. Proposal Sprint 5
+  chưa mang image/registration configuration; các field đó được Organizer cấu hình trên Activity
+  Draft hoặc Partner đề xuất image về sau qua Change Request.
+- Capacity là số dương và không vượt `Location.maxCapacity`.
+- Proposal `PENDING` không khóa Location/time slot và không tính quota Activity chính thức.
+- Hard conflict chỉ áp dụng khi tạo/cập nhật Activity chính thức: cùng physical Location và khoảng
+  `[startAt, endAt)` overlap bị chặn, kể cả Activity thuộc Event khác. Hai khoảng chạm biên được phép.
+- `maxActivitiesPerPartner=0` nghĩa là Partner không được có Activity. Quota đếm Activity chính
+  thức của Partner có status khác `CANCELLED`.
+- Ngay trước approve, hệ thống khóa Event trước, recheck Event/Application/Booth ownership,
+  Location/capacity/quota/conflict và dùng database exclusion constraint làm chốt cuối.
 
 ## 7.3 Organizer Review / Approve / Publish
 
-- Organizer có thể Approve, Reject hoặc Request Change/More Information.
-
-- Approve Proposal tạo/cho phép hình thành Activity chính thức; Approve chưa đồng nghĩa public.
-
-- Publish là bước riêng. Chỉ Activity PUBLISHED mới hiển thị như chương trình chính thức cho Guest/Participant.
+- Chỉ Proposal `PENDING` được review. Organizer có thể Approve, Reject hoặc Request Changes.
+- Organizer không được âm thầm đổi nội dung Proposal trong lệnh approve. Nếu cần sửa, Proposal
+  chuyển `NEED_CHANGES` cùng review note.
+- Partner được sửa `PENDING` đến deadline. Proposal `NEED_CHANGES` được revise/resubmit sau deadline
+  chung nếu Event còn `PUBLISHED`/`ONGOING` và backend time vẫn trước proposed start; resubmit về
+  `PENDING`.
+- Approve atomically chuyển Proposal sang `APPROVED` và tạo đúng một Activity `DRAFT`. Approve lặp
+  lại trả Activity cũ, không tạo bản sao.
+- Publish là bước riêng. Activity chỉ public sau khi `PUBLISHED`; publish lặp lại không tạo lại QR,
+  timestamp hoặc email.
 
 ActivityProposal → Validation → Organizer Review → APPROVED → Activity → PUBLISHED
 
 # 8. Activity do Ban tổ chức tạo
 
-Organizer có thể tạo trực tiếp Activity của BTC mà không cần ActivityProposal. Tuy vậy Activity vẫn phải tuân thủ Location/time conflict, capacity và lifecycle trước khi Publish.
+Organizer có thể tạo trực tiếp Activity của BTC mà không cần ActivityProposal, nhưng trong Sprint 5
+chỉ được dùng Location chung `STAGE`, `WORKSHOP` hoặc `AREA`. Organizer không được dùng flow này để
+chiếm Booth đã cấp cho Partner; Activity tại `BOOTH` chỉ hình thành từ Proposal hợp lệ của Partner
+đang sở hữu Assignment. Activity BTC vẫn phải qua validation, conflict và lifecycle trước publish.
 
-# 9. Quy trình đổi Activity đã Approved/Published
+# 9. Quy trình đổi Activity chính thức DRAFT/PUBLISHED
 
-Nếu Partner muốn đổi time/location của Activity đã Approved/Published, phải gửi ActivityChangeRequest. Không sửa trực tiếp Activity chính thức trước khi Organizer duyệt.
+Partner không sửa trực tiếp Activity chính thức. Activity của Partner được nhận diện bằng source
+Proposal và chỉ nhận Change Request khi còn `DRAFT` hoặc `PUBLISHED`.
 
-- Activity hiện tại vẫn giữ thông tin đang hiệu lực trong lúc Change Request chờ xử lý.
+- Activity hiện tại giữ dữ liệu có hiệu lực trong khi request `PENDING`.
+- Request có thể đề xuất title, description, activityType, Location, start/end, capacity hoặc image
+  URL; phải có ít nhất một thay đổi thực. `requestedStartAt` và `requestedEndAt` phải xuất hiện cùng
+  nhau.
+- Dữ liệu mới được merge với Activity hiện tại rồi validate đầy đủ ở submit và approve.
+- Nếu đổi sang Booth, phải recheck Assignment `ACTIVE` đúng Partner/cùng Event.
+- Mỗi Activity chỉ có tối đa một request `PENDING` tổng cộng giữa Change và Cancellation.
+- Approve atomically cập nhật Activity. Activity đang `PUBLISHED` vẫn `PUBLISHED`; reschedule được
+  ghi audit, không tạo status `RESCHEDULED`.
+- Sprint 5 gửi email sau commit cho representative Partner bị ảnh hưởng. Notification cho
+  Participant đã đăng ký được nối ở Sprint Participant sau này.
 
-- Change Request có thể đề xuất time mới, Location mới hoặc thay đổi lớn khác.
-
-- Nếu chỉ đổi nội dung nhỏ không ảnh hưởng lịch/địa điểm, cách xử lý cụ thể có thể do Organizer quyết định; ERD vẫn cho phép Change Request không có Location mới.
-
-- Khi Approve, hệ thống re-check conflict và capacity với dữ liệu mới nhất.
-
-- Nếu đổi time/location của Activity đã có Participant đăng ký, hệ thống phải notify các Participant bị ảnh hưởng và cho phép họ cancel dù đã qua deadline hủy thông thường.
-
-- Nếu đổi sang Booth, Booth đó phải là Location hợp lệ và phải thỏa quyền sử dụng/Assignment của Partner nếu Activity thuộc Partner.
-
-Activity hiện tại → ActivityChangeRequest → Organizer Review → validation lại → Apply change/reschedule → Notify registrations
+Activity hiện tại → ActivityChangeRequest → Organizer Review → validation lại → Apply audited
+change → email Partner sau commit; notify registrations khi module Participant được triển khai
 
 # 10. Quy trình hủy Activity
 
-## 10.1 Khi ActivityProposal còn PENDING
+## 10.1 Khi ActivityProposal còn mở
 
-- Partner có thể Withdraw Proposal trực tiếp; không cần Organizer xác nhận vì chưa có Activity chính thức/public.
+- Partner có thể withdraw Proposal `PENDING` hoặc `NEED_CHANGES`; lệnh lặp lại trả trạng thái cũ.
+- Event cancellation chuyển Proposal còn mở sang `CANCELLED`.
 
-## 10.2 Khi Activity đã Approved/Published
+## 10.2 Khi Activity đã chính thức
 
-- Partner gửi ActivityCancellationRequest và lý do.
+- Partner gửi ActivityCancellationRequest với reason sau normalize dài 10–500 ký tự; Activity phải
+  thuộc Partner qua source Proposal và chưa terminal.
+- Gửi tại `now <= activityCancellationCutoffAt` có `isLate=false`; sau biên vẫn nhận nhưng đánh dấu
+  `isLate=true`.
+- Submit không hủy Activity. Organizer approve mới atomically chuyển Activity sang `CANCELLED`,
+  lưu `cancelledAt`, reason và source `PARTNER_REQUEST`.
+- Organizer hủy trực tiếp dùng source `ORGANIZER`; Event cancellation dùng `EVENT_CANCELLATION`;
+  lifecycle cleanup dùng `SYSTEM`.
+- Request `PENDING` bị đóng `CANCELLED` khi Event/Activity terminal hóa. Không hard-delete lịch sử.
+- Cancel lặp lại trả state/metadata đầu tiên, không gửi email lặp. Lệnh xung đột khác trên terminal
+  state trả `409`.
 
-- Organizer phải xác nhận trước khi việc hủy có hiệu lực.
-
-- Request sau cancellation cutoff vẫn được tiếp nhận nhưng đánh dấu Late/LATE_CANCELLATION để Organizer xử lý hậu quả.
-
-- Khi Cancel: Activity chuyển CANCELLED; giữ lịch sử Activity Registration và thông báo Participant bị ảnh hưởng.
-
-- Không hard-delete Activity đã phát sinh nghiệp vụ.
-
-Activity APPROVED/PUBLISHED → ActivityCancellationRequest → Organizer Confirm → Activity CANCELLED → Notify Participant
+Activity chính thức → ActivityCancellationRequest → Organizer Approve → Activity CANCELLED →
+email Partner sau commit; notify Participant khi module Participant được triển khai
 
 # 11. Activity Registration sau khi Publish
 
-Sau khi Activity được Publish, Participant có thể đăng ký nếu Activity yêu cầu registration và còn capacity.
+Sprint 5 chỉ chuẩn bị contract và dữ liệu cho Sprint Participant. Activity có
+`registrationRequired`:
+
+- Nếu `false`, `registrationDeadlineAt` phải null, `isCertificateEnabled=false` và không phát sinh
+  ActivityRegistration/Attendance/Certificate.
+- Nếu `true`, trước publish phải có `registrationDeadlineAt <= startAt`; QR attendance được tạo
+  đúng một lần khi publish. `isCertificateEnabled=true` chỉ hợp lệ trong trường hợp này.
+
+Khi module Participant được triển khai, Participant có thể đăng ký Activity `PUBLISHED` yêu cầu
+registration nếu còn capacity và deadline chưa qua.
 
 - Nếu User đăng ký Activity mà chưa có EventRegistration, hệ thống tự tạo EventRegistration trước rồi tạo ActivityRegistration.
 
@@ -280,10 +310,10 @@ Withdraw from Event là nghiệp vụ lớn hơn hủy một Booth hoặc một 
 | BoothAssignment             | MVP hiện tại tạo ACTIVE; RELEASED/CANCELLED/ENDED thuộc lifecycle tương lai hoặc kết thúc Event được triển khai sau                                                                                       |
 | BoothChangeRequest          | POST-MVP REFERENCE                                                                                                                                                                                         |
 | BoothCancellationRequest    | POST-MVP REFERENCE                                                                                                                                                                                         |
-| ActivityProposal            | PENDING → NEED_CHANGES → APPROVED / REJECTED / WITHDRAWN                                                                                                                                                   |
-| Activity                    | DRAFT / PUBLISHED / ONGOING / COMPLETED / CANCELLED / RESCHEDULED                                                                                                                                          |
-| ActivityChangeRequest       | PENDING → APPROVED / REJECTED / WITHDRAWN                                                                                                                                                                  |
-| ActivityCancellationRequest | PENDING → CONFIRMED / REJECTED / WITHDRAWN                                                                                                                                                                 |
+| ActivityProposal            | PENDING → NEED_CHANGES / APPROVED / REJECTED / WITHDRAWN / CANCELLED; NEED_CHANGES → PENDING / WITHDRAWN / CANCELLED                                                                                        |
+| Activity                    | DRAFT → PUBLISHED → ONGOING → COMPLETED; DRAFT/PUBLISHED/ONGOING → CANCELLED; COMPLETED/CANCELLED terminal; không có persisted RESCHEDULED                                                                  |
+| ActivityChangeRequest       | PENDING → APPROVED / REJECTED / WITHDRAWN / CANCELLED                                                                                                                                                      |
+| ActivityCancellationRequest | PENDING → APPROVED / REJECTED / WITHDRAWN / CANCELLED                                                                                                                                                      |
 | ActivityRegistration        | ACTIVE/REGISTERED → CANCELLED / COMPLETED theo lifecycle được triển khai                                                                                                                                   |
 | BoothPayment                | MVP tạo transactionType=PAYMENT cho initial rental; mỗi gateway attempt là record riêng với status PENDING → SUCCESS / FAILED / TIMEOUT. REFUND chỉ là extension point Post-MVP. |
 | Attendance                  | Tối đa một record cho mỗi ActivityRegistration; trạng thái ATTENDED khi self-scan hợp lệ                                                                                                                   |
@@ -305,15 +335,15 @@ BoothAssignment → BoothCancellationRequest → Organizer Confirm → release A
 
 ## 15.4 Đề xuất Activity
 
-Partner APPROVED → ActivityProposal(time + Location + capacity) → Validation → Organizer Approve → Activity → Publish
+Partner APPROVED → submit ActivityProposal PENDING trước/đúng deadline → Organizer Approve atomically → Activity DRAFT → Publish
 
 ## 15.5 Đổi Activity
 
-Activity Approved/Published → ActivityChangeRequest → re-check conflict/capacity → Approve → update/reschedule → notify Participant
+Activity DRAFT/PUBLISHED của Partner → ActivityChangeRequest → merge + re-check toàn bộ → Approve → audited update; nếu public thì giữ PUBLISHED
 
 ## 15.6 Hủy Activity
 
-Activity Approved/Published → ActivityCancellationRequest → Organizer Confirm → CANCELLED → notify Participant và cập nhật registrations
+Activity chính thức của Partner → ActivityCancellationRequest PENDING → Organizer Approve → Activity CANCELLED + cancellation metadata
 
 ## 15.7 Participant sau khi Activity được publish
 
@@ -337,4 +367,4 @@ Scan QR của BoothAssignment ACTIVE → auto-create EventRegistration nếu thi
 
 Các phần không đánh dấu Post-MVP là baseline quy trình Booth + Activity cho MVP hiện tại. Khi requirement thay đổi, cần cập nhật đồng thời Business Rules, Use Case, ERD và tài liệu này để tránh team dùng các flow cũ khác nhau.
 
-Điểm chốt MVP: New Booth = Request (chưa Hold) → Organizer chọn → Hold → Payment → Assignment. Trước settlement, Partner được release Hold theo điều kiện an toàn; sau Assignment không đổi/hủy Booth và không business refund. Activity = Proposal → Approve → Activity → Publish; Activity không có payment trong MVP và đổi/hủy Activity chính thức phải qua Request cùng Organizer xác nhận.
+Điểm chốt MVP: New Booth = Request (chưa Hold) → Organizer chọn → Hold → Payment → Assignment. Trước settlement, Partner được release Hold theo điều kiện an toàn; sau Assignment không đổi/hủy Booth và không business refund. Activity = Proposal PENDING (không khóa chỗ) → approve atomically thành Activity DRAFT (khóa slot) → Publish; Activity không có payment trong MVP, không có status RESCHEDULED, và Partner đổi/hủy Activity chính thức phải qua một request PENDING duy nhất cùng Organizer xác nhận.

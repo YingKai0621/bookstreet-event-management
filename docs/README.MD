@@ -24,18 +24,25 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 
 ## Baseline hiện tại
 
-- Requirement: v5 (Sprint 4 scope clarification)
+- Requirement: v6 (approved Sprint 5 Activity rules)
 - Use Case Diagram: V2, with Post-MVP use cases labelled in the diagram
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v7 with active-MVP/Post-MVP overlay
-- Physical implementation source: immutable Flyway V1–V8; target v1 (33 tables) is reference only
-- Latest completed Sprint: Sprint 04; no new implementation Sprint is currently selected
+- Logical ERD: v8 with approved Sprint 5 Activity overlay
+- Physical implementation source: immutable Flyway V1–V8; approved V9 Activity design overlay is
+  ready for implementation; target v1 image remains reference only
+- Active Sprint: Sprint 05 Activity Planning and Partner Proposal Workflow — approved, not yet
+  implemented
+- Latest completed Sprint: Sprint 04
 - Sprint 1 and Sprint 2: complete; Sprint 3 backend complete
 - Sprint 3 Payment/Assignment backend: implemented and verified through V7
 - Sprint 3 Payment/Assignment frontend integration: implemented; browser-level Playwright E2E remains technical debt
 - Sprint 4 Event lifecycle and pre-payment Booth release: completed and verified through V8
+- Sprint 5 Activity planning: documentation baseline approved; V9/code not yet implemented
 
-Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn chỉnh sửa sơ đồ; ảnh trong `design/assets/` dùng để xem trực tiếp trên GitHub và trong report.
+Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn chỉnh sửa sơ đồ; ảnh trong
+`design/assets/` dùng để xem trực tiếp trên GitHub và trong report. Riêng Activity Sprint 5, V9
+overlay trong `design/12_Physical_ERD_Report.md` là nguồn thiết kế được duyệt và tạm thời supersede
+cụm Activity của Draw.io target v1 cho tới khi migration triển khai và sơ đồ được render lại.
 
 ## Trạng thái extension đã duyệt
 
@@ -44,7 +51,11 @@ Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn
 - Báo cáo hoàn thành Sprint 1 Backend: [`development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`](development/SPRINT_01_BACKEND_COMPLETION_REPORT.md)
 - Báo cáo hoàn thành Sprint 4: [`development/SPRINT_04_COMPLETION_REPORT.md`](development/SPRINT_04_COMPLETION_REPORT.md)
 - Hướng dẫn bàn giao và tích hợp Sprint 1 cho frontend: [`development/SPRINT_01_FRONTEND_HANDOFF.md`](development/SPRINT_01_FRONTEND_HANDOFF.md)
-- Trạng thái Sprint 4: [`sprints/CURRENT_SPRINT.md`](sprints/CURRENT_SPRINT.md)
+- Trạng thái Sprint hiện tại: [`sprints/CURRENT_SPRINT.md`](sprints/CURRENT_SPRINT.md)
+- Sprint 5 baseline: [`sprints/sprint-05.md`](sprints/sprint-05.md)
+- Sprint 5 Use Case Specifications: [`use-cases/sprint-05-use-case-specifications.md`](use-cases/sprint-05-use-case-specifications.md)
+- Sprint 5 API Contract: [`api/sprint-05-api-contract.md`](api/sprint-05-api-contract.md)
+- Sprint 5 Backend Work Assignment: [`sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md`](sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md)
 - Sprint 4 baseline: [`sprints/sprint-04.md`](sprints/sprint-04.md)
 - Sprint 4 Use Case Specifications: [`use-cases/sprint-04-use-case-specifications.md`](use-cases/sprint-04-use-case-specifications.md)
 - Sprint 4 API Contract: [`api/sprint-04-api-contract.md`](api/sprint-04-api-contract.md)

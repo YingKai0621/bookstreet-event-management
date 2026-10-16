@@ -48,7 +48,8 @@ Partner là tổ chức tham gia Event; tài khoản đại diện thao tác cho
 
 - Pay Booth Fee & View Assignment: sau khi request được SELECTED, thanh toán/retry theo giá đã khóa trước Hold `expiresAt`; xem từng payment attempt và Assignment sau PAYMENT SUCCESS hợp lệ khi Event PUBLISHED/ONGOING. Evidence chưa rõ có thể giữ Hold sang ONGOING; success sau COMPLETED/CANCELLED chỉ đối soát và không tạo Assignment. MVP không có business-refund hoặc đổi/hủy Booth sau Assignment.
 
-- Manage Activity Proposal: tạo/sửa/gửi/rút đề xuất Activity.
+- Manage Activity Proposal: submit ngay PENDING, sửa/resubmit khi được phép, theo dõi hoặc rút đề
+  xuất; không cần sở hữu Booth nếu dùng shared Location.
 
 - Request Activity Change / Cancellation: yêu cầu thay đổi hoặc hủy Activity đã được duyệt.
 
@@ -70,7 +71,8 @@ Organizer thuộc Ban quản lý Đường Sách. Mỗi Event có organizerUserI
 
 - Review Activity Proposals.
 
-- Manage Activities: Activity của BTC, publish, reschedule, move hoặc cancel.
+- Manage Activities: tạo Activity BTC tại shared non-Booth Location; cấu hình Draft, publish,
+  audited reschedule/move, cancel và quản lý lifecycle/request.
 
 - Monitor Event/Activity registrations, Attendance và BoothVisit; Organizer chỉ correction/override Attendance khi cần và phải lưu lý do/thời điểm audit, không vận hành quét QR thay Participant.
 
