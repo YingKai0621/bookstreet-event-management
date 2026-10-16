@@ -55,7 +55,8 @@ Join Event không giữ chỗ Activity và không cấp Event QR. Nếu user đ�
 
 - Partner → Apply Event → Approved → BoothRequest PENDING → Organizer Selection → SELECTED + BoothHold + khóa rentalPrice → payment/retry theo giá đã khóa → SUCCESS khi Event PUBLISHED/ONGOING tạo BoothAssignment; candidate khác NOT_SELECTED. FAILED/attempt TIMEOUT chỉ retry khi payment window còn mở. Evidence chưa rõ có thể giữ Hold sang ONGOING mà không dừng Event; success sau COMPLETED/CANCELLED chỉ được giữ để đối soát và không tạo Assignment.
 
-- Partner → Activity Proposal → Conflict Check → Organizer Review → Publish.
+- Partner approved → Activity Proposal PENDING (không giữ slot) → Organizer recheck và approve
+  atomically → Activity DRAFT (giữ slot) → Publish.
 
 - Change/Cancel → impact check → update status → notify affected users.
 

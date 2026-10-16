@@ -2,11 +2,12 @@
 
 ## *BOOK STREET EVENT MANAGEMENT SYSTEM*
 
-**SWP391  |  Logical Data Model Baseline with Post-MVP Reference Overlay**
+**SWP391  |  Logical Data Model v8 — Sprint 5 Activity Baseline with Post-MVP Reference Overlay**
 
-Mục đích: giúp toàn bộ team hiểu active MVP model và target model tương lai. Sơ đồ v7 có 32
-entity, trong đó `BoothChangeRequest`, `BoothCancellationRequest` và
-`PartnerWithdrawalRequest` là `POST-MVP REFERENCE`, không phải nguồn tạo table/API hiện tại.
+Mục đích: giúp toàn bộ team hiểu active MVP model và target model tương lai. Logical v8 khóa
+Activity planning cho Sprint 5; hình v7 vẫn là ảnh tổng quan tham khảo cho cardinality. Ba entity
+`BoothChangeRequest`, `BoothCancellationRequest`, `PartnerWithdrawalRequest` tiếp tục là
+`POST-MVP REFERENCE`, không phải nguồn tạo table/API hiện tại.
 
 # **Kết luận chính**
 
@@ -266,9 +267,13 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 **Vai trò:** Đề xuất Activity do Partner gửi với thời gian, Location và capacity cụ thể.
 
-**Khi nào phát sinh:** Sau khi PartnerEventApplication đã được duyệt.
+**Khi nào phát sinh:** Sau khi PartnerEventApplication được duyệt; create là submit ngay thành
+PENDING, không có Draft Proposal.
 
-**Ý nghĩa và vòng đời:** Proposal PENDING không khóa Location. Trước khi approve phải kiểm tra lại xung đột và capacity. Một proposal tạo tối đa một Activity vì proposal đã mô tả một phiên cụ thể; multi-session nằm ngoài MVP.
+**Ý nghĩa và vòng đời:** `PENDING` không khóa Location hay quota. Vòng đời là PENDING →
+NEED_CHANGES/APPROVED/REJECTED/WITHDRAWN/CANCELLED; NEED_CHANGES có thể resubmit về PENDING.
+Trước approve phải kiểm tra lại Event, application, Booth ownership, Location, conflict, quota và
+capacity. Một Proposal tạo tối đa một Activity; multi-session nằm ngoài MVP.
 
 **Quan hệ chính:** Thuộc PartnerEventApplication và Location; có thể sinh 0..1 Activity.
 
@@ -276,11 +281,14 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 ### **Activity**
 
-**Vai trò:** Hoạt động chính thức được công bố trong Event.
+**Vai trò:** Hoạt động chính thức trong Event, có thể còn Draft trước khi công bố.
 
 **Khi nào phát sinh:** Khi Organizer tạo trực tiếp hoặc approve một ActivityProposal.
 
-**Ý nghĩa và vòng đời:** Activity thuộc một Event và một Location. Activity QR nằm trên Activity để mọi Participant self-scan cùng QR; Attendance vẫn được định danh theo registration. Activity có trạng thái riêng, deadline đăng ký và cờ cho phép Certificate.
+**Ý nghĩa và vòng đời:** Activity thuộc đúng một Event và Location. DRAFT → PUBLISHED → ONGOING →
+COMPLETED; trạng thái không terminal có thể chuyển CANCELLED. Không có persisted RESCHEDULED;
+reschedule là audited update. `registrationRequired` quyết định có registration deadline, QR và
+Certificate hay không. QR chỉ được tạo một lần khi publish Activity yêu cầu registration.
 
 **Quan hệ chính:** Liên kết Event, Location, optional source Proposal, registrations, change/cancellation requests.
 
@@ -288,11 +296,15 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 ### **ActivityChangeRequest**
 
-**Vai trò:** Yêu cầu thay đổi Location, thời gian hoặc capacity của Activity.
+**Vai trò:** Yêu cầu Partner thay đổi title, nội dung, loại, Location, thời gian, capacity hoặc ảnh
+của Activity chính thức.
 
 **Khi nào phát sinh:** Khi Partner muốn sửa Activity đã được duyệt hoặc publish.
 
-**Ý nghĩa và vòng đời:** Hệ thống kiểm tra conflict và capacity trước khi chấp nhận. Khi thay đổi ảnh hưởng lịch, Participant đã đăng ký được thông báo và có thể cancel.
+**Ý nghĩa và vòng đời:** Partner không sửa Activity trực tiếp. Request phải tạo thay đổi thực; cặp
+thời gian đi cùng nhau; merged candidate được kiểm tra ở submit và approve. Trạng thái dùng
+PENDING/APPROVED/REJECTED/WITHDRAWN/CANCELLED. Một Activity chỉ có tối đa một Pending request tổng
+cộng với Cancellation Request. Notification Participant được triển khai cùng module Participant.
 
 **Quan hệ chính:** Thuộc Activity; requestedLocationId là tùy chọn nếu yêu cầu đổi địa điểm.
 
@@ -304,7 +316,9 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 **Khi nào phát sinh:** Khi Partner không thể tiếp tục tổ chức Activity.
 
-**Ý nghĩa và vòng đời:** Yêu cầu sau cutoff vẫn được ghi nhận nhưng đánh dấu late để Organizer xử lý. Activity và registration liên quan không bị xóa; dùng status và notification để giữ lịch sử.
+**Ý nghĩa và vòng đời:** Yêu cầu sau cutoff vẫn được ghi nhận nhưng đánh dấu late; đúng cutoff chưa
+late. Submit không hủy Activity, approve mới atomically hủy và ghi cancellation metadata/source.
+Request dùng cùng năm trạng thái với Change Request; Activity và lịch sử liên quan không bị xóa.
 
 **Quan hệ chính:** Thuộc Activity và tác động đến ActivityRegistration, Attendance, Certificate.
 
@@ -478,7 +492,15 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 
 ## **10.3 Activity và Participant**
 
-* ActivityProposal được duyệt tạo tối đa một Activity; Organizer cũng có thể tạo Activity trực tiếp.  
+* ActivityProposal được duyệt atomically tạo tối đa một Activity DRAFT; Organizer cũng có thể tạo
+  Activity BTC trực tiếp tại shared non-Booth Location.
+* Partner không cần Booth; nếu Activity dùng Booth thì cần Assignment ACTIVE của đúng Partner và
+  Event ở cả submit/resubmit/approve.
+* Proposal PENDING không khóa slot; Activity DRAFT trở đi khóa slot bằng conflict rule `[start,end)`.
+* Change/Cancellation Request là hai khái niệm Logical nhưng có thể dùng một physical table chung
+  để enforce đúng một Pending request trên mỗi Activity.
+* `ActivityRevision` là bảng audit kỹ thuật Physical, không phải Actor-facing Use Case/entity mới;
+  nó giữ old/new snapshot cho thay đổi đã áp dụng thay vì tạo status RESCHEDULED.
 * Participant Join Event tạo EventRegistration; đăng ký Activity tạo ActivityRegistration.  
 * Participant self-scan QR chung của Activity để tạo Attendance.  
 * Attendance hợp lệ cho phép ActivityRating và Certificate khi đủ điều kiện.
@@ -498,6 +520,9 @@ Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình c
 | BoothPayment có transactionType và purpose | Active MVP dùng PAYMENT/INITIAL_BOOTH_RENTAL; REFUND và purpose đổi Booth là extension point Post-MVP. |
 | Activity chỉ nối Location | Booth là subtype của Location; nối thêm Activity-Booth sẽ lặp quan hệ và không dùng được cho Main Stage hoặc Workshop Area. |
 | Activity QR nằm trên Activity | Một QR chung tại địa điểm giúp Participant self-scan; Attendance vẫn gắn đúng ActivityRegistration của User. |
+| Partner Activity ownership đi qua source Proposal | Không cần thêm partner_organization_id lặp trên Activity; Proposal → Application xác định owner và direct BTC Activity có source null. |
+| Hai request Logical dùng một bảng Physical | Partial unique index theo activity_id và status PENDING chặn race giữa Change và Cancellation Request. |
+| ActivityRevision chỉ là audit Physical | Giữ lịch sử old/new của reschedule/move/config change mà không làm phình lifecycle hoặc thêm Use Case. |
 | Refund không có active MVP workflow | V7 giữ khả năng biểu diễn REFUND cho tương lai; không có endpoint/service tạo refund trong active MVP. |
 | User-Badge dùng UserBadge | Quan hệ nhiều nhiều cần record earnedAt và uniqueness cho từng cặp User-Badge. |
 | GeneralFeedback dùng XOR target | Mỗi feedback chỉ phản ánh một target: toàn Đường Sách, một Event hoặc một HeritageContent. |

@@ -1,60 +1,61 @@
 # Current Sprint
 
-## Sprint 04 Event Lifecycle and Pre-payment Booth Release
+## Sprint 05 Activity Planning and Partner Proposal Workflow
 
-- Status: `COMPLETED`
-- Completed: `2026-10-16`
-- Sprint file: `docs/sprints/sprint-04.md`
-- Use Case Specifications: `docs/use-cases/sprint-04-use-case-specifications.md`
-- API Contract: `docs/api/sprint-04-api-contract.md`
-- Backend Work Assignment: `docs/sprints/SPRINT_04_BACKEND_WORK_ASSIGNMENT.md`
-- Completion Report: `docs/development/SPRINT_04_COMPLETION_REPORT.md`
+- Status: `APPROVED — READY FOR IMPLEMENTATION`
+- Approved: `2026-10-16`
+- Sprint file: `docs/sprints/sprint-05.md`
+- Use Case Specifications: `docs/use-cases/sprint-05-use-case-specifications.md`
+- API Contract: `docs/api/sprint-05-api-contract.md`
+- Backend Work Assignment: `docs/sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md`
+- Planned migration: one `V9`; V1–V8 remain immutable
 
 ## Sprint goal
 
-Harden Event update/delete/cancellation and timed lifecycle behavior, then let an owning Partner
-release an eligible selected Booth Hold before settlement without weakening Sprint 3 payment
-reconciliation safety.
+Deliver a concurrency-safe Activity planning workflow: shared Location management, Partner
+Proposal review, official Activity lifecycle, Partner change/cancellation requests and public
+Activity discovery, without starting Participant registration/attendance or expanding Booth refund
+scope.
 
-## Completion baseline
+## Approved implementation baseline
 
-- Sprint 1 Event and Partner-application backend is implemented.
-- Sprint 2 Booth request, selection, price-locked Hold and expiry backend is implemented through V6.
-- Sprint 3 VNPay Payment and Assignment backend is implemented and verified through V7.
-- Sprint 4 Event lifecycle and pre-payment release is implemented through V8.
-- All 23 Sprint 4 Acceptance Criteria have implementation and automated coverage.
-- Backend regression: 284 tests passed with no failures, errors or skips.
-- VNPay disposable spike: 20 tests passed.
-- Frontend lint and production build passed; warnings and bundle splitting remain technical debt.
-- Required Swagger smoke flows were manually accepted.
-- V1 through V8 are the immutable current schema baseline.
+- Partner must have an approved Event application but does not need a Booth.
+- Activity always belongs to one Location: BOOTH, STAGE, WORKSHOP or AREA.
+- A Partner using a Booth needs its Active Assignment in the same Event.
+- Organizer direct BTC Activity uses only shared non-Booth Locations in Sprint 5.
+- Proposal has no Draft; initial creation becomes Pending and does not reserve a slot.
+- Approval atomically creates one official Draft Activity after hard revalidation.
+- All non-cancelled official Activities, including Draft, conflict by physical Location and
+  half-open interval across Events.
+- Partner official changes/cancellations use one Pending request total per Activity.
+- Activity lifecycle is Draft → Published → Ongoing → Completed, with controlled Cancellation;
+  Rescheduled is not a persisted status.
+- Event financial cancellation blockers from Sprint 4 remain unchanged.
+- Registration configuration is prepared, but Participant Registration/Attendance is not in this
+  Sprint.
 
 ## Included Use Case slices
 
-- UC-O01 Manage Events — Draft delete, safe published update, eligible cancellation and timed
-  lifecycle transitions.
-- UC-E02 Manage Booth Request — Pending withdrawal and safe Selected Hold release before
-  settlement.
+- UC-E04 Propose Activity.
+- UC-E05 Request Activity Change.
+- UC-E06 Request Activity Cancellation.
+- UC-O02 Manage Locations — Activity Location slice.
+- UC-O05 Review Activity Proposals.
+- UC-O06 Manage Activities.
+- UC-G01 Discover Public Content — Activity slice.
 
 ## Scope guard
 
-Sprint 4 excludes post-assignment Booth change/cancellation, business refunds, Partner withdrawal
-from the whole Event after approval, cancellation of an Ongoing Event and Admin emergency
-cancellation.
+Sprint 5 excludes Activity payment/tickets, Participant registration/attendance/rating/certificate
+commands, Participant notifications, Notification persistence, advanced map editing, Booth
+change/cancellation/refunds and whole-Event Partner withdrawal.
 
-Every Payment `PENDING`/`SUCCESS`, reconciliation-required record and BoothAssignment remains a
-hard blocker. A browser or frontend claim can never release a Hold or establish payment state.
+The documentation baseline is approved; production implementation has not started on this branch.
+Sprint 5 becomes `COMPLETED` only after V9, all Acceptance Criteria, full regression, Swagger smoke
+flows and a completion report are verified.
 
-Every Event-scoped mutation serializes on the Event row before domain locks. Booth/payment work
-then follows `Event → Booth (if needed) → EventBoothConfig (if needed) → Hold → Payment by
-ascending id → BoothRequest`. Publish and operational patch also require
-`boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`.
+## Previous completed Sprint
 
-That invariant bounds the scheduled checkout window, not unresolved gateway evidence. A Pending or
-reconciliation-required Payment may keep its Hold Active into Ongoing without pausing the Event;
-trusted success may settle while Published/Ongoing, but after Completed/Cancelled it creates no
-Assignment and is retained for manual reconciliation.
-
-Every delivered change maps to the Sprint 4 Use Case Specifications and Acceptance Criteria. No
-new implementation Sprint has been selected; future work must receive a new approved baseline
-before changing the completed Sprint 4 scope.
+Sprint 04 Event Lifecycle and Pre-payment Booth Release remains completed on `2026-10-16` through
+immutable V8 with 284 backend regression tests and 20 VNPay spike tests recorded in its completion
+report.
