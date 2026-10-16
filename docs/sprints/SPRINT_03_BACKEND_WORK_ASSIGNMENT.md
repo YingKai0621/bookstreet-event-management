@@ -2,7 +2,7 @@
 
 > Approved implementation assignment. VNPay Sandbox and the V7 provider/reconciliation design are frozen for Sprint 3.
 
-> Active Sprint 4 overlay: Payment paths must prepend the Event-root lock and apply the Event
+> Implemented Sprint 4 overlay: Payment paths must prepend the Event-root lock and apply the Event
 > lifecycle settlement boundary defined by Sprint 4. This historical assignment does not override
 > that newer cross-module contract.
 

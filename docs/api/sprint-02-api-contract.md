@@ -401,7 +401,7 @@ Errors:
 
 Acceptance Criteria: AC-E02-05 and AC-E02-06.
 
-> Active Sprint 4 override: the same endpoint also accepts an eligible `SELECTED` request, releases
+> Implemented Sprint 4 override: the same endpoint also accepts an eligible `SELECTED` request, releases
 > its Hold safely and uses `BOOTH_REQUEST_NOT_WITHDRAWABLE` as the withdrawal-specific catch-all.
 > See [`sprint-04-api-contract.md`](sprint-04-api-contract.md#4-partner-booth-request-api).
 
@@ -445,7 +445,7 @@ After the selection transaction commits, the backend triggers an email to the Pa
 
 The transaction obtains one authoritative backend time, stores it as `selectedAt` and the Hold creation time, and calculates `expiresAt = selectedAt + boothPaymentWindowMinutes`. The computed instant is persisted on the Hold and is not derived again when the response is read.
 
-Under the active Sprint 4 concurrency contract, selection first locks the Event and rechecks its
+Under the implemented Sprint 4 concurrency contract, selection first locks the Event and rechecks its
 status/backend time before the Sprint 2 configuration, availability and request checks.
 
 Email failure is logged and does not roll back the committed request or Hold. Sprint 2 does not add an outbox, notification table or complex email retry mechanism.

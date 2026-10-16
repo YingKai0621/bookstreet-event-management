@@ -2,7 +2,7 @@
 
 > Approved implementation criteria for initial Booth rental payment and Assignment creation.
 
-> Active Sprint 4 overlay: these historical criteria remain valid only with the Event-rooted lock
+> Implemented Sprint 4 overlay: these historical criteria remain valid only with the Event-rooted lock
 > and lifecycle boundary in
 > [`sprint-04-use-case-specifications.md`](sprint-04-use-case-specifications.md), AC-O01-16.
 
@@ -321,7 +321,7 @@ Within the Sprint 3 payment domain, before QueryDR the worker atomically claims 
 locking `Hold → Payment`, checking
 that the attempt is still eligible and recording `lastGatewayQueryAt`. It releases those locks
 before network I/O, then uses another short `Hold → Payment` transaction to apply the response.
-The active Sprint 4 concurrency contract prefixes both short transactions with the Event row; the
+The implemented Sprint 4 concurrency contract prefixes both short transactions with the Event row; the
 gateway call remains outside every database transaction.
 Concurrent workers therefore cannot query the same Payment inside VNPay's minimum interval. An
 unavailable, invalid or mismatched result never releases the Hold; it retains

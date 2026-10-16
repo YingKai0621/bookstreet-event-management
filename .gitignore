@@ -12,6 +12,10 @@
 # VS Code
 .vscode/
 
+# Local Postman workspace files
+/.postman/
+/postman/
+
 # Java
 target/
 *.class

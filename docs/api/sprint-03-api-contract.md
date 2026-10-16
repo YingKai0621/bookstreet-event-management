@@ -2,7 +2,7 @@
 
 > Approved implementation contract for the Sprint 3 VNPay Sandbox integration.
 
-> Active Sprint 4 overlay: endpoint and payload shapes below remain unchanged, but Payment
+> Implemented Sprint 4 overlay: endpoint and payload shapes below remain unchanged, but Payment
 > mutations use the Event-rooted lock and lifecycle guards in
 > [`sprint-04-api-contract.md`](sprint-04-api-contract.md#7-payment-resolution-across-event-start).
 
@@ -236,7 +236,7 @@ Acceptance Criteria: AC-E03-01 through AC-E03-05 and AC-E03-13 through AC-E03-15
   releases those locks before the network call, then opens another short `Hold → Payment`
   transaction and applies only the still-current trusted result. Concurrent workers therefore
   cannot issue duplicate QueryDR calls inside the configured minimum interval.
-- Under the active Sprint 4 contract, both short reconciliation transactions first lock the Event
+- Under the implemented Sprint 4 contract, both short reconciliation transactions first lock the Event
   row; the network call remains outside the transaction.
 - Trusted success settles normally. Trusted terminal failure or the approved two-query `TIMEOUT` closes the attempt and expires the already-due Hold and source request atomically.
 - Transport errors, invalid signatures, mismatched reference/amount or other unknown results retain `PENDING` and `reconciliationRequired`; they never restore Booth availability.

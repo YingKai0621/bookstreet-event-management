@@ -11,11 +11,11 @@ SWP391 project for managing Book Street events, partners, booths, activities and
 
 ## Project Status
 
-Sprint 3 Payment/Assignment backend is implemented and verified through Flyway V7. Sprint 4 Event
-lifecycle and pre-payment Booth-release documentation is approved; implementation and V8 are
-pending. Frontend checkout/result integration and the Sprint 3 browser E2E demo remain tracked
-technical debt.
+Sprint 4 Event lifecycle and pre-payment Booth release is complete through Flyway V8. Final local
+verification passed 284 backend tests, the 20-test disposable VNPay spike, frontend lint and the
+frontend production build. Automated browser-level Payment/Assignment E2E, existing frontend lint
+warnings and bundle splitting remain tracked technical debt.
 
 Start with the shared documentation in [`docs/README.MD`](docs/README.MD), then read the
 [`Current Sprint`](docs/sprints/CURRENT_SPRINT.md) and
-[`Sprint 4 API Contract`](docs/api/sprint-04-api-contract.md).
+[`Sprint 4 Completion Report`](docs/development/SPRINT_04_COMPLETION_REPORT.md).

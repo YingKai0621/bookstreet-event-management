@@ -1,6 +1,8 @@
 # Sprint 04 API Contract
 
-> Documentation contract for Event lifecycle hardening and pre-payment Booth release.
+> Implemented contract for the completed Sprint 4 Event lifecycle hardening and pre-payment Booth
+> release scope. Completion evidence is in
+> [`SPRINT_04_COMPLETION_REPORT.md`](../development/SPRINT_04_COMPLETION_REPORT.md).
 
 ## 1 General conventions
 

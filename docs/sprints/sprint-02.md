@@ -128,7 +128,7 @@ The implementation should combine a scheduled expiry job with an expiry check be
 - For a newly created Event, the Organizer UI initializes the control to `24 Hours`. When editing an existing Event, it displays the currently persisted value, converted from `boothPaymentWindowMinutes` for presentation when needed.
 - The UI may display a numeric value plus Hours/Days selector, but it converts the value to minutes for the existing Event create/update API.
 - A permitted change affects only future selections. It must not update `expiresAt` for an existing Hold.
-- Under the active Sprint 4 baseline, publish and operational update require
+- Under the implemented Sprint 4 baseline, publish and operational update require
   `boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`; selection remains rejected after
   `boothRequestDeadlineAt`, so a new Hold's scheduled `expiresAt` cannot be later than Event start.
   Unresolved Payment evidence may preserve that Hold as `ACTIVE` past `expiresAt` under the Sprint

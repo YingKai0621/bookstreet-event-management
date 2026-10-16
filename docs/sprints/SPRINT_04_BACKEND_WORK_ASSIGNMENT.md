@@ -1,5 +1,9 @@
 # Sprint 04 Backend Work Assignment
 
+> Status: `COMPLETED`. This file preserves the approved implementation split and review checklist;
+> final combined evidence is in the
+> [Sprint 4 Completion Report](../development/SPRINT_04_COMPLETION_REPORT.md).
+
 ## 1 Shared implementation boundary
 
 - Branch from updated `main`; do not modify V1–V7.
