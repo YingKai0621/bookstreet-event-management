@@ -1,12 +1,16 @@
 # Sprint 04 Use Case Specifications
 
+> Implementation status: `COMPLETED` on 2026-10-16. All AC-O01-01 through AC-O01-16 and AC-E02-01
+> through AC-E02-07 have implementation and automated coverage; see the
+> [Sprint 4 Completion Report](../development/SPRINT_04_COMPLETION_REPORT.md).
+
 ## Shared rules
 
 - Authentication uses the existing Spring Security server-side Session.
 - Ownership is derived from the authenticated principal, never from request data.
 - PostgreSQL is the durable source of truth; Redis stores Session data only.
 - Backend time is authoritative.
-- V1 through V7 are immutable; Sprint 4 schema changes use V8.
+- V1 through V8 are the immutable current schema baseline.
 - Browser or frontend state never overrides Payment/Assignment evidence.
 - Event-scoped mutation locks the Event first and rechecks status/backend time. Booth/payment work
   then follows `Event → Booth (if applicable) → EventBoothConfig (if applicable) → Hold → Payment

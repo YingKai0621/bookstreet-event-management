@@ -2,7 +2,7 @@
 
 > Approved implementation baseline. VNPay Sandbox is the Sprint 3 provider, the local spike is complete, and V7 implementation is authorized on the Sprint 3 branch.
 
-> Active Sprint 4 overlay: Payment transactions acquire/recheck the Event root before existing
+> Implemented Sprint 4 overlay: Payment transactions acquire/recheck the Event root before existing
 > domain locks. Unresolved evidence may keep a Hold Active across Event start. Trusted success may
 > create an Assignment while the Event is Published/Ongoing; after Completed/Cancelled it is kept
 > for manual reconciliation and creates no Assignment. See `sprint-04.md` section 5.4.
@@ -278,7 +278,7 @@ The normal new-attempt response is therefore `201`. Local signing/configuration 
   domain, re-checking eligibility and
   recording `lastGatewayQueryAt` in a short transaction. It then releases the locks, calls QueryDR,
   and opens another short `Hold → Payment` transaction to apply only the still-current result. The
-  active Sprint 4 contract prefixes both short transactions with the Event row. This
+  implemented Sprint 4 contract prefixes both short transactions with the Event row. This
   claim prevents concurrent workers or a crash/retry loop from violating VNPay's minimum query
   interval.
 - Trusted SUCCESS follows atomic settlement. Trusted FAILED or the approved two-query local TIMEOUT closes the attempt and, when the Hold is already due, expires the Hold and source request in that same transaction.

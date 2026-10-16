@@ -1,8 +1,9 @@
 # Sprint 04 Event Lifecycle and Pre-payment Booth Release
 
-> Approved documentation baseline. Sprint 4 hardens the Event lifecycle and lets a Partner
+> Status: `COMPLETED` on 2026-10-16. Sprint 4 hardens the Event lifecycle and lets a Partner
 > release an uncommitted Booth Hold without introducing post-assignment cancellation, Booth
-> change or business-refund execution.
+> change or business-refund execution. Verification evidence is recorded in the
+> [Sprint 4 Completion Report](../development/SPRINT_04_COMPLETION_REPORT.md).
 
 ## 1 Purpose
 
@@ -286,24 +287,24 @@ or Partner-withdrawal request table.
 
 ## 10 Definition of Done
 
-- Source-of-truth documents no longer describe post-assignment Booth change/refund as current MVP.
-- V8 applies cleanly after V7 and Hibernate validation succeeds.
-- Draft delete, published update, cancellation and lifecycle transition rules are covered by tests.
-- Publish and operational patch reject a Booth deadline/payment-window combination that extends
+- [x] Source-of-truth documents no longer describe post-assignment Booth change/refund as current MVP.
+- [x] V8 applies cleanly after V7 and Hibernate validation succeeds.
+- [x] Draft delete, published update, cancellation and lifecycle transition rules are covered by tests.
+- [x] Publish and operational patch reject a Booth deadline/payment-window combination that extends
   beyond `startAt`; selection after the Booth request deadline is rejected.
-- An unresolved Payment may keep its Hold Active across Event start without pausing lifecycle;
+- [x] An unresolved Payment may keep its Hold Active across Event start without pausing lifecycle;
   trusted success settles while the Event is Published or Ongoing, while terminal-Event success is
   retained for manual reconciliation without creating an Assignment.
-- Operational patch, cancellation and the first external-participation command are race-tested
+- [x] Operational patch, cancellation and the first external-participation command are race-tested
   under the Event-root lock.
-- Payment initiation, IPN settlement, QueryDR reconciliation and expiry are race-tested against
+- [x] Payment initiation, IPN settlement, QueryDR reconciliation and expiry are race-tested against
   lifecycle advancement under the shared Event-rooted lock order.
-- Event cancellation never succeeds with a successful, unknown or reconciliation-blocking Payment
+- [x] Event cancellation never succeeds with a successful, unknown or reconciliation-blocking Payment
   or any Assignment.
-- Cancellation releases eligible Holds and closes open Booth requests atomically.
-- A selected Partner can release an eligible Hold immediately without waiting for expiry.
-- No withdrawal can race a trusted success into an unowned charge or reassigned Booth.
-- Duplicate cancellation is mutation-free and cancellation email recipients are deduplicated.
-- Public Event list/detail behavior matches section 7.
-- Existing Sprint 1–3 regression, VNPay spike, frontend lint and frontend build remain green.
+- [x] Cancellation releases eligible Holds and closes open Booth requests atomically.
+- [x] A selected Partner can release an eligible Hold immediately without waiting for expiry.
+- [x] No withdrawal can race a trusted success into an unowned charge or reassigned Booth.
+- [x] Duplicate cancellation is mutation-free and cancellation email recipients are deduplicated.
+- [x] Public Event list/detail behavior matches section 7.
+- [x] Existing Sprint 1–3 regression, VNPay spike, frontend lint and frontend build remain green.
 

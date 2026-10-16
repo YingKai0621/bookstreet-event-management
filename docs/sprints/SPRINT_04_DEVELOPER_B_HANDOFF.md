@@ -1,5 +1,9 @@
 # Sprint 4 — Developer B handoff
 
+> Historical handoff: this contribution has been integrated into the completed Sprint 4 baseline.
+> See the [Sprint 4 Completion Report](../development/SPRINT_04_COMPLETION_REPORT.md) for final
+> cross-module verification.
+
 - Branch: `feature/s4-booth-prepayment-release`
 - Base: updated `main` at `2fac4cf`
 - Scope: backend Booth mutations and pre-payment Hold release.
@@ -66,7 +70,7 @@ Validation on 2026-10-14 used isolated PostgreSQL 17.11 and Redis 7.4.11 contain
 - The only Payment production addition is an ordered repository query for locking a Hold's attempts.
 - Developer C still owns Partner application locking, public Event lifecycle queries and cancellation
   notification. Full cross-module verification must run again after their changes are integrated.
-- `AI_CONTEXT.md`, `CURRENT_SPRINT.md` and the Sprint baseline still describe implementation as pending
-  although Developer A's V8/Event/Payment integration is already on the base branch. The context owner
-  should update those shared documents when reporting the combined Sprint status.
+- At this handoff point, `AI_CONTEXT.md`, `CURRENT_SPRINT.md` and the Sprint baseline still described
+  implementation as pending. The shared context was synchronized with the combined completed Sprint
+  status on 2026-10-16.
 - Interactive Swagger/manual verification and remote PR/merge are separate from this local handoff.

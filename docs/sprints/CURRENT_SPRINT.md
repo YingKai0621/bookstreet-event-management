@@ -2,11 +2,13 @@
 
 ## Sprint 04 Event Lifecycle and Pre-payment Booth Release
 
-- Status: `DOCUMENTATION BASELINE - IMPLEMENTATION PENDING`
+- Status: `COMPLETED`
+- Completed: `2026-10-16`
 - Sprint file: `docs/sprints/sprint-04.md`
 - Use Case Specifications: `docs/use-cases/sprint-04-use-case-specifications.md`
 - API Contract: `docs/api/sprint-04-api-contract.md`
 - Backend Work Assignment: `docs/sprints/SPRINT_04_BACKEND_WORK_ASSIGNMENT.md`
+- Completion Report: `docs/development/SPRINT_04_COMPLETION_REPORT.md`
 
 ## Sprint goal
 
@@ -14,16 +16,18 @@ Harden Event update/delete/cancellation and timed lifecycle behavior, then let a
 release an eligible selected Booth Hold before settlement without weakening Sprint 3 payment
 reconciliation safety.
 
-## Starting baseline
+## Completion baseline
 
 - Sprint 1 Event and Partner-application backend is implemented.
 - Sprint 2 Booth request, selection, price-locked Hold and expiry backend is implemented through V6.
 - Sprint 3 VNPay Payment and Assignment backend is implemented and verified through V7.
-- Backend baseline: 222 tests with no failures or errors; 69 tests are intentionally skipped by
-  test configuration.
-- VNPay disposable spike baseline: 20 tests passed.
-- Sprint 3 frontend payment integration and Playwright payment E2E remain tracked technical debt.
-- V1 through V7 are immutable; Sprint 4 owns V8.
+- Sprint 4 Event lifecycle and pre-payment release is implemented through V8.
+- All 23 Sprint 4 Acceptance Criteria have implementation and automated coverage.
+- Backend regression: 284 tests passed with no failures, errors or skips.
+- VNPay disposable spike: 20 tests passed.
+- Frontend lint and production build passed; warnings and bundle splitting remain technical debt.
+- Required Swagger smoke flows were manually accepted.
+- V1 through V8 are the immutable current schema baseline.
 
 ## Included Use Case slices
 
@@ -51,5 +55,6 @@ reconciliation-required Payment may keep its Hold Active into Ongoing without pa
 trusted success may settle while Published/Ongoing, but after Completed/Cancelled it creates no
 Assignment and is retained for manual reconciliation.
 
-Every implementation change must map to the Sprint 4 Use Case Specifications and Acceptance
-Criteria.
+Every delivered change maps to the Sprint 4 Use Case Specifications and Acceptance Criteria. No
+new implementation Sprint has been selected; future work must receive a new approved baseline
+before changing the completed Sprint 4 scope.
