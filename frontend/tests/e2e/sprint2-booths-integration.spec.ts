@@ -225,8 +225,8 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
     await expect(configRow.getByText('Còn trống', { exact: true })).toBeVisible();
 
     await partnerPage.reload();
-    await partnerPage.getByRole('button', { name: 'Chọn & thuê gian hàng', exact: true }).click();
-    await expect(partnerPage.getByRole('heading', { name: 'Chọn & thuê gian hàng' })).toBeVisible();
+    await partnerPage.getByRole('button', { name: 'Chọn và thuê gian hàng', exact: true }).click();
+    await expect(partnerPage.getByRole('heading', { name: 'Chọn và thuê gian hàng' })).toBeVisible();
     const eventPicker = partnerPage.getByLabel('Sự kiện tham gia');
     if (await eventPicker.isVisible()) {
       await eventPicker.selectOption({ label: eventName });
@@ -246,7 +246,7 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
       content: Array<{ booth: { code: string }; availability: string }>;
     }>(partnerPage, 'GET', `/events/${eventId}/booths?page=0&size=100`);
     expect(pendingAvailability.body.content.find(row => row.booth.code === boothCode)?.availability).toBe('AVAILABLE');
-    await partnerPage.getByRole('button', { name: /Sơ đồ gian hàng/ }).click();
+    await partnerPage.getByRole('tab', { name: /Sơ đồ gian hàng/ }).click();
     await expect(partnerPage.locator('.booth-map-marker.status-available').filter({ hasText: boothCode })).toBeVisible();
 
     await organizerPage.getByRole('button', { name: /Duyệt yêu cầu thuê gian hàng/ }).click();
@@ -260,7 +260,7 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
     await expect(requestCard).toContainText('2.750.000');
 
     await partnerPage.getByRole('button', { name: 'Làm mới' }).click();
-    await partnerPage.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
+    await partnerPage.getByRole('tab', { name: /Yêu cầu của tôi/ }).click();
     await expect(partnerPage.getByText('Đã được chọn', { exact: true })).toBeVisible();
     await expect(partnerPage.getByText('Giá thuê được giữ nguyên theo thời điểm duyệt', { exact: true })).toBeVisible();
     await expect(partnerPage.getByText('Thời gian còn lại', { exact: true })).toBeVisible();
@@ -270,7 +270,7 @@ test('Sprint 2 real FE-BE map flow persists coordinates and creates a price-lock
       content: Array<{ booth: { code: string }; availability: string }>;
     }>(partnerPage, 'GET', `/events/${eventId}/booths?page=0&size=100`);
     expect(heldAvailability.body.content.find(row => row.booth.code === boothCode)?.availability).toBe('ON_HOLD');
-    await partnerPage.getByRole('button', { name: /Sơ đồ gian hàng/ }).click();
+    await partnerPage.getByRole('tab', { name: /Sơ đồ gian hàng/ }).click();
     await expect(partnerPage.locator('.booth-map-marker.status-on_hold').filter({ hasText: boothCode })).toBeVisible();
 
   } finally {

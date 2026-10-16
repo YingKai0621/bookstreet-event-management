@@ -106,7 +106,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     {
       id: 'booth-requests',
       path: '/partner/booth-requests',
-      labelVi: 'Chọn & thuê gian hàng',
+      labelVi: 'Chọn và thuê gian hàng',
       labelEn: 'Choose & Rent Booths',
       icon: <ClipboardList size={18} />,
     },

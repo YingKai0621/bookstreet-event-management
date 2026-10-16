@@ -11,7 +11,7 @@ import {
   Search,
   Send,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
 import '../../components/partner/PartnerEvents.css';
@@ -38,16 +38,32 @@ interface PartnerEventDiscoveryPageProps {
 type AvailabilityFilter = 'all' | 'open' | 'applied';
 type EventTimeFilter = 'all' | 'upcoming' | 'month';
 type EventSortOrder = 'nearest' | 'farthest';
+const EVENTS_PER_PAGE = 6;
+
+function paginationItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages])]
+    .filter(page => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+  const items: Array<number | 'ellipsis'> = [];
+  pages.forEach((page, index) => {
+    if (index > 0 && page - pages[index - 1] > 1) items.push('ellipsis');
+    items.push(page);
+  });
+  return items;
+}
 
 export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps> = ({ language, organization }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const resultsSectionRef = useRef<HTMLElement>(null);
   const [events, setEvents] = useState<PartnerAvailableEvent[]>([]);
   const [applications, setApplications] = useState<PartnerEventApplication[]>([]);
   const [search, setSearch] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('all');
   const [timeFilter, setTimeFilter] = useState<EventTimeFilter>('all');
   const [sortOrder, setSortOrder] = useState<EventSortOrder>('nearest');
+  const [eventPage, setEventPage] = useState(1);
   const [filterReferenceTime] = useState(() => Date.now());
   const [applicationNote, setApplicationNote] = useState('');
   const [applicationEvent, setApplicationEvent] = useState<PartnerAvailableEvent | null>(null);
@@ -66,6 +82,7 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
       ]);
       setEvents(publishedEvents);
       setApplications(ownApplications);
+      setEventPage(1);
 
       const requestedEventId = new URLSearchParams(location.search).get('event');
       if (requestedEventId) {
@@ -123,6 +140,18 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
       return sortOrder === 'nearest' ? difference : -difference;
     }), [applicationByEventId, availabilityFilter, events, filterReferenceTime, keyword, sortOrder, timeFilter]);
 
+  const eventPageCount = Math.ceil(visibleEvents.length / EVENTS_PER_PAGE);
+  const currentEventPage = Math.min(eventPage, Math.max(eventPageCount, 1));
+  const eventRangeStart = (currentEventPage - 1) * EVENTS_PER_PAGE;
+  const paginatedEvents = visibleEvents.slice(eventRangeStart, eventRangeStart + EVENTS_PER_PAGE);
+
+  const goToEventPage = (page: number) => {
+    setEventPage(page);
+    window.requestAnimationFrame(() => {
+      resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   const openApplicationModal = (event: PartnerAvailableEvent) => {
     setApplicationNote('');
     setApplicationEvent(event);
@@ -142,6 +171,7 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
     try {
       await partnerApi.submitApplication(submittedEvent.id, applicationNote.trim());
       setApplications(await partnerApi.getApplications());
+      setEventPage(1);
       setSuccessMessage(`Gửi hồ sơ đăng ký thành công. Hồ sơ tham gia “${submittedEvent.name}” đã được gửi đến Ban Quản Lý để xem xét.`);
       setApplicationEvent(null);
       setApplicationNote('');
@@ -162,7 +192,7 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
   return (
     <div className="partner-page partner-event-hub partner-event-discovery">
       <PartnerEventHero
-        title={language === 'vi' ? 'Khám phá & đăng ký sự kiện' : 'Discover & apply for events'}
+        title={language === 'vi' ? 'Khám phá và đăng ký sự kiện' : 'Discover & apply for events'}
         breadcrumb="KHÁM PHÁ SỰ KIỆN"
         description="Tìm sự kiện phù hợp, xem thời hạn nhận hồ sơ và đăng ký tham gia tại một nơi riêng biệt."
         isLoading={isLoading}
@@ -175,21 +205,21 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
 
       <section className="event-hub-controls" aria-label="Tìm kiếm và lọc sự kiện công khai">
         <div className="event-hub-application-cta is-return"><div><strong>Hồ sơ đã gửi được quản lý riêng</strong><p>Xem trạng thái xét duyệt, phản hồi và rút hồ sơ tại trang quản lý hồ sơ.</p></div><Link to="/partner/events"><FileText size={18} />Hồ sơ sự kiện của tôi<ArrowRight size={17} /></Link></div>
-        <div className="event-hub-search"><Search size={18} /><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc nội dung sự kiện…" aria-label="Tìm kiếm sự kiện công khai" /></div>
+        <div className="event-hub-search"><Search size={18} /><input type="search" value={search} onChange={event => { setSearch(event.target.value); setEventPage(1); }} placeholder="Tìm theo tên hoặc nội dung sự kiện…" aria-label="Tìm kiếm sự kiện công khai" /></div>
         <div className="event-hub-control-row">
-          <div className="event-hub-status-group"><span className="event-hub-control-label">Tình trạng sự kiện</span><div className="event-hub-filters" role="group" aria-label="Tình trạng sự kiện">{filters.map(filter => <button type="button" aria-pressed={availabilityFilter === filter.value} className={`event-hub-filter is-${filter.value} ${availabilityFilter === filter.value ? 'is-active' : ''}`} key={filter.value} onClick={() => setAvailabilityFilter(filter.value)}>{filter.value !== 'all' && <i aria-hidden="true" />}{filter.label}<span>{filter.count}</span></button>)}</div></div>
+          <div className="event-hub-status-group"><span className="event-hub-control-label">Tình trạng sự kiện</span><div className="event-hub-filters" role="group" aria-label="Tình trạng sự kiện">{filters.map(filter => <button type="button" aria-pressed={availabilityFilter === filter.value} className={`event-hub-filter is-${filter.value} ${availabilityFilter === filter.value ? 'is-active' : ''}`} key={filter.value} onClick={() => { setAvailabilityFilter(filter.value); setEventPage(1); }}>{filter.value !== 'all' && <i aria-hidden="true" />}{filter.label}<span>{filter.count}</span></button>)}</div></div>
           <div className="event-hub-selectors">
-            <label className="event-hub-select-field"><span>Sắp xếp sự kiện</span><div><ArrowUpDown size={15} /><select value={sortOrder} onChange={event => setSortOrder(event.target.value as EventSortOrder)} aria-label="Sắp xếp sự kiện"><option value="nearest">Gần nhất</option><option value="farthest">Xa nhất</option></select><ChevronDown size={15} /></div></label>
-            <label className="event-hub-select-field"><span>Thời gian tổ chức</span><div><CalendarDays size={15} /><select value={timeFilter} onChange={event => setTimeFilter(event.target.value as EventTimeFilter)} aria-label="Lọc thời gian sự kiện"><option value="all">Tất cả thời gian</option><option value="upcoming">Sắp/đang diễn ra</option><option value="month">Trong 30 ngày tới</option></select><ChevronDown size={15} /></div></label>
+            <label className="event-hub-select-field"><span>Sắp xếp sự kiện</span><div><ArrowUpDown size={15} /><select value={sortOrder} onChange={event => { setSortOrder(event.target.value as EventSortOrder); setEventPage(1); }} aria-label="Sắp xếp sự kiện"><option value="nearest">Gần nhất</option><option value="farthest">Xa nhất</option></select><ChevronDown size={15} /></div></label>
+            <label className="event-hub-select-field"><span>Thời gian tổ chức</span><div><CalendarDays size={15} /><select value={timeFilter} onChange={event => { setTimeFilter(event.target.value as EventTimeFilter); setEventPage(1); }} aria-label="Lọc thời gian sự kiện"><option value="all">Tất cả thời gian</option><option value="upcoming">Sắp/đang diễn ra</option><option value="month">Trong 30 ngày tới</option></select><ChevronDown size={15} /></div></label>
           </div>
         </div>
       </section>
 
       {isLoading ? <PartnerEventLoading label="Đang tải sự kiện công khai…" /> : (
-        <section aria-labelledby="available-events-title">
+        <section ref={resultsSectionRef} aria-labelledby="available-events-title">
           <div className="event-hub-section-heading"><div><span>SỰ KIỆN CÔNG KHAI</span><h2 id="available-events-title">Sự kiện dành cho đối tác</h2></div><p>{visibleEvents.length} kết quả phù hợp</p></div>
           <div className="event-hub-grid">
-            {visibleEvents.map(event => {
+            {paginatedEvents.map(event => {
               const existingApplication = applicationByEventId.get(event.id);
               return (
                 <article className="event-discovery-card" key={event.id}>
@@ -208,6 +238,12 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
               );
             })}
           </div>
+          {visibleEvents.length > 0 && (
+            <nav className="event-application-pagination" aria-label="Phân trang sự kiện công khai">
+              <p>Hiển thị <strong>{eventRangeStart + 1}–{Math.min(eventRangeStart + EVENTS_PER_PAGE, visibleEvents.length)}</strong> trong tổng số <strong>{visibleEvents.length}</strong> sự kiện</p>
+              {eventPageCount > 1 && <div className="event-pagination-controls"><button type="button" onClick={() => goToEventPage(currentEventPage - 1)} disabled={currentEventPage === 1} aria-label="Trang sự kiện trước">Trước</button>{paginationItems(currentEventPage, eventPageCount).map((item, index) => item === 'ellipsis' ? <span key={`ellipsis-${index}`} aria-hidden="true">…</span> : <button type="button" key={item} onClick={() => goToEventPage(item)} className={item === currentEventPage ? 'is-active' : ''} aria-current={item === currentEventPage ? 'page' : undefined} aria-label={`Trang sự kiện ${item}`}>{item}</button>)}<button type="button" onClick={() => goToEventPage(currentEventPage + 1)} disabled={currentEventPage === eventPageCount} aria-label="Trang sự kiện tiếp theo">Tiếp</button></div>}
+            </nav>
+          )}
           {visibleEvents.length === 0 && <div className="event-hub-empty"><Search size={30} /><h2>Không tìm thấy sự kiện phù hợp</h2><p>Hãy thử từ khóa hoặc bộ lọc khác, hoặc quay lại sau khi Ban tổ chức công bố sự kiện mới.</p></div>}
         </section>
       )}

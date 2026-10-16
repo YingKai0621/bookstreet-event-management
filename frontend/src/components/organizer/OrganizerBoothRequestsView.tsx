@@ -34,6 +34,7 @@ const requestStatusLabel: Record<BoothRequest['status'], string> = {
   NOT_SELECTED: 'Không được chọn',
   REJECTED: 'Đã từ chối',
   WITHDRAWN: 'Đã rút',
+  CANCELLED: 'Sự kiện đã hủy',
 };
 
 function apiMessage(error: unknown): string {

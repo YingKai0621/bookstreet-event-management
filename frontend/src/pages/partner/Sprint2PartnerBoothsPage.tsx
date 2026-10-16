@@ -5,7 +5,6 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  Clock3,
   CreditCard,
   DollarSign,
   Info,
@@ -33,6 +32,7 @@ import './PartnerPages.css';
 interface Props {
   language: Language;
   applications: PartnerEventApplication[];
+  allRequests: BoothRequest[] | null;
 }
 
 interface WithdrawConflict {
@@ -67,6 +67,7 @@ const requestStatusLabel: Record<BoothRequest['status'], string> = {
   NOT_SELECTED: 'Không được chọn',
   REJECTED: 'Đã từ chối',
   WITHDRAWN: 'Đã rút',
+  CANCELLED: 'Sự kiện đã hủy',
 };
 
 function apiMessage(error: unknown): string {
@@ -124,20 +125,139 @@ function money(value: number | null): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 }
 
-function dateTime(value: string | null): string {
+function dateTime(value: string | null | undefined): string {
   if (!value) return '—';
-  return new Date(value).toLocaleString('vi-VN', {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Đang cập nhật';
+  return parsed.toLocaleString('vi-VN', {
     dateStyle: 'short',
     timeStyle: 'short',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
 }
 
-export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
+function eventSchedule(application: PartnerEventApplication | undefined): string {
+  const validStart = application?.startAt && Number.isFinite(new Date(application.startAt).getTime());
+  const validEnd = application?.endAt && Number.isFinite(new Date(application.endAt).getTime());
+  if (validStart && validEnd) return `${dateTime(application?.startAt)} – ${dateTime(application?.endAt)}`;
+  if (validStart) return `Bắt đầu ${dateTime(application?.startAt)}`;
+  if (validEnd) return `Kết thúc ${dateTime(application?.endAt)}`;
+  return application?.dateRange?.trim() || 'Lịch sự kiện đang cập nhật';
+}
+
+type RequestProgressState = 'complete' | 'current' | 'future' | 'terminal-danger' | 'terminal-neutral';
+
+interface RequestProgressStep {
+  key: string;
+  label: string;
+  state: RequestProgressState;
+  occurredAt?: string | null;
+}
+
+function requestProgress(request: BoothRequest): RequestProgressStep[] {
+  const submitted: RequestProgressStep = {
+    key: 'submitted',
+    label: 'Đã gửi',
+    state: 'complete',
+    occurredAt: request.submittedAt,
+  };
+  const selected: RequestProgressStep = {
+    key: 'selected',
+    label: 'Đã được chọn',
+    state: 'complete',
+    occurredAt: request.selectedAt || request.reviewedAt,
+  };
+
+  switch (request.status) {
+    case 'PENDING':
+      return [
+        submitted,
+        { key: 'review', label: 'Chờ xét duyệt', state: 'current' },
+        { key: 'payment', label: 'Thanh toán', state: 'future' },
+        { key: 'allocation', label: 'Cấp gian hàng', state: 'future' },
+      ];
+    case 'SELECTED':
+      return [
+        submitted,
+        selected,
+        { key: 'payment', label: 'Chờ thanh toán', state: 'current' },
+        { key: 'allocation', label: 'Cấp gian hàng', state: 'future' },
+      ];
+    case 'COMPLETED':
+      return [
+        submitted,
+        selected,
+        {
+          key: 'settlement',
+          label: request.hold?.lockedRentalPrice === 0
+            ? 'Đã xác nhận miễn phí'
+            : request.hold ? 'Đã thanh toán' : 'Đã hoàn tất thủ tục',
+          state: 'complete',
+          occurredAt: request.completedAt,
+        },
+        { key: 'allocation', label: 'Đã cấp gian', state: 'complete', occurredAt: request.completedAt },
+      ];
+    case 'PAYMENT_EXPIRED':
+      return [
+        submitted,
+        selected,
+        { key: 'expired', label: 'Hết hạn thanh toán', state: 'terminal-danger', occurredAt: request.paymentExpiredAt },
+      ];
+    case 'REJECTED':
+      return [submitted, { key: 'rejected', label: 'Đã từ chối', state: 'terminal-danger', occurredAt: request.reviewedAt }];
+    case 'NOT_SELECTED':
+      return [submitted, { key: 'not-selected', label: 'Không được chọn', state: 'terminal-neutral', occurredAt: request.completedAt }];
+    case 'WITHDRAWN':
+      return [
+        submitted,
+        ...(request.selectedAt ? [selected] : []),
+        { key: 'withdrawn', label: request.selectedAt ? 'Đã rút & giải phóng' : 'Đã rút yêu cầu', state: 'terminal-neutral' as const, occurredAt: request.withdrawnAt },
+      ];
+    case 'CANCELLED':
+      return [
+        submitted,
+        ...(request.selectedAt ? [selected] : []),
+        { key: 'cancelled', label: 'Dừng do sự kiện hủy', state: 'terminal-neutral' as const, occurredAt: request.cancelledAt },
+      ];
+  }
+}
+
+const progressStateLabel: Record<RequestProgressState, string> = {
+  complete: 'Đã hoàn thành',
+  current: 'Bước hiện tại',
+  future: 'Chưa diễn ra',
+  'terminal-danger': 'Đã kết thúc',
+  'terminal-neutral': 'Đã kết thúc',
+};
+
+function holdStatusLabel(status: NonNullable<BoothRequest['hold']>['status']): string {
+  if (status === 'CONSUMED') return 'Đã cấp gian hàng';
+  if (status === 'EXPIRED') return 'Đã hết hạn giữ chỗ';
+  if (status === 'RELEASED') return 'Đã giải phóng';
+  return 'Đang giữ chỗ';
+}
+
+export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests }) => {
   const [searchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
+  );
+  const approvedEventIds = useMemo(
+    () => new Set(approvedApplications.map(application => application.eventId)),
+    [approvedApplications],
+  );
+  const requestCountsByEvent = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const request of allRequests || []) {
+      const requestEventId = String(request.eventId);
+      counts.set(requestEventId, (counts.get(requestEventId) || 0) + 1);
+    }
+    return counts;
+  }, [allRequests]);
+  const preferredRequestEventId = useMemo(
+    () => (allRequests || []).find(request => approvedEventIds.has(String(request.eventId)))?.eventId.toString() || '',
+    [allRequests, approvedEventIds],
   );
   const [selectedEventId, setSelectedEventId] = useState(() => searchParams.get('eventId') || '');
   const [tab, setTab] = useState<'browse' | 'requests'>('browse');
@@ -157,8 +277,11 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
 
   const eventId = approvedApplications.some(application => application.eventId === selectedEventId)
     ? selectedEventId
-    : approvedApplications[0]?.eventId || '';
+    : preferredRequestEventId || approvedApplications[0]?.eventId || '';
   const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
+  const alternativeRequestApplication = approvedApplications.find(application =>
+    application.eventId !== eventId && (requestCountsByEvent.get(application.eventId) || 0) > 0,
+  );
   const loadGenerationRef = useRef(0);
   const currentEventIdRef = useRef(eventId);
   const handledDeepLinkRef = useRef('');
@@ -364,26 +487,29 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
     <section className="partner-page s2-booth-page" aria-labelledby="partner-booth-title">
       <header className="s2-booth-header">
         <div>
-          <h1 id="partner-booth-title" className="partner-page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
-            Chọn & thuê gian hàng
-          </h1>
-          <p className="partner-page-sub">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi toàn bộ hành trình thuê gian theo từng sự kiện.</p>
+          <span className="s2-booth-header-eyebrow">Đối tác <b>/</b> Chọn và thuê gian hàng</span>
+          <h1 id="partner-booth-title">Chọn và thuê gian hàng</h1>
+          <p>Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi yêu cầu thuê gian hàng theo từng sự kiện.</p>
         </div>
-        <button className="btn-part-secondary" type="button" onClick={() => void loadData()} disabled={loading}>
-          <RefreshCw size={15} />
-          Làm mới
+        <button className="s2-booth-refresh" type="button" onClick={() => void loadData()} disabled={loading}>
+          <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
+          {loading ? 'Đang cập nhật…' : 'Làm mới'}
         </button>
       </header>
 
       <section className="s2-event-context" aria-label="Ngữ cảnh sự kiện đang chọn">
-        <div className="s2-event-context-icon"><Calendar size={21} /></div>
         <div className="s2-event-context-copy">
-          <span>Sự kiện đã được duyệt</span>
+          <span>Sự kiện đang xem</span>
           <strong>{selectedApplication?.eventTitle || 'Chọn sự kiện'}</strong>
-          <small>Chọn một sự kiện để xem đúng sơ đồ và trạng thái gian hàng.</small>
+          <div className="s2-event-context-meta">
+            <span className="s2-event-approved"><CheckCircle2 size={14} /> Hồ sơ đã duyệt</span>
+            {selectedApplication && (
+              <span className="s2-event-context-date"><Calendar size={14} />{eventSchedule(selectedApplication)}</span>
+            )}
+          </div>
         </div>
         <div className="s2-event-context-control">
-          <label htmlFor="partner-booth-event">Chuyển sự kiện</label>
+          <label htmlFor="partner-booth-event">Đổi sự kiện</label>
           <select
             id="partner-booth-event"
             aria-label="Sự kiện tham gia"
@@ -398,39 +524,65 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
             ))}
           </select>
         </div>
-        <div className="s2-event-context-side">
-          <span className="s2-event-approved"><CheckCircle2 size={14} /> Đã duyệt</span>
-          {selectedApplication && <span className="s2-event-context-date"><Clock3 size={14} />{selectedApplication.dateRange}</span>}
-        </div>
-        <div className="s2-event-context-metrics">
-          <span><strong>{booths.length}</strong> gian được mở</span>
-          <span><strong>{booths.filter(booth => booth.availability === 'AVAILABLE').length}</strong> còn trống</span>
-          <span><strong>{requests.length}</strong> yêu cầu của bạn</span>
-        </div>
       </section>
 
+      <section className="s2-booth-summary" aria-label="Thống kê gian hàng của sự kiện">
+        <article>
+          <strong>{booths.length}</strong>
+          <div>
+            <span>Gian hàng được mở</span>
+            <small>Toàn bộ danh mục gian của sự kiện</small>
+          </div>
+        </article>
+        <article>
+          <strong>{booths.filter(booth => booth.availability === 'AVAILABLE').length}</strong>
+          <div>
+            <span>Gian hàng còn trống</span>
+            <small>Có thể xem và gửi yêu cầu thuê</small>
+          </div>
+        </article>
+        <article>
+          <strong>{requests.length}</strong>
+          <div>
+            <span>Yêu cầu đã gửi</span>
+            <small>Tất cả hồ sơ yêu cầu trong sự kiện</small>
+          </div>
+        </article>
+      </section>
 
       {error && <div className="s2-alert s2-alert-error" role="alert"><AlertCircle size={18} />{error}</div>}
       {success && <div className="s2-alert s2-alert-success" role="status"><Check size={18} />{success}</div>}
 
-      <nav className="s2-tabs" aria-label="Gian hàng đối tác">
+      <nav className="s2-tabs" aria-label="Gian hàng đối tác" role="tablist">
         <button
+          id="partner-booth-map-tab"
           type="button"
+          role="tab"
           className={tab === 'browse' ? 'is-active' : ''}
-          aria-pressed={tab === 'browse'}
+          aria-selected={tab === 'browse'}
+          aria-controls="partner-booth-map-panel"
           onClick={() => setTab('browse')}
         >
           Sơ đồ gian hàng <span className="tab-count">{booths.length}</span>
         </button>
         <button
+          id="partner-booth-requests-tab"
           type="button"
+          role="tab"
           className={tab === 'requests' ? 'is-active' : ''}
-          aria-pressed={tab === 'requests'}
+          aria-selected={tab === 'requests'}
+          aria-controls="partner-booth-requests-panel"
           onClick={() => setTab('requests')}
         >
           Yêu cầu của tôi <span className="tab-count">{requests.length}</span>
         </button>
       </nav>
+
+      {tab === 'browse' && !loading && (
+        <p className="s2-map-guidance">
+          <Info size={16} /> Chọn một gian hàng còn trống trên sơ đồ để xem thông tin và gửi yêu cầu thuê.
+        </p>
+      )}
 
       {loading ? (
         <div className="s2-loading">
@@ -438,7 +590,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           Đang tải gian hàng...
         </div>
       ) : tab === 'browse' ? (
-        <div className="s2-panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div
+          id="partner-booth-map-panel"
+          className="s2-panel"
+          role="tabpanel"
+          aria-labelledby="partner-booth-map-tab"
+          style={{ padding: 0, overflow: 'hidden' }}
+        >
           <div className="s2-partner-map">
             <BoothMapCanvas
               markers={mapMarkers}
@@ -457,42 +615,47 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
           </div>
         </div>
       ) : (
-        <div className="s2-panel">
-          <div className="s2-panel-heading" style={{ marginBottom: '1.25rem' }}>
+        <div
+          id="partner-booth-requests-panel"
+          className="s2-panel"
+          role="tabpanel"
+          aria-labelledby="partner-booth-requests-tab"
+        >
+          <div className="s2-partner-request-intro">
             <div>
-              <h2>Yêu cầu của tôi</h2>
+              <span>THEO DÕI XỬ LÝ</span>
+              <h2>Yêu cầu thuê gian hàng</h2>
+              <p>Kiểm tra tiến trình xét duyệt, thời hạn giữ chỗ và các thao tác cần hoàn tất cho từng gian hàng.</p>
             </div>
+            <strong>{requests.length} yêu cầu</strong>
           </div>
           <div className="s2-request-list">
             {requests.map(request => {
               const isHoldActive = request.hold?.status === 'ACTIVE';
               const boothInfo = booths.find(b => b.booth.boothId === request.boothId);
               const boothName = boothInfo?.booth.name;
+              const progressSteps = requestProgress(request);
+              const canWithdraw = request.status === 'PENDING' || (request.status === 'SELECTED' && isHoldActive);
 
               return (
                 <article
-                  className={`s2-request-card ${request.status === 'PENDING' ? 'is-pending' : ''} ${isHoldActive ? 'has-active-hold' : ''}`}
+                  className={`s2-request-card s2-partner-request-card status-${request.status.toLowerCase()} ${isHoldActive ? 'has-active-hold' : ''}`}
                   key={request.boothRequestId}
                 >
-                  <div className="s2-req-topbar">
-                    <div className="s2-req-identity">
-                      <div className="s2-req-badge-group">
-                        <span className="s2-booth-tag">
-                          <Store size={15} />
-                          Gian {request.boothCode}
-                          {boothName ? ` • ${boothName}` : ''}
-                        </span>
-                        <span className={`s2-status request-${request.status.toLowerCase()}`}>
-                          {requestStatusLabel[request.status]}
-                        </span>
-                      </div>
-                      <span className="s2-req-submitted">
-                        <Calendar size={13} /> Gửi lúc: {dateTime(request.submittedAt)}
+                  <header className="s2-partner-request-header">
+                    <div className="s2-partner-request-identity">
+                      <span className="s2-partner-request-eyebrow">YÊU CẦU THUÊ GIAN HÀNG · #{request.boothRequestId}</span>
+                      <h3>Gian {request.boothCode}</h3>
+                      {boothName && <p><b>Tên gian</b>{boothName}</p>}
+                      <span className="s2-partner-request-submitted">
+                        <Calendar size={14} /> Gửi lúc {dateTime(request.submittedAt)}
                       </span>
                     </div>
-
-                    {(request.status === 'PENDING' || (request.status === 'SELECTED' && isHoldActive)) && (
-                      <div className="s2-req-actions">
+                    <div className="s2-partner-request-header-actions">
+                      <span className={`s2-partner-request-status is-${request.status.toLowerCase()}`}>
+                        <i aria-hidden="true" />{requestStatusLabel[request.status]}
+                      </span>
+                      {canWithdraw && (
                         <button
                           type="button"
                           className="btn-request-reject"
@@ -504,124 +667,117 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications }) => {
                             ? 'Đang xử lý…'
                             : request.status === 'SELECTED' ? 'Rút & giải phóng' : 'Rút yêu cầu'}
                         </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {request.requestNote && (
-                    <div className="s2-partner-note-bubble">
-                      <div className="s2-note-bubble-title">
-                        <MessageSquare size={13} />
-                        <span>Ghi chú của bạn:</span>
-                      </div>
-                      <p className="s2-note-bubble-content">{request.requestNote}</p>
+                      )}
                     </div>
-                  )}
+                  </header>
 
-                  {request.reviewNote && (
-                    <div className="s2-organizer-feedback">
-                      <div className="s2-feedback-header">
-                        <CheckCircle2 size={15} />
-                        <span>Phản hồi từ Ban tổ chức</span>
-                      </div>
-                      <div className="s2-feedback-body">{request.reviewNote}</div>
-                    </div>
-                  )}
+                  <section className="s2-partner-request-progress" aria-label="Tiến trình xử lý yêu cầu">
+                    <span className="s2-partner-request-section-label">Tiến trình xử lý</span>
+                    <ol style={{ '--step-count': progressSteps.length } as React.CSSProperties}>
+                      {progressSteps.map((step, index) => {
+                        const nextState = progressSteps[index + 1]?.state;
+                        const connectorState = nextState === 'terminal-danger'
+                          ? 'danger'
+                          : nextState === 'terminal-neutral'
+                            ? 'neutral'
+                            : step.state === 'complete' ? 'complete' : 'future';
 
-                  {(request.reviewedAt || request.selectedAt || request.completedAt || request.paymentExpiredAt || request.withdrawnAt) && (
-                    <div className="s2-timeline-chips">
-                      {request.reviewedAt && (
-                        <div className="s2-timeline-chip">
-                          <span className="s2-chip-dot reviewed" />
-                          <span className="s2-chip-label">Đã xét duyệt:</span>
-                          <strong>{dateTime(request.reviewedAt)}</strong>
-                        </div>
+                        return (
+                          <li
+                            className={`is-${step.state} connector-${connectorState}`}
+                            key={step.key}
+                            aria-label={`${step.label}: ${progressStateLabel[step.state]}`}
+                          >
+                            <span className="s2-partner-request-step-marker" aria-hidden="true">
+                              {step.state === 'complete' && <Check size={12} strokeWidth={3} />}
+                              {step.state.startsWith('terminal') && <X size={12} strokeWidth={3} />}
+                              {step.state === 'current' && <i />}
+                            </span>
+                            <div>
+                              <strong>{step.label}</strong>
+                              {step.state !== 'complete' && <small>{progressStateLabel[step.state]}</small>}
+                              {step.occurredAt && <time dateTime={step.occurredAt}>{dateTime(step.occurredAt)}</time>}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </section>
+
+                  {(request.requestNote || request.reviewNote) && (
+                    <div className="s2-partner-request-notes">
+                      {request.requestNote && (
+                        <p><span><MessageSquare size={14} />Ghi chú của bạn</span><b>{request.requestNote}</b></p>
                       )}
-                      {request.selectedAt && (
-                        <div className="s2-timeline-chip selected">
-                          <span className="s2-chip-dot selected" />
-                          <span className="s2-chip-label">Được chọn:</span>
-                          <strong>{dateTime(request.selectedAt)}</strong>
-                        </div>
-                      )}
-                      {request.completedAt && (
-                        <div className="s2-timeline-chip success">
-                          <span className="s2-chip-dot completed" />
-                          <span className="s2-chip-label">Hoàn tất:</span>
-                          <strong>{dateTime(request.completedAt)}</strong>
-                        </div>
-                      )}
-                      {request.paymentExpiredAt && (
-                        <div className="s2-timeline-chip error">
-                          <span className="s2-chip-dot expired" />
-                          <span className="s2-chip-label">Hết hạn thanh toán:</span>
-                          <strong>{dateTime(request.paymentExpiredAt)}</strong>
-                        </div>
-                      )}
-                      {request.withdrawnAt && (
-                        <div className="s2-timeline-chip neutral">
-                          <span className="s2-chip-dot withdrawn" />
-                          <span className="s2-chip-label">Đã rút:</span>
-                          <strong>{dateTime(request.withdrawnAt)}</strong>
-                        </div>
+                      {request.reviewNote && (
+                        <p className="is-review"><span><CheckCircle2 size={14} />Phản hồi từ Ban tổ chức</span><b>{request.reviewNote}</b></p>
                       )}
                     </div>
                   )}
 
-                  {/* Khi gian hàng đã được chọn và đang trong thời gian giữ chỗ: Thẻ thanh toán chuyên nghiệp VNPay */}
                   {request.status === 'SELECTED' && isHoldActive ? (
-                    <BoothPaymentCheckoutCard request={request} now={now} boothName={boothName} />
+                    <BoothPaymentCheckoutCard request={request} now={now} boothName={boothName} compact />
                   ) : request.hold ? (
-                    /* Lịch sử giữ chỗ khi đã giải phóng hoặc hết hạn */
-                    <div className="s2-hold-box is-inactive">
-                      <div className="s2-hold-box-header">
-                        <div className="s2-hold-price-area">
-                          <span className="s2-hold-price-label">Giá thuê giữ chỗ</span>
-                          <span className="s2-hold-price-value">{money(request.hold.lockedRentalPrice)}</span>
-                        </div>
-                        <div className="s2-hold-status-badge">
-                          <span className={`s2-hold-status-pill ${request.hold.status.toLowerCase()}`}>
-                            {request.hold.status === 'CONSUMED' ? 'Đã cấp gian hàng' : request.hold.status === 'EXPIRED' ? 'Đã hết hạn giữ chỗ' : 'Đã giải phóng'}
-                          </span>
-                        </div>
+                    <section className="s2-partner-request-finance" aria-label="Thông tin giữ chỗ và thanh toán">
+                      <div className="is-price">
+                        <span>Giá thuê đã khóa</span>
+                        <strong>{money(request.hold.lockedRentalPrice)}</strong>
                       </div>
-
-                      <div className="s2-hold-meta-grid">
-                        <div className="s2-hold-meta-item">
-                          <Clock3 size={14} />
-                          <span>Tạo lúc: <strong>{dateTime(request.hold.createdAt)}</strong></span>
-                        </div>
-                        <div className="s2-hold-meta-item">
-                          <Clock3 size={14} />
-                          <span>Hạn thanh toán: <strong>{dateTime(request.hold.expiresAt)}</strong></span>
-                        </div>
-                        {request.hold.releasedAt && (
-                          <div className="s2-hold-meta-item">
-                            <Clock3 size={14} />
-                            <span>Giải phóng lúc: <strong>{dateTime(request.hold.releasedAt)}</strong></span>
-                          </div>
-                        )}
+                      <div>
+                        <span>{isHoldActive ? 'Hạn thanh toán' : 'Hạn thanh toán ban đầu'}</span>
+                        <strong>{dateTime(request.hold.expiresAt)}</strong>
                       </div>
-                    </div>
+                      <div>
+                        <span>Trạng thái giữ chỗ</span>
+                        <strong className={`is-hold-${request.hold.status.toLowerCase()}`}><i aria-hidden="true" />{holdStatusLabel(request.hold.status)}</strong>
+                      </div>
+                      {request.hold.releasedAt && (
+                        <div>
+                          <span>Thời điểm giải phóng</span>
+                          <strong>{dateTime(request.hold.releasedAt)}</strong>
+                        </div>
+                      )}
+                    </section>
                   ) : null}
 
                   {request.hold && (
-                    <div className="s3-payment-link-wrapper">
+                    <footer className="s2-partner-request-footer">
                       <Link to={`/partner/booth-requests/${request.boothRequestId}/payment`} className="s3-payment-details-link">
                         <CreditCard size={16} />
-                        <span>Xem chi tiết thanh toán & thông tin gian hàng</span>
+                        <span>Xem chi tiết thanh toán và gian hàng</span>
                         <ChevronRight size={15} />
                       </Link>
-                    </div>
+                    </footer>
                   )}
                 </article>
               );
             })}
             {!requests.length && (
-              <div className="s2-empty">
-                <Store size={32} />
-                <strong>Bạn chưa gửi yêu cầu gian hàng nào</strong>
-                <span>Chọn các gian hàng còn trống trên sơ đồ để đăng ký.</span>
+              <div className="s2-empty s2-partner-request-empty">
+                <span><Store size={30} /></span>
+                <strong>Sự kiện này chưa có yêu cầu thuê gian hàng</strong>
+                {alternativeRequestApplication ? (
+                  <>
+                    <p>
+                      Bạn có {requestCountsByEvent.get(alternativeRequestApplication.eventId)} yêu cầu tại sự kiện
+                      {' '}<b>{alternativeRequestApplication.eventTitle}</b>.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        currentEventIdRef.current = alternativeRequestApplication.eventId;
+                        setSelectedEventId(alternativeRequestApplication.eventId);
+                      }}
+                    >
+                      Xem yêu cầu ở sự kiện đó <ChevronRight size={15} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>Chọn một gian còn trống trên sơ đồ để xem thông tin và gửi yêu cầu đến Ban tổ chức.</p>
+                    <button type="button" onClick={() => setTab('browse')}>Xem sơ đồ gian hàng <ChevronRight size={15} /></button>
+                  </>
+                )}
               </div>
             )}
           </div>

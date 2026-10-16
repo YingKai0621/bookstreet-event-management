@@ -7,7 +7,8 @@ export type BoothRequestStatus =
   | 'PAYMENT_EXPIRED'
   | 'NOT_SELECTED'
   | 'REJECTED'
-  | 'WITHDRAWN';
+  | 'WITHDRAWN'
+  | 'CANCELLED';
 
 export type BoothHoldStatus = 'ACTIVE' | 'CONSUMED' | 'EXPIRED' | 'RELEASED';
 
@@ -66,6 +67,7 @@ export interface BoothRequest {
   completedAt: string | null;
   paymentExpiredAt: string | null;
   withdrawnAt: string | null;
+  cancelledAt: string | null;
   hold: BoothHold | null;
 }
 

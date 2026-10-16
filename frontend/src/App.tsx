@@ -720,6 +720,7 @@ export function App() {
             <Sprint2PartnerBoothsPage
               language={language}
               applications={partnerApplications}
+              allRequests={partnerBoothRequests}
             />
           } />
           <Route path="/partner/activities" element={

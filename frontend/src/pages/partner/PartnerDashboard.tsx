@@ -74,6 +74,7 @@ const BOOTH_STATUS_LABELS: Record<BoothRequest['status'], string> = {
   NOT_SELECTED: 'Không được chọn',
   REJECTED: 'Từ chối',
   WITHDRAWN: 'Đã rút',
+  CANCELLED: 'Sự kiện đã hủy',
 };
 
 function timestamp(value: string | null | undefined): number {

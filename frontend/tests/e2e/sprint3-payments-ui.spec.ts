@@ -217,9 +217,9 @@ test('Login preserves the Return URL and retrieves the backend result', async ({
 test('Request list opens payment details and labels a consumed Hold as assigned', async ({ page }) => {
   await mock(page, { status: 'SUCCESS' });
   await page.goto('/partner/booth-requests');
-  await page.getByRole('button', { name: /Yêu cầu của tôi/ }).click();
+  await page.getByRole('tab', { name: /Yêu cầu của tôi/ }).click();
   await expect(page.getByText('Đã cấp gian hàng', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Xem chi tiết thanh toán & thông tin gian hàng' }).click();
+  await page.getByRole('link', { name: 'Xem chi tiết thanh toán và gian hàng' }).click();
   await expect(page.getByTestId('booth-assignment')).toBeVisible();
 });
 
