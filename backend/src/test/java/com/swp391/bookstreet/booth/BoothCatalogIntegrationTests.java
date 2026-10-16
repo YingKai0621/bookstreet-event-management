@@ -81,6 +81,17 @@ class BoothCatalogIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from activity_revisions where activity_id in "
+                + "(select activity_id from activities where event_id in "
+                + "(select event_id from events where organizer_user_id in (?, ?)))",
+                owner, otherOrganizer);
+        jdbc.update("delete from activity_requests where activity_id in "
+                + "(select activity_id from activities where event_id in "
+                + "(select event_id from events where organizer_user_id in (?, ?)))",
+                owner, otherOrganizer);
+        jdbc.update("delete from activities where event_id in "
+                + "(select event_id from events where organizer_user_id in (?, ?))",
+                owner, otherOrganizer);
         jdbc.update("""
                 delete from booth_holds
                 where event_booth_config_id in (
@@ -131,14 +142,14 @@ class BoothCatalogIntegrationTests {
                                 {
                                   "name": "Entrance Booth",
                                   "maxCapacity": 10,
-                                  "mapX": 125.00,
+                                  "mapX": 25.00,
                                   "categoryCode": null
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Entrance Booth"))
                 .andExpect(jsonPath("$.maxCapacity").value(10))
-                .andExpect(jsonPath("$.mapX").value(125.0))
+                .andExpect(jsonPath("$.mapX").value(25.0))
                 .andExpect(jsonPath("$.categoryCode").doesNotExist());
 
         assertThat(jdbc.queryForObject("select location_type from locations where location_id = ?",
@@ -148,9 +159,9 @@ class BoothCatalogIntegrationTests {
     }
 
     @Test
-    void duplicateCodeIsConflictAndSecondPairIsNotCreated() throws Exception {
+    void codeIsNormalizedAndCaseInsensitiveDuplicateIsConflict() throws Exception {
         String code = codePrefix + "DUP";
-        createBooth(code);
+        createBooth(code.toLowerCase());
         mvc.perform(post(BOOTHS).with(organizer(owner)).with(csrf())
                         .contentType("application/json").content(createBoothJson(code)))
                 .andExpect(status().isConflict())
@@ -291,6 +302,29 @@ class BoothCatalogIntegrationTests {
                 Integer.class, holdId)).isEqualTo(2000000);
     }
 
+    @Test
+    void boothCapacityAndActiveStateProtectApplicableActivity() throws Exception {
+        long boothId = createBooth(codePrefix + "ACTIVITY");
+        long eventId = insertEvent(owner, "PUBLISHED");
+        insertActivity(eventId, boothId, 7);
+
+        mvc.perform(patch(BOOTHS + "/" + boothId).with(organizer(owner)).with(csrf())
+                        .contentType("application/json").content("{\"maxCapacity\":6}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LOCATION_CAPACITY_IN_USE"));
+        mvc.perform(patch(BOOTHS + "/" + boothId).with(organizer(owner)).with(csrf())
+                        .contentType("application/json").content("{\"active\":false}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LOCATION_HAS_ACTIVE_ACTIVITIES"));
+
+        assertThat(jdbc.queryForObject(
+                "select max_capacity from locations where location_id = ?",
+                Integer.class, boothId)).isEqualTo(8);
+        assertThat(jdbc.queryForObject(
+                "select is_active from locations where location_id = ?",
+                Boolean.class, boothId)).isTrue();
+    }
+
     private long createBooth(String code) throws Exception {
         String response = mvc.perform(post(BOOTHS).with(organizer(owner)).with(csrf())
                         .contentType("application/json").content(createBoothJson(code)))
@@ -307,7 +341,7 @@ class BoothCatalogIntegrationTests {
                   "name": "Booth A05",
                   "description": "Near the entrance",
                   "maxCapacity": 8,
-                  "mapX": 120.50,
+                  "mapX": 20.50,
                   "mapY": 80.00,
                   "categoryCode": "PUBLISHER",
                   "note": null
@@ -338,6 +372,20 @@ class BoothCatalogIntegrationTests {
                 Timestamp.from(start.minus(Duration.ofDays(5))),
                 Timestamp.from(start.minus(Duration.ofDays(5))),
                 Timestamp.from(start.minus(Duration.ofDays(5))), status);
+    }
+
+    private long insertActivity(long eventId, long locationId, int capacity) {
+        Instant start = Instant.now().plus(Duration.ofDays(31));
+        return jdbc.queryForObject("""
+                insert into activities(
+                    event_id, location_id, title, activity_type, start_at, end_at,
+                    registration_required, capacity, is_certificate_enabled, status,
+                    created_at, updated_at)
+                values (?, ?, 'Booth activity', 'TALKSHOW', ?, ?, false, ?, false,
+                    'DRAFT', current_timestamp, current_timestamp)
+                returning activity_id
+                """, Long.class, eventId, locationId, Timestamp.from(start),
+                Timestamp.from(start.plus(Duration.ofHours(1))), capacity);
     }
 
     private long configure(long eventId, long boothId, int price, boolean enabled) {

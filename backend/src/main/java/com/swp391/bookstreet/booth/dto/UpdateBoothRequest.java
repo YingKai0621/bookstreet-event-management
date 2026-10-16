@@ -3,6 +3,8 @@ package com.swp391.bookstreet.booth.dto;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -21,9 +23,13 @@ public class UpdateBoothRequest {
     private String description;
     @Positive
     private Integer maxCapacity;
-    @Digits(integer = 8, fraction = 2)
+    @Digits(integer = 3, fraction = 2)
+    @DecimalMin("0.00")
+    @DecimalMax("100.00")
     private BigDecimal mapX;
-    @Digits(integer = 8, fraction = 2)
+    @Digits(integer = 3, fraction = 2)
+    @DecimalMin("0.00")
+    @DecimalMax("100.00")
     private BigDecimal mapY;
     private Boolean active;
     @Size(max = 50)
