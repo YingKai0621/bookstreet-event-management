@@ -2,6 +2,7 @@ package com.swp391.bookstreet.event;
 
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.event.dto.CancelEventRequest;
+import com.swp391.bookstreet.event.dto.UpdateEventRequest;
 import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.event.service.EventLifecycleService;
@@ -32,6 +33,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.mail.MailSendException;
 import tools.jackson.databind.ObjectMapper;
@@ -81,6 +84,7 @@ class EventApiIntegrationTests {
     @Autowired EventLifecycleService lifecycleService;
     @Autowired PartnerApplicationService partnerApplicationService;
     @Autowired PartnerPaymentService partnerPaymentService;
+    @Autowired PlatformTransactionManager transactionManager;
     @MockitoBean EventCancellationMailService cancellationMailService;
     MockMvc mvc;
     Long owner;
@@ -739,6 +743,87 @@ class EventApiIntegrationTests {
                     .extracting(error -> ((PartnerApiException) error).getCode())
                     .isEqualTo("EVENT_NOT_ACCEPTING_APPLICATIONS");
         } finally {
+            jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
+            jdbc.update("delete from partner_organizations where partner_organization_id = ?",
+                    organizationId);
+        }
+    }
+
+    @Test
+    void concurrentOperationalPatchAndFirstPartnerApplicationSerializeOnEventRoot()
+            throws Exception {
+        long eventId = createEvent();
+        publish(eventId);
+        long organizationId = jdbc.queryForObject("""
+                insert into partner_organizations(
+                    representative_user_id, name, category_code, status,
+                    created_at, updated_at)
+                values (?, ?, 'PUBLISHER', 'ACTIVE', current_timestamp, current_timestamp)
+                returning partner_organization_id
+                """, Long.class, other, "Operational patch race " + UUID.randomUUID());
+        var applicationHoldingEventRoot = new CountDownLatch(1);
+        var releaseApplication = new CountDownLatch(1);
+        var patchStarted = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<String> applicationResult = executor.submit(() -> {
+                new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    partnerApplicationService.submit(other, eventId,
+                            new SubmitPartnerApplicationRequest(
+                                    "First concurrent application"));
+                    applicationHoldingEventRoot.countDown();
+                    try {
+                        if (!releaseApplication.await(10, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("Release timeout");
+                        }
+                    } catch (InterruptedException error) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Interrupted while holding Event root",
+                                error);
+                    }
+                });
+                return "APPLICATION_CREATED";
+            });
+            assertThat(applicationHoldingEventRoot.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Callable<String> operationalPatch = () -> {
+                SecurityContextHolder.getContext().setAuthentication(
+                        identity(owner, true, "ORGANIZER"));
+                patchStarted.countDown();
+                try {
+                    UpdateEventRequest request = new UpdateEventRequest();
+                    request.setMaxBoothsPerPartner(2);
+                    service.update(eventId, request);
+                    return "PATCHED";
+                } catch (EventException error) {
+                    return error.getCode();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+            Future<String> patchResult = executor.submit(operationalPatch);
+            try {
+                assertThat(patchStarted.await(10, TimeUnit.SECONDS)).isTrue();
+                assertThatThrownBy(() -> patchResult.get(1, TimeUnit.SECONDS))
+                        .isInstanceOf(TimeoutException.class);
+            } finally {
+                releaseApplication.countDown();
+            }
+
+            assertThat(applicationResult.get(15, TimeUnit.SECONDS))
+                    .isEqualTo("APPLICATION_CREATED");
+            assertThat(patchResult.get(15, TimeUnit.SECONDS))
+                    .isEqualTo("EVENT_OPERATIONAL_FIELDS_LOCKED");
+            assertThat(jdbc.queryForObject("""
+                    select count(*) from partner_event_applications
+                    where partner_organization_id = ? and event_id = ?
+                    """, Long.class, organizationId, eventId)).isOne();
+            assertThat(jdbc.queryForObject("""
+                    select max_booths_per_partner from events where event_id = ?
+                    """, Integer.class, eventId))
+                    .isEqualTo(1);
+        } finally {
+            releaseApplication.countDown();
             jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
             jdbc.update("delete from partner_organizations where partner_organization_id = ?",
                     organizationId);
