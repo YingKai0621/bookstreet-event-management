@@ -65,6 +65,25 @@ const assignments = requests.map((request, index) => ({
   releaseReason: null,
 }));
 
+const payments = [{
+  boothPaymentId: 401,
+  boothRequestId: 77,
+  boothHoldId: 501,
+  transactionType: 'PAYMENT',
+  purpose: 'INITIAL_BOOTH_RENTAL',
+  amount: 5_000_000,
+  status: 'SUCCESS',
+  idempotencyKey: 'assigned-booth-payment-401',
+  gatewayProvider: 'VNPAY',
+  gatewayTransactionRef: 'VNPAY-401',
+  failureCode: null,
+  failureMessage: null,
+  reconciliationRequired: false,
+  createdAt: iso(-22),
+  updatedAt: iso(-21),
+  completedAt: iso(-21),
+}];
+
 function paged(content: unknown[]) {
   return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 };
 }
@@ -119,6 +138,17 @@ async function mockPartner(page: Page, empty = false) {
       return assignment ? json(route, assignment) : json(route, { code: 'BOOTH_ASSIGNMENT_NOT_FOUND', message: 'Không tìm thấy.' }, 404);
     }
 
+    const paymentHistoryMatch = path.match(/\/partner\/booth-requests\/(\d+)\/payments$/);
+    if (paymentHistoryMatch) {
+      return json(route, paged(payments.filter(item => item.boothRequestId === Number(paymentHistoryMatch[1]))));
+    }
+
+    const requestDetailMatch = path.match(/\/partner\/booth-requests\/(\d+)$/);
+    if (requestDetailMatch) {
+      const request = requests.find(item => item.boothRequestId === Number(requestDetailMatch[1]));
+      return request ? json(route, request) : json(route, { code: 'BOOTH_REQUEST_NOT_FOUND', message: 'Không tìm thấy.' }, 404);
+    }
+
     if (path.endsWith('/partner/booth-requests')) {
       if (empty) return json(route, paged([]));
       const eventId = url.searchParams.get('eventId');
@@ -165,7 +195,21 @@ test('Partner sees assigned Booths by Event phase, opens QR and locates own Boot
   await expect(page.getByRole('button', { name: /Đang diễn ra/ })).toContainText('1');
   await expect(page.getByRole('button', { name: /Đã kết thúc/ })).toContainText('1');
 
+  await page.getByRole('button', { name: /Sắp diễn ra/ }).click();
+  await expect(page.locator('.my-booth-card')).toHaveCount(1);
+  await expect(page.locator('.my-booth-card')).toContainText('Ngày hội sách trẻ');
+  await page.getByRole('combobox', { name: 'Lọc theo thời gian sự kiện' }).selectOption('all');
+
+  const search = page.getByRole('searchbox', { name: 'Tìm gian hàng đã được cấp' });
+  await search.fill('C03');
+  await expect(page.locator('.my-booth-card')).toHaveCount(1);
+  await expect(page.locator('.my-booth-card')).toContainText('Tuần lễ văn hóa đọc');
+  await search.fill('');
+
   const currentBooth = page.locator('.my-booth-card').filter({ hasText: 'Hội sách mùa thu' });
+  await expect(currentBooth.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
+  await expect(currentBooth.getByRole('link', { name: /Chi tiết/ })).toBeVisible();
+  await expect(currentBooth.getByRole('link', { name: /Quản lý hoạt động/ })).toBeVisible();
   await currentBooth.getByRole('button', { name: 'Xem QR' }).click();
   const qrDialog = page.getByRole('dialog', { name: /Gian A05/ });
   await expect(qrDialog).toBeVisible();
@@ -173,7 +217,17 @@ test('Partner sees assigned Booths by Event phase, opens QR and locates own Boot
   await page.keyboard.press('Escape');
   await expect(qrDialog).toHaveCount(0);
 
-  await currentBooth.getByRole('link', { name: /Bản đồ/ }).click();
+  await currentBooth.getByRole('link', { name: /Chi tiết/ }).click();
+  await expect(page).toHaveURL(/\/partner\/booths\/77$/);
+  await expect(page.getByRole('button', { name: 'Gian hàng của tôi' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { name: 'Gian A05', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lịch sử thanh toán' })).toBeVisible();
+  await expect(page.getByText('VNPAY-401')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Mã QR gian hàng A05' })).toBeVisible();
+  await page.getByRole('link', { name: 'Quay lại Gian hàng của tôi' }).click();
+
+  const returnedBooth = page.locator('.my-booth-card').filter({ hasText: 'Hội sách mùa thu' });
+  await returnedBooth.getByRole('link', { name: /Bản đồ/ }).click();
   await expect(page).toHaveURL(/\/partner\/booth-requests\?eventId=101&boothId=11/);
   await expect(page.getByRole('button', { name: /A05.*Gian của bạn/ })).toBeVisible();
   await expect(page.getByText('Gian của bạn', { exact: true })).toBeVisible();
@@ -187,4 +241,22 @@ test('Assigned Booth page has a useful empty state and remains responsive on mob
   await expect(page.getByRole('heading', { name: 'Bạn chưa có gian hàng được cấp' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Xem sơ đồ và yêu cầu gian hàng/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+});
+
+test('Assigned Booth management stays usable at the target responsive widths', async ({ page }) => {
+  await mockPartner(page);
+  await page.goto('/partner/booths');
+
+  for (const width of [1440, 1280, 768, 375]) {
+    await page.setViewportSize({ width, height: width <= 768 ? 900 : 850 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    await expect(page.getByRole('searchbox', { name: 'Tìm gian hàng đã được cấp' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Lọc theo thời gian sự kiện' })).toBeVisible();
+    await expect(page.locator('.my-booth-card').first()).toBeVisible();
+  }
+
+  await page.locator('.my-booth-card').first().getByRole('link', { name: /Chi tiết/ }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await expect(page.getByRole('img', { name: /Mã QR gian hàng/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Xem trên bản đồ' })).toBeVisible();
 });

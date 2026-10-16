@@ -16,7 +16,7 @@ const selectedBoothRequest = { boothRequestId: 51, eventId: 101, boothId: 11, bo
   hold: activeBoothHold };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
   await page.route('**/api/v1/**', async route => {
@@ -51,7 +51,19 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
       state.withdrawals++; state.status = 'WITHDRAWN'; return json(route, { ...application, status: 'WITHDRAWN' });
     }
     if (path.endsWith('/events/101')) return json(route, { ...event, status: scenario.history ? 'COMPLETED' : 'PUBLISHED' });
-    if (path.endsWith('/events')) return scenario.failure ? json(route, { code: 'UNAVAILABLE', message: 'Không thể tải sự kiện' }, 503) : json(route, paged(scenario.history ? [otherEvent] : [event, otherEvent]));
+    if (path.endsWith('/events')) {
+      if (scenario.failure) return json(route, { code: 'UNAVAILABLE', message: 'Không thể tải sự kiện' }, 503);
+      const publishedEvents = scenario.eventCount
+        ? Array.from({ length: scenario.eventCount }, (_, index) => ({
+          ...event,
+          eventId: event.eventId + index,
+          name: index === 0 ? event.name : index === 1 ? otherEvent.name : `Sự kiện phân trang ${index + 1}`,
+          startAt: new Date(new Date(startAt).getTime() + index * 86_400_000).toISOString(),
+          endAt: new Date(new Date(endAt).getTime() + index * 86_400_000).toISOString(),
+        }))
+        : [event, otherEvent];
+      return json(route, paged(scenario.history ? [otherEvent] : publishedEvents));
+    }
     if (path.endsWith('/heritages')) return json(route, []);
     if (path.includes('/activity-proposals') || path.includes('/notifications') || path.endsWith('/partner/schedule')) state.unsupported.push(path);
     return json(route, { code: 'NOT_FOUND', message: 'Không có API này' }, 404);
@@ -125,7 +137,7 @@ test('event discovery is independent from application management and exposes eve
   await setup(page, { empty: true });
   await page.goto('/partner/events/apply');
 
-  await expect(page.getByRole('heading', { name: 'Khám phá & đăng ký sự kiện' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Khám phá và đăng ký sự kiện' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Hồ sơ sự kiện của tôi/ })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Tất cả hồ sơ/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Khám phá & đăng ký' })).toHaveAttribute('aria-current', 'page');
@@ -139,6 +151,23 @@ test('event discovery is independent from application management and exposes eve
   await expect(page.getByRole('heading', { name: 'Hồ sơ sự kiện của tôi' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Đăng ký sự kiện mới/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Hồ sơ sự kiện của tôi' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('event discovery paginates after filtering and resets to the first page', async ({ page }) => {
+  await setup(page, { empty: true, eventCount: 14 });
+  await page.goto('/partner/events/apply');
+
+  const cards = page.locator('.event-discovery-card');
+  await expect(cards).toHaveCount(6);
+  await expect(page.getByText('Hiển thị 1–6 trong tổng số 14 sự kiện')).toBeVisible();
+  await page.getByRole('button', { name: 'Trang sự kiện 3', exact: true }).click();
+  await expect(cards).toHaveCount(2);
+  await expect(page.getByText('Hiển thị 13–14 trong tổng số 14 sự kiện')).toBeVisible();
+
+  await page.getByLabel('Tìm kiếm sự kiện công khai').fill('Sự kiện phân trang 14');
+  await expect(cards).toHaveCount(1);
+  await expect(page.getByText('Hiển thị 1–1 trong tổng số 1 sự kiện')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Trang sự kiện trước' })).toHaveCount(0);
 });
 
 test('event discovery links an already applied event to its application detail', async ({ page }) => {
@@ -266,7 +295,7 @@ test('separated event pages avoid horizontal overflow at target breakpoints', as
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 
     await page.goto('/partner/events/apply');
-    await expect(page.getByRole('heading', { name: 'Khám phá & đăng ký sự kiện' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Khám phá và đăng ký sự kiện' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   }
 });

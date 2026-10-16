@@ -23,6 +23,7 @@ interface Props {
   now: number;
   boothName?: string;
   onPaymentCreated?: () => void;
+  compact?: boolean;
 }
 
 function money(value: number | null): string {
@@ -83,7 +84,7 @@ function mapErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Lỗi kết nối đến máy chủ thanh toán.';
 }
 
-export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothName, onPaymentCreated }) => {
+export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothName, onPaymentCreated, compact = false }) => {
   const [latestPayment, setLatestPayment] = useState<BoothPayment | null>(null);
   const [isLoadingPayments, setIsLoadingPayments] = useState(true);
   const [historyError, setHistoryError] = useState(false);
@@ -206,13 +207,13 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
         : latestPayment?.status === 'TIMEOUT' ? 'Phiên đã hết hạn' : 'Chưa thanh toán';
 
   return (
-    <div className="s3-checkout-card" data-testid="booth-payment-checkout-card">
+    <div className={`s3-checkout-card ${compact ? 'is-request-compact' : ''}`} data-testid="booth-payment-checkout-card">
       {/* Header thanh toán */}
       <div className="s3-checkout-header">
         <div className="s3-checkout-title-group">
           <div>
             <h3 className="s3-checkout-title">Thanh toán gian hàng</h3>
-            <p className="s3-checkout-subtitle">{request.boothCode}{boothName ? ` · ${boothName}` : ''}</p>
+            {!compact && <p className="s3-checkout-subtitle">{request.boothCode}{boothName ? ` · ${boothName}` : ''}</p>}
           </div>
         </div>
         <div className="s3-checkout-status-pill">

@@ -38,6 +38,7 @@ import { PartnerEventApplicationsPage } from './pages/partner/PartnerEventApplic
 import { PartnerEventDiscoveryPage } from './pages/partner/PartnerEventDiscoveryPage';
 import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
 import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
+import { PartnerBoothDetailPage } from './pages/partner/PartnerBoothDetailPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
@@ -708,11 +709,18 @@ export function App() {
               applications={partnerApplications}
             />
           } />
+          <Route path="/partner/booths/:requestId" element={
+            <PartnerBoothDetailPage
+              language={language}
+              applications={partnerApplications}
+            />
+          } />
           <Route path="/partner/booths/select" element={<Navigate to="/partner/booth-requests" replace />} />
           <Route path="/partner/booth-requests" element={
             <Sprint2PartnerBoothsPage
               language={language}
               applications={partnerApplications}
+              allRequests={partnerBoothRequests}
             />
           } />
           <Route path="/partner/activities" element={
