@@ -356,7 +356,8 @@ class EventApiIntegrationTests {
                 values (?, 'Draft delete Booth', 'BOOTH', 4, true,
                     current_timestamp, current_timestamp)
                 returning location_id
-                """, Long.class, "DELETE-" + UUID.randomUUID().toString().substring(0, 12));
+                """, Long.class,
+                ("DELETE-" + UUID.randomUUID().toString().substring(0, 12)).toUpperCase());
         jdbc.update("insert into booths(booth_id, category_code) values (?, 'PUBLISHER')", boothId);
         jdbc.update("""
                 insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
@@ -1515,7 +1516,8 @@ class EventApiIntegrationTests {
                 values (?, 'Cancellation Booth', 'BOOTH', 4, true,
                     current_timestamp, current_timestamp)
                 returning location_id
-                """, Long.class, suffix + "-" + UUID.randomUUID().toString().substring(0, 12));
+                """, Long.class,
+                (suffix + "-" + UUID.randomUUID().toString().substring(0, 12)).toUpperCase());
         jdbc.update("insert into booths(booth_id, category_code) values (?, 'PUBLISHER')", boothId);
         return boothId;
     }

@@ -61,9 +61,13 @@ Booth là “chỗ”, Activity là “việc”. Hủy một Activity không đ
 
 # 2. Nguyên tắc chung về hủy
 
-- Nếu Booth Request hoặc Activity Proposal vẫn ở trạng thái PENDING: Partner được tự Withdraw, không cần Organizer xác nhận. Booth Request đang PENDING chưa tạo Hold nên không có Hold để release.
+- BoothRequest `PENDING` được Partner tự withdraw. ActivityProposal `PENDING` hoặc `NEED_CHANGES`
+  cũng được tự withdraw, không cần Organizer xác nhận; các record mở này chưa phải Assignment hay
+  Activity chính thức.
 
-- Nếu Activity đã Approved/Published: Partner gửi Cancellation Request; Organizer xử lý chính thức. Booth đã Assigned không có cancellation workflow trong MVP.
+- Nếu Activity đã chính thức và chưa terminal: Partner gửi Cancellation Request; submit chưa hủy
+  Activity, Organizer approve mới làm việc hủy có hiệu lực. Booth đã Assigned không có
+  cancellation workflow trong MVP.
 
 - Không xóa dữ liệu lịch sử. Hệ thống giữ lại request, lý do hủy, thời điểm hủy và trạng thái để phục vụ báo cáo.
 
@@ -129,23 +133,32 @@ Kim Đồng mất Booth A05. Activity “Mini game tại A05” bị ảnh hư�
 
 # 4. Hủy Activity
 
-## 4.1 Khi Activity Proposal còn Pending
+## 4.1 Khi Activity Proposal còn mở
 
-Partner có thể Withdraw Proposal trực tiếp. Vì Activity chưa được duyệt và chưa public nên không cần Organizer xác nhận.
+Partner có thể Withdraw Proposal `PENDING` hoặc `NEED_CHANGES` trực tiếp. Vì Activity chưa được duyệt
+và chưa public nên không cần Organizer xác nhận. Event cancellation chuyển Proposal còn mở sang
+`CANCELLED`; không hard-delete record.
 
-## 4.2 Khi Activity đã Approved/Published
+## 4.2 Khi Activity đã chính thức
 
 - Partner chọn Activity và gửi “Activity Cancellation Request”.
 
-- Partner nhập lý do hủy, ghi chú và gửi yêu cầu.
+- Partner nhập lý do hủy sau normalize dài 10–500 ký tự và gửi yêu cầu. Đúng biên
+  `activityCancellationCutoffAt` chưa bị coi là trễ; sau biên request vẫn được nhận với
+  `isLate=true`.
 
 - Organizer xem số người đã đăng ký, thời gian còn lại, địa điểm và khả năng xử lý thay thế.
 
-- Organizer chọn phương án: Confirm Cancel, Reschedule, Change Location hoặc Request More Information.
+- Organizer approve hoặc reject Cancellation Request. Reschedule/Change Location phải dùng
+  ActivityChangeRequest riêng, không biến Cancellation Request thành một lệnh sửa Activity.
 
-- Nếu Cancel: Activity chuyển sang Cancelled và hệ thống xử lý tự động các đăng ký liên quan.
+- Nếu approve: request chuyển `APPROVED`; Activity atomically chuyển `CANCELLED` và lưu
+  `cancelledAt`, `cancellationReason`, `cancellationSource=PARTNER_REQUEST`. Organizer hủy trực tiếp
+  dùng source `ORGANIZER`; Event cancellation dùng `EVENT_CANCELLATION`; cleanup dùng `SYSTEM`.
 
-- Activity QR không còn hợp lệ để tạo Attendance mới sau khi Activity bị CANCELLED. Attendance, Certificate hoặc ActivityRating đã phát sinh hợp lệ trước đó vẫn được giữ lịch sử; registration chưa scan hợp lệ không được coi là đã tham dự.
+- Submit request chưa làm QR mất hiệu lực; chỉ khi Activity thực sự `CANCELLED` thì QR không còn hợp
+  lệ cho Attendance mới. Attendance, Certificate hoặc ActivityRating hợp lệ trước đó vẫn được giữ;
+  registration chưa scan hợp lệ không được coi là đã tham dự.
 
 ## 4.3 Nếu Activity bị hủy sau khi đã có Participant đăng ký
 
@@ -157,7 +170,9 @@ Partner có thể Withdraw Proposal trực tiếp. Vì Activity chưa được d
 
 ## 4.4 Hủy Activity sát giờ
 
-Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organizer xác nhận việc hủy ngay trên hệ thống; hệ thống thông báo hàng loạt cho Participant và đóng các đăng ký liên quan. Organizer không xử lý từng người thủ công.
+Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Request vẫn được ghi nhận là late để
+Organizer xử lý. Sprint 5 gửi email sau commit cho representative Partner; notification hàng loạt
+và đóng registration của Participant được thực hiện khi module Participant được triển khai.
 
 # 5. Partner rút khỏi toàn bộ Event — POST-MVP REFERENCE
 
@@ -181,8 +196,8 @@ Ví dụ 14:30 Partner báo không thể tổ chức Activity lúc 15:00. Organi
 |-----------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Booth Request - PENDING     | Withdraw trực tiếp; chưa có Hold | Không cần xác nhận                                                                                                                                                                 |
 | Booth đã Assigned           | Gửi Cancellation Request         | Confirm + hoàn tiền theo cutoff + release Booth                                                                                                                                    |
-| Activity Proposal - Pending | Withdraw trực tiếp               | Không cần xác nhận                                                                                                                                                                 |
-| Activity Approved/Published | Gửi Cancellation Request         | Cancel / Reschedule / Change Location                                                                                                                                              |
+| Activity Proposal - PENDING/NEED_CHANGES | Withdraw trực tiếp     | Không cần xác nhận                                                                                                                                                                 |
+| Activity chính thức chưa terminal | Gửi Cancellation Request    | Approve/reject Cancellation; reschedule/move dùng Change Request riêng                                                                                                             |
 | Booth hủy trước cutoff      | Gửi yêu cầu                      | Hoàn 100%; release assignment; có thể mở lại nếu còn phù hợp                                                                                                                       |
 | Booth hủy sau cutoff        | Gửi yêu cầu                      | Không hoàn tiền; release assignment; thường để trống hoặc chủ động reassign                                                                                                        |
 | Activity hủy sát giờ        | Gửi yêu cầu                      | Confirm cancel + notify Participant                                                                                                                                                |
@@ -195,4 +210,6 @@ Booth MVP: Partner chọn Booth → BoothRequest PENDING (chưa Hold, chưa khó
 
 Booth Post-MVP: Cancellation Request, Partner withdrawal sau approval và refund theo cutoff chỉ là thiết kế tham khảo tương lai.
 
-Activity: Partner Proposal → Organizer Approve → Activity Published → Partner Cancellation Request → Organizer Handle → Cancel/Reschedule/Change Location → System Notify Participant.
+Activity: Partner Proposal PENDING → Organizer approve atomically thành Activity DRAFT → Publish →
+Partner gửi Change hoặc Cancellation Request → Organizer approve/reject. Sprint 5 gửi email
+post-commit cho Partner; notification Participant được nối khi module Participant được triển khai.

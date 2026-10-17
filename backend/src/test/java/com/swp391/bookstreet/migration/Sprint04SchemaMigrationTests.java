@@ -42,7 +42,7 @@ class Sprint04SchemaMigrationTests {
 
     @Test
     void cleanDatabaseMigratesThroughV8WithCancellationSchema() throws SQLException {
-        Flyway flyway = flyway(null);
+        Flyway flyway = flyway(MigrationVersion.fromVersion("8"));
 
         flyway.migrate();
 
@@ -74,7 +74,7 @@ class Sprint04SchemaMigrationTests {
             eventId = insertLegacyCancelledEvent(connection, legacyUpdatedAt);
         }
 
-        Flyway upgraded = flyway(null);
+        Flyway upgraded = flyway(MigrationVersion.fromVersion("8"));
         upgraded.migrate();
 
         assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("8");

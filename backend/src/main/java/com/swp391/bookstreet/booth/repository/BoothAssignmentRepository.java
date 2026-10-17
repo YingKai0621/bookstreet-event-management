@@ -106,4 +106,62 @@ public interface BoothAssignmentRepository extends JpaRepository<BoothAssignment
               and assignment.status = 'ACTIVE'
             """, nativeQuery = true)
     long countActiveByApplication(@Param("applicationId") Long applicationId);
+
+    @EntityGraph(attributePaths = {
+            "boothHold", "boothHold.eventBoothConfig",
+            "boothHold.eventBoothConfig.booth",
+            "boothHold.eventBoothConfig.booth.location",
+            "boothHold.boothRequest", "boothHold.boothRequest.application",
+            "boothHold.boothRequest.application.partnerOrganization"
+    })
+    @Query("""
+            select assignment
+            from BoothAssignment assignment
+            where assignment.status = com.swp391.bookstreet.booth.entity.BoothAssignmentStatus.ACTIVE
+              and assignment.boothHold.eventBoothConfig.eventId = :eventId
+              and assignment.boothHold.boothRequest.application.partnerOrganization.id = :partnerOrganizationId
+            order by assignment.boothHold.eventBoothConfig.booth.location.code,
+                     assignment.boothAssignmentId
+            """)
+    List<BoothAssignment> findActiveOwnedByEventAndPartnerOrganization(
+            @Param("eventId") Long eventId,
+            @Param("partnerOrganizationId") Long partnerOrganizationId);
+
+    @Query(value = """
+            select exists (
+                select 1
+                from booth_assignments assignment
+                join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
+                join event_booth_configs config
+                  on config.event_booth_config_id = hold.event_booth_config_id
+                where assignment.status = 'ACTIVE'
+                  and config.event_id = :eventId
+                  and config.booth_id = :boothId
+            )
+            """, nativeQuery = true)
+    boolean existsActiveForEventAndBooth(
+            @Param("eventId") Long eventId,
+            @Param("boothId") Long boothId);
+
+    @Query(value = """
+            select exists (
+                select 1
+                from booth_assignments assignment
+                join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
+                join event_booth_configs config
+                  on config.event_booth_config_id = hold.event_booth_config_id
+                join booth_requests request
+                  on request.booth_request_id = hold.booth_request_id
+                join partner_event_applications application
+                  on application.application_id = request.application_id
+                where assignment.status = 'ACTIVE'
+                  and config.event_id = :eventId
+                  and config.booth_id = :boothId
+                  and application.partner_organization_id = :partnerOrganizationId
+            )
+            """, nativeQuery = true)
+    boolean existsActiveOwnedForEventAndBooth(
+            @Param("eventId") Long eventId,
+            @Param("boothId") Long boothId,
+            @Param("partnerOrganizationId") Long partnerOrganizationId);
 }

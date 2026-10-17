@@ -47,6 +47,16 @@ Last updated: `2026-10-16`
 - Sprint 4 Event lifecycle hardening and pre-payment Booth release are complete through V8. All 23
   Sprint 4 Acceptance Criteria have implementation and automated coverage; required Swagger smoke
   flows were manually accepted on 2026-10-16.
+- Sprint 5 Activity Planning and Partner Proposal Workflow documentation is approved and ready for
+  implementation. No Sprint 5 production code or V9 migration exists yet; V1–V8 remain the current
+  immutable runtime schema.
+- The approved Sprint 5 baseline covers shared Activity Locations, Partner Proposal review,
+  official Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
+  Participant registration/attendance/rating/certificate commands remain out of Sprint 5.
+- Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
+  creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
+  and half-open interval across Events; one Pending Activity request exists across change and
+  cancellation types; direct Organizer Activity cannot commandeer a Booth.
 - Current MVP policy does not permit Booth change/cancellation after Assignment, whole-Event
   Partner withdrawal after approval or business-refund execution. Those designs are retained only
   as post-MVP references.
@@ -123,6 +133,18 @@ Last updated: `2026-10-16`
 - backfills legacy Cancelled Event metadata before enforcing the constraints;
 - adds BoothRequest `CANCELLED` support and `cancelled_at` consistency constraints.
 
+Approved V9 design, not yet implemented:
+
+- extends `locations` type/code constraints for BOOTH/STAGE/WORKSHOP/AREA;
+- creates `activity_proposals`, `activities`, a unified physical `activity_requests` table and
+  immutable `activity_revisions` audit snapshots;
+- uses the unified request table plus a partial unique index for one Pending Change/Cancellation
+  request per Activity;
+- enables `btree_gist` and adds a cross-Event half-open Location/time exclusion constraint for
+  every non-cancelled official Activity;
+- prepares registration/certificate/Attendance-QR configuration without implementing Participant
+  registration or scan commands.
+
 ## Not yet implemented
 
 - Forgot/Reset Password
@@ -130,34 +152,41 @@ Last updated: `2026-10-16`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
+- Sprint 5 V9 Activity schema and all Sprint 5 production APIs/services/tests
 
 ## Next planning task
 
-- Merge the Sprint 4 closure documentation and keep V1–V8 immutable.
-- Select and approve a new Sprint baseline before beginning additional production scope.
+- Merge the approved Sprint 5 documentation baseline and keep V1–V8 immutable.
+- Implement Sprint 5 from `docs/sprints/sprint-05.md`, its Use Case Specifications, API Contract
+  and Backend Work Assignment; create exactly one reviewed V9 migration.
 - Keep browser-level payment/assignment E2E, frontend lint warnings and bundle splitting visible in
   the technical-debt backlog.
 - Preserve the Sprint 4 Event-root lock order and unresolved-Payment safety rules in future work.
 
-## Latest completed Sprint
+## Active and latest completed Sprint
 
-Sprint 04 Event Lifecycle and Pre-payment Booth Release is complete. No new implementation Sprint
-has been selected.
+Sprint 05 Activity Planning and Partner Proposal Workflow is approved and ready for implementation;
+code has not started. Sprint 04 Event Lifecycle and Pre-payment Booth Release remains the latest
+completed Sprint.
 
-Included Use Case slices:
+Sprint 5 included Use Case slices:
 
-- UC-O01 Manage Events - Draft delete, safe published update, eligible cancellation and timed
-  lifecycle transitions
-- UC-E02 Manage Booth Request - Pending withdrawal and safe Selected Hold release before settlement
+- UC-E04 Propose Activity
+- UC-E05 Request Activity Change
+- UC-E06 Request Activity Cancellation
+- UC-O02 Manage Locations — Activity Location slice
+- UC-O05 Review Activity Proposals
+- UC-O06 Manage Activities
+- UC-G01 Discover Public Content — Activity slice
 
 ## Current approved baselines
 
-- Requirement baseline: v5 (Sprint 4 scope clarification)
+- Requirement baseline: v6 (approved Sprint 5 Activity rules)
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v7 with active-MVP/Post-MVP overlay
-- Physical implementation source: immutable Flyway V1–V8; the v1 33-table image is
-  target/reference only
+- Logical ERD: v8 with approved Sprint 5 Activity overlay
+- Physical implementation source: immutable Flyway V1–V8; approved V9 Activity design overlay is
+  ready for implementation; the v1 33-table image is target/reference only
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or the 33-table target image as an

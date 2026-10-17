@@ -3,6 +3,7 @@ package com.swp391.bookstreet.event.service;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.repository.EventRepository;
+import com.swp391.bookstreet.activity.service.EventActivityCascadeService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -20,8 +21,10 @@ class EventRootLockServiceTests {
     private static final Instant NOW = Instant.parse("2030-01-01T10:00:00Z");
 
     private final EventRepository repository = mock(EventRepository.class);
+    private final EventActivityCascadeService activityCascadeService =
+            mock(EventActivityCascadeService.class);
     private final EventRootLockService service = new EventRootLockService(
-            repository, Clock.fixed(NOW, ZoneOffset.UTC));
+            repository, activityCascadeService, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     void locksEventByIdAndKeepsPublishedBeforeStart() {
@@ -63,6 +66,7 @@ class EventRootLockServiceTests {
         service.lock(21L);
 
         assertThat(event.getStatus()).isEqualTo(EventStatus.COMPLETED);
+        verify(activityCascadeService).completeEvent(21L, NOW);
     }
 
     @Test
@@ -73,6 +77,7 @@ class EventRootLockServiceTests {
         service.lock(21L);
 
         assertThat(event.getStatus()).isEqualTo(EventStatus.COMPLETED);
+        verify(activityCascadeService).completeEvent(21L, NOW);
     }
 
     @Test
