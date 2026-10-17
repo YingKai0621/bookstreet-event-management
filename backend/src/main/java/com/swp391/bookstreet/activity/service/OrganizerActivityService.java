@@ -2,9 +2,12 @@ package com.swp391.bookstreet.activity.service;
 
 import com.swp391.bookstreet.activity.dto.ActivityPageResponse;
 import com.swp391.bookstreet.activity.dto.ActivityResponse;
+import com.swp391.bookstreet.activity.dto.ActivityRevisionResponse;
+import com.swp391.bookstreet.activity.dto.CancelActivityRequest;
 import com.swp391.bookstreet.activity.dto.CreateActivityRequest;
 import com.swp391.bookstreet.activity.dto.UpdateActivityRequest;
 import com.swp391.bookstreet.activity.entity.Activity;
+import com.swp391.bookstreet.activity.entity.ActivityCancellationSource;
 import com.swp391.bookstreet.activity.entity.ActivityRevision;
 import com.swp391.bookstreet.activity.entity.ActivityRevisionSource;
 import com.swp391.bookstreet.activity.entity.ActivityStatus;
@@ -134,7 +137,7 @@ public class OrganizerActivityService {
         var locks = lockService.lockOwnedActivity(activityId, organizerId, requestedLocations);
         Activity activity = locks.activity();
         Event event = locks.event();
-        lifecycleCoordinator.advanceLocked(activity, clock.instant());
+        lifecycleCoordinator.advanceLocked(activity, databaseInstant());
         requirePatchable(activity);
         requireEventAccepting(event);
 
@@ -206,7 +209,7 @@ public class OrganizerActivityService {
         Long organizerId = currentUser.requireOrganizerId();
         var locks = lockService.lockOwnedActivity(activityId, organizerId, List.of());
         Activity activity = locks.activity();
-        lifecycleCoordinator.advanceLocked(activity, clock.instant());
+        lifecycleCoordinator.advanceLocked(activity, databaseInstant());
         if (activity.getStatus() == ActivityStatus.PUBLISHED
                 || activity.getStatus() == ActivityStatus.ONGOING
                 || activity.getStatus() == ActivityStatus.COMPLETED) {
@@ -245,6 +248,40 @@ public class OrganizerActivityService {
             throw error;
         }
         return response(activity, location);
+    }
+
+    @Transactional
+    public ActivityResponse cancel(Long activityId, CancelActivityRequest request) {
+        Long organizerId = currentUser.requireOrganizerId();
+        var locks = lockService.lockOwnedActivity(activityId, organizerId, List.of());
+        Activity activity = locks.activity();
+        Instant now = databaseInstant();
+        lifecycleCoordinator.advanceLocked(activity, now);
+        if (activity.getStatus() == ActivityStatus.CANCELLED) {
+            return response(activity, locks.location(activity.getLocationId()));
+        }
+        if (activity.getStatus() == ActivityStatus.COMPLETED) {
+            throw new ActivityApiException(HttpStatus.CONFLICT, "ACTIVITY_NOT_CANCELLABLE",
+                    "Completed Activity cannot be cancelled.");
+        }
+        String reason = validation.reason(request == null ? null : request.reason());
+        activity.cancel(reason, ActivityCancellationSource.ORGANIZER, now);
+        lockService.lockPendingRequestsAfterActivity(activityId)
+                .forEach(pending -> pending.cancelIfPending(now));
+        activityRepository.flush();
+        return response(activity, locks.location(activity.getLocationId()));
+    }
+
+    public ActivityPageResponse<ActivityRevisionResponse> revisions(Long activityId,
+            int page, int size, String sort) {
+        Long organizerId = currentUser.requireOrganizerId();
+        activityRepository.findOwnedById(activityId, organizerId)
+                .orElseThrow(OrganizerActivityService::notFound);
+        var result = revisionRepository.findByActivityId(activityId,
+                ActivityPagination.revisions(page, size, sort));
+        return new ActivityPageResponse<>(result.getContent().stream()
+                .map(ActivityRevisionResponse::from).toList(), result.getNumber(),
+                result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     private List<ActivityResponse> responses(List<Activity> activities) {

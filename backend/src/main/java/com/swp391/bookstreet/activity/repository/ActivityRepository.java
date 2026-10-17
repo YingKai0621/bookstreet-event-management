@@ -27,6 +27,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     Optional<Activity> findBySourceProposalId(Long sourceProposalId);
 
+    boolean existsByEventId(Long eventId);
+
     @Query("""
             select activity.eventId as eventId, activity.locationId as locationId
             from Activity activity
@@ -96,6 +98,26 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             order by activity.activityId
             """)
     List<Activity> findByEventIdForUpdate(@Param("eventId") Long eventId);
+
+    @Query("""
+            select distinct activity.locationId
+            from Activity activity
+            where activity.eventId = :eventId
+              and activity.status <> com.swp391.bookstreet.activity.entity.ActivityStatus.CANCELLED
+            """)
+    List<Long> findNonCancelledLocationIdsByEventId(@Param("eventId") Long eventId);
+
+    @Query("""
+            select case when count(activity) > 0 then true else false end
+            from Activity activity
+            where activity.eventId = :eventId
+              and activity.status <> com.swp391.bookstreet.activity.entity.ActivityStatus.CANCELLED
+              and (activity.startAt < :eventStartAt or activity.endAt > :eventEndAt)
+            """)
+    boolean existsNonCancelledOutsideEventInterval(
+            @Param("eventId") Long eventId,
+            @Param("eventStartAt") Instant eventStartAt,
+            @Param("eventEndAt") Instant eventEndAt);
 
     @Query("""
             select case when count(activity) > 0 then true else false end

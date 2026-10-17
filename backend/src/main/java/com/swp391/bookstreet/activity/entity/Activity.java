@@ -135,6 +135,16 @@ public class Activity {
         return true;
     }
 
+    public boolean cancel(String reason, ActivityCancellationSource source, Instant now) {
+        if (status == ActivityStatus.CANCELLED) return false;
+        status = ActivityStatus.CANCELLED;
+        cancelledAt = now;
+        cancellationReason = reason;
+        cancellationSource = source;
+        updatedAt = now;
+        return true;
+    }
+
     public boolean advanceTimedLifecycle(Instant now) {
         if (status == ActivityStatus.PUBLISHED) {
             if (!now.isBefore(endAt)) {

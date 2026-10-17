@@ -21,21 +21,37 @@ final class ActivityPagination {
     }
 
     static Pageable of(int page, int size, String sort) {
+        return of(page, size, sort, SORT_FIELDS, "activityId",
+                "sort uses an unsupported Activity field.");
+    }
+
+    static Pageable revisions(int page, int size, String sort) {
+        return of(page, size, sort, Map.of(
+                "changedAt", "changedAt",
+                "revisionSource", "revisionSource",
+                "activityRevisionId", "activityRevisionId"),
+                "activityRevisionId", "sort uses an unsupported revision field.");
+    }
+
+    private static Pageable of(int page, int size, String sort,
+            Map<String, String> fields, String tieBreaker, String invalidSortMessage) {
         if (page < 0) throw invalid("INVALID_PAGE", "page must be non-negative.");
         if (size < 1 || size > 100) {
             throw invalid("INVALID_SIZE", "size must be between 1 and 100.");
         }
         String[] parts = sort == null ? new String[0] : sort.split(",", -1);
-        if (parts.length < 1 || parts.length > 2 || !SORT_FIELDS.containsKey(parts[0])
+        if (parts.length < 1 || parts.length > 2 || !fields.containsKey(parts[0])
                 || (parts.length == 2 && !parts[1].equalsIgnoreCase("asc")
                     && !parts[1].equalsIgnoreCase("desc"))) {
-            throw invalid("INVALID_SORT", "sort uses an unsupported Activity field.");
+            throw invalid("INVALID_SORT", invalidSortMessage);
         }
         Sort.Direction direction = parts.length == 2
                 ? Sort.Direction.fromString(parts[1]) : Sort.Direction.ASC;
         var orders = new ArrayList<Sort.Order>();
-        orders.add(new Sort.Order(direction, SORT_FIELDS.get(parts[0])));
-        orders.add(Sort.Order.asc("activityId"));
+        orders.add(new Sort.Order(direction, fields.get(parts[0])));
+        if (!fields.get(parts[0]).equals(tieBreaker)) {
+            orders.add(Sort.Order.asc(tieBreaker));
+        }
         return PageRequest.of(page, size, Sort.by(orders));
     }
 

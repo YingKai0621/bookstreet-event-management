@@ -2,6 +2,8 @@ package com.swp391.bookstreet.activity.controller;
 
 import com.swp391.bookstreet.activity.dto.ActivityPageResponse;
 import com.swp391.bookstreet.activity.dto.ActivityResponse;
+import com.swp391.bookstreet.activity.dto.ActivityRevisionResponse;
+import com.swp391.bookstreet.activity.dto.CancelActivityRequest;
 import com.swp391.bookstreet.activity.dto.CreateActivityRequest;
 import com.swp391.bookstreet.activity.dto.UpdateActivityRequest;
 import com.swp391.bookstreet.activity.entity.ActivityStatus;
@@ -58,5 +60,20 @@ public class OrganizerActivityController {
     @PostMapping("/{activityId}/publish")
     public ActivityResponse publish(@PathVariable Long activityId) {
         return service.publish(activityId);
+    }
+
+    @PostMapping("/{activityId}/cancel")
+    public ActivityResponse cancel(@PathVariable Long activityId,
+            @RequestBody CancelActivityRequest request) {
+        return service.cancel(activityId, request);
+    }
+
+    @GetMapping("/{activityId}/revisions")
+    public ActivityPageResponse<ActivityRevisionResponse> revisions(
+            @PathVariable Long activityId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "changedAt,desc") String sort) {
+        return service.revisions(activityId, page, size, sort);
     }
 }

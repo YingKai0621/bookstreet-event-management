@@ -288,6 +288,101 @@ class OrganizerActivityIntegrationTests {
         assertThat(lifecycleService.advanceDueActivities()).isZero();
     }
 
+    @Test
+    void organizerCancellationIsIdempotentAndClosesPendingRequest() throws Exception {
+        Instant now = Instant.now();
+        long eventId = insertEvent(organizerUser, "PUBLISHED", now.plus(Duration.ofDays(1)),
+                now.plus(Duration.ofDays(2)));
+        long locationId = insertLocation(prefix + "CANCEL", "STAGE", 60, true);
+        long activityId = insertPublishedActivity(eventId, locationId,
+                now.plus(Duration.ofHours(26)), now.plus(Duration.ofHours(27)));
+        long pendingRequest = insertPendingRequest(activityId, "CHANGE");
+
+        String first = mvc.perform(post(ACTIVITIES + "/" + activityId + "/cancel")
+                        .with(organizer(organizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"  Diễn giả không thể tiếp tục tham gia.  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancellationSource").value("ORGANIZER"))
+                .andExpect(jsonPath("$.cancellationReason")
+                        .value("Diễn giả không thể tiếp tục tham gia."))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(dbStatus("activity_requests", "activity_request_id", pendingRequest))
+                .isEqualTo("CANCELLED");
+
+        String retry = mvc.perform(post(ACTIVITIES + "/" + activityId + "/cancel")
+                        .with(organizer(organizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"x\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(mapper.readTree(retry).get("cancelledAt").asText())
+                .isEqualTo(mapper.readTree(first).get("cancelledAt").asText());
+        assertThat(mapper.readTree(retry).get("cancellationReason").asText())
+                .isEqualTo("Diễn giả không thể tiếp tục tham gia.");
+
+        mvc.perform(post(ACTIVITIES + "/" + activityId + "/cancel")
+                        .with(organizer(otherOrganizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"Một lý do hủy hợp lệ khác.\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ACTIVITY_NOT_FOUND"));
+    }
+
+    @Test
+    void completedActivityCannotBeCancelledAndRevisionHistoryIsOwnedAndPaged()
+            throws Exception {
+        Instant future = Instant.now().plus(Duration.ofDays(3));
+        long draftEvent = insertEvent(organizerUser, "DRAFT", future,
+                future.plus(Duration.ofDays(1)));
+        long locationId = insertLocation(prefix + "REVISION", "WORKSHOP", 50, true);
+        long activityId = create(draftEvent, locationId, "Revision source",
+                future.plus(Duration.ofHours(1)), future.plus(Duration.ofHours(2)));
+        mvc.perform(patch(ACTIVITIES + "/" + activityId)
+                        .with(organizer(organizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"description\":\"First revision\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(patch(ACTIVITIES + "/" + activityId)
+                        .with(organizer(organizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"description\":\"Second revision\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get(ACTIVITIES + "/" + activityId
+                        + "/revisions?size=1&sort=activityRevisionId,desc")
+                        .with(organizer(organizerUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.content[0].newSnapshot.description")
+                        .value("Second revision"));
+        mvc.perform(get(ACTIVITIES + "/" + activityId + "/revisions")
+                        .with(organizer(otherOrganizerUser)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ACTIVITY_NOT_FOUND"));
+        mvc.perform(get(ACTIVITIES + "/" + activityId
+                        + "/revisions?sort=activityId,asc")
+                        .with(organizer(organizerUser)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_SORT"));
+
+        Instant now = Instant.now();
+        long ongoingEvent = insertEvent(organizerUser, "ONGOING",
+                now.minus(Duration.ofHours(3)), now.plus(Duration.ofHours(2)));
+        long completedId = insertPublishedActivity(ongoingEvent, locationId,
+                now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(1)));
+        mvc.perform(post(ACTIVITIES + "/" + completedId + "/cancel")
+                        .with(organizer(organizerUser)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"Không thể hủy hoạt động đã hoàn tất.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ACTIVITY_NOT_CANCELLABLE"));
+        assertThat(dbStatus("activities", "activity_id", completedId))
+                .isNotEqualTo("CANCELLED");
+    }
+
     private long create(long eventId, long locationId, String title, Instant start,
             Instant end) throws Exception {
         String response = mvc.perform(post(ACTIVITIES).with(organizer(organizerUser)).with(csrf())

@@ -67,6 +67,17 @@ public class ActivityProposal {
     protected ActivityProposal() {
     }
 
+    public boolean cancelIfOpen(Instant now) {
+        if (status != ActivityProposalStatus.PENDING
+                && status != ActivityProposalStatus.NEED_CHANGES) {
+            return false;
+        }
+        status = ActivityProposalStatus.CANCELLED;
+        cancelledAt = now;
+        updatedAt = now;
+        return true;
+    }
+
     public Long getActivityProposalId() { return activityProposalId; }
     public Long getApplicationId() { return applicationId; }
     public Long getLocationId() { return locationId; }

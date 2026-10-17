@@ -1,5 +1,7 @@
 package com.swp391.bookstreet.event.service;
 
+import com.swp391.bookstreet.activity.repository.ActivityRepository;
+import com.swp391.bookstreet.activity.service.EventActivityCascadeService;
 import com.swp391.bookstreet.booth.entity.BoothHold;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
@@ -50,6 +52,8 @@ public class EventService {
     private final EventValidation validation;
     private final EventRootLockService eventRootLockService;
     private final EventBoothConfigRepository eventBoothConfigRepository;
+    private final ActivityRepository activityRepository;
+    private final EventActivityCascadeService activityCascadeService;
     private final BoothHoldRepository boothHoldRepository;
     private final BoothPaymentRepository boothPaymentRepository;
     private final BoothAssignmentRepository boothAssignmentRepository;
@@ -61,6 +65,8 @@ public class EventService {
     public EventService(EventRepository repository, EventCurrentUser currentUser,
             EventValidation validation, EventRootLockService eventRootLockService,
             EventBoothConfigRepository eventBoothConfigRepository,
+            ActivityRepository activityRepository,
+            EventActivityCascadeService activityCascadeService,
             BoothHoldRepository boothHoldRepository,
             BoothPaymentRepository boothPaymentRepository,
             BoothAssignmentRepository boothAssignmentRepository,
@@ -73,6 +79,8 @@ public class EventService {
         this.validation = validation;
         this.eventRootLockService = eventRootLockService;
         this.eventBoothConfigRepository = eventBoothConfigRepository;
+        this.activityRepository = activityRepository;
+        this.activityCascadeService = activityCascadeService;
         this.boothHoldRepository = boothHoldRepository;
         this.boothPaymentRepository = boothPaymentRepository;
         this.boothAssignmentRepository = boothAssignmentRepository;
@@ -160,6 +168,15 @@ public class EventService {
         } else {
             validation.validate(event);
         }
+        if (event.getStatus() == EventStatus.DRAFT
+                && (request.contains("startAt") || request.contains("endAt"))
+                && activityRepository.existsNonCancelledOutsideEventInterval(
+                        id, event.getStartAt(), event.getEndAt())) {
+            throw new EventException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "ACTIVITY_TIME_OUTSIDE_EVENT",
+                    "Every non-cancelled Activity must remain within the Event interval.",
+                    "startAt");
+        }
         repository.flush();
         return EventResponse.from(event);
     }
@@ -176,6 +193,11 @@ public class EventService {
     @Transactional
     public void deleteDraft(Long id) {
         Event event = ownedDraftForUpdate(id);
+        if (activityRepository.existsByEventId(id)) {
+            throw new EventException(HttpStatus.CONFLICT,
+                    "EVENT_HAS_ACTIVITY_DEPENDENCIES",
+                    "Draft Event has Activity history and cannot be deleted.");
+        }
         try {
             eventBoothConfigRepository.deleteByEventId(id);
             repository.delete(event);
@@ -218,6 +240,7 @@ public class EventService {
                 .filter(hold -> openRequestIds.contains(hold.getBoothRequest().getBoothRequestId()))
                 .forEach(hold -> hold.release(now));
         event.cancel(reason, now);
+        activityCascadeService.cancelEvent(id, reason, now);
         repository.flush();
         eventPublisher.publishEvent(new EventCancellationMessageRequested(
                 event.getEventId(), event.getName(), event.getCancelledAt(),
