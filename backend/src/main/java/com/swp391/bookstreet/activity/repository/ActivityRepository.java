@@ -157,6 +157,31 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<PartnerOwnership> findPartnerOwnership(
             @Param("activityIds") Collection<Long> activityIds);
 
+    @Query(value = """
+            select case
+                       when representative.email_verified_at is not null
+                            and representative.email is not null
+                            and btrim(representative.email) <> ''
+                       then representative.email
+                       else null
+                   end as recipientEmail,
+                   event.name as eventName,
+                   activity.title as activityTitle
+            from activities activity
+            join activity_proposals proposal
+              on proposal.activity_proposal_id = activity.source_proposal_id
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
+            join partner_organizations organization
+              on organization.partner_organization_id = application.partner_organization_id
+            join users representative
+              on representative.user_id = organization.representative_user_id
+            join events event on event.event_id = activity.event_id
+            where activity.activity_id = :activityId
+            """, nativeQuery = true)
+    Optional<ActivityPartnerNotificationContext> findPartnerNotificationContext(
+            @Param("activityId") Long activityId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select activity from Activity activity where activity.activityId = :activityId")
     Optional<Activity> findByIdForUpdate(@Param("activityId") Long activityId);

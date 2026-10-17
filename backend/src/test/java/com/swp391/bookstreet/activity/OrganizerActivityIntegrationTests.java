@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.activity;
 
 import com.swp391.bookstreet.activity.service.ActivityLifecycleService;
+import com.swp391.bookstreet.activity.service.ActivityPartnerMailService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -19,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -65,6 +67,7 @@ class OrganizerActivityIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper mapper;
     @Autowired ActivityLifecycleService lifecycleService;
+    @MockitoBean ActivityPartnerMailService partnerMailService;
 
     MockMvc mvc;
     Long organizerUser;

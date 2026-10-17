@@ -1,6 +1,8 @@
 package com.swp391.bookstreet.activity;
 
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
+import com.swp391.bookstreet.activity.service.ActivityPartnerMailService;
+import com.swp391.bookstreet.activity.service.ActivityPartnerMessageType;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,9 +18,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.MailSendException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -34,6 +38,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=${EVENT_TEST_DATABASE_URL}",
@@ -59,6 +69,7 @@ class PartnerActivityProposalIntegrationTests {
 
     @Autowired WebApplicationContext context;
     @Autowired JdbcTemplate jdbc;
+    @MockitoBean ActivityPartnerMailService partnerMailService;
 
     private MockMvc mvc;
     private String prefix;
@@ -402,6 +413,8 @@ class PartnerActivityProposalIntegrationTests {
 
     @Test
     void requestTimeLifecycleClosesStaleOpenProposalOnce() throws Exception {
+        doThrow(new MailSendException("Simulated delivery failure"))
+                .when(partnerMailService).sendMessage(anyString(), any());
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         long eventId = insertEvent("ONGOING", now.minus(Duration.ofHours(1)),
                 now.plus(Duration.ofHours(1)), now.minus(Duration.ofHours(2)), 3);
@@ -433,6 +446,56 @@ class PartnerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject("select cancelled_at from activity_proposals "
                 + "where activity_proposal_id = ?", Instant.class, proposalId))
                 .isEqualTo(firstCancelledAt);
+        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+                event.referenceId().equals(proposalId)));
+    }
+
+    @Test
+    void organizerCancellationOfPartnerActivityCommitsAndNotifiesExactlyOnce()
+            throws Exception {
+        doThrow(new MailSendException("Simulated delivery failure"))
+                .when(partnerMailService).sendMessage(anyString(), any());
+        Instant eventStart = future(5);
+        long eventId = insertEvent("PUBLISHED", eventStart,
+                eventStart.plus(Duration.ofDays(1)), future(2), 3);
+        long applicationId = insertApplication(eventId,
+                partnerOneOrganizationId, "APPROVED");
+        long locationId = insertLocation("CANCELLED-BY-ORG", "STAGE", 80, true);
+        Instant activityStart = eventStart.plus(Duration.ofHours(1));
+        long proposalId = insertApprovedProposal(applicationId, locationId,
+                "Partner activity to cancel", activityStart,
+                activityStart.plusSeconds(1800));
+        long activityId = insertOfficialActivity(eventId, locationId, proposalId,
+                "Partner activity to cancel", "PUBLISHED", activityStart,
+                activityStart.plusSeconds(1800), false);
+        String reason = "Ban tổ chức buộc phải hủy hoạt động vì thay đổi vận hành.";
+
+        mvc.perform(post("/api/v1/organizer/activities/" + activityId + "/cancel")
+                        .with(organizer()).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"" + reason + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancellationSource").value("ORGANIZER"));
+        Instant firstCancelledAt = jdbc.queryForObject("select cancelled_at "
+                + "from activities where activity_id = ?", Instant.class, activityId);
+
+        mvc.perform(post("/api/v1/organizer/activities/" + activityId + "/cancel")
+                        .with(organizer()).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"Lý do gọi lại không được ghi đè.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        assertThat(jdbc.queryForObject("select cancelled_at from activities "
+                + "where activity_id = ?", Instant.class, activityId))
+                .isEqualTo(firstCancelledAt);
+        assertThat(jdbc.queryForObject("select cancellation_reason from activities "
+                + "where activity_id = ?", String.class, activityId)).isEqualTo(reason);
+        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+                event.referenceId().equals(activityId)
+                        && event.messageType()
+                        == ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER));
     }
 
     @Test
@@ -1194,6 +1257,10 @@ class PartnerActivityProposalIntegrationTests {
 
     private RequestPostProcessor partner(long userId) {
         return actor(userId, "PARTNER");
+    }
+
+    private RequestPostProcessor organizer() {
+        return actor(organizerId, "ORGANIZER");
     }
 
     private RequestPostProcessor actor(long userId, String role) {

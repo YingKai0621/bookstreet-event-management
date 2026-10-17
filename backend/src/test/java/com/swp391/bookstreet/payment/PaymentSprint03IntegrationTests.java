@@ -2,6 +2,7 @@ package com.swp391.bookstreet.payment;
 
 import com.swp391.bookstreet.booth.service.BoothSelectionMailService;
 import com.swp391.bookstreet.booth.service.BoothHoldExpiryService;
+import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.payment.gateway.VnPayCheckout;
 import com.swp391.bookstreet.payment.gateway.VnPayGateway;
 import com.swp391.bookstreet.payment.gateway.VnPayGatewayException;
@@ -96,6 +97,7 @@ class PaymentSprint03IntegrationTests {
     @Autowired PlatformTransactionManager transactionManager;
     @MockitoBean VnPayGateway gateway;
     @MockitoBean BoothSelectionMailService mailService;
+    @MockitoBean EventCancellationMailService eventCancellationMailService;
 
     private MockMvc mvc;
     private Long organizer;
@@ -111,7 +113,7 @@ class PaymentSprint03IntegrationTests {
         partner = insertUser("Partner");
         prefix = "P" + UUID.randomUUID().toString().replace("-", "")
                 .substring(0, 8).toUpperCase();
-        reset(gateway, mailService);
+        reset(gateway, mailService, eventCancellationMailService);
     }
 
     @AfterEach

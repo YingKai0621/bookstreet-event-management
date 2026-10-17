@@ -13,13 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class ActivityProposalLifecycleTransactionService {
     private final ActivityProposalRepository proposalRepository;
     private final ActivityLockService lockService;
+    private final ActivityPartnerNotificationService notificationService;
     private final Clock clock;
 
     public ActivityProposalLifecycleTransactionService(
             ActivityProposalRepository proposalRepository,
-            ActivityLockService lockService, Clock clock) {
+            ActivityLockService lockService,
+            ActivityPartnerNotificationService notificationService, Clock clock) {
         this.proposalRepository = proposalRepository;
         this.lockService = lockService;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -33,6 +36,12 @@ public class ActivityProposalLifecycleTransactionService {
                 || proposal.getProposedStartAt().isAfter(now)) {
             return false;
         }
-        return proposal.cancelIfOpen(now);
+        boolean changed = proposal.cancelIfOpen(now);
+        if (changed) {
+            notificationService.proposalChanged(proposalId,
+                    ActivityPartnerMessageType.PROPOSAL_CLOSED_BY_SYSTEM,
+                    "The proposal was closed because its proposed start time was reached.", now);
+        }
+        return changed;
     }
 }

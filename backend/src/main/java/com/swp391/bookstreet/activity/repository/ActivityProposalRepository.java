@@ -218,6 +218,29 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
             @Param("representativeUserId") Long representativeUserId);
 
     @Query(value = """
+            select case
+                       when representative.email_verified_at is not null
+                            and representative.email is not null
+                            and btrim(representative.email) <> ''
+                       then representative.email
+                       else null
+                   end as recipientEmail,
+                   event.name as eventName,
+                   proposal.title as activityTitle
+            from activity_proposals proposal
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
+            join partner_organizations organization
+              on organization.partner_organization_id = application.partner_organization_id
+            join users representative
+              on representative.user_id = organization.representative_user_id
+            join events event on event.event_id = application.event_id
+            where proposal.activity_proposal_id = :proposalId
+            """, nativeQuery = true)
+    Optional<ActivityPartnerNotificationContext> findPartnerNotificationContext(
+            @Param("proposalId") Long proposalId);
+
+    @Query(value = """
             select proposal.activity_proposal_id
             from activity_proposals proposal
             where proposal.status in ('PENDING', 'NEED_CHANGES')
