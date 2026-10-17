@@ -1,5 +1,3 @@
-import { PageHeader } from '../../components/ui/PageHeader';
-import { EmptyState } from '../../components/ui/EmptyState';
 import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, QrCode, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -33,14 +31,22 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
   return (
     <div className="my-activities-page">
       {/* 1. Header */}
-      <PageHeader className="reader-tab-header" title={language === 'vi' ? 'Sự kiện của tôi' : 'My events'} subtitle={language === 'vi' ? 'Lịch tham gia, mã vé và các hoạt động của bạn.' : 'Your schedule, tickets and activities.'} />
+      <div className="participant-page-header">
+        <h1 className="participant-page-title">
+          {language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}
+        </h1>
+        <p className="participant-page-sub">
+          {language === 'vi' 
+            ? 'Theo dõi các hoạt động bạn đã đăng ký trong những sự kiện mình tham gia, nhận chứng nhận và xuất trình mã QR check-in.'
+            : 'Track activities registered in your events, access check-in QR codes and view earned certificates.'}
+        </p>
+      </div>
 
       {/* 2. Tabs Bar matching Sketch Screen 5: Sắp diễn ra (2) | Đã tham gia (1) | Đã hủy (0) */}
       <div className="participant-tabs-bar">
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'upcoming' ? 'is-active' : ''}`}
-          aria-pressed={activeTab === 'upcoming'}
           onClick={() => setActiveTab('upcoming')}
         >
           {language === 'vi' ? `Sắp diễn ra (${upcomingActivities.length})` : `Upcoming (${upcomingActivities.length})`}
@@ -49,7 +55,6 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'attended' ? 'is-active' : ''}`}
-          aria-pressed={activeTab === 'attended'}
           onClick={() => setActiveTab('attended')}
         >
           {language === 'vi' ? `Đã tham gia (${attendedActivities.length})` : `Attended (${attendedActivities.length})`}
@@ -58,7 +63,6 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'cancelled' ? 'is-active' : ''}`}
-          aria-pressed={activeTab === 'cancelled'}
           onClick={() => setActiveTab('cancelled')}
         >
           {language === 'vi' ? `Đã hủy (${cancelledActivities.length})` : `Cancelled (${cancelledActivities.length})`}
@@ -67,9 +71,23 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
 
       {/* 3. Activity Cards List */}
       {displayedList.length === 0 ? (
-        <div className="reader-certificate-empty">
-          <EmptyState icon={<Calendar size={28} />} title={language === 'vi' ? 'Chưa có hoạt động trong mục này' : 'No activities in this section'} description={language === 'vi' ? 'Các hoạt động bạn đăng ký sẽ được hiển thị tại đây.' : 'Your registered activities will appear here.'} />
-          <div className="reader-empty-actions"><Link to="/participant" className="btn-part-primary">{language === 'vi' ? 'Xem lịch sự kiện' : 'View event calendar'}<ArrowRight size={15} /></Link></div>
+        <div style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2EAE5',
+          borderRadius: '14px',
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          color: '#637771'
+        }}>
+          <p style={{ fontSize: '0.95rem', marginBottom: '1.25rem' }}>
+            {language === 'vi' 
+              ? 'Không có hoạt động nào trong danh mục này.' 
+              : 'No activities found in this section.'}
+          </p>
+          <Link to="/#su-kien" className="btn-part-primary">
+            <span>{language === 'vi' ? 'Khám phá sự kiện' : 'Explore events'}</span>
+            <ArrowRight size={15} />
+          </Link>
         </div>
       ) : (
         <div className="activities-list-stack">
