@@ -67,11 +67,36 @@ public class ActivityLockService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public ActivityLocks lockActivityRoot(Long activityId) {
+        return lockActivityRoot(activityId, List.of());
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ActivityLocks lockActivityRoot(Long activityId,
+            Collection<Long> additionalLocationIds) {
         var route = activityRepository.findRouteById(activityId)
                 .orElseThrow(ActivityLockService::activityNotFound);
         Event event = eventRootLockService.lock(route.getEventId())
                 .orElseThrow(ActivityLockService::activityNotFound);
-        return lockActivityAfterEvent(event, activityId, List.of());
+        return lockActivityAfterEvent(event, activityId, additionalLocationIds);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ProposalLocks lockProposalRoot(Long proposalId,
+            Collection<Long> additionalLocationIds) {
+        var initialRoute = proposalRepository.findRouteById(proposalId)
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        Event event = eventRootLockService.lock(initialRoute.getEventId())
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        var lockedRoute = proposalRepository.findRouteById(proposalId)
+                .filter(route -> route.getEventId().equals(event.getEventId()))
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        List<Long> locationIds = new ArrayList<>();
+        locationIds.add(lockedRoute.getLocationId());
+        if (additionalLocationIds != null) locationIds.addAll(additionalLocationIds);
+        List<Location> locations = lockLocations(locationIds);
+        ActivityProposal proposal = proposalRepository.findByIdForUpdate(proposalId)
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        return new ProposalLocks(event, locations, proposal);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -136,10 +161,33 @@ public class ActivityLockService {
                 "Activity not found.");
     }
 
+    private static ActivityApiException proposalNotFound() {
+        return new ActivityApiException(HttpStatus.NOT_FOUND,
+                "ACTIVITY_PROPOSAL_NOT_FOUND", "Activity Proposal not found.");
+    }
+
     public record RootLocks(Event event, List<Location> locations) {
+        public Location location(Long locationId) {
+            return locations.stream()
+                    .filter(location -> location.getLocationId().equals(locationId))
+                    .findFirst()
+                    .orElseThrow(() -> new ActivityApiException(HttpStatus.NOT_FOUND,
+                            "LOCATION_NOT_FOUND", "Location not found."));
+        }
     }
 
     public record ActivityLocks(Event event, List<Location> locations, Activity activity) {
+        public Location location(Long locationId) {
+            return locations.stream()
+                    .filter(location -> location.getLocationId().equals(locationId))
+                    .findFirst()
+                    .orElseThrow(() -> new ActivityApiException(HttpStatus.NOT_FOUND,
+                            "LOCATION_NOT_FOUND", "Location not found."));
+        }
+    }
+
+    public record ProposalLocks(Event event, List<Location> locations,
+            ActivityProposal proposal) {
         public Location location(Long locationId) {
             return locations.stream()
                     .filter(location -> location.getLocationId().equals(locationId))

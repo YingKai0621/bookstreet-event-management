@@ -1,5 +1,6 @@
 package com.swp391.bookstreet.activity.service;
 
+import com.swp391.bookstreet.activity.entity.Activity;
 import java.time.Clock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,5 +23,12 @@ public class ActivityLifecycleTransactionService {
     public boolean advance(Long activityId) {
         var locks = lockService.lockActivityRoot(activityId);
         return coordinator.advanceLocked(locks.activity(), clock.instant());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Activity advanceAndGet(Long activityId) {
+        var locks = lockService.lockActivityRoot(activityId);
+        coordinator.advanceLocked(locks.activity(), clock.instant());
+        return locks.activity();
     }
 }

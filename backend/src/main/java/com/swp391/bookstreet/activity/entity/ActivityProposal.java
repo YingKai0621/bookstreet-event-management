@@ -67,6 +67,56 @@ public class ActivityProposal {
     protected ActivityProposal() {
     }
 
+    public static ActivityProposal submit(Long applicationId, Long locationId, String title,
+            String description, String activityType, Instant proposedStartAt,
+            Instant proposedEndAt, Integer capacity, Instant now) {
+        ActivityProposal proposal = new ActivityProposal();
+        proposal.applicationId = applicationId;
+        proposal.locationId = locationId;
+        proposal.title = title;
+        proposal.description = description;
+        proposal.activityType = activityType;
+        proposal.proposedStartAt = proposedStartAt;
+        proposal.proposedEndAt = proposedEndAt;
+        proposal.capacity = capacity;
+        proposal.status = ActivityProposalStatus.PENDING;
+        proposal.submittedAt = now;
+        proposal.updatedAt = now;
+        return proposal;
+    }
+
+    public void revise(Long locationId, String title, String description, String activityType,
+            Instant proposedStartAt, Instant proposedEndAt, Integer capacity, Instant now) {
+        this.locationId = locationId;
+        this.title = title;
+        this.description = description;
+        this.activityType = activityType;
+        this.proposedStartAt = proposedStartAt;
+        this.proposedEndAt = proposedEndAt;
+        this.capacity = capacity;
+        this.updatedAt = now;
+    }
+
+    public void resubmit(Instant now) {
+        if (status != ActivityProposalStatus.NEED_CHANGES) {
+            throw new IllegalStateException("Only a NeedChanges Proposal can be resubmitted.");
+        }
+        status = ActivityProposalStatus.PENDING;
+        updatedAt = now;
+    }
+
+    public boolean withdrawIfOpen(Instant now) {
+        if (status == ActivityProposalStatus.WITHDRAWN) return false;
+        if (status != ActivityProposalStatus.PENDING
+                && status != ActivityProposalStatus.NEED_CHANGES) {
+            throw new IllegalStateException("Proposal is not open for withdrawal.");
+        }
+        status = ActivityProposalStatus.WITHDRAWN;
+        withdrawnAt = now;
+        updatedAt = now;
+        return true;
+    }
+
     public boolean cancelIfOpen(Instant now) {
         if (status != ActivityProposalStatus.PENDING
                 && status != ActivityProposalStatus.NEED_CHANGES) {

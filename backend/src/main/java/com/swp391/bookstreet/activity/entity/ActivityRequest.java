@@ -83,6 +83,52 @@ public class ActivityRequest {
     protected ActivityRequest() {
     }
 
+    public static ActivityRequest submitChange(Long activityId, Long requestedLocationId,
+            String requestedTitle, boolean requestedDescriptionPresent,
+            String requestedDescription, String requestedActivityType,
+            Instant requestedStartAt, Instant requestedEndAt, Integer requestedCapacity,
+            boolean requestedImageUrlPresent, String requestedImageUrl, String reason,
+            Instant now) {
+        ActivityRequest request = new ActivityRequest();
+        request.activityId = activityId;
+        request.requestType = ActivityRequestType.CHANGE;
+        request.requestedLocationId = requestedLocationId;
+        request.requestedTitle = requestedTitle;
+        request.requestedDescriptionPresent = requestedDescriptionPresent;
+        request.requestedDescription = requestedDescription;
+        request.requestedActivityType = requestedActivityType;
+        request.requestedStartAt = requestedStartAt;
+        request.requestedEndAt = requestedEndAt;
+        request.requestedCapacity = requestedCapacity;
+        request.requestedImageUrlPresent = requestedImageUrlPresent;
+        request.requestedImageUrl = requestedImageUrl;
+        request.reason = reason;
+        request.late = false;
+        request.status = ActivityRequestStatus.PENDING;
+        request.submittedAt = now;
+        return request;
+    }
+
+    public static ActivityRequest submitCancellation(Long activityId, String reason,
+            boolean late, Instant now) {
+        ActivityRequest request = new ActivityRequest();
+        request.activityId = activityId;
+        request.requestType = ActivityRequestType.CANCELLATION;
+        request.reason = reason;
+        request.late = late;
+        request.status = ActivityRequestStatus.PENDING;
+        request.submittedAt = now;
+        return request;
+    }
+
+    public boolean withdrawIfPending(Instant now) {
+        if (status == ActivityRequestStatus.WITHDRAWN) return false;
+        if (status != ActivityRequestStatus.PENDING) return false;
+        status = ActivityRequestStatus.WITHDRAWN;
+        withdrawnAt = now;
+        return true;
+    }
+
     public boolean cancelIfPending(Instant now) {
         if (status != ActivityRequestStatus.PENDING) return false;
         status = ActivityRequestStatus.CANCELLED;

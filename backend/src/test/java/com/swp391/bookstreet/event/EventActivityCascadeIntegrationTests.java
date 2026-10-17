@@ -1,5 +1,7 @@
 package com.swp391.bookstreet.event;
 
+import com.swp391.bookstreet.activity.service.ActivityPartnerMailService;
+import com.swp391.bookstreet.activity.service.ActivityPartnerMessageType;
 import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.event.service.EventLifecycleService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
@@ -28,6 +30,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -63,6 +70,7 @@ class EventActivityCascadeIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired EventLifecycleService lifecycleService;
     @MockitoBean EventCancellationMailService cancellationMailService;
+    @MockitoBean ActivityPartnerMailService partnerMailService;
 
     private MockMvc mvc;
     private long organizerId;
@@ -204,6 +212,7 @@ class EventActivityCascadeIntegrationTests {
         assertThat(jdbc.queryForObject("select cancelled_at from activities "
                 + "where activity_id = ?", Instant.class, activityId))
                 .isEqualTo(firstCancelledAt);
+        verifyNoInteractions(partnerMailService);
     }
 
     @Test
@@ -276,8 +285,12 @@ class EventActivityCascadeIntegrationTests {
                 now.minus(Duration.ofHours(2)));
         long draftId = insertActivity(eventId, draftLocation, "DRAFT",
                 now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(1)));
+        long sourceProposalId = insertApprovedProposal(applicationId, publicLocation,
+                now.minus(Duration.ofHours(2)));
         long publishedId = insertActivity(eventId, publicLocation, "PUBLISHED",
                 now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(1)));
+        jdbc.update("update activities set source_proposal_id = ? where activity_id = ?",
+                sourceProposalId, publishedId);
         long requestId = insertPendingChangeRequest(publishedId);
 
         assertThat(lifecycleService.advanceDueEvents()).isGreaterThanOrEqualTo(1);
@@ -294,6 +307,14 @@ class EventActivityCascadeIntegrationTests {
         assertThat(dbStatus("activity_requests", "activity_request_id", requestId))
                 .isEqualTo("CANCELLED");
         assertThat(lifecycleService.advanceDueEvents()).isZero();
+        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+                event.referenceId().equals(proposalId)
+                        && event.messageType()
+                        == ActivityPartnerMessageType.PROPOSAL_CLOSED_BY_SYSTEM));
+        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+                event.referenceId().equals(requestId)
+                        && event.messageType()
+                        == ActivityPartnerMessageType.REQUEST_CLOSED_BY_SYSTEM));
     }
 
     private long insertUser(String role) {
@@ -345,6 +366,19 @@ class EventActivityCascadeIntegrationTests {
                     submitted_at, updated_at)
                 values (?, ?, 'Open proposal', 'TALKSHOW', ?, ?, 20, 'PENDING',
                     current_timestamp, current_timestamp)
+                returning activity_proposal_id
+                """, Long.class, applicationId, locationId, Timestamp.from(start),
+                Timestamp.from(start.plusSeconds(1800)));
+    }
+
+    private long insertApprovedProposal(long applicationId, long locationId, Instant start) {
+        return jdbc.queryForObject("""
+                insert into activity_proposals(
+                    application_id, location_id, title, activity_type,
+                    proposed_start_at, proposed_end_at, capacity, status,
+                    submitted_at, updated_at, reviewed_at)
+                values (?, ?, 'Approved source proposal', 'TALKSHOW', ?, ?, 20, 'APPROVED',
+                    current_timestamp, current_timestamp, current_timestamp)
                 returning activity_proposal_id
                 """, Long.class, applicationId, locationId, Timestamp.from(start),
                 Timestamp.from(start.plusSeconds(1800)));

@@ -50,6 +50,7 @@ public class OrganizerActivityService {
     private final ActivityLifecycleService lifecycleService;
     private final ActivityLifecycleTransactionService lifecycleTransactions;
     private final ActivityLifecycleCoordinator lifecycleCoordinator;
+    private final ActivityPartnerNotificationService notificationService;
     private final Clock clock;
 
     public OrganizerActivityService(ActivityRepository activityRepository,
@@ -60,7 +61,8 @@ public class OrganizerActivityService {
             ActivityConstraintTranslator constraintTranslator,
             ActivityLifecycleService lifecycleService,
             ActivityLifecycleTransactionService lifecycleTransactions,
-            ActivityLifecycleCoordinator lifecycleCoordinator, Clock clock) {
+            ActivityLifecycleCoordinator lifecycleCoordinator,
+            ActivityPartnerNotificationService notificationService, Clock clock) {
         this.activityRepository = activityRepository;
         this.revisionRepository = revisionRepository;
         this.locationRepository = locationRepository;
@@ -72,6 +74,7 @@ public class OrganizerActivityService {
         this.lifecycleService = lifecycleService;
         this.lifecycleTransactions = lifecycleTransactions;
         this.lifecycleCoordinator = lifecycleCoordinator;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -269,6 +272,9 @@ public class OrganizerActivityService {
         lockService.lockPendingRequestsAfterActivity(activityId)
                 .forEach(pending -> pending.cancelIfPending(now));
         activityRepository.flush();
+        notificationService.activityChanged(activityId, activityId,
+                ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER,
+                reason, now);
         return response(activity, locks.location(activity.getLocationId()));
     }
 
