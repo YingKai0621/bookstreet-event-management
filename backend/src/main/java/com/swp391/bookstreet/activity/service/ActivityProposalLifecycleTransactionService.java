@@ -30,6 +30,18 @@ public class ActivityProposalLifecycleTransactionService {
     public boolean closeIfDue(Long proposalId) {
         if (proposalRepository.findRouteById(proposalId).isEmpty()) return false;
         var proposal = lockService.lockProposalRoot(proposalId, java.util.List.of()).proposal();
+        return closeLocked(proposalId, proposal);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean closeIfDueOwned(Long proposalId, Long organizerUserId) {
+        var proposal = lockService.lockOwnedProposalRoot(proposalId, organizerUserId,
+                java.util.List.of()).proposal();
+        return closeLocked(proposalId, proposal);
+    }
+
+    private boolean closeLocked(Long proposalId,
+            com.swp391.bookstreet.activity.entity.ActivityProposal proposal) {
         Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         if ((proposal.getStatus() != ActivityProposalStatus.PENDING
                 && proposal.getStatus() != ActivityProposalStatus.NEED_CHANGES)

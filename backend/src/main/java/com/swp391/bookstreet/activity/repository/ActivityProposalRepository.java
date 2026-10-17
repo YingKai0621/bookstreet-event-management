@@ -177,6 +177,74 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
             from activity_proposals proposal
             join partner_event_applications application
               on application.application_id = proposal.application_id
+            join events event on event.event_id = application.event_id
+            join locations location on location.location_id = proposal.location_id
+            left join activities activity
+              on activity.source_proposal_id = proposal.activity_proposal_id
+            where event.organizer_user_id = :organizerUserId
+              and (:eventId is null or application.event_id = :eventId)
+              and (:status is null or proposal.status = :status)
+              and (:locationId is null or proposal.location_id = :locationId)
+              and (:search is null
+                   or lower(proposal.title) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(proposal.description, '')) like lower(concat('%', :search, '%'))
+                   or lower(proposal.activity_type) like lower(concat('%', :search, '%'))
+                   or lower(event.name) like lower(concat('%', :search, '%'))
+                   or lower(location.name) like lower(concat('%', :search, '%')))
+            """, countQuery = """
+            select count(*)
+            from activity_proposals proposal
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
+            join events event on event.event_id = application.event_id
+            join locations location on location.location_id = proposal.location_id
+            where event.organizer_user_id = :organizerUserId
+              and (:eventId is null or application.event_id = :eventId)
+              and (:status is null or proposal.status = :status)
+              and (:locationId is null or proposal.location_id = :locationId)
+              and (:search is null
+                   or lower(proposal.title) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(proposal.description, '')) like lower(concat('%', :search, '%'))
+                   or lower(proposal.activity_type) like lower(concat('%', :search, '%'))
+                   or lower(event.name) like lower(concat('%', :search, '%'))
+                   or lower(location.name) like lower(concat('%', :search, '%')))
+            """, nativeQuery = true)
+    Page<PartnerProposalView> findOrganizerProposals(
+            @Param("organizerUserId") Long organizerUserId,
+            @Param("eventId") Long eventId,
+            @Param("status") String status,
+            @Param("locationId") Long locationId,
+            @Param("search") String search,
+            Pageable pageable);
+
+    @Query(value = """
+            select proposal.activity_proposal_id as activityProposalId,
+                   application.event_id as eventId,
+                   event.name as eventName,
+                   application.partner_organization_id as partnerOrganizationId,
+                   location.location_id as locationId,
+                   location.code as locationCode,
+                   location.name as locationName,
+                   location.location_type as locationType,
+                   location.max_capacity as locationMaxCapacity,
+                   location.is_active as locationActive,
+                   proposal.title as title,
+                   proposal.description as description,
+                   proposal.activity_type as activityType,
+                   proposal.proposed_start_at as proposedStartAt,
+                   proposal.proposed_end_at as proposedEndAt,
+                   proposal.capacity as capacity,
+                   proposal.status as status,
+                   proposal.review_note as reviewNote,
+                   proposal.submitted_at as submittedAt,
+                   proposal.updated_at as updatedAt,
+                   proposal.reviewed_at as reviewedAt,
+                   proposal.withdrawn_at as withdrawnAt,
+                   proposal.cancelled_at as cancelledAt,
+                   activity.activity_id as activityId
+            from activity_proposals proposal
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
             join partner_organizations organization
               on organization.partner_organization_id = application.partner_organization_id
             join events event on event.event_id = application.event_id
@@ -189,6 +257,45 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
     Optional<PartnerProposalView> findOwnedPartnerView(
             @Param("proposalId") Long proposalId,
             @Param("representativeUserId") Long representativeUserId);
+
+    @Query(value = """
+            select proposal.activity_proposal_id as activityProposalId,
+                   application.event_id as eventId,
+                   event.name as eventName,
+                   application.partner_organization_id as partnerOrganizationId,
+                   location.location_id as locationId,
+                   location.code as locationCode,
+                   location.name as locationName,
+                   location.location_type as locationType,
+                   location.max_capacity as locationMaxCapacity,
+                   location.is_active as locationActive,
+                   proposal.title as title,
+                   proposal.description as description,
+                   proposal.activity_type as activityType,
+                   proposal.proposed_start_at as proposedStartAt,
+                   proposal.proposed_end_at as proposedEndAt,
+                   proposal.capacity as capacity,
+                   proposal.status as status,
+                   proposal.review_note as reviewNote,
+                   proposal.submitted_at as submittedAt,
+                   proposal.updated_at as updatedAt,
+                   proposal.reviewed_at as reviewedAt,
+                   proposal.withdrawn_at as withdrawnAt,
+                   proposal.cancelled_at as cancelledAt,
+                   activity.activity_id as activityId
+            from activity_proposals proposal
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
+            join events event on event.event_id = application.event_id
+            join locations location on location.location_id = proposal.location_id
+            left join activities activity
+              on activity.source_proposal_id = proposal.activity_proposal_id
+            where proposal.activity_proposal_id = :proposalId
+              and event.organizer_user_id = :organizerUserId
+            """, nativeQuery = true)
+    Optional<PartnerProposalView> findOwnedOrganizerView(
+            @Param("proposalId") Long proposalId,
+            @Param("organizerUserId") Long organizerUserId);
 
     @Query(value = """
             select proposal.application_id as applicationId,

@@ -105,6 +105,29 @@ public class ActivityProposal {
         updatedAt = now;
     }
 
+    public void requestChanges(String note, Instant now) {
+        requirePending();
+        status = ActivityProposalStatus.NEED_CHANGES;
+        reviewNote = note;
+        reviewedAt = now;
+        updatedAt = now;
+    }
+
+    public void reject(String note, Instant now) {
+        requirePending();
+        status = ActivityProposalStatus.REJECTED;
+        reviewNote = note;
+        reviewedAt = now;
+        updatedAt = now;
+    }
+
+    public void approve(Instant now) {
+        requirePending();
+        status = ActivityProposalStatus.APPROVED;
+        reviewedAt = now;
+        updatedAt = now;
+    }
+
     public boolean withdrawIfOpen(Instant now) {
         if (status == ActivityProposalStatus.WITHDRAWN) return false;
         if (status != ActivityProposalStatus.PENDING
@@ -126,6 +149,12 @@ public class ActivityProposal {
         cancelledAt = now;
         updatedAt = now;
         return true;
+    }
+
+    private void requirePending() {
+        if (status != ActivityProposalStatus.PENDING) {
+            throw new IllegalStateException("Only a Pending Proposal can be reviewed.");
+        }
     }
 
     public Long getActivityProposalId() { return activityProposalId; }
