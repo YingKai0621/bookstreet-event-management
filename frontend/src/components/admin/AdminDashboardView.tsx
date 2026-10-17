@@ -78,12 +78,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   return (
     <div className="adm-dashboard-view">
       {/* 1. Header */}
-      <div className="adm-page-header">
+      <div className="adm-page-header workspace-page-hero">
         <div>
-          <h1 className="adm-page-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', color: '#172421', margin: 0 }}>
-            Tổng quan Quản trị Hệ thống
+          <h1 className="adm-page-title">
+            Tổng quan
           </h1>
-          <p className="adm-page-subtitle" style={{ fontSize: '0.85rem', color: '#637771', margin: '0.35rem 0 0 0' }}>
+          <p className="adm-page-subtitle">
             Theo dõi vận hành, tài khoản và hoạt động tại Đường Sách TP.HCM.
           </p>
         </div>
@@ -93,7 +93,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             type="button"
             className="adm-btn adm-btn-secondary" 
             onClick={() => onNavigateTab('users')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #DCE5E0', background: '#FFFFFF', color: '#172421', fontSize: '0.85rem', fontWeight: 650, cursor: 'pointer' }}
           >
             <Users size={16} />
             <span>Danh sách người dùng</span>
@@ -102,7 +101,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             type="button"
             className="adm-btn adm-btn-primary" 
             onClick={onOpenAddUser}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.5rem 1.15rem', borderRadius: '8px', background: '#14241F', color: '#FFFFFF', fontSize: '0.85rem', fontWeight: 650, border: 'none', cursor: 'pointer' }}
           >
             <UserPlus size={16} />
             <span>Thêm tài khoản</span>

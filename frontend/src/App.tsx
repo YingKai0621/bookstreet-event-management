@@ -222,13 +222,9 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    if (!publicEventId) {
-      setBooths([]);
-      return () => { active = false; };
-    }
     setIsPublicBoothsLoading(true);
     setPublicBoothsError('');
-    publicApi.getBooths(publicEventId)
+    publicApi.getBooths()
       .then(rows => { if (active) setBooths(rows); })
       .catch(error => {
         if (!active) return;
@@ -237,7 +233,7 @@ export function App() {
       })
       .finally(() => { if (active) setIsPublicBoothsLoading(false); });
     return () => { active = false; };
-  }, [publicEventId, dataRevision]);
+  }, [events, dataRevision]);
 
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantProfileError, setParticipantProfileError] = useState('');

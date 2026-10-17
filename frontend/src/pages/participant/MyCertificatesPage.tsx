@@ -1,6 +1,8 @@
-import { ArrowRight, Award, Calendar, Download, Eye, QrCode, Sparkles } from 'lucide-react';
+import { Award, Download, Eye, Info } from 'lucide-react';
 import React, { useState } from 'react';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ModalDialog } from '../../components/ui/ModalDialog';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Link } from 'react-router-dom';
 import { Language, ParticipantCertificate } from '../../types';
 import './ParticipantPages.css';
@@ -19,7 +21,6 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
   isLoading = false,
 }) => {
   const [selectedCert, setSelectedCert] = useState<ParticipantCertificate | null>(null);
-  useModalDismiss(Boolean(selectedCert), () => setSelectedCert(null));
 
   const handleDownloadCertificate = (cert: ParticipantCertificate) => {
     // Generate a printable certificate HTML in a new popup or trigger print
@@ -153,16 +154,16 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
   return (
     <div className="certificates-page">
       {/* 1. Header */}
-      <div className="participant-page-header">
-        <h1 className="participant-page-title">
-          {language === 'vi' ? 'Chứng nhận của tôi' : 'My Certificates'}
-        </h1>
-        <p className="participant-page-sub">
-          {language === 'vi' 
-            ? 'Danh sách chứng chỉ tham gia hoạt động và sự kiện văn hóa tại Đường Sách TP.HCM.' 
-            : 'Verified certificates earned from attended activities and cultural workshops.'}
-        </p>
-      </div>
+      <PageHeader
+        className="reader-tab-header"
+        title={language === 'vi' ? 'Chứng nhận của tôi' : 'My Certificates'}
+        subtitle={language === 'vi' 
+          ? 'Danh sách chứng chỉ tham gia hoạt động và sự kiện văn hóa tại Đường Sách TP.HCM.' 
+          : 'Verified certificates earned from attended activities and cultural workshops.'}
+      />
+
+      {/* Thông báo chưa kết nối backend cho tính năng chứng nhận */}
+      <div className="reader-preview-note" role="note"><Info size={16} /><span>{language === 'vi' ? 'Bản xem trước · Chứng nhận chưa được kết nối dữ liệu hệ thống.' : 'Preview · Certificates are not connected to system data yet.'}</span></div>
 
       {/* 2. Skeleton Loading State or Certificate List or Empty State */}
       {isLoading ? (
@@ -183,105 +184,15 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
           ))}
         </div>
       ) : certificates.length === 0 ? (
-        <div className="certificate-empty-card">
-          <div className="cert-empty-icon-wrap" aria-hidden="true">
-            <Award size={44} />
-          </div>
-
-          <h2 className="cert-empty-title">
-            {language === 'vi' ? 'Bạn chưa có chứng nhận nào' : 'No Certificates Yet'}
-          </h2>
-
-          <p className="cert-empty-desc">
-            {language === 'vi' 
-              ? 'Hãy tham gia các buổi tọa đàm tác giả, triển lãm và workshop sáng tạo tại Đường Sách TP.HCM để hoàn tất điểm danh và nhận chứng nhận số chính thức được lưu vĩnh viễn trong hồ sơ.' 
-              : 'Join author talks, exhibitions, and creative workshops at Ho Chi Minh City Book Street to complete check-in and earn official digital certificates.'}
-          </p>
-
-          <div className="cert-empty-steps-grid">
-            <div className="cert-step-card">
-              <span className="cert-step-badge">
-                <Calendar size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                {language === 'vi' ? 'BƯỚC 1' : 'STEP 1'}
-              </span>
-              <h4 className="cert-step-title">
-                {language === 'vi' ? '1. Đăng ký sự kiện & hoạt động' : '1. Register Events & Activities'}
-              </h4>
-              <p className="cert-step-desc">
-                {language === 'vi' 
-                  ? 'Khám phá lịch tọa đàm tác giả, ra mắt sách và workshop hấp dẫn đang mở đăng ký.' 
-                  : 'Browse upcoming book launches, talkshows, and workshops open for registration.'}
-              </p>
-            </div>
-
-            <div className="cert-step-card">
-              <span className="cert-step-badge">
-                <QrCode size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                {language === 'vi' ? 'BƯỚC 2' : 'STEP 2'}
-              </span>
-              <h4 className="cert-step-title">
-                {language === 'vi' ? '2. Check-in QR tại chỗ' : '2. Check-in on-site with QR'}
-              </h4>
-              <p className="cert-step-desc">
-                {language === 'vi' 
-                  ? 'Xuất trình mã QR cá nhân trên điện thoại tại bàn tiếp tân khi đến tham dự sự kiện.' 
-                  : 'Present your personal QR code at the reception desk upon arriving at the venue.'}
-              </p>
-            </div>
-
-            <div className="cert-step-card">
-              <span className="cert-step-badge">
-                <Sparkles size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                {language === 'vi' ? 'BƯỚC 3' : 'STEP 3'}
-              </span>
-              <h4 className="cert-step-title">
-                {language === 'vi' ? '3. Nhận chứng nhận số' : '3. Earn Verified Certificate'}
-              </h4>
-              <p className="cert-step-desc">
-                {language === 'vi' 
-                  ? 'Hệ thống tự động cấp chứng chỉ với mã tra cứu độc bản, có thể tải về và in bản cứng.' 
-                  : 'System automatically issues your certificate with unique code to view and print.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Action CTAs */}
-          <div className="cert-empty-actions-row">
-            <Link
-              to="/participant/events"
-              className="btn-part-primary"
-              style={{
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.25rem',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '0.88rem'
-              }}
-            >
-              <Calendar size={16} />
-              <span>{language === 'vi' ? 'Khám phá sự kiện sắp diễn ra' : 'Explore Upcoming Events'}</span>
-              <ArrowRight size={15} />
-            </Link>
-
-            <Link
-              to="/participant/activities"
-              className="btn-part-secondary"
-              style={{
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.6rem 1.15rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.88rem'
-              }}
-            >
-              <span>{language === 'vi' ? 'Xem hoạt động của tôi' : 'My Registered Activities'}</span>
-            </Link>
+        <div className="reader-certificate-empty">
+          <EmptyState
+            icon={<Award size={28} />}
+            title={language === 'vi' ? 'Chưa có chứng nhận' : 'No certificates yet'}
+            description={language === 'vi' ? 'Chứng nhận sẽ xuất hiện sau khi bạn hoàn tất hoạt động đủ điều kiện.' : 'Certificates appear after you complete an eligible activity.'}
+          />
+          <div className="reader-empty-actions">
+            <Link to="/participant" className="btn-part-primary">{language === 'vi' ? 'Xem lịch sự kiện' : 'View event calendar'}</Link>
+            <Link to="/participant/activities" className="btn-part-secondary">{language === 'vi' ? 'Hoạt động của tôi' : 'My activities'}</Link>
           </div>
         </div>
       ) : (
@@ -341,82 +252,14 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
 
       {/* Modal preview when user clicks 'Xem trước' */}
       {selectedCert && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(14, 28, 23, 0.75)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.5rem'
-        }}>
-          <div style={{
-            background: '#FFFDF9',
-            border: '6px double #C89D3C',
-            borderRadius: '16px',
-            padding: '2.5rem',
-            maxWidth: '620px',
-            width: '100%',
-            textAlign: 'center',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-            position: 'relative'
-          }}>
-            <button
-              type="button"
-              onClick={() => setSelectedCert(null)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.25rem',
-                cursor: 'pointer',
-                color: '#637771'
-              }}
-            >
-              ✕
-            </button>
-
-            <div style={{ fontSize: '0.75rem', letterSpacing: '2px', color: '#8C6519', fontWeight: 700, marginBottom: '0.5rem' }}>
-              ĐƯỜNG SÁCH THÀNH PHỐ HỒ CHÍ MINH
-            </div>
-
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', color: '#14241F', margin: '0.5rem 0 1rem 0' }}>
-              {selectedCert.title}
-            </h2>
-
-            <p style={{ fontSize: '0.85rem', color: '#637771', margin: '0 0 0.25rem 0' }}>
-              Trao tặng cho:
-            </p>
-            <div style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '1.6rem',
-              fontWeight: 700,
-              color: '#C84C32',
-              marginBottom: '1rem'
-            }}>
-              {participantName}
-            </div>
-
-            <p style={{ fontSize: '0.88rem', color: '#495D57', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              Đã tích cực tham gia hoạt động <strong>"{selectedCert.activityTitle}"</strong> thuộc sự kiện <em>{selectedCert.eventTitle}</em>.
-            </p>
-
-            <div style={{
-              fontSize: '0.78rem',
-              color: '#7B8F89',
-              padding: '0.75rem',
-              background: '#F7F3EC',
-              borderRadius: '8px',
-              marginBottom: '1.5rem'
-            }}>
-              {selectedCert.issueDate} • Mã chứng nhận: <strong style={{ color: '#17382E' }}>{selectedCert.certificateCode}</strong>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+        <ModalDialog
+          isOpen={Boolean(selectedCert)}
+          onClose={() => setSelectedCert(null)}
+          title={selectedCert.title}
+          subtitle={`ĐƯỜNG SÁCH THÀNH PHỐ HỒ CHÍ MINH • ${selectedCert.issueDate}`}
+          maxWidth="620px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', width: '100%' }}>
               <button
                 type="button"
                 className="btn-part-primary"
@@ -436,8 +279,43 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
                 <span>{language === 'vi' ? 'Đóng' : 'Close'}</span>
               </button>
             </div>
+          }
+        >
+          <div style={{
+            background: '#FFFDF9',
+            border: '4px double #C89D3C',
+            borderRadius: '12px',
+            padding: '2rem',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '0.85rem', color: '#556B65', margin: '0 0 0.25rem 0' }}>
+              Trao tặng cho:
+            </p>
+            <div style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: '1.6rem',
+              fontWeight: 750,
+              color: '#C84C32',
+              marginBottom: '1rem'
+            }}>
+              {participantName}
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: '#172421', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              Đã tích cực tham gia hoạt động <strong>"{selectedCert.activityTitle}"</strong> thuộc sự kiện <em>{selectedCert.eventTitle}</em>.
+            </p>
+
+            <div style={{
+              fontSize: '0.8rem',
+              color: '#556B65',
+              padding: '0.65rem',
+              background: '#F0F7F4',
+              borderRadius: '8px'
+            }}>
+              {selectedCert.issueDate} • Mã chứng nhận: <strong style={{ color: '#17382E' }}>{selectedCert.certificateCode}</strong>
+            </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
     </div>
   );

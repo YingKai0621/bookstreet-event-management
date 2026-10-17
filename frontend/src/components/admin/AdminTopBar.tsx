@@ -124,7 +124,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
           </button>
 
           {notifDropdownOpen && (
-            <div className="partner-notif-dropdown-popover" style={{ right: '-50px', width: '380px' }}>
+            <div className="partner-notif-dropdown-popover admin-notif-popover">
               <div className="notif-dropdown-header">
                 <strong className="notif-header-title-text">{language === 'vi' ? 'Thông báo mới nhất' : 'Admin Notifications'}</strong>
                 <div className="notif-header-center">
@@ -209,7 +209,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
             role="button"
             tabIndex={0}
           >
-            <div className="admin-avatar-circle" style={{ overflow: 'hidden' }}>
+            <div className="admin-avatar-circle" style={{ overflow: 'hidden', borderRadius: '50%' }}>
               {profile.avatarUrl ? (
                 <img 
                   src={profile.avatarUrl} 
@@ -234,9 +234,9 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
               right: 0,
               width: '240px',
               background: '#FFFFFF',
-              border: '1px solid #E5E7EB',
+              border: '1px solid #D8E1DC',
               borderRadius: '12px',
-              boxShadow: '0 12px 35px rgba(0, 0, 0, 0.25)',
+              boxShadow: '0 12px 35px rgba(0, 0, 0, 0.2)',
               padding: '0.65rem',
               zIndex: 200,
               animation: 'admModalIn 0.15s ease-out'
@@ -264,7 +264,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
                   fontSize: '0.82rem',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  borderRadius: '7px',
+                  borderRadius: '2px',
                   textAlign: 'left'
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F4F7F5')}
@@ -292,7 +292,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
                   fontSize: '0.82rem',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  borderRadius: '7px',
+                  borderRadius: '2px',
                   textAlign: 'left',
                   marginTop: '0.25rem'
                 }}

@@ -68,17 +68,19 @@
 
 .notification-callout-floating {
   position: fixed;
+  top: 24px;
   right: 24px;
-  bottom: 24px;
+  bottom: auto;
   z-index: 9999;
-  max-width: min(560px, calc(100vw - 32px));
-  animation: notificationCalloutIn 220ms ease-out;
+  max-width: min(480px, calc(100vw - 32px));
+  box-shadow: 0 10px 30px rgba(20, 36, 31, 0.16);
+  animation: notificationCalloutInTop 180ms ease-out;
 }
 
-@keyframes notificationCalloutIn {
+@keyframes notificationCalloutInTop {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-12px);
   }
   to {
     opacity: 1;

@@ -17,6 +17,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ModalDialog } from '../../components/ui/ModalDialog';
 import { NotificationCallout } from '../../components/ui/NotificationCallout';
 import { Language, ParticipantActivity, ParticipantEvent, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
@@ -273,20 +274,33 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
         </NotificationCallout>
       )}
 
-      {/* 1. Header with Welcome Greeting */}
-      <div className="participant-page-header">
-        <h1 className="participant-page-title">
-          {language === 'vi' ? `Xin chào, ${profile.name}!` : `Welcome back, ${profile.name}!`}
-        </h1>
-        <p className="participant-page-sub">
-          {language === 'vi'
-            ? 'Theo dõi lịch sự kiện và các hoạt động văn hóa đọc hấp dẫn diễn ra tại Đường Sách TP.HCM.'
-            : 'Track literary events and community reading activities on HCMC Book Street calendar.'}
-        </p>
+      {/* 1. Header with Task Priority */}
+      <div className="participant-page-header workspace-page-hero">
+        <div>
+          <h1 className="participant-page-title">
+            {language === 'vi' ? 'Lịch & Sự kiện' : 'Events & Schedule'}
+          </h1>
+          <p className="participant-page-sub">
+            {language === 'vi'
+              ? 'Theo dõi lịch hoạt động tại Đường Sách và sự kiện bạn đã tham gia.'
+              : 'Explore scheduled activities and your registered events at Book Street.'}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.65rem' }}>
+          <Link
+            to="/participant/events"
+            className="btn-part-primary"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.55rem 1.15rem' }}
+          >
+            <CalendarCheck size={16} />
+            <span>{language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}</span>
+          </Link>
+        </div>
       </div>
 
-      {/* 2. Stat Cards */}
-      <div className="participant-summary-grid dashboard-stat-grid">
+      {/* 2. Quick Stat Overview */}
+      <div className="participant-summary-grid dashboard-stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '1.25rem' }}>
         {/* Card 1: Joined Events */}
         <Link to="/participant/events" className="summary-stat-card" style={{ textDecoration: 'none' }}>
           <div className="stat-number-box">
@@ -297,25 +311,14 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           </div>
         </Link>
 
-        {/* Card 2: Total Points with Star */}
+        {/* Card 2: Total Points */}
         <Link to="/participant/rewards" className="summary-stat-card" style={{ textDecoration: 'none' }}>
           <div className="stat-number-box gold">
-            <Star size={24} className="stat-star-icon" />
+            <Star size={22} className="stat-star-icon" />
             <span>{profile.points}</span>
           </div>
           <div className="stat-label-text">
             {language === 'vi' ? 'Điểm tích lũy' : 'Accumulated Points'}
-          </div>
-        </Link>
-
-        {/* Card 3: Certificates */}
-        <Link to="/participant/certificates" className="summary-stat-card" style={{ textDecoration: 'none' }}>
-          <div className="stat-number-box">
-            <Award size={22} className="stat-badge-icon" />
-            <span>{totalCertificatesCount}</span>
-          </div>
-          <div className="stat-label-text">
-            {language === 'vi' ? 'Chứng nhận đạt được' : 'Certificates'}
           </div>
         </Link>
       </div>
@@ -418,7 +421,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                 style={{
                   minHeight: '148px',
                   padding: '8px',
-                  borderRadius: '12px',
+                  borderRadius: '2px',
                   background: isSelected 
                     ? '#F0F7F4' 
                     : hasEvents 
@@ -429,7 +432,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                   border: isSelected 
                     ? '2px solid #17382E' 
                     : hasEvents 
-                      ? '1px solid #EAE0CE' 
+                      ? '1px solid #D8E1DC' 
                       : '1px solid #EEF2F0',
                   cursor: hasEvents ? 'pointer' : 'default',
                   opacity: cell.isCurrentMonth ? 1 : 0.35,
@@ -440,7 +443,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                   boxShadow: isSelected 
                     ? '0 4px 16px rgba(23, 56, 46, 0.12)' 
                     : hasEvents 
-                      ? '0 2px 8px rgba(0, 0, 0, 0.02)' 
+                      ? '0 2px 6px rgba(0, 0, 0, 0.02)' 
                       : 'none'
                 }}
               >
@@ -455,9 +458,9 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                     fontSize: '0.88rem',
                     fontWeight: isSelected || isToday ? 850 : 650,
                     color: isToday ? '#FFFFFF' : isSelected ? '#17382E' : '#2C3E3A',
-                    width: isToday ? '26px' : 'auto',
-                    height: isToday ? '26px' : 'auto',
-                    borderRadius: isToday ? '50%' : 'none',
+                    width: isToday ? '24px' : 'auto',
+                    height: isToday ? '24px' : 'auto',
+                    borderRadius: isToday ? '2px' : 'none',
                     background: isToday ? '#17382E' : 'transparent',
                     display: 'grid',
                     placeItems: 'center'
@@ -472,7 +475,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       background: cell.events.length > 2 ? '#FEF3C7' : '#E8F5EF',
                       color: cell.events.length > 2 ? '#92400E' : '#065F46',
                       padding: '1px 6px',
-                      borderRadius: '10px'
+                      borderRadius: '2px'
                     }}>
                       {cell.events.length} sự kiện
                     </span>
@@ -499,7 +502,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                           key={ev.id}
                           onClick={(e) => handleEventClick(ev, e)}
                           style={{
-                            borderRadius: '8px',
+                            borderRadius: '2px',
                             background: bgCard,
                             border: `1.5px solid ${borderColor}`,
                             borderLeft: `4px solid ${leftBarColor}`,
@@ -552,7 +555,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                                 color: '#059669',
                                 border: '1px solid #A7F3D0',
                                 padding: '1px 5px',
-                                borderRadius: '4px',
+                                borderRadius: '2px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '3px',
@@ -569,7 +572,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                                 color: '#DC2626',
                                 border: '1px solid #FECACA',
                                 padding: '1px 5px',
-                                borderRadius: '4px',
+                                borderRadius: '2px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '3px',
@@ -598,7 +601,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                         }}
                         style={{
                           padding: '4px 8px',
-                          borderRadius: '6px',
+                          borderRadius: '2px',
                           background: '#FFFBEB',
                           border: '1px dashed #F59E0B',
                           color: '#B45309',
@@ -626,226 +629,169 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       </div>
 
       {/* 4. Modal "Xem Thêm" Sự Kiện trong ngày */}
-      {selectedDayEvents && (
-        <div className="participant-calendar-modal-backdrop" onClick={() => setSelectedDayEvents(null)}>
-          <div className="participant-calendar-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="calendar-modal-header">
-              <div className="calendar-modal-title-group">
-                <div className="calendar-modal-date-tag">
-                  <CalendarIcon size={14} color="#E9BC63" />
-                  <span>{selectedDayEvents.dateStr}</span>
-                </div>
-                <h3>{language === 'vi' ? 'Danh sách Sự kiện & Hoạt động' : 'Day Events & Activities'}</h3>
-              </div>
-              <button 
-                type="button" 
-                className="calendar-modal-close-btn"
-                onClick={() => setSelectedDayEvents(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="calendar-modal-body">
-              <div className="calendar-modal-events-list">
-                {selectedDayEvents.events.map((evt) => (
-                  <div key={evt.id} className="calendar-modal-event-card">
-                    <div className="modal-event-card-left" style={{ borderLeftColor: evt.badgeColor || '#185E48' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                        <div className="modal-event-badge">
-                          <Tag size={12} />
-                          <span>{evt.category || (evt.type === 'event' ? 'Sự kiện lớn' : 'Hoạt động')}</span>
-                        </div>
-                        {evt.isRegistered && (
-                          <span style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            background: '#ECFDF5',
-                            color: '#059669',
-                            border: '1px solid #A7F3D0',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                          }}>
-                            <CheckCircle2 size={11} />
-                            <span>Đã đăng ký (Sẽ tham gia)</span>
-                          </span>
-                        )}
-                      </div>
-                      
-                      <h4 className="modal-event-title">{evt.title}</h4>
-                      
-                      <div className="modal-event-meta-row">
-                        {evt.time && (
-                          <span className="modal-event-meta-item">
-                            <Clock size={13} color="#185E48" />
-                            <span>{evt.time}</span>
-                          </span>
-                        )}
-                        {evt.location && (
-                          <span className="modal-event-meta-item">
-                            <MapPin size={13} color="#185E48" />
-                            <span>{evt.location}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      {!evt.isRegistered && evt.status !== 'ended' ? (
-                        <button
-                          type="button"
-                          className="modal-event-action-btn"
-                          style={{ background: '#185E48', border: 'none', cursor: 'pointer' }}
-                          onClick={() => {
-                            setConfirmingEvent(evt);
-                          }}
-                        >
-                          <CalendarCheck size={14} />
-                          <span>{language === 'vi' ? 'Đăng ký tham gia' : 'Register'}</span>
-                        </button>
-                      ) : (
-                        <Link 
-                          to={evt.link} 
-                          className="modal-event-action-btn"
-                          onClick={() => setSelectedDayEvents(null)}
-                        >
-                          <span>{language === 'vi' ? 'Chi tiết' : 'View'}</span>
-                          <ArrowRight size={14} />
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. Confirmation Modal: Xác nhận Đăng ký Tham gia */}
-      {confirmingEvent && (
-        <div 
-          className="participant-calendar-modal-backdrop" 
-          style={{ zIndex: 10000 }}
-          onClick={() => setConfirmingEvent(null)}
-        >
-          <div 
-            className="participant-calendar-modal" 
-            style={{ maxWidth: '480px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="calendar-modal-header" style={{ background: confirmingEvent.isRegistered ? '#ECFDF5' : '#F0F7F4' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: confirmingEvent.isRegistered ? '#059669' : '#185E48',
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: '#FFFFFF'
-                }}>
-                  {confirmingEvent.isRegistered ? <CheckCircle2 size={20} /> : <CalendarCheck size={20} />}
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#172421', fontWeight: 800 }}>
-                    {confirmingEvent.isRegistered
-                      ? (language === 'vi' ? 'Thông tin đăng ký tham gia' : 'Registration Information')
-                      : (language === 'vi' ? 'Xác nhận đăng ký tham gia' : 'Confirm Registration')}
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: '#556B65' }}>
-                    {language === 'vi' ? 'Đường Sách TP.HCM' : 'HCMC Book Street'}
-                  </span>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                className="calendar-modal-close-btn"
-                onClick={() => setConfirmingEvent(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="calendar-modal-body" style={{ padding: '1.5rem' }}>
-              <div style={{
+      <ModalDialog
+        isOpen={Boolean(selectedDayEvents)}
+        onClose={() => setSelectedDayEvents(null)}
+        title={selectedDayEvents ? (language === 'vi' ? `Lịch ngày ${selectedDayEvents.dateStr}` : `Schedule for ${selectedDayEvents.dateStr}`) : ''}
+        maxWidth={580}
+      >
+        {selectedDayEvents && (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {selectedDayEvents.events.map((evt) => (
+              <article key={evt.id} style={{
                 background: '#FAFBFB',
-                border: confirmingEvent.isRegistered ? '1.5px solid #A7F3D0' : '1px solid #E5ECE8',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                marginBottom: '1.25rem'
+                border: '1px solid #D8E1DC',
+                borderLeft: '3px solid #17382E',
+                borderRadius: '2px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    color: confirmingEvent.badgeColor || '#185E48',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em'
-                  }}>
-                    {confirmingEvent.category || (confirmingEvent.type === 'event' ? 'Sự kiện chính' : 'Hoạt động trải nghiệm')}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: evt.badgeColor || '#185E48',
+                      textTransform: 'uppercase'
+                    }}>
+                      {evt.category}
+                    </span>
+                    {evt.time && (
+                      <span style={{ fontSize: '0.78rem', color: '#556B65', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} />
+                        {evt.time}
+                      </span>
+                    )}
                   </div>
-
-                  {confirmingEvent.isRegistered ? (
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: '#D1FAE5',
-                      color: '#065F46',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px'
-                    }}>
-                      <CheckCircle2 size={12} />
-                      <span>{language === 'vi' ? 'Đã đăng ký (Sẽ tham gia)' : 'Registered (Attending)'}</span>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '0.98rem', color: '#172421', fontWeight: 700 }}>
+                    {evt.title}
+                  </h4>
+                  {evt.location && (
+                    <span style={{ fontSize: '0.8rem', color: '#637771', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={12} />
+                      {evt.location}
                     </span>
+                  )}
+                </div>
+
+                <div style={{ flexShrink: 0 }}>
+                  {!evt.isRegistered && evt.status !== 'ended' ? (
+                    <button
+                      type="button"
+                      className="btn-part-primary"
+                      style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', height: '36px', gap: '6px' }}
+                      onClick={() => setConfirmingEvent(evt)}
+                    >
+                      <CalendarCheck size={14} />
+                      <span>{language === 'vi' ? 'Đăng ký' : 'Register'}</span>
+                    </button>
                   ) : (
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 750,
-                      background: '#FEE2E2',
-                      color: '#B91C1C',
-                      padding: '2px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      {language === 'vi' ? 'Chưa đăng ký' : 'Not registered'}
-                    </span>
+                    <Link
+                      to={evt.link}
+                      className="btn-part-secondary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', height: '36px', gap: '4px', textDecoration: 'none' }}
+                      onClick={() => setSelectedDayEvents(null)}
+                    >
+                      <span>{language === 'vi' ? 'Chi tiết' : 'View'}</span>
+                      <ArrowRight size={13} />
+                    </Link>
                   )}
                 </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </ModalDialog>
 
-                <h4 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem', color: '#172421', fontWeight: 750, lineHeight: 1.4 }}>
-                  {confirmingEvent.title}
-                </h4>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: '#526661' }}>
-                  {confirmingEvent.time && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <Clock size={14} color="#185E48" />
-                      <span>{confirmingEvent.time}</span>
-                    </div>
-                  )}
-                  {confirmingEvent.location && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <MapPin size={14} color="#185E48" />
-                      <span>{confirmingEvent.location}</span>
-                    </div>
-                  )}
+      {/* 5. Confirmation Modal */}
+      <ModalDialog
+        isOpen={Boolean(confirmingEvent)}
+        onClose={() => setConfirmingEvent(null)}
+        title={confirmingEvent?.isRegistered
+          ? (language === 'vi' ? 'Thông tin đăng ký' : 'Registration Info')
+          : (language === 'vi' ? 'Xác nhận tham gia' : 'Confirm Registration')}
+        maxWidth={500}
+      >
+        {confirmingEvent && (
+          <div>
+            <div style={{
+              background: '#FAFBFB',
+              border: confirmingEvent.isRegistered ? '1.5px solid #A7F3D0' : '1px solid #D8E1DC',
+              borderLeft: confirmingEvent.isRegistered ? '4px solid #059669' : '4px solid #17382E',
+              borderRadius: '2px',
+              padding: '1.15rem',
+              marginBottom: '1.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <div style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  color: confirmingEvent.badgeColor || '#185E48',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}>
+                  {confirmingEvent.category || (confirmingEvent.type === 'event' ? 'Sự kiện chính' : 'Hoạt động trải nghiệm')}
                 </div>
+
+                {confirmingEvent.isRegistered ? (
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    background: '#D1FAE5',
+                    color: '#065F46',
+                    padding: '2px 8px',
+                    borderRadius: '2px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <CheckCircle2 size={12} />
+                    <span>{language === 'vi' ? 'Đã đăng ký' : 'Registered'}</span>
+                  </span>
+                ) : (
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 750,
+                    background: '#FEE2E2',
+                    color: '#B91C1C',
+                    padding: '2px 8px',
+                    borderRadius: '2px'
+                  }}>
+                    {language === 'vi' ? 'Chưa đăng ký' : 'Not registered'}
+                  </span>
+                )}
               </div>
 
-              {confirmingEvent.isRegistered ? (
-                <div>
-                  {/* Mã QR Check-in chỉ được cấp cho đăng ký hoạt động */}
-                  {confirmingEvent.type === 'activity' && confirmingEvent.qrToken && (
+              <h4 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem', color: '#172421', fontWeight: 750, lineHeight: 1.4 }}>
+                {confirmingEvent.title}
+              </h4>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: '#526661' }}>
+                {confirmingEvent.time && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Clock size={14} color="#185E48" />
+                    <span>{confirmingEvent.time}</span>
+                  </div>
+                )}
+                {confirmingEvent.location && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <MapPin size={14} color="#185E48" />
+                    <span>{confirmingEvent.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {confirmingEvent.isRegistered ? (
+              <div>
+                {confirmingEvent.type === 'activity' && confirmingEvent.qrToken && (
                   <div style={{
                     background: '#F8FAFC',
                     border: '1.5px dashed #A7F3D0',
-                    borderRadius: '14px',
+                    borderRadius: '2px',
                     padding: '1.25rem',
                     textAlign: 'center',
                     marginBottom: '1.25rem'
@@ -857,7 +803,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       display: 'inline-block',
                       background: '#FFFFFF',
                       padding: '10px',
-                      borderRadius: '12px',
+                      borderRadius: '2px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                       border: '1px solid #E2E8F0',
                       marginBottom: '0.65rem'
@@ -871,97 +817,75 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       </strong>
                     </div>
                   </div>
-                  )}
+                )}
 
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.65rem',
-                    padding: '0.85rem 1rem',
-                    background: '#ECFDF5',
-                    borderRadius: '8px',
-                    color: '#065F46',
-                    fontSize: '0.8rem',
-                    lineHeight: 1.45,
-                    marginBottom: '1.5rem',
-                    border: '1px solid #A7F3D0'
-                  }}>
-                    <CheckCircle2 size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#059669' }} />
-                    <span>
-                      {language === 'vi' 
-                        ? 'Bạn đã đăng ký sự kiện này thành công. Hãy đưa mã QR này cho ban tổ chức khi tham gia để tích điểm nhé!' 
-                        : 'You have registered for this event. Present this QR code when attending to check in!'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.65rem',
                   padding: '0.85rem 1rem',
-                  background: '#FEF3C7',
-                  borderRadius: '8px',
-                  color: '#92400E',
-                  fontSize: '0.8rem',
+                  background: '#ECFDF5',
+                  borderRadius: '2px',
+                  color: '#065F46',
+                  fontSize: '0.82rem',
                   lineHeight: 1.45,
-                  marginBottom: '1.5rem'
+                  marginBottom: '1.25rem',
+                  border: '1px solid #A7F3D0'
                 }}>
-                  <AlertCircle size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#059669' }} />
                   <span>
-                    {language === 'vi' 
-                        ? 'Sau khi đăng ký, mục này sẽ được lưu vào danh sách của bạn. Mã QR chỉ được cấp cho hoạt động đã đăng ký.'
-                        : 'After registration, this item is saved to your list. QR codes are issued only for registered activities.'}
+                    {language === 'vi'
+                      ? 'Bạn đã đăng ký tham gia thành công. Hãy đưa mã QR này cho ban tổ chức khi tham gia để điểm danh nhé!'
+                      : 'You have registered for this event. Present this QR code when attending to check in!'}
                   </span>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.65rem',
+                padding: '0.85rem 1rem',
+                background: '#FEF3C7',
+                borderRadius: '2px',
+                color: '#92400E',
+                fontSize: '0.82rem',
+                lineHeight: 1.45,
+                marginBottom: '1.25rem',
+                border: '1px solid #FDE68A'
+              }}>
+                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>
+                  {language === 'vi'
+                    ? 'Sau khi đăng ký, sự kiện sẽ được lưu vào danh sách Sự kiện của tôi.'
+                    : 'After registration, this event will be saved to your My Events list.'}
+                </span>
+              </div>
+            )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'flex-end', borderTop: '1px solid #E2EAE5', paddingTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn-part-secondary"
+                onClick={() => setConfirmingEvent(null)}
+              >
+                {language === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+
+              {!confirmingEvent.isRegistered && (
                 <button
                   type="button"
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
-                    border: '1px solid #D3DFDA',
-                    background: '#FFFFFF',
-                    color: '#4B5563',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => setConfirmingEvent(null)}
+                  className="btn-part-primary"
+                  onClick={handleConfirmRegistration}
                 >
-                  {language === 'vi' ? 'Đóng' : 'Close'}
+                  <CheckCircle2 size={15} />
+                  <span>{language === 'vi' ? 'Xác nhận Đăng ký' : 'Confirm Registration'}</span>
                 </button>
-
-                {!confirmingEvent.isRegistered && (
-                  <button
-                    type="button"
-                    style={{
-                      padding: '0.65rem 1.45rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: '#185E48',
-                      color: '#FFFFFF',
-                      fontWeight: 750,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      boxShadow: '0 4px 12px rgba(24, 94, 72, 0.25)'
-                    }}
-                    onClick={handleConfirmRegistration}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>{language === 'vi' ? 'Xác nhận Đăng ký' : 'Confirm Registration'}</span>
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalDialog>
     </div>
   );
 };

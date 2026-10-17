@@ -172,22 +172,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               <h2>{vi ? 'Danh mục các gian hàng' : 'All Bookstalls & Publishers'}</h2>
             </div>
             <div className="booths-experience-controls">
-              {events.length > 0 && (
-                <label className="booths-experience-event-picker">
-                  <span>{vi ? 'Sự kiện công khai' : 'Published event'}</span>
-                  <select
-                    value={selectedEventId}
-                    onChange={event => onSelectEventId(event.target.value)}
-                    aria-label={vi ? 'Sự kiện công khai' : 'Published event'}
-                  >
-                    {events.map(event => (
-                      <option key={event.id} value={event.id}>
-                        {vi ? event.title : event.titleEn}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
               <div className="heritage-search">
                 <Search size={16} />
                 <input

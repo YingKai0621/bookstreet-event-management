@@ -1,0 +1,58 @@
+.shared-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.shared-page-header-main {
+  flex: 1;
+  min-width: min(100%, 280px);
+}
+
+.shared-page-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8B692A;
+  margin-bottom: 0.35rem;
+}
+
+.shared-page-title {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #172421;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.25;
+}
+
+.shared-page-subtitle {
+  font-size: 0.92rem;
+  color: #556B65;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.shared-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .shared-page-header {
+    margin-bottom: 1.25rem;
+  }
+  .shared-page-title {
+    font-size: 1.5rem;
+  }
+  .shared-page-header-actions {
+    width: 100%;
+  }
+}

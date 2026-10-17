@@ -1,0 +1,140 @@
+/* ==========================================================================
+   SHARED ACCESSIBLE MODAL DIALOG
+   Forest Teal Palette: #14241F, #17382E, Gold #E9BC63, Border #E2EAE5
+   ========================================================================== */
+
+.modal-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 36, 29, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 160ms ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-dialog-container {
+  width: 100%;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 1px solid #D8E1DC;
+  border-top: 3px solid #17382E;
+  border-radius: 2px;
+  box-shadow: 0 16px 48px rgba(17, 36, 29, 0.22);
+  color: #172421;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  overflow: hidden;
+  animation: modalSlideUp 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 1.15rem 1.5rem;
+  background: #F8FAF9;
+  border-bottom: 1px solid #E2EAE5;
+  flex-shrink: 0;
+}
+
+.modal-dialog-title {
+  margin: 0;
+  font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #172421;
+  line-height: 1.35;
+}
+
+.modal-dialog-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-dialog-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #D8E1DC;
+  border-radius: 2px;
+  background: #FFFFFF;
+  color: #556B65;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.modal-dialog-close-btn:hover {
+  background: #F0F4F2;
+  color: #172421;
+  border-color: #CAD8D1;
+}
+
+.modal-dialog-close-btn:focus-visible {
+  outline: 2px solid var(--figma-gold, #E9BC63);
+  outline-offset: 2px;
+}
+
+.modal-dialog-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  line-height: 1.6;
+  font-size: 0.92rem;
+  color: #172421;
+}
+
+.modal-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 1rem 1.5rem;
+  background: #F8FAF9;
+  border-top: 1px solid #E2EAE5;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .modal-dialog-backdrop {
+    padding: 12px;
+  }
+  .modal-dialog-header {
+    padding: 1rem 1.15rem;
+  }
+  .modal-dialog-body {
+    padding: 1.15rem;
+  }
+  .modal-dialog-footer {
+    padding: 0.85rem 1.15rem;
+  }
+}

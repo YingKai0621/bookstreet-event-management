@@ -187,10 +187,33 @@ export function toHeritageProfile(heritage: Record<string, unknown>): HeritagePr
 
 export const publicApi = {
   getEvents: getPublishedEvents,
-  async getBooths(eventId: string): Promise<Booth[]> {
-    if (!eventId) return [];
-    const rows = await boothApi.listAllPublicEventBooths(eventId);
-    return rows.map(toPublicBooth);
+  async getBooths(eventId?: string): Promise<Booth[]> {
+    if (eventId) {
+      const rows = await boothApi.listAllPublicEventBooths(eventId);
+      return rows.map(toPublicBooth);
+    }
+    const events = await getPublishedEvents();
+    if (events.length === 0) return [];
+    const eventBoothLists = await Promise.all(
+      events.map(event =>
+        boothApi.listAllPublicEventBooths(event.id).catch(err => {
+          console.warn(`Could not fetch booths for event ${event.id}:`, err);
+          return [];
+        })
+      )
+    );
+    const seenBoothIds = new Set<string>();
+    const allBooths: Booth[] = [];
+    for (const rows of eventBoothLists) {
+      for (const row of rows) {
+        const booth = toPublicBooth(row);
+        if (!seenBoothIds.has(booth.id)) {
+          seenBoothIds.add(booth.id);
+          allBooths.push(booth);
+        }
+      }
+    }
+    return allBooths;
   },
   async getHeritages(): Promise<HeritageProfile[]> {
     // Heritage persistence/API belongs to a future module and is not part of the

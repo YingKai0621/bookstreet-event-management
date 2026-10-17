@@ -1,0 +1,80 @@
+.shared-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #FFFFFF;
+  border: 1px dashed #CAD8D1;
+  border-radius: 14px;
+  margin: 1.5rem 0;
+  color: #172421;
+}
+
+.shared-empty-state.is-error {
+  border-color: #F87171;
+  background: #FEF2F2;
+}
+
+.shared-empty-state-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0F4F2;
+  color: #556B65;
+  margin-bottom: 1rem;
+}
+
+.shared-empty-state.is-error .shared-empty-state-icon {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.shared-empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #172421;
+  margin: 0 0 0.35rem 0;
+}
+
+.shared-empty-state-desc {
+  font-size: 0.88rem;
+  color: #556B65;
+  margin: 0 0 1.25rem 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.shared-empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 8px;
+  border: 1px solid #17382E;
+  background: #17382E;
+  color: #FFFFFF;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.shared-empty-state-btn:hover {
+  background: #14241F;
+  border-color: #14241F;
+}
+
+.shared-empty-state.is-error .shared-empty-state-btn {
+  background: #DC2626;
+  border-color: #DC2626;
+}
+
+.shared-empty-state.is-error .shared-empty-state-btn:hover {
+  background: #B91C1C;
+  border-color: #B91C1C;
+}

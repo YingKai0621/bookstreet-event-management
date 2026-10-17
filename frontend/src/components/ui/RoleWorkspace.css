@@ -1,0 +1,177 @@
+/* Shared workspace foundation, taken from the live Partner portal. */
+:is(.partner-app-shell, .participant-app-shell, .admin-app-shell) {
+  --workspace-canvas: #f8faf9;
+  --workspace-surface: #fff;
+  --workspace-ink: #172421;
+  --workspace-muted: #556b65;
+  --workspace-border: #d6dfda;
+  --workspace-primary: #17382e;
+  --workspace-radius: 2px;
+  --workspace-control-radius: 2px;
+  --workspace-font: var(--font-sans);
+  --workspace-title-font: var(--font-serif);
+  font-family: var(--workspace-font);
+}
+
+/* Same image, title face and proportions as the live Partner dashboard. */
+:is(.participant-app-shell, .admin-app-shell) :is(.participant-page-header, .adm-page-header).workspace-page-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 238px;
+  padding: 1.65rem 1.9rem;
+  padding-right: 34%;
+  border: 1px solid var(--workspace-border);
+  background: #f8f5ed;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.15rem;
+  overflow: hidden;
+}
+
+.workspace-page-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 68%;
+  background: linear-gradient(90deg, #f8f5ed, transparent 45%), url('/duong_sach_hero_bg.jpg') center / cover;
+}
+
+:is(.participant-app-shell, .admin-app-shell) .workspace-page-hero :is(.participant-page-title, .adm-page-title) {
+  margin: 0 0 .35rem;
+  font-size: clamp(2rem, 3.3vw, 2.65rem);
+  line-height: 1.1;
+  color: #112d24;
+}
+
+:is(.participant-app-shell, .admin-app-shell) .workspace-page-hero p {
+  margin: 0;
+  font-size: .94rem;
+  line-height: 1.55;
+  color: #4f665d;
+}
+
+.admin-app-shell .adm-kpi-grid {
+  gap: 0;
+  border-top: 1px solid var(--workspace-border);
+  border-left: 1px solid var(--workspace-border);
+}
+
+.admin-app-shell .adm-kpi-grid > .adm-kpi-card {
+  border: 0;
+  border-right: 1px solid var(--workspace-border);
+  border-bottom: 1px solid var(--workspace-border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1.25rem;
+  transition: background 150ms ease;
+}
+
+.admin-app-shell .adm-kpi-card:hover {
+  background: #fbfaf6;
+  transform: none;
+  box-shadow: inset 0 -3px #c49a48;
+}
+
+.admin-app-shell .adm-kpi-card::before { display: none; }
+.admin-app-shell .adm-kpi-icon-wrap { border-radius: 2px; }
+.admin-app-shell .adm-card { box-shadow: none; }
+.admin-app-shell .adm-card-title { font-family: var(--workspace-title-font); }
+.admin-app-shell .adm-dashboard-view :is(.adm-card, .admin-card) {
+  border: 1px solid var(--workspace-border);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+:is(.participant-app-shell, .admin-app-shell) .workspace-page-hero :is(a, button) {
+  min-height: 43px;
+  border-radius: var(--workspace-control-radius);
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(button, input, select, textarea) {
+  font-family: var(--workspace-font);
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(h1, h2, h3) {
+  font-family: var(--workspace-title-font);
+  text-wrap: pretty;
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(.participant-page-title, .shared-page-title, .adm-page-title, .booth-crud-title-group h1, .facility-heading h1) {
+  font-family: var(--workspace-title-font);
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: normal;
+  color: var(--workspace-ink);
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(.participant-page-sub, .adm-page-subtitle, .shared-page-subtitle) {
+  color: var(--workspace-muted);
+  font-size: .92rem;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(.participant-main-viewport, .admin-main-viewport) {
+  min-width: 0;
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+  padding: 2rem 2.5rem 4rem;
+  background: var(--workspace-canvas);
+}
+
+:is(.participant-app-shell, .admin-app-shell) :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #b3862a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  :is(.participant-app-shell, .admin-app-shell) :is(.participant-main-viewport, .admin-main-viewport) {
+    padding: 1.5rem 1.25rem 3rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-app-shell .admin-topbar { padding-inline: .85rem; }
+  .admin-app-shell .admin-topbar-left { gap: .65rem; min-width: 0; }
+  .admin-app-shell .admin-topbar-right { gap: .5rem; min-width: 0; }
+  .admin-app-shell .admin-top-search { display: none; }
+  .admin-app-shell .admin-brand-text { display: none; }
+  .admin-app-shell .admin-notif-popover {
+    position: fixed;
+    inset: 68px 12px auto;
+    width: auto;
+    max-width: calc(100vw - 24px);
+  }
+  :is(.participant-app-shell, .admin-app-shell) :is(.participant-page-header, .adm-page-header).workspace-page-hero {
+    min-height: 0;
+    padding: 1.15rem;
+  }
+  .workspace-page-hero::after { display: none; }
+  :is(.participant-app-shell, .admin-app-shell) .workspace-page-hero :is(.participant-page-title, .adm-page-title) { font-size: 1.75rem; }
+  :is(.participant-app-shell, .admin-app-shell) :is(.participant-main-viewport, .admin-main-viewport) {
+    padding: 1rem .75rem 2.5rem;
+  }
+
+  :is(.participant-app-shell, .admin-app-shell) :is(.participant-page-title, .shared-page-title, .adm-page-title, .booth-crud-title-group h1, .facility-heading h1) {
+    font-size: 1.5rem;
+  }
+
+  :is(.participant-app-shell, .admin-app-shell) :is(.adm-page-header, .booth-crud-header) {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.participant-app-shell, .admin-app-shell) *,
+  :is(.participant-app-shell, .admin-app-shell) *::before,
+  :is(.participant-app-shell, .admin-app-shell) *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
