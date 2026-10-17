@@ -28,6 +28,7 @@ skills-lock.json
 /report/
 /reports/
 /coverage/
+/frontend/docs/
 *.report
 
 # Local-only demo seed scripts and credentials
