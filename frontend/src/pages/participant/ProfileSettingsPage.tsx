@@ -1,3 +1,4 @@
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Camera, Check, Edit3, Mail, UserRound, X } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { Language, ParticipantProfile } from '../../types';
@@ -87,10 +88,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
 
   return (
     <div className="profile-settings-page reader-profile-page">
-      <header className="participant-page-header">
-        <h1 className="participant-page-title">{vi ? 'Hồ sơ cá nhân & Cài đặt' : 'Profile & Settings'}</h1>
-        <p className="participant-page-sub">{vi ? 'Cập nhật thông tin cá nhân và quản lý tài khoản của bạn.' : 'Update your personal information and manage your account.'}</p>
-      </header>
+      <PageHeader className="reader-tab-header" title={vi ? 'Hồ sơ' : 'Profile'} subtitle={vi ? 'Thông tin cá nhân và tài khoản.' : 'Personal and account information.'} />
       {saveError && <div className="reader-profile-notice error" role="alert">{saveError}</div>}
       {saveSuccess && <div className="reader-profile-notice success" role="status"><Check size={18} />{vi ? 'Đã lưu thay đổi hồ sơ thành công!' : 'Profile changes saved successfully!'}</div>}
       <div className="profile-card-container">

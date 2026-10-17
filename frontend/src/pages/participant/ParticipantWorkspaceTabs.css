@@ -1,0 +1,101 @@
+/* Reader tasks share the Partner workspace's quiet, square surfaces. */
+.participant-app-shell .reader-tab-header {
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #d6dfda;
+  border-left: 3px solid #b3862a;
+  background: #f8f5ed;
+  align-items: center;
+}
+.participant-app-shell .reader-tab-header h1 { margin: 0 0 .35rem; font-size: 1.85rem; }
+.participant-app-shell .reader-tab-header p { margin: 0; color: #556b65; }
+.participant-app-shell :is(.shared-empty-state, .certificate-card-row, .badge-item-card, .rewards-earn-card) {
+  border: 1px solid #d6dfda;
+  border-radius: 2px;
+  box-shadow: none;
+  background: #fff;
+}
+.participant-app-shell .shared-empty-state { min-height: 260px; padding: 2.5rem 1.5rem; }
+.participant-app-shell .shared-empty-state-icon { width: 48px; height: 48px; border-radius: 2px; background: #edf3ef; color: #355e50; }
+.participant-app-shell .shared-empty-state-title { font-size: 1.3rem; }
+.participant-app-shell .shared-empty-state-desc { max-width: 48ch; font-size: .9rem; }
+.reader-certificate-empty { border: 1px solid #d6dfda; background: #fff; }
+.participant-app-shell .reader-certificate-empty .shared-empty-state { border: 0; min-height: 230px; padding-bottom: 1rem; }
+.reader-empty-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .65rem; padding: 0 1.25rem 2rem; }
+.participant-app-shell .activity-row-card { border: 1px solid #d6dfda; border-radius: 2px; box-shadow: none; }
+.participant-app-shell .activity-row-card:hover { transform: none; box-shadow: none; }
+.participant-app-shell :is(.shared-empty-state-btn, .btn-part-primary, .btn-part-secondary, .btn-part-leave, .btn-part-danger-outline) {
+  border-radius: 2px;
+  min-height: 42px;
+  height: auto;
+  padding: .6rem .9rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+.participant-app-shell .btn-part-secondary { border: 1px solid #aebfb7; background: #fff; color: #17382e; }
+.participant-app-shell .participant-tabs-bar { gap: .5rem; padding: 0 0 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid #d6dfda; flex-wrap: wrap; }
+.participant-app-shell .participant-tab-btn { border: 1px solid #d6dfda; border-radius: 2px; min-height: 42px; background: #fff; padding: .6rem .9rem; white-space: nowrap; }
+.participant-app-shell .participant-tab-btn.is-active { background: #17382e; border-color: #17382e; color: #fff; }
+.participant-app-shell .participant-tab-btn::after { display: none; }
+.participant-app-shell .participant-events-grid { gap: 1.25rem; }
+.participant-app-shell .participant-event-card { border-radius: 2px; box-shadow: none; }
+.participant-app-shell .participant-event-card:hover { transform: none; border-color: #aebfb7; box-shadow: none; }
+.participant-app-shell .event-card-actions { flex-wrap: wrap; }
+.participant-app-shell .event-card-title { font-size: 1.25rem; }
+.participant-app-shell .event-card-desc { max-width: 65ch; }
+.participant-app-shell .reader-preview-note { display: flex; align-items: flex-start; gap: .65rem; padding: .85rem 1rem; border: 1px solid #e3d6b8; background: #fcf9f1; color: #785c28; font-size: .85rem; line-height: 1.5; margin-bottom: 1.25rem; }
+.reader-preview-note svg { flex-shrink: 0; margin-top: 2px; }
+.participant-app-shell .rewards-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid #d6dfda; margin-bottom: 1.75rem; max-width: none; }
+.participant-app-shell .rewards-summary-grid .summary-stat-card { border: 0; border-radius: 0; box-shadow: none; padding: 1.4rem; }
+.participant-app-shell .rewards-summary-grid .summary-stat-card + .summary-stat-card { border-left: 1px solid #d6dfda; }
+.participant-app-shell .badges-collection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 1rem; }
+.participant-app-shell .badge-item-card { padding: 1.5rem 1rem; }
+.participant-app-shell .badge-item-card:hover { transform: none; box-shadow: none; }
+.participant-app-shell .badge-item-card.locked { opacity: 1; background: #f8faf9; }
+.participant-app-shell .badge-icon-disc { width: 48px; height: 48px; border-radius: 2px; box-shadow: none; }
+.participant-app-shell .rewards-earn-card { margin-top: 1.5rem; padding: 1.5rem; }
+.participant-app-shell .rewards-earn-title { font-size: 1.2rem; }
+.participant-app-shell .rewards-earn-step { padding: 0; border: 0; background: transparent; }
+.participant-app-shell .certificate-card-row { gap: 1.25rem; padding: 1.25rem; }
+.participant-app-shell .certificate-mini-preview { border-radius: 2px; box-shadow: none; background: #f8f5ed; }
+.participant-app-shell .reader-feedback-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin: 0 0 1.25rem; }
+.reader-feedback-count { color: #556b65; font-size: .85rem; }
+.reader-feedback-filters { display: flex; gap: .5rem; flex-wrap: wrap; }
+.reader-feedback-filters button { padding: .6rem .85rem; min-height: 42px; border: 1px solid #d6dfda; border-radius: 2px; background: #fff; color: #556b65; font: inherit; font-size: .82rem; cursor: pointer; }
+.reader-feedback-filters button[aria-pressed="true"] { background: #17382e; border-color: #17382e; color: #fff; }
+.reader-feedback-list { display: grid; gap: 1rem; }
+.reader-feedback-card { padding: 1.25rem; background: #fff; border: 1px solid #d6dfda; min-width: 0; }
+.reader-feedback-card header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: .75rem; margin-bottom: 1rem; }
+.reader-feedback-card h2 { margin: 0 0 .35rem; font-size: 1.2rem; color: #17382e; }
+.reader-feedback-card time { font-size: .8rem; color: #637771; }
+.reader-feedback-card p { line-height: 1.65; overflow-wrap: anywhere; margin: .75rem 0 0; }
+.reader-feedback-status { padding: .3rem .55rem; font-size: .78rem; background: #edf3ef; color: #17382e; border: 1px solid #d6dfda; }
+.reader-feedback-rating { display: flex; gap: 3px; color: #9a7128; }
+.reader-feedback-response { margin-top: 1rem; padding: 1rem; background: #f3f7f4; border-left: 3px solid #355e50; }
+.reader-feedback-form { display: grid; gap: 1.15rem; }
+.reader-feedback-form label, .reader-feedback-form legend { font-size: .88rem; font-weight: 700; color: #172421; }
+.reader-feedback-form :is(input, select, textarea) { width: 100%; display: block; margin-top: .5rem; border: 1px solid #aebfb7; border-radius: 2px; padding: .75rem; font: inherit; color: #172421; background: #fff; }
+.reader-feedback-form textarea { resize: vertical; min-height: 120px; }
+.reader-feedback-form fieldset { border: 0; padding: 0; margin: 0; }
+.reader-rating-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; margin-top: .5rem; }
+.reader-rating-options label { display: flex; justify-content: center; align-items: center; gap: .25rem; padding: .65rem .25rem; border: 1px solid #d6dfda; cursor: pointer; }
+.reader-rating-options label:has(:checked) { background: #edf3ef; border-color: #355e50; }
+.reader-rating-options input { width: auto; margin: 0; accent-color: #17382e; }
+.reader-form-actions { display: flex; justify-content: flex-end; gap: .65rem; padding-top: .5rem; }
+.participant-app-shell .modal-dialog-container { border-radius: 2px; }
+.participant-app-shell .reader-profile-page .profile-card-container { border-color: #d6dfda; }
+.participant-app-shell .reader-profile-page .profile-card-header { background: #fff; }
+.participant-app-shell .reader-profile-page .reader-profile-eyebrow { display: none; }
+.participant-app-shell .reader-profile-page .profile-names h2 { font-size: 1.45rem; }
+@media (max-width: 640px) {
+  .participant-app-shell .reader-tab-header { padding: 1.15rem; gap: 1rem; }
+  .participant-app-shell .reader-tab-header h1 { font-size: 1.5rem; }
+  .participant-app-shell .reader-tab-header .shared-page-header-actions { width: auto; }
+  .participant-app-shell .rewards-summary-grid .summary-stat-card { padding: 1rem; flex-direction: column; align-items: flex-start; gap: .65rem; }
+  .participant-app-shell .badges-collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .participant-app-shell .rewards-earn-grid { grid-template-columns: 1fr; }
+  .participant-app-shell .certificate-card-row { align-items: stretch; }
+  .reader-feedback-card { padding: 1rem; }
+  .reader-form-actions { flex-wrap: wrap; }
+  .reader-form-actions button { flex: 1; }
+}

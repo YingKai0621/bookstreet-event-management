@@ -19,6 +19,7 @@ import { RoleSidebar } from '../../components/ui/RoleSidebar';
 import { participantApi } from '../../services/participantApi';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
+import './ParticipantWorkspaceTabs.css';
 
 interface ParticipantLayoutProps {
   language: Language;
@@ -113,7 +114,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     {
       id: 'rewards',
       path: '/participant/rewards',
-      labelVi: 'Điểm & Đổi thưởng',
+      labelVi: 'Điểm thưởng',
       labelEn: 'Rewards',
       icon: <Award size={18} />,
     },
@@ -127,14 +128,14 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     {
       id: 'feedback',
       path: '/participant/feedback',
-      labelVi: 'Đánh giá & Góp ý',
+      labelVi: 'Góp ý',
       labelEn: 'Feedback',
       icon: <MessageSquare size={18} />,
     },
     {
       id: 'profile',
       path: '/participant/profile',
-      labelVi: 'Hồ sơ cá nhân',
+      labelVi: 'Hồ sơ',
       labelEn: 'Profile',
       icon: <User size={18} />,
     },
@@ -176,7 +177,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
             </div>
             <div className="participant-brand-text">
               <span className="brand-main">ĐƯỜNG SÁCH</span>
-              <span className="brand-sub">TP.HCM</span>
+              <span className="brand-sub">TP.HCM • ĐỘC GIẢ</span>
             </div>
           </Link>
 

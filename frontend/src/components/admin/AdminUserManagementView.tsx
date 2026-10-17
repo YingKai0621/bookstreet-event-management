@@ -14,7 +14,9 @@ import {
   X
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { EmptyState } from '../ui/EmptyState';
+import { ModalDialog } from '../ui/ModalDialog';
+import { PageHeader } from '../ui/PageHeader';
 import {
   AdminAccountStatus,
   AdminRoleType,
@@ -46,10 +48,6 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
   const [lockTargetUser, setLockTargetUser] = useState<AdminUserAccount | null>(null);
   const [lockReason, setLockReason] = useState('');
   const [resetTargetUser, setResetTargetUser] = useState<AdminUserAccount | null>(null);
-  useModalDismiss(isAddModalOpen, () => setIsAddModalOpen(false));
-  useModalDismiss(Boolean(editingUser), () => setEditingUser(null));
-  useModalDismiss(Boolean(lockTargetUser), () => setLockTargetUser(null));
-  useModalDismiss(Boolean(resetTargetUser), () => setResetTargetUser(null));
 
   // New user form state
   const [newFullName, setNewFullName] = useState('');
@@ -389,231 +387,207 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
       </div>
 
       {/* Modal: Add New User */}
-      {isAddModalOpen && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Thêm tài khoản người dùng mới</h3>
-              <button className="adm-modal-close" onClick={() => setIsAddModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveNewUser}>
-              <div className="adm-modal-body">
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Họ và tên *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Ví dụ: Nguyễn Văn An"
-                    className="adm-form-input"
-                    value={newFullName}
-                    onChange={(e) => setNewFullName(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Địa chỉ Email *</label>
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="email@domain.com"
-                      className="adm-form-input"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Số điện thoại</label>
-                    <input 
-                      type="tel" 
-                      placeholder="0912 345 678"
-                      className="adm-form-input"
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Vai trò trong hệ thống</label>
-                    <select 
-                      className="adm-form-select"
-                      value={newRole}
-                      onChange={(e) => setNewRole(e.target.value as AdminRoleType)}
-                    >
-                      <option value="participant">Participant (Độc giả)</option>
-                      <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
-                      <option value="organizer">Organizer (Ban tổ chức)</option>
-                      <option value="admin">System Admin (Quản trị viên)</option>
-                    </select>
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Trạng thái khởi tạo</label>
-                    <select 
-                      className="adm-form-select"
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value as AdminAccountStatus)}
-                    >
-                      <option value="active">Hoạt động ngay</option>
-                      <option value="pending_verification">Chờ xác thực hồ sơ</option>
-                      <option value="locked">Tạm khóa</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="adm-form-hint">
-                  * Mật khẩu tạm thời sẽ được tạo ngẫu nhiên và gửi tới hòm thư của người dùng sau khi khởi tạo thành công.
-                </div>
-              </div>
-
-              <div className="adm-modal-footer">
-                <button 
-                  type="button" 
-                  className="adm-btn adm-btn-secondary"
-                  onClick={() => setIsAddModalOpen(false)}
-                >
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="adm-btn adm-btn-primary">
-                  Tạo tài khoản
-                </button>
-              </div>
-            </form>
+      <ModalDialog
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Thêm tài khoản người dùng mới"
+        subtitle="Khởi tạo tài khoản và gửi email thông tin đăng nhập"
+        maxWidth="560px"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+            <button 
+              type="button" 
+              className="adm-btn adm-btn-secondary"
+              onClick={() => setIsAddModalOpen(false)}
+            >
+              Hủy bỏ
+            </button>
+            <button 
+              type="button" 
+              className="adm-btn adm-btn-primary"
+              onClick={handleSaveNewUser}
+            >
+              Tạo tài khoản
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form onSubmit={handleSaveNewUser}>
+          <div className="adm-modal-body" style={{ padding: 0 }}>
+            <div className="adm-form-group">
+              <label className="adm-form-label">Họ và tên *</label>
+              <input 
+                type="text" 
+                required
+                placeholder="Ví dụ: Nguyễn Văn An"
+                className="adm-form-input"
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+              />
+            </div>
+
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-form-label">Địa chỉ Email *</label>
+                <input 
+                  type="email" 
+                  required
+                  placeholder="email@domain.com"
+                  className="adm-form-input"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-form-label">Số điện thoại</label>
+                <input 
+                  type="tel" 
+                  placeholder="0912 345 678"
+                  className="adm-form-input"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-form-label">Vai trò trong hệ thống</label>
+                <select 
+                  className="adm-form-select"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as AdminRoleType)}
+                >
+                  <option value="participant">Participant (Độc giả)</option>
+                  <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
+                  <option value="organizer">Organizer (Ban tổ chức)</option>
+                  <option value="admin">System Admin (Quản trị viên)</option>
+                </select>
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-form-label">Trạng thái khởi tạo</label>
+                <select 
+                  className="adm-form-select"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as AdminAccountStatus)}
+                >
+                  <option value="active">Hoạt động ngay</option>
+                  <option value="pending_verification">Chờ xác thực hồ sơ</option>
+                  <option value="locked">Tạm khóa</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="adm-form-hint" style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#637771' }}>
+              * Mật khẩu tạm thời sẽ được tạo ngẫu nhiên và gửi tới hòm thư của người dùng sau khi khởi tạo thành công.
+            </div>
+          </div>
+        </form>
+      </ModalDialog>
 
       {/* Modal: Edit User */}
       {editingUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Chỉnh sửa tài khoản: {editingUser.code}</h3>
-              <button className="adm-modal-close" onClick={() => setEditingUser(null)}>
-                <X size={18} />
+        <ModalDialog
+          isOpen={Boolean(editingUser)}
+          onClose={() => setEditingUser(null)}
+          title={`Chỉnh sửa tài khoản: ${editingUser.code}`}
+          subtitle={`${editingUser.fullName} • ${editingUser.email}`}
+          maxWidth="560px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+              <button 
+                type="button" 
+                className="adm-btn adm-btn-secondary"
+                onClick={() => setEditingUser(null)}
+              >
+                Hủy
+              </button>
+              <button 
+                type="button" 
+                className="adm-btn adm-btn-primary"
+                onClick={handleSaveEdit}
+              >
+                Lưu thay đổi
               </button>
             </div>
-            <form onSubmit={handleSaveEdit}>
-              <div className="adm-modal-body">
+          }
+        >
+          <form onSubmit={handleSaveEdit}>
+            <div className="adm-modal-body" style={{ padding: 0 }}>
+              <div className="adm-form-group">
+                <label className="adm-form-label">Họ và tên</label>
+                <input 
+                  type="text" 
+                  required
+                  className="adm-form-input"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                />
+              </div>
+
+              <div className="adm-form-row">
                 <div className="adm-form-group">
-                  <label className="adm-form-label">Họ và tên</label>
+                  <label className="adm-form-label">Email (Không thể sửa)</label>
                   <input 
                     type="text" 
-                    required
-                    className="adm-form-input"
-                    value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
+                    disabled
+                    className="adm-form-input adm-input-disabled"
+                    value={editingUser.email}
                   />
                 </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Email (Không thể sửa)</label>
-                    <input 
-                      type="text" 
-                      disabled
-                      className="adm-form-input adm-input-disabled"
-                      value={editingUser.email}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Số điện thoại</label>
-                    <input 
-                      type="tel" 
-                      className="adm-form-input"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Vai trò</label>
-                    <select 
-                      className="adm-form-select"
-                      value={editRole}
-                      onChange={(e) => setEditRole(e.target.value as AdminRoleType)}
-                    >
-                      <option value="participant">Participant (Độc giả)</option>
-                      <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
-                      <option value="organizer">Organizer (Ban tổ chức)</option>
-                      <option value="admin">System Admin (Quản trị viên)</option>
-                    </select>
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Trạng thái</label>
-                    <select 
-                      className="adm-form-select"
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as AdminAccountStatus)}
-                    >
-                      <option value="active">Hoạt động</option>
-                      <option value="locked">Bị khóa</option>
-                      <option value="pending_verification">Chờ xác thực</option>
-                    </select>
-                  </div>
+                <div className="adm-form-group">
+                  <label className="adm-form-label">Số điện thoại</label>
+                  <input 
+                    type="tel" 
+                    className="adm-form-input"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                  />
                 </div>
               </div>
 
-              <div className="adm-modal-footer">
-                <button 
-                  type="button" 
-                  className="adm-btn adm-btn-secondary"
-                  onClick={() => setEditingUser(null)}
-                >
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn adm-btn-primary">
-                  Lưu thay đổi
-                </button>
+              <div className="adm-form-row">
+                <div className="adm-form-group">
+                  <label className="adm-form-label">Vai trò</label>
+                  <select 
+                    className="adm-form-select"
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as AdminRoleType)}
+                  >
+                    <option value="participant">Participant (Độc giả)</option>
+                    <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
+                    <option value="organizer">Organizer (Ban tổ chức)</option>
+                    <option value="admin">System Admin (Quản trị viên)</option>
+                  </select>
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-form-label">Trạng thái</label>
+                  <select 
+                    className="adm-form-select"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as AdminAccountStatus)}
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="locked">Bị khóa</option>
+                    <option value="pending_verification">Chờ xác thực</option>
+                  </select>
+                </div>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </form>
+        </ModalDialog>
       )}
 
       {/* Dialog: Lock / Unlock User */}
       {lockTargetUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content adm-dialog-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">
-                {lockTargetUser.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản người dùng'}
-              </h3>
-              <button className="adm-modal-close" onClick={() => setLockTargetUser(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="adm-modal-body">
-              {lockTargetUser.status === 'locked' ? (
-                <p className="adm-confirm-text">
-                  Bạn có chắc chắn muốn mở khóa cho tài khoản <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email})? 
-                  Người dùng sẽ có thể đăng nhập lại bình thường.
-                </p>
-              ) : (
-                <>
-                  <p className="adm-confirm-text">
-                    Xác nhận khóa truy cập tài khoản của <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email}).
-                    Phiên đăng nhập hiện tại sẽ bị hủy hiệu lực ngay lập tức.
-                  </p>
-                  <div className="adm-form-group" style={{ marginTop: '1rem' }}>
-                    <label className="adm-form-label">Lý do khóa tài khoản (Ghi vào Audit log) *</label>
-                    <input 
-                      type="text"
-                      className="adm-form-input"
-                      placeholder="Ví dụ: Vi phạm quy định nội dung, nghi ngờ bị chiếm quyền..."
-                      value={lockReason}
-                      onChange={(e) => setLockReason(e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="adm-modal-footer">
+        <ModalDialog
+          isOpen={Boolean(lockTargetUser)}
+          onClose={() => setLockTargetUser(null)}
+          title={lockTargetUser.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản người dùng'}
+          subtitle={`${lockTargetUser.fullName} (${lockTargetUser.email})`}
+          maxWidth="480px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
               <button 
                 type="button" 
                 className="adm-btn adm-btn-secondary"
@@ -629,30 +603,46 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                 {lockTargetUser.status === 'locked' ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
               </button>
             </div>
+          }
+        >
+          <div className="adm-modal-body" style={{ padding: 0 }}>
+            {lockTargetUser.status === 'locked' ? (
+              <p className="adm-confirm-text" style={{ fontSize: '0.88rem', color: '#172421', lineHeight: 1.5 }}>
+                Bạn có chắc chắn muốn mở khóa cho tài khoản <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email})? 
+                Người dùng sẽ có thể đăng nhập lại bình thường.
+              </p>
+            ) : (
+              <>
+                <p className="adm-confirm-text" style={{ fontSize: '0.88rem', color: '#172421', lineHeight: 1.5 }}>
+                  Xác nhận khóa truy cập tài khoản của <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email}).
+                  Phiên đăng nhập hiện tại sẽ bị hủy hiệu lực ngay lập tức.
+                </p>
+                <div className="adm-form-group" style={{ marginTop: '1rem' }}>
+                  <label className="adm-form-label">Lý do khóa tài khoản (Ghi vào Audit log) *</label>
+                  <input 
+                    type="text"
+                    className="adm-form-input"
+                    placeholder="Ví dụ: Vi phạm quy định nội dung, nghi ngờ bị chiếm quyền..."
+                    value={lockReason}
+                    onChange={(e) => setLockReason(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </ModalDialog>
       )}
 
       {/* Dialog: Reset Password */}
       {resetTargetUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content adm-dialog-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Đặt lại mật khẩu</h3>
-              <button className="adm-modal-close" onClick={() => setResetTargetUser(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="adm-modal-body">
-              <p className="adm-confirm-text">
-                Hệ thống sẽ tạo yêu cầu đặt lại mật khẩu cho tài khoản <strong>{resetTargetUser.fullName}</strong> và ghi thông báo bảo mật vào cơ sở dữ liệu.
-              </p>
-              <div className="adm-callout-info">
-                <CheckCircle2 size={16} />
-                <span>Yêu cầu đặt lại mật khẩu có hiệu lực trong vòng 30 phút.</span>
-              </div>
-            </div>
-            <div className="adm-modal-footer">
+        <ModalDialog
+          isOpen={Boolean(resetTargetUser)}
+          onClose={() => setResetTargetUser(null)}
+          title="Đặt lại mật khẩu"
+          subtitle={`${resetTargetUser.fullName} (${resetTargetUser.email})`}
+          maxWidth="480px"
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
               <button 
                 type="button" 
                 className="adm-btn adm-btn-secondary"
@@ -668,8 +658,18 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                 Tạo yêu cầu đặt lại
               </button>
             </div>
+          }
+        >
+          <div className="adm-modal-body" style={{ padding: 0 }}>
+            <p className="adm-confirm-text" style={{ fontSize: '0.88rem', color: '#172421', lineHeight: 1.5 }}>
+              Hệ thống sẽ tạo yêu cầu đặt lại mật khẩu cho tài khoản <strong>{resetTargetUser.fullName}</strong> và ghi thông báo bảo mật vào cơ sở dữ liệu.
+            </p>
+            <div className="adm-callout-info" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#F0F7F4', border: '1px solid #C4DCD3', borderRadius: '8px', padding: '0.75rem 1rem', color: '#17382E', fontSize: '0.82rem', marginTop: '1rem' }}>
+              <CheckCircle2 size={16} />
+              <span>Yêu cầu đặt lại mật khẩu có hiệu lực trong vòng 30 phút.</span>
+            </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
-import { Award, Bookmark, BookOpen, Clock, Compass, Crown, Gift, HelpCircle, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Award, Bookmark, BookOpen, Clock, Compass, Crown, Gift, HelpCircle, Info, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import React from 'react';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Language, ParticipantBadge, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 
@@ -15,7 +17,6 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
   badges,
 }) => {
   const earnedBadgesCount = badges.filter(b => !b.isLocked).length;
-  const hasAdminCreatedBadge = badges.some(badge => !['MAM_DOC', 'BAN_DOC_THAN_THIET', 'DAI_SU_VAN_HOA', 'HOC_GIA_TINH_HOA'].includes(badge.code || badge.id));
 
   const renderBadgeIcon = (iconName: string, isLocked?: boolean) => {
     if (isLocked) return <HelpCircle size={22} />;
@@ -42,16 +43,16 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
   return (
     <div className="rewards-page">
       {/* 1. Header */}
-      <div className="participant-page-header">
-        <h1 className="participant-page-title">
-          {language === 'vi' ? 'Điểm thưởng & Huy hiệu' : 'Rewards & Badges'}
-        </h1>
-        <p className="participant-page-sub">
-          {language === 'vi' 
-            ? 'Theo dõi điểm tích lũy và bộ sưu tập huy hiệu độc giả của bạn.' 
-            : 'Track your reader loyalty points and badge milestones.'}
-        </p>
-      </div>
+      <PageHeader
+        className="reader-tab-header"
+        title={language === 'vi' ? 'Điểm thưởng' : 'Rewards & Badges'}
+        subtitle={language === 'vi' 
+          ? 'Theo dõi điểm tích lũy và bộ sưu tập huy hiệu độc giả của bạn.' 
+          : 'Track your reader loyalty points and badge milestones.'}
+      />
+
+      {/* Thông báo chưa kết nối backend cho tính năng tích điểm */}
+      <div className="reader-preview-note" role="note"><Info size={16} /><span>{language === 'vi' ? 'Bản xem trước · Điểm và huy hiệu chưa được kết nối dữ liệu hệ thống.' : 'Preview · Points and badges are not connected to system data yet.'}</span></div>
 
       {/* 2. Top Summary Stat Cards matching Screen 7 */}
       <div className="participant-summary-grid rewards-summary-grid">
@@ -84,6 +85,7 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
           </h2>
         </div>
 
+        {badges.length === 0 && <EmptyState icon={<Award size={28} />} title={language === 'vi' ? 'Chưa có huy hiệu' : 'No badges yet'} description={language === 'vi' ? 'Huy hiệu được hiển thị khi có dữ liệu và bạn đạt điều kiện nhận.' : 'Badges appear when data is available and you meet the requirements.'} />}
         <div className="badges-collection-grid">
           {badges.map((badge) => {
             const isLocked = badge.isLocked;
@@ -104,13 +106,7 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
               </div>
             );
           })}
-          {!hasAdminCreatedBadge && (
-            <div className="badge-item-card locked" aria-label={language === 'vi' ? 'Huy hiệu bí ẩn' : 'Mystery badge'}>
-              <div className="badge-icon-disc"><HelpCircle size={22} /></div>
-              <h3 className="badge-title">{language === 'vi' ? 'Huy hiệu bí ẩn' : 'Mystery Badge'}</h3>
-              <span className="badge-date">{language === 'vi' ? 'Chưa mở khóa' : 'Locked'}</span>
-            </div>
-          )}
+
         </div>
       </div>
 
