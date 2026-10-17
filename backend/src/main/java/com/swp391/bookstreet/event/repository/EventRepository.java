@@ -23,14 +23,17 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findByEventIdAndOrganizerUserId(Long eventId, Long organizerUserId);
 
     /**
-     * Every Booth request, Hold, Payment and Assignment is rooted in a Partner Event
-     * application by the active V1-V8 foreign-key graph. Therefore the first application
-     * is also the first possible external participation record for the Event.
+     * Partner workflows are rooted in an application. A direct Organizer Activity is the
+     * Sprint 5 exception and must independently freeze Published Event operations.
      */
     @Query(value = """
             select exists (
                 select 1
                 from partner_event_applications
+                where event_id = :eventId
+                union all
+                select 1
+                from activities
                 where event_id = :eventId
             )
             """, nativeQuery = true)

@@ -1,6 +1,8 @@
 package com.swp391.bookstreet.booth.dto;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,8 +15,8 @@ public record CreateBoothRequest(
         @NotBlank @Size(max = 100) String name,
         String description,
         @NotNull @Positive Integer maxCapacity,
-        @Digits(integer = 8, fraction = 2) BigDecimal mapX,
-        @Digits(integer = 8, fraction = 2) BigDecimal mapY,
+        @Digits(integer = 3, fraction = 2) @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal mapX,
+        @Digits(integer = 3, fraction = 2) @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal mapY,
         @Size(max = 50) String categoryCode,
         String note
 ) {

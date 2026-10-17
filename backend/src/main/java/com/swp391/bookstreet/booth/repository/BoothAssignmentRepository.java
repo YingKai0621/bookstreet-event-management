@@ -106,4 +106,24 @@ public interface BoothAssignmentRepository extends JpaRepository<BoothAssignment
               and assignment.status = 'ACTIVE'
             """, nativeQuery = true)
     long countActiveByApplication(@Param("applicationId") Long applicationId);
+
+    @EntityGraph(attributePaths = {
+            "boothHold", "boothHold.eventBoothConfig",
+            "boothHold.eventBoothConfig.booth",
+            "boothHold.eventBoothConfig.booth.location",
+            "boothHold.boothRequest", "boothHold.boothRequest.application",
+            "boothHold.boothRequest.application.partnerOrganization"
+    })
+    @Query("""
+            select assignment
+            from BoothAssignment assignment
+            where assignment.status = com.swp391.bookstreet.booth.entity.BoothAssignmentStatus.ACTIVE
+              and assignment.boothHold.eventBoothConfig.eventId = :eventId
+              and assignment.boothHold.boothRequest.application.partnerOrganization.id = :partnerOrganizationId
+            order by assignment.boothHold.eventBoothConfig.booth.location.code,
+                     assignment.boothAssignmentId
+            """)
+    List<BoothAssignment> findActiveOwnedByEventAndPartnerOrganization(
+            @Param("eventId") Long eventId,
+            @Param("partnerOrganizationId") Long partnerOrganizationId);
 }

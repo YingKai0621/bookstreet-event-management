@@ -1,5 +1,6 @@
 package com.swp391.bookstreet.booth.service;
 
+import com.swp391.bookstreet.activity.repository.ActivityRepository;
 import com.swp391.bookstreet.booth.dto.BoothPageResponse;
 import com.swp391.bookstreet.booth.dto.BoothResponse;
 import com.swp391.bookstreet.booth.dto.CreateBoothRequest;
@@ -14,6 +15,7 @@ import com.swp391.bookstreet.booth.repository.LocationRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class BoothCatalogService {
     private final LocationRepository locationRepository;
     private final EventBoothConfigRepository configRepository;
     private final BoothAssignmentRepository assignmentRepository;
+    private final ActivityRepository activityRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
     private final Clock clock;
@@ -34,11 +37,13 @@ public class BoothCatalogService {
             LocationRepository locationRepository,
             EventBoothConfigRepository configRepository,
             BoothAssignmentRepository assignmentRepository,
-            BoothCurrentUser currentUser, BoothHoldExpiryService expiryService, Clock clock) {
+            ActivityRepository activityRepository, BoothCurrentUser currentUser,
+            BoothHoldExpiryService expiryService, Clock clock) {
         this.boothRepository = boothRepository;
         this.locationRepository = locationRepository;
         this.configRepository = configRepository;
         this.assignmentRepository = assignmentRepository;
+        this.activityRepository = activityRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
         this.clock = clock;
@@ -47,8 +52,8 @@ public class BoothCatalogService {
     @Transactional
     public BoothResponse create(CreateBoothRequest request) {
         currentUser.requireOrganizerId();
-        String code = required(request.code(), "code", 30);
-        if (locationRepository.existsByCode(code)) {
+        String code = requiredLocationCode(request.code());
+        if (locationRepository.existsByCodeIgnoreCase(code)) {
             throw codeAlreadyExists();
         }
         Instant now = clock.instant();
@@ -116,11 +121,27 @@ public class BoothCatalogService {
         String note = request.contains("note")
                 ? optional(request.getNote()) : booth.getNote();
         if (request.contains("code")) {
-            String newCode = required(request.getCode(), "code", 30).toUpperCase();
+            String newCode = requiredLocationCode(request.getCode());
             location.setCode(newCode);
         }
 
-        location.update(name, description, capacity, mapX, mapY, active, clock.instant());
+        Instant now = clock.instant();
+        if (location.isActive() && !active
+                && activityRepository.existsCurrentOrFutureAtLocation(boothId, now)) {
+            throw new BoothApiException(HttpStatus.CONFLICT,
+                    "LOCATION_HAS_ACTIVE_ACTIVITIES",
+                    "Location cannot be deactivated while current or future Activities use it.");
+        }
+        if (capacity < location.getMaxCapacity()) {
+            int usedCapacity = activityRepository.findMaximumCurrentOrFutureCapacityAtLocation(
+                    boothId, now);
+            if (capacity < usedCapacity) {
+                throw new BoothApiException(HttpStatus.CONFLICT, "LOCATION_CAPACITY_IN_USE",
+                        "Location capacity is below an applicable Activity capacity.");
+            }
+        }
+
+        location.update(name, description, capacity, mapX, mapY, active, now);
         booth.updateDetails(category, note);
         try {
             boothRepository.flush();
@@ -148,6 +169,14 @@ public class BoothCatalogService {
             throw validation(field + " must be positive.", field);
         }
         return value;
+    }
+
+    private static String requiredLocationCode(String value) {
+        String code = required(value, "code", 30).toUpperCase(Locale.ROOT);
+        if (!code.matches("[A-Z0-9_-]{1,30}")) {
+            throw validation("code may contain only A-Z, 0-9, underscore or hyphen.", "code");
+        }
+        return code;
     }
 
     private static boolean requiredBoolean(Boolean value, String field) {

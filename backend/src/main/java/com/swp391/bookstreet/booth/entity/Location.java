@@ -64,6 +64,21 @@ public class Location {
         return location;
     }
 
+    public static Location createShared(String code, String name, LocationType locationType,
+            String description, Integer maxCapacity, BigDecimal mapX, BigDecimal mapY,
+            Instant now) {
+        if (locationType == null || locationType == LocationType.BOOTH) {
+            throw new IllegalArgumentException("A shared Location cannot use type BOOTH.");
+        }
+        Location location = new Location();
+        location.code = code;
+        location.locationType = locationType;
+        location.active = true;
+        location.createdAt = now;
+        location.update(name, description, maxCapacity, mapX, mapY, true, now);
+        return location;
+    }
+
     public void update(String name, String description, Integer maxCapacity,
             BigDecimal mapX, BigDecimal mapY, boolean active, Instant now) {
         this.name = name;
