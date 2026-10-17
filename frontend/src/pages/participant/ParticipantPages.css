@@ -8,15 +8,15 @@
 
 .participant-page-title {
   font-family: var(--font-serif);
-  font-size: 1.85rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: #172421;
   margin-bottom: 0.35rem;
 }
 
 .participant-page-sub {
-  font-size: 0.92rem;
-  color: #556B65;
+  font-size: 0.88rem;
+  color: #637771;
   margin-bottom: 0;
 }
 
@@ -31,7 +31,7 @@
 .summary-stat-card {
   background: #FFFFFF;
   border: 1px solid #E2EAE5;
-  border-radius: var(--workspace-radius, 2px);
+  border-radius: 12px;
   padding: 1.25rem 1.35rem;
   display: flex;
   align-items: center;
@@ -170,7 +170,7 @@
 .participant-event-card {
   background: #FFFFFF;
   border: 1px solid #E2EAE5;
-  border-radius: var(--workspace-radius, 2px);
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(24, 41, 36, 0.04);
   display: flex;
@@ -187,7 +187,6 @@
   position: relative;
   height: 170px;
   overflow: hidden;
-  border-radius: 0;
 }
 
 .event-card-media img {
@@ -206,7 +205,7 @@
   top: 12px;
   right: 12px;
   padding: 0.25rem 0.65rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -290,7 +289,7 @@
     background-color: #17382E;
     color: #FFFFFF;
     border: 1px solid #17382E;
-    border-radius: var(--workspace-control-radius, 2px);
+    border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 700;
     text-decoration: none;
@@ -325,7 +324,7 @@
     background-color: #F0F7F4;
     color: #185E48;
     border: 1.5px solid #A7F3D0;
-    border-radius: var(--workspace-control-radius, 2px);
+    border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 700;
     text-decoration: none;
@@ -352,7 +351,7 @@
     background-color: #FFFFFF;
     color: #C84C32;
     border: 1.5px solid #F1B5AA;
-    border-radius: var(--workspace-control-radius, 2px);
+    border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 700;
     text-decoration: none;
@@ -503,7 +502,7 @@
   .part-search-input input {
     height: 38px;
     width: 220px;
-    border-radius: var(--workspace-control-radius, 2px);
+    border-radius: 8px;
     background-color: #FFFFFF;
     border: 1px solid #CFDDD8;
     padding: 0 0.85rem 0 2.2rem;
@@ -522,7 +521,7 @@
   .activity-row-card {
     background: #FFFFFF;
     border: 1px solid #E2EAE5;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: 12px;
     padding: 1rem 1.25rem;
     display: flex;
     align-items: center;
@@ -540,7 +539,7 @@
   .activity-thumb {
     width: 72px;
     height: 72px;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: 10px;
     object-fit: cover;
     flex-shrink: 0;
   }
@@ -569,7 +568,7 @@
     font-size: 0.68rem;
     font-weight: 750;
     padding: 0.15rem 0.5rem;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: 4px;
     background-color: #F0F5F2;
     color: #3F5E55;
     border: 1px solid #D6E4DF;
@@ -591,7 +590,7 @@
 
   .activity-capacity-badge {
     padding: 0.25rem 0.65rem;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: var(--radius-pill);
     font-size: 0.72rem;
     font-weight: 700;
     white-space: nowrap;
@@ -868,7 +867,7 @@
   .badge-item-card {
     background: #FFFFFF;
     border: 1px solid #E2EAE5;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: 12px;
     padding: 0.85rem 0.65rem;
     text-align: center;
     box-shadow: 0 2px 8px rgba(24, 41, 36, 0.03);
@@ -887,7 +886,7 @@
   .badge-icon-disc {
     width: 44px;
     height: 44px;
-    border-radius: var(--workspace-radius, 2px);
+    border-radius: 50%;
     background: #FDF9F2;
     border: 1.5px solid #E9BC63;
     color: #B3862A;
@@ -1823,9 +1822,9 @@
   .dashboard-calendar-card {
     background: #FFFFFF;
     border: 1px solid #E2EAE5;
-    border-radius: var(--workspace-radius, 2px);
-    padding: 1.5rem;
-    box-shadow: none;
+    border-radius: 18px;
+    padding: 1.75rem;
+    box-shadow: 0 8px 30px rgba(23, 36, 33, 0.05);
     margin-top: 1.5rem;
     margin-bottom: 2rem;
   }
@@ -1848,12 +1847,12 @@
   }
 
   .dashboard-calendar-month-title {
-    font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-serif);
     font-size: 1.65rem;
     color: #172421;
     margin: 0;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   .dashboard-calendar-nav-btns {
