@@ -25,9 +25,31 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         Long getPartnerOrganizationId();
     }
 
+    interface PartnerActivityRoute {
+        Long getActivityId();
+        Long getEventId();
+        Long getLocationId();
+        Long getPartnerOrganizationId();
+    }
+
     Optional<Activity> findBySourceProposalId(Long sourceProposalId);
 
     boolean existsByEventId(Long eventId);
+
+    @Query(value = """
+            select count(*)
+            from activities activity
+            join activity_proposals proposal
+              on proposal.activity_proposal_id = activity.source_proposal_id
+            join partner_event_applications application
+              on application.application_id = proposal.application_id
+            where activity.event_id = :eventId
+              and application.partner_organization_id = :partnerOrganizationId
+              and activity.status <> 'CANCELLED'
+            """, nativeQuery = true)
+    long countOfficialPartnerActivities(
+            @Param("eventId") Long eventId,
+            @Param("partnerOrganizationId") Long partnerOrganizationId);
 
     @Query("""
             select activity.eventId as eventId, activity.locationId as locationId
@@ -72,6 +94,55 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Optional<Activity> findOwnedById(
             @Param("activityId") Long activityId,
             @Param("organizerUserId") Long organizerUserId);
+
+    @Query("""
+            select activity
+            from Activity activity, ActivityProposal proposal,
+                 PartnerEventApplication application
+            where activity.sourceProposalId = proposal.activityProposalId
+              and proposal.applicationId = application.id
+              and application.partnerOrganization.representativeUserId = :representativeUserId
+              and (:eventId is null or activity.eventId = :eventId)
+              and (:status is null or activity.status = :status)
+              and (lower(activity.title) like lower(concat('%', :search, '%'))
+                   or lower(activity.activityType) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(activity.description, '')) like lower(concat('%', :search, '%')))
+            """)
+    Page<Activity> findForPartner(
+            @Param("representativeUserId") Long representativeUserId,
+            @Param("eventId") Long eventId,
+            @Param("status") ActivityStatus status,
+            @Param("search") String search,
+            Pageable pageable);
+
+    @Query("""
+            select activity
+            from Activity activity, ActivityProposal proposal,
+                 PartnerEventApplication application
+            where activity.activityId = :activityId
+              and activity.sourceProposalId = proposal.activityProposalId
+              and proposal.applicationId = application.id
+              and application.partnerOrganization.representativeUserId = :representativeUserId
+            """)
+    Optional<Activity> findOwnedByPartner(
+            @Param("activityId") Long activityId,
+            @Param("representativeUserId") Long representativeUserId);
+
+    @Query("""
+            select activity.activityId as activityId,
+                   activity.eventId as eventId,
+                   activity.locationId as locationId,
+                   application.partnerOrganization.id as partnerOrganizationId
+            from Activity activity, ActivityProposal proposal,
+                 PartnerEventApplication application
+            where activity.activityId = :activityId
+              and activity.sourceProposalId = proposal.activityProposalId
+              and proposal.applicationId = application.id
+              and application.partnerOrganization.representativeUserId = :representativeUserId
+            """)
+    Optional<PartnerActivityRoute> findPartnerRoute(
+            @Param("activityId") Long activityId,
+            @Param("representativeUserId") Long representativeUserId);
 
     @Query(value = """
             select activity.activity_id as activityId,

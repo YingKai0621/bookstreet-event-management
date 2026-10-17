@@ -697,6 +697,7 @@ Existing Event APIs retain their paths. Sprint 5 changes internal eligibility/ca
 - `ACTIVITY_REQUEST_ALREADY_PENDING`
 - `ACTIVITY_REQUEST_NOT_REVIEWABLE`
 - `ACTIVITY_ALREADY_CANCELLED`
+- `ACTIVITY_NOT_CANCELLABLE`
 - `EVENT_HAS_ACTIVITY_DEPENDENCIES`
 
 ### 14.3 Request/query — 400

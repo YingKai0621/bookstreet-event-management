@@ -48,4 +48,19 @@ public record ActivityResponse(
                 activity.getCancelledAt(), activity.getCancellationReason(),
                 activity.getCancellationSource());
     }
+
+    public static ActivityResponse partner(Activity activity, Location location,
+            Long partnerOrganizationId) {
+        return new ActivityResponse(activity.getActivityId(), activity.getEventId(),
+                activity.getSourceProposalId(), partnerOrganizationId,
+                ActivityLocationResponse.from(location), activity.getTitle(),
+                activity.getDescription(), activity.getActivityType(), activity.getStartAt(),
+                activity.getEndAt(), activity.getCapacity(), activity.getImageUrl(),
+                activity.isRegistrationRequired(), activity.getRegistrationDeadlineAt(),
+                activity.isCertificateEnabled(), activity.getAttendanceQrToken() != null,
+                null, activity.getStatus(), activity.getCreatedAt(), activity.getUpdatedAt(),
+                activity.getPublishedAt(), activity.getCompletedAt(),
+                activity.getCancelledAt(), activity.getCancellationReason(),
+                activity.getCancellationSource());
+    }
 }

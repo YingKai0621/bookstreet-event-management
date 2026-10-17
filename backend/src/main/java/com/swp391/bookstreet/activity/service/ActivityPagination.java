@@ -33,6 +33,25 @@ final class ActivityPagination {
                 "activityRevisionId", "sort uses an unsupported revision field.");
     }
 
+    static Pageable proposals(int page, int size, String sort) {
+        return of(page, size, sort, Map.of(
+                "submittedAt", "submittedAt",
+                "updatedAt", "updatedAt",
+                "proposedStartAt", "proposedStartAt",
+                "title", "title",
+                "status", "status"),
+                "activityProposalId", "sort uses an unsupported Proposal field.");
+    }
+
+    static Pageable requests(int page, int size, String sort) {
+        return of(page, size, sort, Map.of(
+                "submittedAt", "submittedAt",
+                "handledAt", "handledAt",
+                "status", "status",
+                "activityChangeRequestId", "activityRequestId"),
+                "activityRequestId", "sort uses an unsupported Activity Request field.");
+    }
+
     private static Pageable of(int page, int size, String sort,
             Map<String, String> fields, String tieBreaker, String invalidSortMessage) {
         if (page < 0) throw invalid("INVALID_PAGE", "page must be non-negative.");
