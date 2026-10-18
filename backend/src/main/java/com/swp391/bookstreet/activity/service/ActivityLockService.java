@@ -87,6 +87,21 @@ public class ActivityLockService {
                 .orElseThrow(ActivityLockService::proposalNotFound);
         Event event = eventRootLockService.lock(initialRoute.getEventId())
                 .orElseThrow(ActivityLockService::proposalNotFound);
+        return lockProposalAfterEvent(event, proposalId, additionalLocationIds);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ProposalLocks lockOwnedProposalRoot(Long proposalId, Long organizerUserId,
+            Collection<Long> additionalLocationIds) {
+        var initialRoute = proposalRepository.findRouteById(proposalId)
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        Event event = eventRootLockService.lockOwned(initialRoute.getEventId(), organizerUserId)
+                .orElseThrow(ActivityLockService::proposalNotFound);
+        return lockProposalAfterEvent(event, proposalId, additionalLocationIds);
+    }
+
+    private ProposalLocks lockProposalAfterEvent(Event event, Long proposalId,
+            Collection<Long> additionalLocationIds) {
         var lockedRoute = proposalRepository.findRouteById(proposalId)
                 .filter(route -> route.getEventId().equals(event.getEventId()))
                 .orElseThrow(ActivityLockService::proposalNotFound);

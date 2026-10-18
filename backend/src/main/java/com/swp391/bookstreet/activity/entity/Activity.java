@@ -105,6 +105,14 @@ public class Activity {
         return activity;
     }
 
+    public static Activity createFromProposal(Long eventId, Long locationId,
+            Long sourceProposalId, ValidatedActivityFields fields, Instant now) {
+        Activity activity = createDirect(eventId, locationId, fields,
+                false, null, false, now);
+        activity.sourceProposalId = sourceProposalId;
+        return activity;
+    }
+
     public void apply(ValidatedActivityFields fields, boolean registrationRequired,
             Instant registrationDeadlineAt, boolean certificateEnabled, Instant now) {
         this.title = fields.title();
