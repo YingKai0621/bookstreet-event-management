@@ -1,6 +1,36 @@
 # Environment
 .env
 
+# Local agent configuration and non-code working files
+/.agent/
+/.agents/
+/.autohand/
+/.codex/
+/.claude/
+/.cursor/
+/.skills/
+/skills/
+skills-lock.json
+*.agent
+
+# Local documentation, scripts, and generated reports
+*.md
+*.docx
+*.doc
+*.pdf
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.drawio
+*.csv
+*.py
+/report/
+/reports/
+/coverage/
+/frontend/docs/
+*.report
+
 # Local-only demo seed scripts and credentials
 /local-data/
 
