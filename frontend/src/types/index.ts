@@ -335,26 +335,6 @@ export interface PartnerBooth {
   relatedEventTitle: string;
 }
 
-export interface PartnerActivityProposal {
-  id: string;
-  title: string;
-  category: 'Workshop' | 'Talkshow' | 'Minigame' | 'Signings' | 'Exhibition';
-  date: string;
-  time: string;
-  duration: string;
-  location: string;
-  capacity: number;
-  registeredCount: number;
-  targetAudience: string;
-  description: string;
-  requiredEquipments: string[];
-  imageUrl: string;
-  status: 'pending' | 'approved' | 'need_changes' | 'cancelled';
-  eventId: string;
-  eventName: string;
-  feedbacks?: string;
-}
-
 export interface PartnerTodoItem {
   id: string;
   title: string;
@@ -382,16 +362,6 @@ export interface PartnerReportStats {
   averageRating: number; // e.g. 4.8
   activityStats: { name: string; count: number }[];
   ratingDistribution: { stars: string; percent: number }[];
-}
-
-export interface AttendanceScanRecord {
-  id: string;
-  activityId: string;
-  activityTitle: string;
-  participantName: string;
-  ticketCode: string;
-  scanTime: string;
-  status: 'success' | 'already_scanned' | 'invalid';
 }
 
 export * from './admin';

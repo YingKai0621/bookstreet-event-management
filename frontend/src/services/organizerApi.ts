@@ -16,6 +16,24 @@ import { apiClient } from './apiClient';
 import { boothApi } from './boothApi';
 import { toHeritageProfile } from './publicApi';
 import type { EventBooth, PhysicalBooth } from '../types/booth';
+import type {
+  ActivityCancellationRequestListQuery,
+  ActivityListQuery,
+  ActivityPageResponse,
+  ActivityProposalListQuery,
+  ActivityRequestListQuery,
+  ApproveActivityProposalResponse,
+  CreateOrganizerActivityRequest,
+  CreateOrganizerLocationRequest,
+  OrganizerActivityCancellationRequestResponse,
+  OrganizerActivityChangeRequestResponse,
+  OrganizerActivityProposalResponse,
+  OrganizerActivityResponse,
+  OrganizerActivityRevisionResponse,
+  OrganizerLocationResponse,
+  UpdateOrganizerActivityRequest,
+  UpdateOrganizerLocationRequest,
+} from '../types/activity';
 
 export type OrganizerFeedbackStatus = 'new' | 'in_progress' | 'responded' | 'closed';
 
@@ -138,6 +156,15 @@ function formatEventDateRange(startAt: string, endAt: string): string {
   return `${start} - ${end}`;
 }
 
+function activityQuery<T extends object>(parameters: T): string {
+  const query = new URLSearchParams();
+  Object.entries(parameters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  });
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
 function toOrganizerBoothItem(booth: PhysicalBooth, eventBooth?: EventBooth): OrganizerBoothItem {
   const availability = eventBooth?.availability
     ?? (booth.active ? 'AVAILABLE' : 'UNAVAILABLE');
@@ -251,7 +278,6 @@ export const organizerApi = {
     const event = await apiClient.post<OrganizerEventResponse>('/organizer/events', data);
     return toOrganizerEvent(event);
   },
-  getEventLocations: (eventId: string) => apiClient.get<Array<{ id: string; name: string; capacity: number }>>(`/organizer/event-locations?eventId=${encodeURIComponent(eventId)}`),
   async updateEvent(id: string, data: OrganizerEventRequest): Promise<OrganizerEvent> {
     const event = await apiClient.patch<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}`, data);
     return toOrganizerEvent(event);
@@ -287,38 +313,96 @@ export const organizerApi = {
     }));
   },
   async getActivities(eventId?: string): Promise<OrganizerActivityItem[]> {
-    const rows = await apiClient.get<any[]>(`/organizer/activities${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-    if (!Array.isArray(rows)) throw new Error('Dữ liệu hoạt động không hợp lệ.');
-    return rows.map(activity => ({
-        id: String(activity.id || ''),
-        eventId: String(activity.eventId || ''),
+    const response = await apiClient.get<ActivityPageResponse<OrganizerActivityResponse>>(
+      `/organizer/activities${activityQuery({ eventId, page: 0, size: 100, sort: 'startAt,asc' })}`,
+    );
+    return response.content.map(activity => ({
+        id: String(activity.activityId),
+        eventId: String(activity.eventId),
         title: activity.title || '',
-        type: activity.kind || activity.type || 'Workshop',
+        type: activity.activityType || 'Hoạt động',
         dateStr: activity.startAt ? new Date(activity.startAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
         timeStr: activity.startAt && activity.endAt
           ? `${new Date(activity.startAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} – ${new Date(activity.endAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`
           : '',
-        location: activity.location?.name || activity.location || '',
+        location: activity.location?.name || '',
         capacity: Number(activity.capacity || 0),
-        registeredCount: Number(activity.registeredCount || 0),
-        attendedCount: Number(activity.attendedCount || activity._count?.attendanceSessions || 0),
-        partnerName: activity.organization?.name || activity.partnerName || '',
-        speaker: activity.speaker || '',
-        status: activity.status || 'pending',
-        statusLabelVi: activity.status === 'published' ? 'Đã công bố' : activity.status === 'approved' ? 'Đã duyệt' : activity.status === 'cancelled' ? 'Đã hủy' : 'Chờ duyệt',
-        isPublished: ['published', 'ongoing', 'completed'].includes(activity.status),
-        thumbnail: activity.imageUrl || activity.thumbnail || '',
+        registeredCount: 0,
+        attendedCount: 0,
+        partnerName: activity.partnerOrganizationId ? `Đối tác #${activity.partnerOrganizationId}` : 'Đường Sách TP.HCM',
+        speaker: '',
+        status: activity.status === 'CANCELLED'
+          ? 'cancelled'
+          : activity.status === 'DRAFT'
+            ? 'pending'
+            : 'approved',
+        statusLabelVi: activity.status === 'DRAFT'
+          ? 'Bản nháp'
+          : activity.status === 'PUBLISHED'
+            ? 'Đã công bố'
+            : activity.status === 'ONGOING'
+              ? 'Đang diễn ra'
+              : activity.status === 'COMPLETED'
+                ? 'Đã hoàn thành'
+                : 'Đã hủy',
+        isPublished: ['PUBLISHED', 'ONGOING', 'COMPLETED'].includes(activity.status),
+        thumbnail: activity.imageUrl || '',
         description: activity.description || '',
     }));
   },
+  listActivities: (query: ActivityListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<OrganizerActivityResponse>>(
+      `/organizer/activities${activityQuery(query)}`,
+    ),
+  getActivity: (activityId: number | string) =>
+    apiClient.get<OrganizerActivityResponse>(
+      `/organizer/activities/${encodeURIComponent(activityId)}`,
+    ),
   async getParticipants(eventId?: string): Promise<OrganizerParticipantItem[]> {
     const rows = await apiClient.get<any[]>(`/organizer/participants${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
     if (!Array.isArray(rows)) throw new Error('Dữ liệu người tham gia không hợp lệ.');
     return rows;
   },
-  publishActivity: (id: string) => apiClient.post(`/organizer/activities/${encodeURIComponent(id)}/publish`, {}),
-  createActivity: (data: unknown) => apiClient.post('/organizer/activities', data),
-  updateActivity: (id: string, data: unknown) => apiClient.patch(`/organizer/activities/${encodeURIComponent(id)}`, data),
+  publishActivity: (id: number | string) =>
+    apiClient.post<OrganizerActivityResponse>(`/organizer/activities/${encodeURIComponent(id)}/publish`),
+  createActivity: (data: CreateOrganizerActivityRequest) =>
+    apiClient.post<OrganizerActivityResponse>('/organizer/activities', data),
+  updateActivity: (id: number | string, data: UpdateOrganizerActivityRequest) =>
+    apiClient.patch<OrganizerActivityResponse>(
+      `/organizer/activities/${encodeURIComponent(id)}`,
+      data,
+    ),
+  getActivityRevisions: (id: number | string, page = 0, size = 20) =>
+    apiClient.get<ActivityPageResponse<OrganizerActivityRevisionResponse>>(
+      `/organizer/activities/${encodeURIComponent(id)}/revisions${activityQuery({
+        page,
+        size,
+        sort: 'changedAt,desc',
+      })}`,
+    ),
+  cancelActivity: (id: number | string, reason: string) =>
+    apiClient.post<OrganizerActivityResponse>(
+      `/organizer/activities/${encodeURIComponent(id)}/cancel`,
+      { reason },
+    ),
+  listActivityLocations: (query: {
+    page?: number;
+    size?: number;
+    sort?: string;
+    type?: 'STAGE' | 'WORKSHOP' | 'AREA';
+    active?: boolean;
+    search?: string;
+  } = {}) =>
+    apiClient.get<ActivityPageResponse<OrganizerLocationResponse>>(
+      `/organizer/locations${activityQuery({ page: 0, size: 100, ...query })}`,
+    ),
+  createActivityLocation: (data: CreateOrganizerLocationRequest) =>
+    apiClient.post<OrganizerLocationResponse>('/organizer/locations', data),
+  updateActivityLocation: (locationId: number | string, data: UpdateOrganizerLocationRequest) =>
+    apiClient.patch<OrganizerLocationResponse>(
+      `/organizer/locations/${encodeURIComponent(locationId)}`,
+      data,
+    ),
   async getPartnerApplications(eventId: string): Promise<OrganizerPartnerApplication[]> {
     const query = new URLSearchParams({
       page: '0',
@@ -348,11 +432,62 @@ export const organizerApi = {
       `/organizer/applications/${encodeURIComponent(id)}/reject`,
       { reviewNote },
     ),
-  getProposals: (eventId?: string) => apiClient.get<any[]>(`/organizer/activity-proposals?limit=100${eventId ? `&eventId=${encodeURIComponent(eventId)}` : ''}`),
-  approveProposal: (id: string, note?: string) => apiClient.post(`/organizer/activity-proposals/${encodeURIComponent(id)}/approve`, { note }),
-  rejectProposal: (id: string, note: string) => apiClient.post(`/organizer/activity-proposals/${encodeURIComponent(id)}/reject`, { note }),
-  requestProposalSupplement: (id: string, note: string) => apiClient.post(`/organizer/activity-proposals/${encodeURIComponent(id)}/request-supplement`, { note }),
-
+  listActivityProposals: (query: ActivityProposalListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<OrganizerActivityProposalResponse>>(
+      `/organizer/activity-proposals${activityQuery(query)}`,
+    ),
+  getActivityProposal: (proposalId: number | string) =>
+    apiClient.get<OrganizerActivityProposalResponse>(
+      `/organizer/activity-proposals/${encodeURIComponent(proposalId)}`,
+    ),
+  approveActivityProposal: (proposalId: number | string) =>
+    apiClient.post<ApproveActivityProposalResponse>(
+      `/organizer/activity-proposals/${encodeURIComponent(proposalId)}/approve`,
+    ),
+  rejectActivityProposal: (proposalId: number | string, reviewNote: string) =>
+    apiClient.post<OrganizerActivityProposalResponse>(
+      `/organizer/activity-proposals/${encodeURIComponent(proposalId)}/reject`,
+      { reviewNote },
+    ),
+  requestActivityProposalChanges: (proposalId: number | string, reviewNote: string) =>
+    apiClient.post<OrganizerActivityProposalResponse>(
+      `/organizer/activity-proposals/${encodeURIComponent(proposalId)}/request-changes`,
+      { reviewNote },
+    ),
+  listActivityChangeRequests: (query: ActivityRequestListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<OrganizerActivityChangeRequestResponse>>(
+      `/organizer/activity-change-requests${activityQuery(query)}`,
+    ),
+  getActivityChangeRequest: (requestId: number | string) =>
+    apiClient.get<OrganizerActivityChangeRequestResponse>(
+      `/organizer/activity-change-requests/${encodeURIComponent(requestId)}`,
+    ),
+  approveActivityChangeRequest: (requestId: number | string) =>
+    apiClient.post<OrganizerActivityChangeRequestResponse>(
+      `/organizer/activity-change-requests/${encodeURIComponent(requestId)}/approve`,
+    ),
+  rejectActivityChangeRequest: (requestId: number | string, reviewNote: string) =>
+    apiClient.post<OrganizerActivityChangeRequestResponse>(
+      `/organizer/activity-change-requests/${encodeURIComponent(requestId)}/reject`,
+      { reviewNote },
+    ),
+  listActivityCancellationRequests: (query: ActivityCancellationRequestListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<OrganizerActivityCancellationRequestResponse>>(
+      `/organizer/activity-cancellation-requests${activityQuery(query)}`,
+    ),
+  getActivityCancellationRequest: (requestId: number | string) =>
+    apiClient.get<OrganizerActivityCancellationRequestResponse>(
+      `/organizer/activity-cancellation-requests/${encodeURIComponent(requestId)}`,
+    ),
+  approveActivityCancellationRequest: (requestId: number | string) =>
+    apiClient.post<OrganizerActivityCancellationRequestResponse>(
+      `/organizer/activity-cancellation-requests/${encodeURIComponent(requestId)}/approve`,
+    ),
+  rejectActivityCancellationRequest: (requestId: number | string, reviewNote: string) =>
+    apiClient.post<OrganizerActivityCancellationRequestResponse>(
+      `/organizer/activity-cancellation-requests/${encodeURIComponent(requestId)}/reject`,
+      { reviewNote },
+    ),
   // Quét QR điểm danh (BR-45, BR-47)
   async scanAttendance(ticketCode: string, activityId?: string): Promise<any> {
     return await apiClient.post('/organizer/checkin', { ticketCode, activityId });

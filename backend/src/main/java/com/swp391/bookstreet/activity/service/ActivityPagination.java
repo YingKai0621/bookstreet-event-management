@@ -48,7 +48,9 @@ final class ActivityPagination {
                 "submittedAt", "submittedAt",
                 "handledAt", "handledAt",
                 "status", "status",
-                "activityChangeRequestId", "activityRequestId"),
+                "activityChangeRequestId", "activityRequestId",
+                "activityCancellationRequestId", "activityRequestId",
+                "activityRequestId", "activityRequestId"),
                 "activityRequestId", "sort uses an unsupported Activity Request field.");
     }
 

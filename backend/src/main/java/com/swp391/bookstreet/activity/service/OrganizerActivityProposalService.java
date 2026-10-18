@@ -105,9 +105,7 @@ public class OrganizerActivityProposalService {
     }
 
     private static String normalizeSearch(String search) {
-        if (search == null) return null;
-        String normalized = search.trim();
-        return normalized.isEmpty() ? null : normalized;
+        return search == null ? "" : search.trim();
     }
 
     private static ActivityApiException notFound() {

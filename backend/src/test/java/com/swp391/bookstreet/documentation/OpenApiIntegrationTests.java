@@ -142,6 +142,36 @@ class OpenApiIntegrationTests {
     }
 
     @Test
+    void openApiDocumentIncludesOrganizerActivityRequestEndpoints() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-change-requests'].get")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-change-requests/{requestId}'].get")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-change-requests/{requestId}/approve'].post")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-change-requests/{requestId}/reject'].post")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-cancellation-requests'].get")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-cancellation-requests/{requestId}'].get")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-cancellation-requests/{requestId}/approve'].post")
+                        .exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/v1/organizer/activity-cancellation-requests/{requestId}/reject'].post")
+                        .exists());
+    }
+
+    @Test
     void unsafeRequestWithoutCsrfTokenIsRejected() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

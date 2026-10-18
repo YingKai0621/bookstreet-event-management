@@ -129,6 +129,11 @@ class OrganizerActivityIntegrationTests {
         long activityId = create(eventId, stageId, "  Opening   Ceremony  ", start,
                 start.plus(Duration.ofHours(1)));
 
+        mvc.perform(get(ACTIVITIES + "?eventId=" + eventId)
+                        .with(organizer(organizerUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].activityId").value(activityId));
         mvc.perform(get(ACTIVITIES + "?search=opening&status=DRAFT")
                         .with(organizer(organizerUser)))
                 .andExpect(status().isOk())

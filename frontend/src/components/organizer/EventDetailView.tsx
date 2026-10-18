@@ -25,11 +25,8 @@ interface EventDetailViewProps {
   activities: OrganizerActivityItem[];
   participants: OrganizerParticipantItem[];
   partnerApplications?: OrganizerPartnerApplication[];
-  activityProposals?: any[];
   onApprovePartnerApplication?: (applicationId: string, reviewNote?: string) => void | Promise<void>;
   onRejectPartnerApplication?: (applicationId: string, reviewNote: string) => void | Promise<void>;
-  onApproveProposal?: (proposalId: string) => void;
-  onRejectProposal?: (proposalId: string) => void;
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
   onBoothConfigurationChanged?: () => void | Promise<void>;
@@ -45,11 +42,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   activities,
   participants,
   partnerApplications = [],
-  activityProposals = [],
   onApprovePartnerApplication,
   onRejectPartnerApplication,
-  onApproveProposal,
-  onRejectProposal,
   onBack,
   onNavigateToBoothsMap,
   onBoothConfigurationChanged,
@@ -393,26 +387,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: '0 0 1.25rem 0' }}>
             {language === 'vi' ? 'Danh sách hoạt động thuộc sự kiện' : 'Event Activities'}
           </h2>
-
-          {activityProposals.length > 0 && (
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.95rem', color: '#172421' }}>Đề xuất hoạt động đang chờ xử lý</h3>
-              {activityProposals.map((proposal) => (
-                <div key={proposal.id} style={{ padding: '0.8rem', border: '1px solid #E2EAE5', borderRadius: 8, marginBottom: 8 }}>
-                  <strong>{proposal.title}</strong>
-                  <div style={{ fontSize: '0.78rem', color: '#556B65', margin: '4px 0 8px' }}>
-                    {proposal.organization?.name || 'Đối tác'} · {new Date(proposal.startAt).toLocaleString('vi-VN')} · {proposal.location?.name || ''}
-                  </div>
-                  {proposal.status === 'pending' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" className="btn-org-primary" onClick={() => onApproveProposal?.(proposal.id)}>Duyệt</button>
-                      <button type="button" className="btn-org-secondary" onClick={() => onRejectProposal?.(proposal.id)}>Từ chối</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {activities.map((act) => (

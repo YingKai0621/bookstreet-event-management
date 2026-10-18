@@ -428,9 +428,9 @@ public class OrganizerActivityService {
     }
 
     private static String normalizeSearch(String search) {
-        if (search == null) return null;
-        String normalized = search.trim();
-        return normalized.isEmpty() ? null : normalized;
+        // Bind an empty VARCHAR instead of null. PostgreSQL can otherwise infer a null
+        // parameter used by lower(concat(...)) as bytea and reject lower(bytea).
+        return search == null ? "" : search.trim();
     }
 
     private static ActivityApiException validation(String message, String field) {

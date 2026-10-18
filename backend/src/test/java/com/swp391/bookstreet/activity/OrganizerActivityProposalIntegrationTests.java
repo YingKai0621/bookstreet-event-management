@@ -137,6 +137,10 @@ class OrganizerActivityProposalIntegrationTests {
                 "PENDING", eventStart.plus(Duration.ofHours(5)),
                 eventStart.plus(Duration.ofHours(6)), 3);
 
+        mvc.perform(get(PROPOSALS + "?eventId=" + eventId)
+                        .with(actor(organizerId, "ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
         mvc.perform(get(PROPOSALS + "?size=1&status=PENDING&locationId=" + stageId
                         + "&search=author&sort=submittedAt,asc")
                         .with(actor(organizerId, "ORGANIZER")))
@@ -145,6 +149,8 @@ class OrganizerActivityProposalIntegrationTests {
                 .andExpect(jsonPath("$.totalPages").value(1))
                 .andExpect(jsonPath("$.content[0].activityProposalId").value(firstId))
                 .andExpect(jsonPath("$.content[0].eventId").value(eventId))
+                .andExpect(jsonPath("$.content[0].partnerOrganizationName")
+                        .value(prefix + " Partner"))
                 .andExpect(jsonPath("$.content[0].location.locationId").value(stageId));
         mvc.perform(get(PROPOSALS + "/" + firstId)
                         .with(actor(organizerId, "ORGANIZER")))

@@ -26,6 +26,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
         Long getEventId();
         String getEventName();
         Long getPartnerOrganizationId();
+        String getPartnerOrganizationName();
         Long getLocationId();
         String getLocationCode();
         String getLocationName();
@@ -85,6 +86,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    application.event_id as eventId,
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
+                   organization.name as partnerOrganizationName,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -154,6 +156,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    application.event_id as eventId,
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
+                   organization.name as partnerOrganizationName,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -177,6 +180,8 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
             from activity_proposals proposal
             join partner_event_applications application
               on application.application_id = proposal.application_id
+            join partner_organizations organization
+              on organization.partner_organization_id = application.partner_organization_id
             join events event on event.event_id = application.event_id
             join locations location on location.location_id = proposal.location_id
             left join activities activity
@@ -222,6 +227,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    application.event_id as eventId,
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
+                   organization.name as partnerOrganizationName,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -263,6 +269,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    application.event_id as eventId,
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
+                   organization.name as partnerOrganizationName,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -286,6 +293,8 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
             from activity_proposals proposal
             join partner_event_applications application
               on application.application_id = proposal.application_id
+            join partner_organizations organization
+              on organization.partner_organization_id = application.partner_organization_id
             join events event on event.event_id = application.event_id
             join locations location on location.location_id = proposal.location_id
             left join activities activity
