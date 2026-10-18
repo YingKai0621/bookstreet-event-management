@@ -32,11 +32,9 @@ import { ParticipantFeedbackPage } from './pages/participant/ParticipantFeedback
 import { ParticipantLayout } from './pages/participant/ParticipantLayout';
 import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
-import { ActivityAttendanceModal } from './pages/partner/ActivityAttendanceModal';
-import { ActivityProposalPage } from './pages/partner/ActivityProposalPage';
+import { PartnerActivityWorkspacePage } from './pages/partner/PartnerActivityWorkspacePage';
 import { PartnerEventApplicationsPage } from './pages/partner/PartnerEventApplicationsPage';
 import { PartnerEventDiscoveryPage } from './pages/partner/PartnerEventDiscoveryPage';
-import { PartnerActivityDetailPage } from './pages/partner/PartnerActivityDetailPage';
 import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
 import { PartnerBoothDetailPage } from './pages/partner/PartnerBoothDetailPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
@@ -54,7 +52,6 @@ import { publicApi } from './services/publicApi';
 import { boothApi } from './services/boothApi';
 import type { BoothRequest } from './types/booth';
 import {
-  AttendanceScanRecord,
   Booth,
   EventItem,
   ExtendedHeritageProfile,
@@ -64,7 +61,6 @@ import {
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
-  PartnerActivityProposal,
   PartnerEventApplication,
   PartnerNotification,
   PartnerOrganization,
@@ -102,11 +98,7 @@ export function App() {
 
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
-  const [partnerApp, setPartnerApp] = useState<PartnerEventApplication | null>(null);
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
-  const [partnerEventLocations, setPartnerEventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
-  const [partnerAssets, setPartnerAssets] = useState<Array<{ id: string; name: string; totalQuantity: number }>>([]);
-  const [partnerActivities, setPartnerActivities] = useState<PartnerActivityProposal[]>([]);
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
   const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
@@ -114,8 +106,6 @@ export function App() {
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
   const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
-  const [attendanceScans, setAttendanceScans] = useState<AttendanceScanRecord[]>([]);
-  const [activeAttendanceActivityId, setActiveAttendanceActivityId] = useState<string | null>(null);
 
   const [language, setLanguage] = useState<Language>('vi');
   const [dataRevision, setDataRevision] = useState(0);
@@ -295,8 +285,8 @@ export function App() {
     // oxlint-disable-next-line react/set-state-in-effect
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
-    setPartnerActivities([]); setPartnerNotifications([]); setPartnerAssets([]);
-    _setPartnerReports(null); setPartnerEventLocations([]);
+    setPartnerNotifications([]);
+    _setPartnerReports(null);
     void Promise.allSettled([
       partnerApi.getProfile(),
       partnerApi.getApplications(),
@@ -313,11 +303,9 @@ export function App() {
 
       if (applicationsResult.status === 'fulfilled') {
         setPartnerApplications(applicationsResult.value);
-        setPartnerApp(applicationsResult.value.find(application => application.status === 'approved') || null);
       } else {
         console.warn('Could not fetch partner applications', applicationsResult.reason);
         setPartnerApplications([]);
-        setPartnerApp(null);
         partnerErrors.push(applicationsResult.reason instanceof Error ? applicationsResult.reason.message : 'Không thể tải hồ sơ sự kiện.');
       }
       setPartnerOverviewError(partnerErrors.join(' '));
@@ -574,63 +562,9 @@ export function App() {
     );
   }
 
-  // --- Partner Handlers ---
-  const handleAddPartnerActivity = async (newAct: Omit<PartnerActivityProposal, 'id'>) => {
-    if (!partnerApp) throw new Error('Chưa có sự kiện đối tác đang tham gia');
-    const [day, month, year] = newAct.date.split('/');
-    const [startTime, endTime] = newAct.time.split('–').map(value => value.trim());
-    const kindByCategory: Record<PartnerActivityProposal['category'], string> = {
-      Workshop: 'workshop', Talkshow: 'talkshow', Minigame: 'minigame', Signings: 'signing', Exhibition: 'exhibition',
-    };
-    await partnerApi.submitActivityProposal({
-      eventId: partnerApp.eventId,
-      title: newAct.title,
-      kind: kindByCategory[newAct.category],
-      locationName: newAct.location,
-      startAt: `${year}-${month}-${day}T${startTime}:00+07:00`,
-      endAt: `${year}-${month}-${day}T${endTime}:00+07:00`,
-      capacity: newAct.capacity,
-      targetAudience: newAct.targetAudience,
-      description: newAct.description,
-      devices: newAct.requiredEquipments.map(name => ({ name, quantity: 1 })),
-    });
-    const [activities, reports] = await Promise.all([
-      partnerApi.getActivityProposals(), partnerApi.getReports(partnerApp.eventId),
-    ]);
-    setPartnerActivities(activities);
-    _setPartnerReports(reports);
-  };
-
-  const handleUpdatePartnerActivity = async (id: string, updated: Partial<PartnerActivityProposal>) => {
-    const saved = await partnerApi.updateActivityProposal(id, updated);
-    setPartnerActivities(prev => prev.map(activity => activity.id === id ? saved : activity));
-  };
-
-  const handleRecordAttendanceScan = (rec: Omit<AttendanceScanRecord, 'id'>) => {
-    const scanRecord: AttendanceScanRecord = {
-      ...rec,
-      id: `scn-${Date.now()}`
-    };
-    setAttendanceScans(prev => [scanRecord, ...prev]);
-  };
-
   const handleMarkAllPartnerNotifsRead = async () => {
     await partnerApi.markAllNotificationsRead();
     setPartnerNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-  };
-
-  const handlePartnerAttendanceScan = async (qrToken: string): Promise<Omit<AttendanceScanRecord, 'id'>> => {
-    const result = await partnerApi.scanAttendance(qrToken) as {
-      status: string; activityId: string; activityTitle: string; participantName: string; ticketCode: string;
-    };
-    return {
-      activityId: result.activityId,
-      activityTitle: result.activityTitle,
-      participantName: result.participantName,
-      ticketCode: result.ticketCode,
-      scanTime: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      status: result.status === 'already_completed' ? 'already_scanned' : 'success',
-    };
   };
 
   const handleMarkPartnerNotifRead = async (id: string) => {
@@ -664,8 +598,6 @@ export function App() {
       representativeName: authenticatedUser?.fullName || '', email: authenticatedUser?.email || '',
       phone: '', address: '', website: '', categories: [], status: '',
     };
-
-    const attendanceModalActivity = partnerActivities.find(a => a.id === activeAttendanceActivityId) || partnerActivities[0];
 
     return (
       <PartnerLayout
@@ -724,21 +656,15 @@ export function App() {
             />
           } />
           <Route path="/partner/activities" element={
-            <ActivityProposalPage
+            <PartnerActivityWorkspacePage
               language={language}
-              activities={partnerActivities}
-              locations={partnerEventLocations}
-              assets={partnerAssets}
-              onAddActivity={handleAddPartnerActivity}
-              onOpenAttendanceModal={(id) => setActiveAttendanceActivityId(id)}
+              applications={partnerApplications}
             />
           } />
           <Route path="/partner/activities/:activityId" element={
-            <PartnerActivityDetailPage
+            <PartnerActivityWorkspacePage
               language={language}
-              activities={partnerActivities}
-              onOpenAttendanceModal={(id) => setActiveAttendanceActivityId(id)}
-              onUpdateActivity={handleUpdatePartnerActivity}
+              applications={partnerApplications}
             />
           } />
           <Route path="/partner/reports" element={
@@ -772,18 +698,6 @@ export function App() {
             />
           } />
         </Routes>
-
-        {/* Modal Quét Điểm danh QR Hoạt động (Screen 10) */}
-        {activeAttendanceActivityId && attendanceModalActivity && (
-          <ActivityAttendanceModal
-            language={language}
-            activity={attendanceModalActivity}
-            scans={attendanceScans}
-            onClose={() => setActiveAttendanceActivityId(null)}
-            onRecordScan={handleRecordAttendanceScan}
-            onScanQr={handlePartnerAttendanceScan}
-          />
-        )}
       </PartnerLayout>
     );
   }

@@ -1,7 +1,9 @@
 package com.swp391.bookstreet.activity.service;
 
+import com.swp391.bookstreet.activity.config.ActivityAsyncConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -17,6 +19,7 @@ public class ActivityPartnerMessageListener {
         this.mailService = mailService;
     }
 
+    @Async(ActivityAsyncConfiguration.PARTNER_MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendAfterCommit(ActivityPartnerMessageRequested event) {
         if (event.recipientEmails().isEmpty()) {

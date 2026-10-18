@@ -1,0 +1,33 @@
+.organizer-location-toolbar .facility-search { max-width: none; }
+.organizer-location-toolbar .facility-filter { margin-left: 0; }
+.organizer-location-toolbar .facility-search + .facility-filter { margin-left: auto; }
+.organizer-location-page .facility-name > span:last-child { display: grid; gap: 3px; }
+.organizer-location-page .facility-name small { color: #7b8b84; font-size: 10px; font-weight: 750; letter-spacing: .07em; }
+.organizer-location-type { display: inline-flex; padding: 5px 9px; color: #49675d; background: #f0f5f2; border: 1px solid #d5e2dc; border-radius: 20px; font-size: 11px; font-weight: 750; }
+.organizer-location-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 750; }
+.organizer-location-status i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.organizer-location-status.is-active { color: #24805f; }
+.organizer-location-status.is-inactive { color: #8a9691; }
+.organizer-location-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.organizer-location-footer > div { display: flex; align-items: center; gap: 10px; }
+.organizer-location-footer button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #d2ddd7; border-radius: 6px; background: white; color: #355448; cursor: pointer; }
+.organizer-location-footer button:disabled { opacity: .4; cursor: not-allowed; }
+.organizer-location-dialog { width: min(700px, calc(100vw - 32px)); }
+.organizer-location-fields { grid-template-columns: 1fr 1fr; }
+.organizer-location-fields select,
+.organizer-location-fields textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; padding: 12px; border-radius: 8px; border: 1px solid #d4dfd7; font: inherit; color: #172421; background: white; }
+.organizer-location-fields textarea { resize: vertical; }
+.organizer-location-wide { grid-column: 1 / -1; }
+.organizer-location-active { padding: 13px; border: 1px solid #d6e1db; border-radius: 8px; background: #f7faf8; display: flex !important; align-items: flex-start; gap: 10px; cursor: pointer; }
+.organizer-location-active input { width: auto !important; margin: 3px 0 0 !important; accent-color: #245640; }
+.organizer-location-active > span { color: inherit !important; display: grid; gap: 2px; }
+.organizer-location-active small { margin-top: 0; }
+@media (max-width: 900px) {
+  .organizer-location-toolbar .facility-search + .facility-filter { margin-left: 0; }
+  .organizer-location-toolbar .facility-search { flex-basis: 100%; }
+}
+@media (max-width: 620px) {
+  .organizer-location-fields { grid-template-columns: 1fr; }
+  .organizer-location-wide { grid-column: auto; }
+  .organizer-location-footer { align-items: flex-start; flex-direction: column; }
+}

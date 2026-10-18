@@ -1,4 +1,20 @@
-import { PartnerActivityProposal, PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
+import { PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
+import type {
+  ActivityCancellationRequestListQuery,
+  ActivityListQuery,
+  ActivityPageResponse,
+  ActivityProposalListQuery,
+  ActivityRequestListQuery,
+  CreatePartnerActivityChangeRequest,
+  CreatePartnerActivityProposalRequest,
+  OrganizerLocationResponse,
+  PartnerActivityCancellationRequestResponse,
+  PartnerActivityChangeRequestResponse,
+  PartnerActivityProposalResponse,
+  PartnerActivityResponse,
+  PartnerActivityRevisionResponse,
+  UpdatePartnerActivityProposalRequest,
+} from '../types/activity';
 import { ApiError, apiClient } from './apiClient';
 
 interface PageResponse<T> {
@@ -108,6 +124,15 @@ function toAvailableEvent(event: PublicEventResponse): PartnerAvailableEvent {
   };
 }
 
+function activityQuery(query: object): string {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]: [string, unknown]) => {
+    if (value !== undefined && value !== '') params.set(key, String(value));
+  });
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
 async function loadPublishedEvents(): Promise<PartnerAvailableEvent[]> {
   const query = new URLSearchParams({ page: '0', size: '100', sort: 'startAt,asc' });
   const first = await apiClient.get<PageResponse<PublicEventResponse>>(`/events?${query.toString()}`);
@@ -203,19 +228,81 @@ export const partnerApi = {
       };
     });
   },
-  getEventLocations: (eventId: string) => apiClient.get<Array<{ id: string; name: string; capacity: number }>>(`/partner/event-locations?eventId=${encodeURIComponent(eventId)}`),
-  getAssets: () => apiClient.get<Array<{ id: string; name: string; totalQuantity: number }>>('/partner/assets'),
-  getSchedule: () => apiClient.get<Array<Record<string, unknown>>>('/partner/schedule'),
-  getActivityProposals: () => apiClient.get<PartnerActivityProposal[]>('/partner/activity-proposals'),
+  getActivityLocations: (eventId: string | number, startAt?: string, endAt?: string) =>
+    apiClient.get<OrganizerLocationResponse[]>(
+      `/partner/events/${encodeURIComponent(eventId)}/activity-locations${activityQuery({ startAt, endAt })}`,
+    ),
+  getActivityProposals: (query: ActivityProposalListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<PartnerActivityProposalResponse>>(
+      `/partner/activity-proposals${activityQuery(query)}`,
+    ),
+  getActivityProposal: (proposalId: string | number) =>
+    apiClient.get<PartnerActivityProposalResponse>(
+      `/partner/activity-proposals/${encodeURIComponent(proposalId)}`,
+    ),
   submitApplication: (eventId: string, applicationNote: string) =>
     apiClient.post<PartnerApplicationResponse>(`/events/${encodeURIComponent(eventId)}/applications`, { applicationNote }),
   withdrawApplication: (applicationId: string) =>
     apiClient.post<PartnerApplicationResponse>(`/partner/applications/${encodeURIComponent(applicationId)}/withdraw`, {}),
-  submitActivityProposal: (data: unknown) => apiClient.post('/partner/activity-proposals', data),
-  updateActivityProposal: (id: string, data: Partial<PartnerActivityProposal>) => apiClient.patch<PartnerActivityProposal>(`/partner/activity-proposals/${encodeURIComponent(id)}`, data),
-  requestActivityChange: (id: string, reason: string) => apiClient.post(`/partner/activity-proposals/${encodeURIComponent(id)}/requests`, { kind: 'change', reason }),
-  requestActivityCancellation: (id: string, reason: string) => apiClient.post(`/partner/activity-proposals/${encodeURIComponent(id)}/requests`, { kind: 'cancellation', reason }),
-  getActivityParticipants: (id: string) => apiClient.get<Array<{ id: string; fullName: string; phone: string; ticketCode: string; status: string }>>(`/partner/activity-proposals/${encodeURIComponent(id)}/participants`),
+  submitActivityProposal: (data: CreatePartnerActivityProposalRequest) =>
+    apiClient.post<PartnerActivityProposalResponse>('/partner/activity-proposals', data),
+  updateActivityProposal: (proposalId: string | number, data: UpdatePartnerActivityProposalRequest) =>
+    apiClient.patch<PartnerActivityProposalResponse>(
+      `/partner/activity-proposals/${encodeURIComponent(proposalId)}`,
+      data,
+    ),
+  resubmitActivityProposal: (proposalId: string | number) =>
+    apiClient.post<PartnerActivityProposalResponse>(
+      `/partner/activity-proposals/${encodeURIComponent(proposalId)}/resubmit`,
+    ),
+  withdrawActivityProposal: (proposalId: string | number) =>
+    apiClient.post<PartnerActivityProposalResponse>(
+      `/partner/activity-proposals/${encodeURIComponent(proposalId)}/withdraw`,
+    ),
+  getActivities: (query: ActivityListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<PartnerActivityResponse>>(
+      `/partner/activities${activityQuery(query)}`,
+    ),
+  getActivity: (activityId: string | number) =>
+    apiClient.get<PartnerActivityResponse>(`/partner/activities/${encodeURIComponent(activityId)}`),
+  getActivityRevisions: (activityId: string | number, page = 0, size = 20) =>
+    apiClient.get<ActivityPageResponse<PartnerActivityRevisionResponse>>(
+      `/partner/activities/${encodeURIComponent(activityId)}/revisions${activityQuery({ page, size, sort: 'changedAt,desc' })}`,
+    ),
+  submitActivityChangeRequest: (activityId: string | number, data: CreatePartnerActivityChangeRequest) =>
+    apiClient.post<PartnerActivityChangeRequestResponse>(
+      `/partner/activities/${encodeURIComponent(activityId)}/change-requests`,
+      data,
+    ),
+  getActivityChangeRequests: (query: ActivityRequestListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<PartnerActivityChangeRequestResponse>>(
+      `/partner/activity-change-requests${activityQuery(query)}`,
+    ),
+  getActivityChangeRequest: (requestId: string | number) =>
+    apiClient.get<PartnerActivityChangeRequestResponse>(
+      `/partner/activity-change-requests/${encodeURIComponent(requestId)}`,
+    ),
+  withdrawActivityChangeRequest: (requestId: string | number) =>
+    apiClient.post<PartnerActivityChangeRequestResponse>(
+      `/partner/activity-change-requests/${encodeURIComponent(requestId)}/withdraw`,
+    ),
+  submitActivityCancellationRequest: (activityId: string | number, reason: string) =>
+    apiClient.post<PartnerActivityCancellationRequestResponse>(
+      `/partner/activities/${encodeURIComponent(activityId)}/cancellation-requests`,
+      { reason },
+    ),
+  getActivityCancellationRequests: (query: ActivityCancellationRequestListQuery = {}) =>
+    apiClient.get<ActivityPageResponse<PartnerActivityCancellationRequestResponse>>(
+      `/partner/activity-cancellation-requests${activityQuery(query)}`,
+    ),
+  getActivityCancellationRequest: (requestId: string | number) =>
+    apiClient.get<PartnerActivityCancellationRequestResponse>(
+      `/partner/activity-cancellation-requests/${encodeURIComponent(requestId)}`,
+    ),
+  withdrawActivityCancellationRequest: (requestId: string | number) =>
+    apiClient.post<PartnerActivityCancellationRequestResponse>(
+      `/partner/activity-cancellation-requests/${encodeURIComponent(requestId)}/withdraw`,
+    ),
   async getNotifications(): Promise<PartnerNotification[]> {
     const items = await apiClient.get<Array<Record<string, unknown>>>('/partner/notifications');
     return items.map(item => ({
@@ -227,6 +314,5 @@ export const partnerApi = {
   markNotificationRead: (id: string) => apiClient.patch(`/partner/notifications/${encodeURIComponent(id)}/read`, {}),
   markAllNotificationsRead: () => apiClient.patch('/partner/notifications/read-all', {}),
   getReports: (eventId?: string) => apiClient.get<PartnerReportStats>(`/partner/reports${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`),
-  scanAttendance: (qrToken: string) => apiClient.post('/partner/attendance/scan', { qrToken }),
   changePassword: (currentPassword: string, newPassword: string) => apiClient.post('/partner/password', { currentPassword, newPassword }),
 };

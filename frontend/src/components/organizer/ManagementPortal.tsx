@@ -15,12 +15,12 @@ import { OrganizerTopBar } from './OrganizerTopBar';
 
 import { OrganizerBoothManagementView } from './OrganizerBoothManagementView';
 import { OrganizerBoothRequestsView } from './OrganizerBoothRequestsView';
-import { ActivityManagementView } from './ActivityManagementView';
+import { OrganizerActivityWorkspace } from './OrganizerActivityWorkspace';
 import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
-import { OrganizerCreateActivityModal } from './OrganizerCreateActivityModal';
 import { OrganizerCreateEventModal } from './OrganizerCreateEventModal';
 import { OrganizerFeedbackView } from './OrganizerFeedbackView';
 import { OrganizerNotificationsView } from './OrganizerNotificationsView';
+import { OrganizerLocationManagementView } from './OrganizerLocationManagementView';
 import { OrganizerProfileView } from './OrganizerProfileView';
 import { OrganizerPublicContentView } from './OrganizerPublicContentView';
 import { OrganizerReportsView } from './OrganizerReportsView';
@@ -63,7 +63,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OrganizerEvent | null>(null);
-  const [isCreateActivityOpen, setIsCreateActivityOpen] = useState(false);
 
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
@@ -78,8 +77,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   });
   const [partnerApplications, setPartnerApplications] = useState<OrganizerPartnerApplication[]>([]);
   const [boothRequests, setBoothRequests] = useState<BoothRequest[]>([]);
-  const [proposalList] = useState<any[]>([]);
-  const [eventLocations] = useState<Array<{ id: string; name: string; capacity: number }>>([]);
   const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -185,33 +182,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   // Unread notifications count
   const unreadCount = notificationsList.filter(n => !n.isRead).length;
 
-  // Handlers for Activity Approval
-  const handleApproveActivity = async (actId: string) => {
-    await organizerApi.updateActivity(actId, { status: 'approved' });
-    await refreshOrganizerData(selectedEventId);
-  };
-
-  const handleRejectActivity = async (actId: string) => {
-    await organizerApi.updateActivity(actId, { status: 'cancelled', reason: 'Hủy bởi Ban Quản Lý' });
-    await refreshOrganizerData(selectedEventId);
-  };
-
-  const handlePublishActivity = async (actId: string) => {
-    await organizerApi.publishActivity(actId);
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
-  const handleUpdateActivity = async (updatedAct: OrganizerActivityItem) => {
-    await organizerApi.updateActivity(updatedAct.id, { title: updatedAct.title, description: updatedAct.description, speaker: updatedAct.speaker, capacity: updatedAct.capacity });
-    await refreshOrganizerData(selectedEventId);
-  };
-
-  const handleDeleteActivity = async (actId: string) => {
-    await organizerApi.updateActivity(actId, { status: 'cancelled', reason: 'Hủy bởi Ban Quản Lý' });
-    await refreshOrganizerData(selectedEventId);
-  };
-
   // Handlers for Participant Manual Override
   const handleManualOverrideStatus = (
     participantId: string, 
@@ -255,18 +225,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Không thể từ chối hồ sơ đối tác.');
     }
-  };
-
-  const handleApproveProposal = async (proposalId: string) => {
-    await organizerApi.approveProposal(proposalId);
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
-  const handleRejectProposal = async (proposalId: string) => {
-    await organizerApi.rejectProposal(proposalId, 'Đề xuất chưa đáp ứng đầy đủ yêu cầu tổ chức hoạt động.');
-    await refreshOrganizerData(selectedEventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
   const handleUpdateProfile = async (updates: Partial<OrganizerProfile>) => {
@@ -350,21 +308,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     }
   };
 
-  // Create Activity Handler
-  const handleCreateNewActivity = async (newActivity: OrganizerActivityItem) => {
-    const [day, month, year] = newActivity.dateStr.split('/');
-    const isoDate = year ? `${year}-${month}-${day}` : newActivity.dateStr;
-    const [startTime, endTime] = newActivity.timeStr.split('–').map(value => value.trim());
-    await organizerApi.createActivity({
-      eventId: newActivity.eventId, title: newActivity.title, kind: newActivity.type,
-      startAt: `${isoDate}T${startTime}:00+07:00`, endAt: `${isoDate}T${endTime}:00+07:00`,
-      location: newActivity.location, capacity: newActivity.capacity, speaker: newActivity.speaker,
-      description: newActivity.description, imageUrl: newActivity.thumbnail, isPublished: newActivity.isPublished,
-    });
-    await refreshOrganizerData(newActivity.eventId);
-    window.dispatchEvent(new Event('duongsach:data-changed'));
-  };
-
   // Notification Mark All as Read
   const handleMarkAllNotificationsRead = async () => {
     await organizerApi.markAllNotificationsRead();
@@ -388,7 +331,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         onNavigateTab={(tab) => {
           setActiveTab(tab);
-          if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
+          if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'activities' && tab !== 'participants' && tab !== 'reports') {
             setSelectedEventId(null);
           }
         }}
@@ -404,7 +347,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           activeTab={activeTab}
           onSelectTab={(tab: OrganizerTab) => {
             setActiveTab(tab);
-            if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'participants' && tab !== 'reports') {
+            if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'activities' && tab !== 'participants' && tab !== 'reports') {
               setSelectedEventId(null);
             }
           }}
@@ -422,7 +365,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         {actionError && <p className="app-loading-state" role="alert">{actionError}</p>}
 
         {/* Dynamic Views Rendering based on activeTab */}
-        {activeTab === 'venues' && <FacilityManagementView key="venues" kind="venues" />}
+        {activeTab === 'venues' && <OrganizerLocationManagementView />}
         {activeTab === 'assets' && <FacilityManagementView key="assets" kind="assets" />}
         {activeTab === 'overview' && currentSelectedEvent && (
           <OrganizerDashboard 
@@ -436,7 +379,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             onNavigateTab={(tab: OrganizerTab, extraState?: { eventId?: string }) => {
               setActiveTab(tab === 'event_detail' ? 'events' : tab);
               if (extraState?.eventId) setSelectedEventId(extraState.eventId);
-              else if (tab !== 'events') setSelectedEventId(null);
+              else if (tab !== 'events' && tab !== 'activities') setSelectedEventId(null);
             }}
             onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
             onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
@@ -468,11 +411,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             activities={activitiesList}
             participants={participantsList}
             partnerApplications={partnerApplications}
-            activityProposals={proposalList}
             onApprovePartnerApplication={handleApprovePartnerApplication}
             onRejectPartnerApplication={handleRejectPartnerApplication}
-            onApproveProposal={handleApproveProposal}
-            onRejectProposal={handleRejectProposal}
             onBack={() => setSelectedEventId(null)}
             onNavigateToBoothsMap={() => {
               setActiveTab('booths');
@@ -506,15 +446,11 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
 
         {activeTab === 'activities' && (
-          <ActivityManagementView 
+          <OrganizerActivityWorkspace
             language={language}
-            activities={activitiesList}
-            onOpenCreateActivity={() => setIsCreateActivityOpen(true)}
-            onApproveActivity={handleApproveActivity}
-            onRejectActivity={handleRejectActivity}
-            onPublishActivity={handlePublishActivity}
-            onUpdateActivity={handleUpdateActivity}
-            onDeleteActivity={handleDeleteActivity}
+            events={eventsList}
+            selectedEventId={selectedEventId}
+            onSelectEventId={setSelectedEventId}
           />
         )}
 
@@ -589,15 +525,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onSave={handleSaveEvent}
       />
 
-      {/* Global Create Activity Modal */}
-      <OrganizerCreateActivityModal 
-        language={language}
-        isOpen={isCreateActivityOpen}
-        onClose={() => setIsCreateActivityOpen(false)}
-        events={currentSelectedEvent ? [currentSelectedEvent] : []}
-        locations={eventLocations}
-        onCreateActivity={handleCreateNewActivity}
-      />
     </div>
   );
 };

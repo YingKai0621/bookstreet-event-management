@@ -136,6 +136,22 @@ public class ActivityRequest {
         return true;
     }
 
+    public boolean approveIfPending(Instant now) {
+        if (status != ActivityRequestStatus.PENDING) return false;
+        status = ActivityRequestStatus.APPROVED;
+        handledAt = now;
+        reviewNote = null;
+        return true;
+    }
+
+    public boolean rejectIfPending(String note, Instant now) {
+        if (status != ActivityRequestStatus.PENDING) return false;
+        status = ActivityRequestStatus.REJECTED;
+        reviewNote = note;
+        handledAt = now;
+        return true;
+    }
+
     public Long getActivityRequestId() { return activityRequestId; }
     public Long getActivityId() { return activityId; }
     public ActivityRequestType getRequestType() { return requestType; }
