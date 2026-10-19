@@ -11,11 +11,16 @@ SWP391 project for managing Book Street events, partners, booths, activities and
 
 ## Project Status
 
-Sprint 4 Event lifecycle and pre-payment Booth release is complete through Flyway V8. Final local
-verification passed 284 backend tests, the 20-test disposable VNPay spike, frontend lint and the
-frontend production build. Automated browser-level Payment/Assignment E2E, existing frontend lint
-warnings and bundle splitting remain tracked technical debt.
+Sprint 5 Activity Planning and Partner Proposal Workflow is complete through Flyway V9 and merge
+commit `759a25c`. The delivered scope includes shared Activity Locations, Partner Proposals,
+Organizer review, official Activity lifecycle, Partner Change/Cancellation Requests, public
+Activity discovery and integrated Partner/Organizer workspaces.
+
+The current backend test inventory contains 370 tests, and the focused Sprint 5 Activity
+Playwright suite passes 9 Partner/Organizer scenarios. Automated browser-level Payment/Assignment
+E2E, existing frontend lint warnings, bundle splitting and Participant Activity
+registration/attendance/rating/certificate flows remain future work.
 
 Start with the shared documentation in [`docs/README.MD`](docs/README.MD), then read the
 [`Current Sprint`](docs/sprints/CURRENT_SPRINT.md) and
-[`Sprint 4 Completion Report`](docs/development/SPRINT_04_COMPLETION_REPORT.md).
+[`Sprint 5 Completion Report`](docs/development/SPRINT_05_COMPLETION_REPORT.md).

@@ -1,8 +1,8 @@
 # Sprint 05 Activity Planning and Partner Proposal Workflow
 
-> Status: `APPROVED — READY FOR IMPLEMENTATION` on 2026-10-16. This document freezes the
-> Activity baseline before production code begins. V1–V8 remain immutable; implementation must
-> introduce a single V9 migration owned by one developer.
+> Status: `COMPLETED` on 2026-10-19 through PR `#56` (merge commit `759a25c`). This document is the
+> delivered Activity baseline. V1–V8 remain immutable and the implementation introduced the single
+> reviewed `V9__create_sprint5_activity_schema.sql` migration.
 
 ## 1. Purpose
 
@@ -333,9 +333,9 @@ Canonical codes are defined in the Sprint 5 API Contract and must not be replace
   Activity-related Location constraints.
 - V9 owns `btree_gist` and the official Activity exclusion constraint.
 - `hibernate.ddl-auto=validate` remains enabled.
-- The old 33-table Draw.io image is a target/reference view, not migration source. The approved V9
-  overlay in `12_Physical_ERD_Report.md` plus this Sprint/API contract is authoritative until the
-  implementation migration is merged and the rendered diagram is regenerated.
+- The old 33-table Draw.io image remains a target/reference view, not a migration source. The
+  immutable V9 Flyway migration, this Sprint baseline and the API contract are authoritative for
+  the delivered Activity schema.
 
 ## 13. Definition of done
 
@@ -350,4 +350,8 @@ Sprint 5 is complete only when:
 - post-commit email failure cannot undo domain changes;
 - full backend regression, frontend lint/build and documented Swagger smoke flows pass;
 - a Sprint 5 completion report records exact test counts and remaining technical debt.
+
+All completion conditions were accepted on 2026-10-19. Verification evidence, merge references,
+test counts and non-blocking technical debt are recorded in
+`docs/development/SPRINT_05_COMPLETION_REPORT.md`.
 

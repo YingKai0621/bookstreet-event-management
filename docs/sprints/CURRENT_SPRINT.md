@@ -1,61 +1,43 @@
 # Current Sprint
 
-## Sprint 05 Activity Planning and Partner Proposal Workflow
+## No active implementation Sprint
 
-- Status: `APPROVED — READY FOR IMPLEMENTATION`
-- Approved: `2026-10-16`
-- Sprint file: `docs/sprints/sprint-05.md`
+- Latest completed Sprint: `Sprint 05 Activity Planning and Partner Proposal Workflow`
+- Status: `COMPLETED`
+- Completion date: `2026-10-19`
+- Merge evidence: PR `#56`, merge commit `759a25c`
+- Completion report: `docs/development/SPRINT_05_COMPLETION_REPORT.md`
+- Sprint baseline: `docs/sprints/sprint-05.md`
 - Use Case Specifications: `docs/use-cases/sprint-05-use-case-specifications.md`
 - API Contract: `docs/api/sprint-05-api-contract.md`
 - Backend Work Assignment: `docs/sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md`
-- Planned migration: one `V9`; V1–V8 remain immutable
+- Implemented schema baseline: immutable Flyway migrations V1 through V9
 
-## Sprint goal
+## Delivered Sprint 5 goal
 
-Deliver a concurrency-safe Activity planning workflow: shared Location management, Partner
-Proposal review, official Activity lifecycle, Partner change/cancellation requests and public
-Activity discovery, without starting Participant registration/attendance or expanding Booth refund
-scope.
+Sprint 5 delivered the concurrency-safe Activity planning workflow: shared Location management,
+Partner Proposal review, official Activity lifecycle, Partner change/cancellation requests, public
+Activity discovery and the integrated Partner/Organizer workspaces.
 
-## Approved implementation baseline
+The implementation preserves these approved invariants:
 
-- Partner must have an approved Event application but does not need a Booth.
-- Activity always belongs to one Location: BOOTH, STAGE, WORKSHOP or AREA.
-- A Partner using a Booth needs its Active Assignment in the same Event.
-- Organizer direct BTC Activity uses only shared non-Booth Locations in Sprint 5.
-- Proposal has no Draft; initial creation becomes Pending and does not reserve a slot.
-- Approval atomically creates one official Draft Activity after hard revalidation.
-- All non-cancelled official Activities, including Draft, conflict by physical Location and
-  half-open interval across Events.
-- Partner official changes/cancellations use one Pending request total per Activity.
-- Activity lifecycle is Draft → Published → Ongoing → Completed, with controlled Cancellation;
-  Rescheduled is not a persisted status.
-- Event financial cancellation blockers from Sprint 4 remain unchanged.
-- Registration configuration is prepared, but Participant Registration/Attendance is not in this
-  Sprint.
+- Partner requires an approved Event application but does not require a Booth.
+- Activity belongs to one BOOTH, STAGE, WORKSHOP or AREA Location.
+- Partner Booth use requires an Active Assignment in the same Event.
+- Proposal does not reserve a slot; approval atomically creates one Draft Activity.
+- Every non-cancelled official Activity conflicts by physical Location and half-open interval,
+  including across Events.
+- `maxActivitiesPerPartner` is enforced per Event and cancelled Activities release quota.
+- One Pending change/cancellation request is allowed per Activity.
+- Organizer and Partner use controlled review/request workflows instead of directly overwriting
+  each other's records.
 
-## Included Use Case slices
+## Sprint 6 planning gate
 
-- UC-E04 Propose Activity.
-- UC-E05 Request Activity Change.
-- UC-E06 Request Activity Cancellation.
-- UC-O02 Manage Locations — Activity Location slice.
-- UC-O05 Review Activity Proposals.
-- UC-O06 Manage Activities.
-- UC-G01 Discover Public Content — Activity slice.
+Sprint 6 has not been baselined or approved. Before implementation, create its scope, business
+decisions, Use Case Specifications, API Contract, work assignment, validation/error matrix and
+Acceptance Criteria. Sprint 5 out-of-scope items do not automatically become Sprint 6 scope.
 
-## Scope guard
-
-Sprint 5 excludes Activity payment/tickets, Participant registration/attendance/rating/certificate
-commands, Participant notifications, Notification persistence, advanced map editing, Booth
-change/cancellation/refunds and whole-Event Partner withdrawal.
-
-The documentation baseline is approved; production implementation has not started on this branch.
-Sprint 5 becomes `COMPLETED` only after V9, all Acceptance Criteria, full regression, Swagger smoke
-flows and a completion report are verified.
-
-## Previous completed Sprint
-
-Sprint 04 Event Lifecycle and Pre-payment Booth Release remains completed on `2026-10-16` through
-immutable V8 with 284 backend regression tests and 20 VNPay spike tests recorded in its completion
-report.
+Potential follow-up candidates that require explicit Sprint 6 prioritization include Participant
+Activity registration/attendance/rating/certificate flows. An optional setup buffer between
+adjacent Activities is a future scheduling enhancement, not unfinished Sprint 5 work.

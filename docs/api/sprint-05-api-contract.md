@@ -1,6 +1,7 @@
 # Sprint 05 API Contract
 
-> Status: `APPROVED — READY FOR IMPLEMENTATION`. This contract defines the Activity planning API
+> Status: `IMPLEMENTED — SPRINT 5 COMPLETED` on 2026-10-19. This contract defines the delivered
+> Activity planning API.
 > before V9 implementation. Existing Sprint 1–4 endpoints remain backward compatible.
 
 ## 1. General conventions

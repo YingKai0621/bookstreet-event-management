@@ -1,16 +1,18 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-16`
+Last updated: `2026-10-19`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V8. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V9. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
-  Sprint 4 Event/BoothRequest cancellation metadata and constraints.
+  Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
+  Location/Activity schema and concurrency constraints.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover clean V1-to-V8 migration and the existing-V7 upgrade/backfill path.
+- Flyway migration tests cover clean V1-to-V9 migration, the existing V8-to-V9 upgrade path and
+  the earlier Sprint migration/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
 - Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
@@ -35,11 +37,14 @@ Last updated: `2026-10-16`
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The complete backend suite runs 284 tests against PostgreSQL with no failures, errors or skips.
-  Coverage includes the V8 migration, Event lifecycle, ownership, Event-root locking, Partner and
-  Booth races, VNPay reconciliation and settlement/expiry boundaries. The disposable VNPay spike
-  suite runs 20 tests with no failures.
+- The backend test inventory contains 370 tests. The latest local Surefire report has zero failures
+  and zero errors; 171 database/environment-gated cases are skipped when PostgreSQL/Redis test
+  services are unavailable. GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis.
+  Coverage includes V8/V9 migrations, Event and Activity lifecycles, ownership, lock ordering,
+  Partner/Booth/Activity races, VNPay reconciliation and settlement/expiry boundaries. The
+  disposable VNPay spike suite retains 20 tests.
 - Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
+- The focused Sprint 5 Partner/Organizer Activity Playwright suite has 9 passing scenarios.
 - Sprint 2 backend Booth selection, price-locked BoothHold and Hold expiry are implemented through
   V6.
 - Sprint 3 Payment and Assignment backend and frontend integration are implemented through V7.
@@ -47,12 +52,13 @@ Last updated: `2026-10-16`
 - Sprint 4 Event lifecycle hardening and pre-payment Booth release are complete through V8. All 23
   Sprint 4 Acceptance Criteria have implementation and automated coverage; required Swagger smoke
   flows were manually accepted on 2026-10-16.
-- Sprint 5 Activity Planning and Partner Proposal Workflow documentation is approved and ready for
-  implementation. No Sprint 5 production code or V9 migration exists yet; V1–V8 remain the current
-  immutable runtime schema.
-- The approved Sprint 5 baseline covers shared Activity Locations, Partner Proposal review,
-  official Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
-  Participant registration/attendance/rating/certificate commands remain out of Sprint 5.
+- Sprint 5 Activity Planning and Partner Proposal Workflow is complete on `main` through PR #56
+  (merge commit `759a25c`). Its V9 migration, backend APIs/services, Partner and Organizer
+  workspaces, public Activity discovery and automated coverage are implemented.
+- The delivered Sprint 5 scope covers shared Activity Locations, Partner Proposal review, official
+  Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
+  Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
+  candidates for a separately approved future Sprint.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -133,7 +139,7 @@ Last updated: `2026-10-16`
 - backfills legacy Cancelled Event metadata before enforcing the constraints;
 - adds BoothRequest `CANCELLED` support and `cancelled_at` consistency constraints.
 
-Approved V9 design, not yet implemented:
+`V9__create_sprint5_activity_schema.sql` implements:
 
 - extends `locations` type/code constraints for BOOTH/STAGE/WORKSHOP/AREA;
 - creates `activity_proposals`, `activities`, a unified physical `activity_requests` table and
@@ -152,22 +158,23 @@ Approved V9 design, not yet implemented:
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Sprint 5 V9 Activity schema and all Sprint 5 production APIs/services/tests
+- Participant Activity registration, attendance scanning, rating and certificate issuance
 
 ## Next planning task
 
-- Merge the approved Sprint 5 documentation baseline and keep V1–V8 immutable.
-- Implement Sprint 5 from `docs/sprints/sprint-05.md`, its Use Case Specifications, API Contract
-  and Backend Work Assignment; create exactly one reviewed V9 migration.
-- Keep browser-level payment/assignment E2E, frontend lint warnings and bundle splitting visible in
-  the technical-debt backlog.
-- Preserve the Sprint 4 Event-root lock order and unresolved-Payment safety rules in future work.
+- Baseline Sprint 6 before implementation: scope, business decisions, Use Case Specifications, API
+  Contract, validation/error matrix, work assignment and Acceptance Criteria.
+- Do not automatically pull every Sprint 5 exclusion into Sprint 6; prioritize Participant Activity
+  registration/attendance/rating/certificate slices explicitly.
+- Keep browser-level payment/assignment E2E, frontend lint warnings, bundle splitting and optional
+  Activity setup-buffer policy visible in the technical-debt/backlog review.
+- Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules and Sprint 5
+  Event → Location(s) → Activity/request lock order in future work.
 
 ## Active and latest completed Sprint
 
-Sprint 05 Activity Planning and Partner Proposal Workflow is approved and ready for implementation;
-code has not started. Sprint 04 Event Lifecycle and Pre-payment Booth Release remains the latest
-completed Sprint.
+There is no active implementation Sprint. Sprint 05 Activity Planning and Partner Proposal Workflow
+is the latest completed Sprint as of 2026-10-19. Sprint 6 planning has not yet been approved.
 
 Sprint 5 included Use Case slices:
 
@@ -185,8 +192,8 @@ Sprint 5 included Use Case slices:
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 with approved Sprint 5 Activity overlay
-- Physical implementation source: immutable Flyway V1–V8; approved V9 Activity design overlay is
-  ready for implementation; the v1 33-table image is target/reference only
+- Physical implementation source: immutable Flyway V1–V9; the v1 33-table image remains
+  target/reference only
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or the 33-table target image as an

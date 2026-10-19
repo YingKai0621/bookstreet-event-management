@@ -1,7 +1,8 @@
 # Sprint 05 Backend Work Assignment
 
-> Status: `APPROVED — READY FOR IMPLEMENTATION`. Branch from updated `main` only after this
-> documentation baseline is merged. V1–V8 are immutable and V9 has exactly one owner.
+> Status: `COMPLETED` on 2026-10-19. Developers A, B and C delivered their assigned slices through
+> the Sprint 5 merge sequence; PR `#56` completed the integrated Partner/Organizer workflow.
+> V1–V8 remain immutable and the single V9 migration is owned by the delivered Activity foundation.
 
 ## 1. Shared implementation boundary
 

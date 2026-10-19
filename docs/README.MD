@@ -28,21 +28,19 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 - Use Case Diagram: V2, with Post-MVP use cases labelled in the diagram
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 with approved Sprint 5 Activity overlay
-- Physical implementation source: immutable Flyway V1–V8; approved V9 Activity design overlay is
-  ready for implementation; target v1 image remains reference only
-- Active Sprint: Sprint 05 Activity Planning and Partner Proposal Workflow — approved, not yet
-  implemented
-- Latest completed Sprint: Sprint 04
+- Physical implementation source: immutable Flyway V1–V9; target v1 image remains reference only
+- Active Sprint: none; Sprint 6 is not yet baselined or approved
+- Latest completed Sprint: Sprint 05 Activity Planning and Partner Proposal Workflow
 - Sprint 1 and Sprint 2: complete; Sprint 3 backend complete
 - Sprint 3 Payment/Assignment backend: implemented and verified through V7
 - Sprint 3 Payment/Assignment frontend integration: implemented; browser-level Playwright E2E remains technical debt
 - Sprint 4 Event lifecycle and pre-payment Booth release: completed and verified through V8
-- Sprint 5 Activity planning: documentation baseline approved; V9/code not yet implemented
+- Sprint 5 Activity planning: completed and verified through V9 and PR #56
 
 Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn chỉnh sửa sơ đồ; ảnh trong
-`design/assets/` dùng để xem trực tiếp trên GitHub và trong report. Riêng Activity Sprint 5, V9
-overlay trong `design/12_Physical_ERD_Report.md` là nguồn thiết kế được duyệt và tạm thời supersede
-cụm Activity của Draw.io target v1 cho tới khi migration triển khai và sơ đồ được render lại.
+`design/assets/` dùng để xem trực tiếp trên GitHub và trong report. Với Activity Sprint 5, immutable
+Flyway V9 cùng Sprint/API contract là nguồn triển khai authoritative; Draw.io target v1 vẫn chỉ là
+tài liệu tham khảo cho tới khi ảnh sơ đồ được render lại.
 
 ## Trạng thái extension đã duyệt
 
@@ -50,6 +48,7 @@ cụm Activity của Draw.io target v1 cho tới khi migration triển khai và 
 - Browser Session/CORS/CSRF đã triển khai; frontend phải tích hợp theo contract và cấu hình origin/cookie phù hợp từng môi trường: [`api/browser-security-contract.md`](api/browser-security-contract.md)
 - Báo cáo hoàn thành Sprint 1 Backend: [`development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`](development/SPRINT_01_BACKEND_COMPLETION_REPORT.md)
 - Báo cáo hoàn thành Sprint 4: [`development/SPRINT_04_COMPLETION_REPORT.md`](development/SPRINT_04_COMPLETION_REPORT.md)
+- Báo cáo hoàn thành Sprint 5: [`development/SPRINT_05_COMPLETION_REPORT.md`](development/SPRINT_05_COMPLETION_REPORT.md)
 - Hướng dẫn bàn giao và tích hợp Sprint 1 cho frontend: [`development/SPRINT_01_FRONTEND_HANDOFF.md`](development/SPRINT_01_FRONTEND_HANDOFF.md)
 - Trạng thái Sprint hiện tại: [`sprints/CURRENT_SPRINT.md`](sprints/CURRENT_SPRINT.md)
 - Sprint 5 baseline: [`sprints/sprint-05.md`](sprints/sprint-05.md)

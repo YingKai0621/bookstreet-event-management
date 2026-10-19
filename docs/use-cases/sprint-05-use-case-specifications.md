@@ -1,7 +1,7 @@
 # Sprint 05 Use Case Specifications
 
-> Baseline status: `APPROVED — READY FOR IMPLEMENTATION` on 2026-10-16. These Acceptance
-> Criteria are the implementation and test contract for Sprint 5 Activity planning.
+> Baseline status: `IMPLEMENTED — SPRINT 5 COMPLETED` on 2026-10-19. These 54 Acceptance
+> Criteria remain the implementation and regression-test contract for Sprint 5 Activity planning.
 
 ## 1. Shared rules
 
