@@ -47,7 +47,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void cleanDatabaseMigratesThroughV9WithActivitySchema() throws SQLException {
-        Flyway flyway = flyway(null);
+        Flyway flyway = flyway(MigrationVersion.fromVersion("9"));
 
         flyway.migrate();
 
@@ -87,7 +87,7 @@ class Sprint05SchemaMigrationTests {
                     """);
         }
 
-        Flyway upgraded = flyway(null);
+        Flyway upgraded = flyway(MigrationVersion.fromVersion("9"));
         upgraded.migrate();
 
         assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("9");
@@ -126,14 +126,14 @@ class Sprint05SchemaMigrationTests {
                     """);
         }
 
-        assertThatThrownBy(() -> flyway(null).migrate())
+        assertThatThrownBy(() -> flyway(MigrationVersion.fromVersion("9")).migrate())
                 .isInstanceOf(FlywayException.class)
                 .hasMessageContaining("projected codes are not unique");
     }
 
     @Test
     void exclusionConstraintAllowsAdjacencyAndRejectsCrossEventOverlap() throws SQLException {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         try (Connection connection = connectToSchema()) {
             long firstEventId = insertEvent(connection, "First Event");
@@ -155,7 +155,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void onePendingRequestGuardWorksAcrossRequestTypes() throws SQLException {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         try (Connection connection = connectToSchema()) {
             long eventId = insertEvent(connection, "Request Guard Event");
@@ -174,7 +174,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void onePendingRequestGuardSurvivesConcurrentCrossTypeInserts() throws Exception {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         long activityId;
         try (Connection connection = connectToSchema()) {
@@ -215,7 +215,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void sourceProposalCanCreateAtMostOneActivity() throws SQLException {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         try (Connection connection = connectToSchema()) {
             long eventId = insertEvent(connection, "Unique Proposal Event");
@@ -236,7 +236,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void invalidCancellationAndRequestStateAreRejectedByDatabase() throws SQLException {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         try (Connection connection = connectToSchema()) {
             long eventId = insertEvent(connection, "State Constraint Event");
@@ -259,7 +259,7 @@ class Sprint05SchemaMigrationTests {
 
     @Test
     void revisionSnapshotsPersistAsObjectsAndRejectNonObjects() throws SQLException {
-        flyway(null).migrate();
+        flyway(MigrationVersion.fromVersion("9")).migrate();
 
         try (Connection connection = connectToSchema()) {
             long eventId = insertEvent(connection, "Revision Event");
