@@ -1,7 +1,7 @@
-**USE CASE LIST - COMPACT v5**
+**USE CASE LIST - COMPACT v6**
 
-Active MVP baseline updated 16/10/2026 for approved Sprint 5 Activity planning; Post-MVP references
-are listed separately
+Active MVP baseline updated 19/10/2026 for the Sprint 6 Participant participation planning
+baseline; Post-MVP references are listed separately
 
 # 1. Quy tắc đặt tên Use Case
 
@@ -22,7 +22,7 @@ are listed separately
 <thead>
 <tr class="header">
 <th>Điều chỉnh quan trọng<br />
-Guest được gom thành một Use Case public chính: Explore Book Street. Participant cũng được gom theo mục tiêu lớn; các phần My Events, Activity registrations, Attendance, BoothVisit, Points, Badge và Certificate được gom vào Track Participation thay vì tách thành nhiều Use Case View.</th>
+Guest được gom thành một Use Case public chính: Explore Book Street. Participant vẫn có 4 goal lớn; Join/Leave thuộc Manage Event Participation, giữ chỗ thuộc Manage Activity Registrations, còn Attendance, lịch sử tham gia, Certificate và thông báo liên quan thuộc Track Participation. Auto-join EventRegistration, No-show, Certificate processor, Notification delivery và Attendance correction là flow/rule hỗ trợ, không phải top-level Use Case mới.</th>
 </tr>
 </thead>
 <tbody>
@@ -35,7 +35,7 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 
 | **ID** | **Use Case**            | **Description**                                                                                                                                                                    |
 |--------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| UC-G01 | Explore Book Street     | Khám phá Event, Activity, Booth, Booth Map và Heritage/public content.                                                                                                             |
+| UC-G01 | Explore Book Street     | Khám phá danh sách/chi tiết Event, Activity đã public, Booth, Booth Map và Heritage/public content; dữ liệu QR Attendance và participation riêng tư không được public.             |
 | UC-G02 | Create Account          | Đăng ký bằng username, full name, password và confirm password; email tùy chọn với Participant. Username duy nhất không phân biệt hoa thường; confirm password không lưu database. |
 | UC-G03 | Manage Account Access   | Đăng nhập, đăng xuất, xác minh email và yêu cầu đặt lại mật khẩu; role PARTNER, ORGANIZER và ADMIN yêu cầu verified email.                                                         |
 | UC-G04 | Submit General Feedback | Gửi góp ý về đúng một target BOOK_STREET, EVENT hoặc HERITAGE; không target Location hoặc Activity và không cần đăng nhập.                                                         |
@@ -44,10 +44,10 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 
 | **ID** | **Use Case**                  | **Description**                                                                                                                                                |
 |--------|-------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| UC-P01 | Manage Event Participation    | Join/Leave Event; hệ thống lưu My Events và gửi thông báo chung của Event.                                                                                     |
-| UC-P02 | Manage Activity Registrations | Đăng ký/hủy Activity; hệ thống xử lý capacity và cảnh báo khi lịch bị trùng.                                                                                   |
-| UC-P03 | Track Participation           | Theo dõi My Events, Activity registrations, Attendance, BoothVisit, Points, Badge và Certificate; tự quét Activity QR/BoothAssignment QR khi tham gia thực tế. |
-| UC-P04 | Rate Activity                 | Đánh giá Activity khi Participant có Attendance hợp lệ; mỗi Attendance tối đa một rating.                                                                      |
+| UC-P01 | Manage Event Participation    | Join/rejoin Event còn hạn, xem My Events và Leave khi không còn ActivityRegistration seat-active; nhận thông báo hệ thống thuộc Event như Event cancellation.                                         |
+| UC-P02 | Manage Activity Registrations | Đăng ký, tự hủy hoặc re-register Activity hợp lệ; hệ thống auto-join Event khi cần, kiểm soát deadline/capacity atomically và cảnh báo lịch trùng nhưng không chặn.                                    |
+| UC-P03 | Track Participation           | Theo dõi registration/Attendance/No-show/Certificate và thông báo liên quan; Participant đã đăng nhập tự quét QR chung của Activity. BoothVisit, Points và Badge vẫn thuộc umbrella Use Case này nhưng không phải slice Sprint 6. |
+| UC-P04 | Rate Activity                 | Tạo hoặc cập nhật một rating cho mỗi Attendance `VALID` sau khi Activity `COMPLETED`; rating bị vô hiệu hóa nếu Attendance bị void.                                                                  |
 
 ## Partner / Exhibitor
 
@@ -64,13 +64,13 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 
 | **ID** | **Use Case**                | **Description**                                                                                                                                                                                                                                         |
 |--------|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| UC-O01 | Manage Events               | Tạo, cập nhật, publish, xóa Draft, cancel Event chưa settlement và quản lý lifecycle/deadline; Event.organizerUserId xác định Organizer chịu trách nhiệm.                                                                                               |
+| UC-O01 | Manage Events               | Tạo, cập nhật, publish, xóa Draft, cancel Event chưa settlement và quản lý lifecycle/deadline; external participation khóa operational update, Event cancellation cascade registration/Notification nhưng không xóa lịch sử.                            |
 | UC-O02 | Manage Locations            | Quản lý shared Area/Stage/Workshop và Booth subtype, capacity/active state; bảo vệ Location đang có Activity.                                                                                                                                            |
 | UC-O03 | Review Partner Applications | Duyệt Partner tham gia Event.                                                                                                                                                                                                                           |
 | UC-O04 | Review Booth Requests       | Review candidate cạnh tranh cùng Booth/time; chọn winner để tạo Hold và khóa giá. Candidate khác giữ PENDING; payment-window expiry chuyển winner thành PAYMENT_EXPIRED. Organizer chọn candidate tiếp theo sau khi Hold hết hạn hoặc được Partner release an toàn. |
 | UC-O05 | Review Activity Proposals   | Request changes, reject hoặc atomically approve Proposal thành một Activity DRAFT sau khi revalidate.                                                                                                                                                   |
-| UC-O06 | Manage Activities           | Tạo Activity BTC tại shared non-Booth Location; cấu hình Draft, publish, audited reschedule/move, cancel, lifecycle và review Partner requests.                                                                                                           |
-| UC-O07 | Monitor Participation       | Theo dõi Event/Activity registrations, Attendance, no-show và BoothVisit; correction/override Attendance khi cần phải lưu lý do.                                                                                                                        |
+| UC-O06 | Manage Activities           | Tạo Activity BTC tại shared non-Booth Location; cấu hình Draft, publish, audited reschedule/move, cancel, lifecycle và review Partner requests; không đổi lịch/Location sau Attendance đầu tiên hoặc giảm capacity dưới seat-active count.               |
+| UC-O07 | Monitor Participation       | Theo dõi Event/Activity registrations, Attendance, No-show và BoothVisit trong Event mình quản lý; correction Attendance phải có lý do, xác nhận rõ và append-only audit, không dùng Attendance Operator.                                               |
 | UC-O08 | View Event Reports          | Xem thống kê Event cơ bản.                                                                                                                                                                                                                              |
 | UC-O09 | Manage Public Content       | Quản lý nội dung public/supporting content.                                                                                                                                                                                                             |
 
@@ -100,7 +100,7 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 <thead>
 <tr class="header">
 <th>Tổng số Use Case<br />
-26 active MVP Use Case. Các Post-MVP reference không tính vào tổng này. Bản active đủ gọn để vẽ diagram; Participant chỉ còn 4 Use Case lớn. Các thao tác xem chi tiết, status, deadline, conflict, QR validation, Points/Certificate rules sẽ đi vào Use Case Specification và Business Rules, không tách thêm oval.</th>
+26 active MVP Use Case. Các Post-MVP reference không tính vào tổng này. Participant vẫn có 4 Use Case lớn; Sprint 6 mở rộng flow/Acceptance Criteria bên trong các Use Case đã có, không tăng tổng số. Chi tiết status, deadline, capacity, QR window, No-show, correction audit, Notification, Certificate và Rating đi vào Use Case Specification/Business Rules thay vì tách thêm oval.</th>
 </tr>
 </thead>
 <tbody>
@@ -109,10 +109,17 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 
 # 3. Gợi ý vẽ Diagram
 
-- Participant được hiểu là authenticated user có toàn bộ khả năng public của Guest. General Feedback thuộc public flow; Participant có thêm Activity Rating khi đủ điều kiện. Các dữ liệu cá nhân như My Events, Activity registrations, Attendance, BoothVisit, Points, Badge và Certificate được gom trong Track Participation.
+- Participant được hiểu là authenticated User có toàn bộ khả năng public của Guest. General Feedback thuộc public flow; Participant có thêm Activity Rating khi đủ điều kiện. Manage Event Participation quản lý Join/Leave; Manage Activity Registrations quản lý seat; Track Participation trình bày Attendance, No-show, Certificate, BoothVisit, Points, Badge và Notification liên quan mà không tạo Event-level QR.
 
 - Nếu một diagram vẫn đông, chia thành 2 diagram: Public & Participant; Partner & Management.
 
 - Event Registration và Activity Registration phải là hai khái niệm riêng, nhưng không cần tách các bước auto-create Event Registration thành một Use Case riêng.
 
-- Conflict checking, capacity, deadline, QR validation, points threshold và payment verification là business rules/include logic, không phải top-level Use Case. Payment Gateway là external integration của UC-E03, không phải business actor cốt lõi.
+- Conflict checking, capacity, deadline, QR validation, No-show scheduler, Attendance correction audit, Certificate/Notification processor, points threshold và payment verification là business rules/include logic, không phải top-level Use Case. Payment Gateway là external integration của UC-E03, không phải business actor cốt lõi.
+
+# 4. Sprint 6 traceability note
+
+- Sprint 6 dùng các slice `UC-G01`, `UC-P01`–`UC-P04`, `UC-O01`, `UC-O06` và `UC-O07`; không tạo Actor hoặc Use Case mới.
+- `UC-P03` chỉ giao Activity registration status, self-scan Attendance, No-show, Certificate và participation Notification trong Sprint 6. BoothVisit, Points và Badge vẫn là active MVP scope nhưng được triển khai ở slice khác.
+- Organizer correction là alternative/authorized flow của `UC-O07`; `attendance_adjustments` là technical audit, không phải Actor-facing entity/Use Case.
+- Automatic lifecycle, No-show, Certificate metadata và Notification persistence là System behavior kích hoạt từ các Use Case trên, không phải cron/scheduler Actor trên diagram.

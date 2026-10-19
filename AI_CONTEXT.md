@@ -58,7 +58,11 @@ Last updated: `2026-10-19`
 - The delivered Sprint 5 scope covers shared Activity Locations, Partner Proposal review, official
   Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
   Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
-  candidates for a separately approved future Sprint.
+  now the approved active Sprint 6 scope.
+- Sprint 6 Participant Activity Registration and Attendance is active as of 2026-10-19. Its
+  approved baseline contains 65 Acceptance Criteria, 29 canonical endpoint headings, a seven-table
+  Physical ERD overlay and sole ownership of target migration V10 by Developer A. No Sprint 6 code
+  or V10 migration is implemented yet.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -158,46 +162,51 @@ Last updated: `2026-10-19`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Participant Activity registration, attendance scanning, rating and certificate issuance
+- Active Sprint 6 Participant Activity registration, Attendance, Certificate, Rating and
+  notification implementation
 
-## Next planning task
+## Active implementation task
 
-- Baseline Sprint 6 before implementation: scope, business decisions, Use Case Specifications, API
-  Contract, validation/error matrix, work assignment and Acceptance Criteria.
-- Do not automatically pull every Sprint 5 exclusion into Sprint 6; prioritize Participant Activity
-  registration/attendance/rating/certificate slices explicitly.
+- Begin only `S6-1`: Developer A creates V10, verifies clean V1-to-V10 and V9-to-V10 upgrades and
+  adds the shared persistence/notification-writer foundation.
+- Follow `docs/sprints/CURRENT_SPRINT.md` and
+  `docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`; do not merge around an unmet gate.
+- Keep the approved Sprint 6 exclusions closed; no Event QR, Participant-specific QR, BoothVisit,
+  Points, Badge, generic notification composer or unapproved compatibility route.
 - Keep browser-level payment/assignment E2E, frontend lint warnings, bundle splitting and optional
   Activity setup-buffer policy visible in the technical-debt/backlog review.
-- Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules and Sprint 5
-  Event → Location(s) → Activity/request lock order in future work.
+- Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
+  Event → Location(s) → Activity/request lock order and approved Sprint 6 Participant lock order.
 
 ## Active and latest completed Sprint
 
-There is no active implementation Sprint. Sprint 05 Activity Planning and Partner Proposal Workflow
-is the latest completed Sprint as of 2026-10-19. Sprint 6 planning has not yet been approved.
+Sprint 06 Participant Activity Registration and Attendance is the active implementation Sprint as
+of 2026-10-19. Sprint 05 Activity Planning and Partner Proposal Workflow remains the latest
+completed Sprint.
 
-Sprint 5 included Use Case slices:
+Sprint 6 includes these approved Use Case slices:
 
-- UC-E04 Propose Activity
-- UC-E05 Request Activity Change
-- UC-E06 Request Activity Cancellation
-- UC-O02 Manage Locations — Activity Location slice
-- UC-O05 Review Activity Proposals
-- UC-O06 Manage Activities
-- UC-G01 Discover Public Content — Activity slice
+- UC-G01 public Activity discovery debt
+- UC-P01 Event participation
+- UC-P02 Activity registration
+- UC-P03 participation tracking, notification and Certificate slice
+- UC-P04 Activity Rating
+- UC-O01 Sprint 6 Event update/cancellation slice
+- UC-O06 Sprint 6 Activity lifecycle/cascade slice
+- UC-O07 participation monitoring and audited correction
 
 ## Current approved baselines
 
-- Requirement baseline: v6 (approved Sprint 5 Activity rules)
+- Requirement baseline: active MVP rules plus approved Sprint 6 Participant refinements
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v8 with approved Sprint 5 Activity overlay
-- Physical implementation source: immutable Flyway V1–V9; the v1 33-table image remains
-  target/reference only
+- Logical ERD: v8 plus the approved Sprint 6 Participant interpretation in the active Use Cases
+- Physical implementation source: immutable Flyway V1–V9; approved Sprint 6 Physical overlay is
+  the target for unimplemented V10
 - Active MVP Use Case count: 26
 
-Do not use the old Use Case Diagram V1, an earlier ERD or the 33-table target image as an
-implementation source.
+Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
+source. Use the active Sprint 6 Physical ERD report and drawio source.
 
 ## Authentication baseline
 
