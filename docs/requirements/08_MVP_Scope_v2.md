@@ -40,23 +40,28 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 ## Participant Event Participation
 
-- Join/Leave Event
+- Join/Leave Event with one reusable EventRegistration per User/Event; leaving preserves history
 
 - My Events
 
-- Event-level in-app notifications
+- Durable in-app notifications for the Participant-impacting transitions defined in this scope
 
 - Auto-create Event Registration when registering an Activity or scanning a valid BoothAssignment QR without joining first
 
 ## Activity Registration
 
-- Register/cancel Activity
+- Register/cancel/re-register Activity within the Event and Activity registration deadlines
 
-- Capacity control
+- Atomic seat-capacity control, including concurrent registration attempts
 
 - Schedule-overlap warning
 
-- My Activity registrations, Attendance, BoothVisit, Points, Badge and Certificate
+- My Activity registrations with Active, Cancelled, Attended and No-show outcomes
+
+- Shared Activity QR self-scan, Attendance history, Certificate and verified Activity Rating
+
+- BoothVisit, Points and Badge progression remain part of the broader Participant MVP, but are
+  separate from the Sprint 6 Activity-registration delivery slice
 
 ## Partner Participation
 
@@ -112,15 +117,21 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - BTC Activity creation
 
-- Conflict/capacity checking
+- Conflict/capacity checking, including rejection of capacity below the seat-active registration count
 
-- Change/reschedule/cancel
+- Change/reschedule/cancel with Participant registration and Notification effects preserved
+
+- Schedule or Location becomes immutable after the first valid Attendance for that Activity
 
 - Configurable per-Event activity limit
 
 ## QR Participation & Rewards
 
-- Activity QR belongs to Activity; registered Participant self-scans in valid time window to create Attendance = ATTENDED
+- Activity QR belongs to Activity; an authenticated registered Participant self-scans the shared QR
+  in `[startAt - 15 minutes, endAt)` to create one idempotent valid Attendance
+
+- Activity completion classifies each remaining active registration without valid Attendance as
+  No-show; Organizer correction requires an append-only reasoned audit trail
 
 - BoothAssignment QR is active only while Assignment/Event is active; Participant self-scans to create BoothVisit
 
@@ -130,15 +141,22 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Badge from cumulative total Points
 
-- Certificate only after Activity COMPLETED, with valid Attendance and certificateAvailable=true
+- Certificate metadata is issued idempotently only after Activity `COMPLETED`, with valid Attendance
+  and certificate enabled; voiding/restoring Attendance revokes/reissues the same Certificate identity
 
 ## Communication & Feedback
 
-- In-app notifications sent to User; no NotificationType entity or senderUserId
+- Durable in-app notifications are stored for Activity schedule/Location change, Activity/Event
+  cancellation and Certificate issue/revocation; the affected User can read and mark only their own
+  notifications
+
+- Optional verified-email delivery runs after commit and cannot roll back domain state; no
+  NotificationType entity or senderUserId
 
 - General Feedback without login
 
-- Verified Activity Rating for eligible Participants
+- Verified Activity Rating is available only after Activity `COMPLETED` to the owner of valid
+  Attendance; one Attendance has at most one current Rating
 
 ## Reporting
 
@@ -167,6 +185,19 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 - Event Registration is not an entrance ticket and has no Event QR.
 
 - Activity Registration is the seat/capacity-controlled registration. Activity QR belongs to the Activity; a registered Participant self-scans it to create Attendance.
+
+- There is no Participant-specific Attendance QR and no staff/Attendance Operator scanning flow.
+  The authenticated session identifies the scanning Participant; clients do not submit a userId.
+
+- Attended is derived from valid Attendance rather than stored as a fourth ActivityRegistration
+  status. ActivityRegistration uses Active, Cancelled and No-show while cancellation source records
+  whether Participant, Activity or Event caused the cancellation.
+
+- Activity/Event cancellation preserves historical Attendance, Certificate, Rating and correction
+  audit. Cancellation is the primary current outcome even when a valid Attendance existed earlier.
+
+- A valid Activity schedule/Location change before Attendance keeps existing registrations and
+  recomputes overlap warnings; it does not require Participant reconfirmation.
 
 - Partner must be APPROVED in an Event before requesting a Booth or submitting an Activity Proposal.
 
@@ -199,6 +230,12 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Waitlist
 
+- Event-level entrance QR, Participant-specific Attendance QR, staff scanner and Attendance Operator role
+
+- Check-out, attendance duration, face recognition, GPS/geofencing and device fingerprinting
+
+- Generic Organizer notification composer, SMS/push delivery and transactional message outbox
+
 - Sponsor management
 
 - Equipment inventory
@@ -217,14 +254,47 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Guest browses public information and submits General Feedback without login.
 
-- Participant can Join Event, see My Events, register Activity, self-scan Activity QR for Attendance and BoothAssignment QR for BoothVisit.
+- Participant can Join/Leave Event, see My Events, register/cancel/re-register Activity and see an
+  ownership-safe registration outcome without duplicate seats.
+
+- A registered Participant can self-scan the shared Activity QR only in the valid server-time window;
+  duplicate/concurrent scans return one Attendance and completion classifies eligible No-shows.
 
 - Partner can apply to an Event, be approved, select/request a specific Booth, release an eligible pre-payment Hold, pay after Organizer selection, receive Assignment after success and submit an Activity Proposal.
 
-- Organizer can manage Event/Location/Booth/Activity, safely update/cancel an eligible Event and handle the in-scope Activity workflows.
+- Organizer can manage Event/Location/Booth/Activity, safely update/cancel an eligible Event, monitor
+  participation and correct Attendance only through a reasoned append-only audit workflow.
 
-- System enforces capacity, conflict, Event/time Booth availability and access rules while maintaining history.
+- System enforces registration deadlines, atomic capacity, schedule conflict warnings, Activity
+  schedule/Location freeze after Attendance, Event/time Booth availability and access rules while
+  maintaining history.
 
-- BoothVisit produces Point/Badge progression correctly; valid Activity Attendance enables rating, while Certificate additionally requires Activity COMPLETED and certificateAvailable=true.
+- BoothVisit produces Point/Badge progression correctly. Valid Activity Attendance enables Rating
+  only after Activity completion; Certificate additionally requires the completed Activity to have
+  certificates enabled.
+
+- Activity/Event cancellation and Attendance correction preserve history and cascade registration,
+  Certificate, Rating and in-app Notification state consistently and idempotently.
+
+- Public and Participant Activity responses never expose the raw shared Attendance QR token;
+  Organizer receives it only for an owned Event through protected access.
 
 - Organizer can see basic participation/occupancy reports.
+
+# 7. Sprint 6 Delivery Boundary
+
+- Sprint 6 delivers the Participant Activity slice of `UC-G01`, `UC-P01`–`UC-P04`, `UC-O01`,
+  `UC-O06` and `UC-O07`; it does not introduce a new Actor or top-level Use Case.
+
+- The Sprint 6 slice includes canonical public Activity discovery, Event participation,
+  Activity registration, shared-QR Attendance, No-show, Organizer correction audit, Certificate,
+  Activity Rating and the narrow durable in-app Notification set above.
+
+- BoothVisit, Points and Badge remain active MVP scope and keep their existing traceability, but are
+  not implementation or completion gates for Sprint 6.
+
+- Sprint 6 does not reopen the Event operational-update policy: after external participation exists,
+  prohibited Event operational fields remain frozen rather than being changed with a notification.
+
+- Exact statuses, timing boundaries, cancellation precedence, correction cascades, idempotency and
+  lock ordering are governed by `05_Business_Rules.md`; this scope document does not redefine them.
