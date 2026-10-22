@@ -71,7 +71,12 @@ jobs:
 
       - name: Test and package backend
         working-directory: backend
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress
+          -Dspring.datasource.hikari.maximum-pool-size=2
+          -Dspring.datasource.hikari.minimum-idle=0
+          -Dspring.test.context.cache.maxSize=4
+          verify
 
   frontend:
     name: Frontend checks

@@ -1,12 +1,16 @@
 package com.swp391.bookstreet.registration.entity;
 
+import com.swp391.bookstreet.event.entity.Event;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Objects;
@@ -24,6 +28,10 @@ public class EventRegistration {
 
     @Column(name = "event_id", nullable = false, updatable = false)
     private Long eventId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id", insertable = false, updatable = false)
+    private Event event;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -85,6 +93,7 @@ public class EventRegistration {
     public Long getEventRegistrationId() { return eventRegistrationId; }
     public Long getUserId() { return userId; }
     public Long getEventId() { return eventId; }
+    public Event getEvent() { return event; }
     public EventRegistrationStatus getStatus() { return status; }
     public Instant getRegisteredAt() { return registeredAt; }
     public Instant getActivatedAt() { return activatedAt; }
