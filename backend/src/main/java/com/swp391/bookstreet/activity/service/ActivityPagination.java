@@ -25,6 +25,15 @@ final class ActivityPagination {
                 "sort uses an unsupported Activity field.");
     }
 
+    static Pageable publicActivities(int page, int size, String sort) {
+        return of(page, size, sort, Map.of(
+                "startAt", "startAt",
+                "endAt", "endAt",
+                "title", "title",
+                "publishedAt", "publishedAt"),
+                "activityId", "sort uses an unsupported public Activity field.");
+    }
+
     static Pageable revisions(int page, int size, String sort) {
         return of(page, size, sort, Map.of(
                 "changedAt", "changedAt",

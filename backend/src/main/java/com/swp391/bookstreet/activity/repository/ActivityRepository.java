@@ -34,7 +34,30 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     Optional<Activity> findBySourceProposalId(Long sourceProposalId);
 
+    Optional<Activity> findByActivityIdAndPublishedAtIsNotNull(Long activityId);
+
     boolean existsByEventId(Long eventId);
+
+    @Query("""
+            select activity
+            from Activity activity
+            where activity.status in :statuses
+              and (:eventId is null or activity.eventId = :eventId)
+              and (:activityType = ''
+                   or lower(activity.activityType) = lower(:activityType))
+              and (:locationId is null or activity.locationId = :locationId)
+              and (:search = ''
+                   or lower(activity.title) like lower(concat('%', :search, '%'))
+                   or lower(activity.activityType) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(activity.description, '')) like lower(concat('%', :search, '%')))
+            """)
+    Page<Activity> findPublic(
+            @Param("statuses") Collection<ActivityStatus> statuses,
+            @Param("eventId") Long eventId,
+            @Param("activityType") String activityType,
+            @Param("locationId") Long locationId,
+            @Param("search") String search,
+            Pageable pageable);
 
     @Query(value = """
             select count(*)

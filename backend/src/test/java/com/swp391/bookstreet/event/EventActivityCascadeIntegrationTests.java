@@ -97,6 +97,18 @@ class EventActivityCascadeIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where event_id in "
+                + "(select event_id from events where organizer_user_id = ?)", organizerId);
+        jdbc.update("delete from attendances where activity_registration_id in "
+                + "(select activity_registration_id from activity_registrations where "
+                + "event_registration_id in (select event_registration_id from "
+                + "event_registrations where event_id in (select event_id from events "
+                + "where organizer_user_id = ?)))", organizerId);
+        jdbc.update("delete from activity_registrations where event_registration_id in "
+                + "(select event_registration_id from event_registrations where event_id in "
+                + "(select event_id from events where organizer_user_id = ?))", organizerId);
+        jdbc.update("delete from event_registrations where event_id in "
+                + "(select event_id from events where organizer_user_id = ?)", organizerId);
         jdbc.update("delete from booth_assignments where booth_hold_id in "
                 + "(select booth_hold_id from booth_holds where event_booth_config_id in "
                 + "(select event_booth_config_id from event_booth_configs where event_id in "
@@ -230,6 +242,19 @@ class EventActivityCascadeIntegrationTests {
         long activityId = insertActivity(eventId, activityLocationId, "PUBLISHED",
                 start.plusSeconds(3600), start.plusSeconds(7200));
         long activityRequestId = insertPendingChangeRequest(activityId);
+        long eventRegistrationId = jdbc.queryForObject("""
+                insert into event_registrations(
+                    user_id, event_id, status, registered_at, activated_at, updated_at)
+                values (?, ?, 'ACTIVE', current_timestamp, current_timestamp, current_timestamp)
+                returning event_registration_id
+                """, Long.class, partnerUserId, eventId);
+        long activityRegistrationId = jdbc.queryForObject("""
+                insert into activity_registrations(
+                    event_registration_id, activity_id, status,
+                    registered_at, activated_at, updated_at)
+                values (?, ?, 'ACTIVE', current_timestamp, current_timestamp, current_timestamp)
+                returning activity_registration_id
+                """, Long.class, eventRegistrationId, activityId);
         long configId = jdbc.queryForObject("""
                 insert into event_booth_configs(event_id, booth_id, rental_price, is_enabled)
                 values (?, ?, 10000, true)
@@ -271,6 +296,11 @@ class EventActivityCascadeIntegrationTests {
                 .isEqualTo("PENDING");
         assertThat(dbStatus("booth_requests", "booth_request_id", boothRequestId))
                 .isEqualTo("SELECTED");
+        assertThat(dbStatus("activity_registrations", "activity_registration_id",
+                activityRegistrationId)).isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject(
+                "select count(*) from notifications where event_id = ?",
+                Long.class, eventId)).isZero();
     }
 
     @Test

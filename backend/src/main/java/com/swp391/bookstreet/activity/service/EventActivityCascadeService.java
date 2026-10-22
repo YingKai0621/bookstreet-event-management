@@ -41,17 +41,23 @@ public class EventActivityCascadeService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void cancelEvent(Long eventId, String reason, Instant now) {
+    public List<Long> cancelEvent(Long eventId, String reason, Instant now) {
         lockAffectedLocations(eventId);
         closeOpenProposals(eventId, now, false);
+        List<Long> seatActiveActivityIds = new ArrayList<>();
         for (Activity activity : activityRepository.findByEventIdForUpdate(eventId)) {
+            boolean wasSeatActive = activity.getStatus() == ActivityStatus.PUBLISHED
+                    || activity.getStatus() == ActivityStatus.ONGOING;
             if (activity.getStatus() == ActivityStatus.DRAFT
-                    || activity.getStatus() == ActivityStatus.PUBLISHED
-                    || activity.getStatus() == ActivityStatus.ONGOING) {
+                    || wasSeatActive) {
                 activity.cancel(reason, ActivityCancellationSource.EVENT_CANCELLATION, now);
+            }
+            if (wasSeatActive) {
+                seatActiveActivityIds.add(activity.getActivityId());
             }
             closePendingRequests(activity.getActivityId(), now, false);
         }
+        return List.copyOf(seatActiveActivityIds);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

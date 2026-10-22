@@ -24,7 +24,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     /**
      * Partner workflows are rooted in an application. A direct Organizer Activity is the
-     * Sprint 5 exception and must independently freeze Published Event operations.
+     * Sprint 5 exception. Every ActivityRegistration and Attendance is transitively rooted in
+     * an EventRegistration, so the final branch also covers all Sprint 6 Participant evidence.
      */
     @Query(value = """
             select exists (
@@ -34,6 +35,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                 union all
                 select 1
                 from activities
+                where event_id = :eventId
+                union all
+                select 1
+                from event_registrations
                 where event_id = :eventId
             )
             """, nativeQuery = true)

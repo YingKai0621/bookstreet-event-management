@@ -18,6 +18,7 @@ import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.registration.service.EventParticipantCancellationService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -59,6 +60,7 @@ public class EventService {
     private final BoothAssignmentRepository boothAssignmentRepository;
     private final BoothRequestRepository boothRequestRepository;
     private final PartnerEventApplicationRepository partnerApplicationRepository;
+    private final EventParticipantCancellationService participantCancellationService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
@@ -72,6 +74,7 @@ public class EventService {
             BoothAssignmentRepository boothAssignmentRepository,
             BoothRequestRepository boothRequestRepository,
             PartnerEventApplicationRepository partnerApplicationRepository,
+            EventParticipantCancellationService participantCancellationService,
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.repository = repository;
@@ -86,6 +89,7 @@ public class EventService {
         this.boothAssignmentRepository = boothAssignmentRepository;
         this.boothRequestRepository = boothRequestRepository;
         this.partnerApplicationRepository = partnerApplicationRepository;
+        this.participantCancellationService = participantCancellationService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
@@ -240,7 +244,9 @@ public class EventService {
                 .filter(hold -> openRequestIds.contains(hold.getBoothRequest().getBoothRequestId()))
                 .forEach(hold -> hold.release(now));
         event.cancel(reason, now);
-        activityCascadeService.cancelEvent(id, reason, now);
+        var seatActiveActivityIds = activityCascadeService.cancelEvent(id, reason, now);
+        participantCancellationService.cancelEvent(
+                id, event.getName(), seatActiveActivityIds, now);
         repository.flush();
         eventPublisher.publishEvent(new EventCancellationMessageRequested(
                 event.getEventId(), event.getName(), event.getCancelledAt(),
