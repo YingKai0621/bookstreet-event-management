@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "certificates")
@@ -47,6 +48,58 @@ public class Certificate {
     private Instant updatedAt;
 
     protected Certificate() {
+    }
+
+    public static Certificate issue(Long attendanceId, String certificateCode,
+            String recipientNameSnapshot, Instant now) {
+        Certificate certificate = new Certificate();
+        certificate.attendanceId = Objects.requireNonNull(attendanceId,
+                "attendanceId must not be null");
+        certificate.certificateCode = requireText(certificateCode, "certificateCode");
+        certificate.recipientNameSnapshot = requireText(
+                recipientNameSnapshot, "recipientNameSnapshot");
+        certificate.status = CertificateStatus.ISSUED;
+        certificate.issuedAt = Objects.requireNonNull(now, "now must not be null");
+        certificate.createdAt = now;
+        certificate.updatedAt = now;
+        return certificate;
+    }
+
+    public boolean revoke(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        if (status == CertificateStatus.REVOKED) return false;
+        requireNotBefore(now, issuedAt, "revokedAt must not be before issuedAt");
+        status = CertificateStatus.REVOKED;
+        revokedAt = now;
+        fileUrl = null;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean restore(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        if (status == CertificateStatus.ISSUED) return false;
+        requireNotBefore(now, revokedAt, "restore time must not be before revokedAt");
+        status = CertificateStatus.ISSUED;
+        revokedAt = null;
+        fileUrl = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private static String requireText(String value, String field) {
+        Objects.requireNonNull(value, field + " must not be null");
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException(field + " must not be blank");
+        }
+        return normalized;
+    }
+
+    private static void requireNotBefore(Instant candidate, Instant boundary, String message) {
+        if (boundary != null && candidate.isBefore(boundary)) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     public Long getCertificateId() { return certificateId; }
