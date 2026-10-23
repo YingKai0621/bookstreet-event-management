@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "activity_ratings")
@@ -41,6 +42,32 @@ public class ActivityRating {
     private Instant invalidatedAt;
 
     protected ActivityRating() {
+    }
+
+    public boolean invalidate(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        if (status == ActivityRatingStatus.INVALIDATED) return false;
+        requireNotBefore(now, createdAt, "invalidatedAt must not be before createdAt");
+        status = ActivityRatingStatus.INVALIDATED;
+        invalidatedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean restore(Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        if (status == ActivityRatingStatus.ACTIVE) return false;
+        requireNotBefore(now, invalidatedAt, "restore time must not be before invalidatedAt");
+        status = ActivityRatingStatus.ACTIVE;
+        invalidatedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void requireNotBefore(Instant candidate, Instant boundary, String message) {
+        if (boundary != null && candidate.isBefore(boundary)) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     public Long getActivityRatingId() { return activityRatingId; }
