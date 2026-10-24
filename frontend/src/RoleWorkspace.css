@@ -1,8 +1,8 @@
 .admin-app-shell, .participant-app-shell {
-  --font-sans: 'Nunito', sans-serif;
-  --font-serif: 'Nunito', sans-serif;
-  --font-display: 'Nunito', sans-serif;
-  font-family: 'Nunito', sans-serif;
+  --font-sans: 'Be Vietnam Pro', sans-serif;
+  --font-serif: 'Be Vietnam Pro', sans-serif;
+  --font-display: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 .admin-app-shell *, .participant-app-shell * { font-family: inherit !important; }
 .compact-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; color: #637771; font-size: .82rem; }
