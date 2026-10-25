@@ -44,6 +44,52 @@ public class ActivityRating {
     protected ActivityRating() {
     }
 
+    public static ActivityRating create(Long attendanceId, Short score, String comment, Instant now) {
+        Objects.requireNonNull(attendanceId, "attendanceId must not be null");
+        Objects.requireNonNull(now, "now must not be null");
+        validateScore(score);
+        String normalizedComment = normalizeComment(comment);
+
+        ActivityRating rating = new ActivityRating();
+        rating.attendanceId = attendanceId;
+        rating.score = score;
+        rating.comment = normalizedComment;
+        rating.status = ActivityRatingStatus.ACTIVE;
+        rating.createdAt = now;
+        rating.updatedAt = now;
+        rating.invalidatedAt = null;
+        return rating;
+    }
+
+    public void update(Short score, String comment, Instant now) {
+        Objects.requireNonNull(now, "now must not be null");
+        requireNotBefore(now, createdAt, "updatedAt must not be before createdAt");
+        validateScore(score);
+        this.score = score;
+        this.comment = normalizeComment(comment);
+        this.updatedAt = now;
+    }
+
+    private static void validateScore(Short score) {
+        if (score == null || score < 1 || score > 5) {
+            throw new IllegalArgumentException("score must be between 1 and 5");
+        }
+    }
+
+    private static String normalizeComment(String comment) {
+        if (comment == null) {
+            return null;
+        }
+        String trimmed = comment.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() > 1000) {
+            throw new IllegalArgumentException("comment length must not exceed 1000 characters");
+        }
+        return trimmed;
+    }
+
     public boolean invalidate(Instant now) {
         Objects.requireNonNull(now, "now must not be null");
         if (status == ActivityRatingStatus.INVALIDATED) return false;

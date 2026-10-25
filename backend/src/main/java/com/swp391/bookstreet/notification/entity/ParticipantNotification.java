@@ -59,7 +59,7 @@ public class ParticipantNotification {
         if (now.isBefore(createdAt)) {
             throw new IllegalArgumentException("readAt must not be before createdAt");
         }
-        readAt = now;
+        readAt = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         return true;
     }
 
