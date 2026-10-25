@@ -93,8 +93,9 @@ class ParticipantCertificateIntegrationTests {
         long attendanceId = insertAttendance(actRegId, "VALID");
         issuedCertId = insertCertificate(attendanceId, "BKS-2027-TEST001", "Participant Cert One", "ISSUED", null);
 
-        // Create a revoked certificate for participant in another activity
-        long activityId2 = insertActivity(eventId, locationId, "Poetry Reading");
+        // Create a revoked certificate for participant in another activity with a distinct location
+        long locationId2 = insertLocation();
+        long activityId2 = insertActivity(eventId, locationId2, "Poetry Reading");
         long actRegId2 = insertActivityRegistration(activityId2, eventRegId);
         long attendanceId2 = insertAttendance(actRegId2, "VOIDED");
         revokedCertId = insertCertificate(attendanceId2, "BKS-2027-TEST002", "Participant Cert One", "REVOKED", BASE.plusSeconds(3600));

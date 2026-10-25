@@ -26,6 +26,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -133,7 +134,8 @@ class ParticipantNotificationIntegrationTests {
     void markAsReadForeignNotificationReturns404AndConcealsForeignData() throws Exception {
         // Participant 1 attempts to mark Participant 2's notification as read
         mvc.perform(post(BASE_URL + "/" + p2NotifId + "/read")
-                        .with(participant(participant1Id)))
+                        .with(participant(participant1Id))
+                        .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_FOUND"));
 
@@ -148,7 +150,8 @@ class ParticipantNotificationIntegrationTests {
     void markAsReadOwnedNotificationUpdatesReadAtAndIsIdempotent() throws Exception {
         // First read call updates read_at
         MvcResult firstResult = mvc.perform(post(BASE_URL + "/" + p1Notif1Id + "/read")
-                        .with(participant(participant1Id)))
+                        .with(participant(participant1Id))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.notificationId").value(p1Notif1Id))
                 .andExpect(jsonPath("$.read").value(true))
@@ -159,7 +162,8 @@ class ParticipantNotificationIntegrationTests {
 
         // Second read call (retry) preserves the first read_at
         mvc.perform(post(BASE_URL + "/" + p1Notif1Id + "/read")
-                        .with(participant(participant1Id)))
+                        .with(participant(participant1Id))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.readAt").value(firstReadAt));
 
@@ -180,7 +184,8 @@ class ParticipantNotificationIntegrationTests {
     void markAllAsReadUpdatesAllUnreadForCurrentParticipantOnly() throws Exception {
         // Participant 1 marks all as read
         mvc.perform(post(BASE_URL + "/read-all")
-                        .with(participant(participant1Id)))
+                        .with(participant(participant1Id))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updatedCount").value(2));
 
