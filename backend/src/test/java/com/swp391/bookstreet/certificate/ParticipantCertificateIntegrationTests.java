@@ -1,7 +1,7 @@
 package com.swp391.bookstreet.certificate;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.swp391.bookstreet.certificate.service.CertificatePdfRenderer;
 import com.swp391.bookstreet.event.service.EventCancellationMailService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
