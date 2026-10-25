@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(initializers = ParticipantNotificationIntegrationTests.TestDatabaseGuard.class)
 class ParticipantNotificationIntegrationTests {
 
-    private static final Instant BASE = Instant.parse("2026-10-25T10:00:00Z");
+    private static final Instant BASE = Instant.parse("2026-01-01T00:00:00Z");
     private static final String BASE_URL = "/api/v1/participant/notifications";
 
     static class TestDatabaseGuard implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -204,7 +204,7 @@ class ParticipantNotificationIntegrationTests {
 
     private long insertUser(String prefix) {
         String username = prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        long roleId = jdbc.queryForObject("select role_id from roles where role_code = 'PARTICIPANT'", Long.class);
+        long roleId = jdbc.queryForObject("select role_id from roles where code = 'PARTICIPANT'", Long.class);
         long id = jdbc.queryForObject("""
                 insert into users(username, full_name, password_hash, email, email_verified_at, status, created_at, updated_at)
                 values (?, ?, 'hash', ?, ?, 'ACTIVE', ?, ?)

@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(initializers = ParticipantCertificateIntegrationTests.TestDatabaseGuard.class)
 class ParticipantCertificateIntegrationTests {
 
-    private static final Instant BASE = Instant.parse("2026-10-23T08:00:00Z");
+    private static final Instant BASE = Instant.parse("2026-01-01T00:00:00Z");
     private static final String CERTIFICATES_URL = "/api/v1/participant/certificates";
 
     static class TestDatabaseGuard implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -134,6 +134,7 @@ class ParticipantCertificateIntegrationTests {
 
         jdbc.update("delete from event_registrations where user_id in (?, ?)", participantId, otherParticipantId);
         jdbc.update("delete from activities where event_id = ?", eventId);
+        jdbc.update("delete from locations where code like 'CERT-%'");
         jdbc.update("delete from events where event_id = ?", eventId);
         jdbc.update("delete from user_roles where user_id in (?, ?, ?)", organizerId, participantId, otherParticipantId);
         jdbc.update("delete from users where user_id in (?, ?, ?)", organizerId, participantId, otherParticipantId);
@@ -270,7 +271,7 @@ class ParticipantCertificateIntegrationTests {
     // Helper insert methods
     private long insertUser(String prefix) {
         String username = prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        long roleId = jdbc.queryForObject("select role_id from roles where role_code = 'PARTICIPANT'", Long.class);
+        long roleId = jdbc.queryForObject("select role_id from roles where code = 'PARTICIPANT'", Long.class);
         long id = jdbc.queryForObject("""
                 insert into users(username, full_name, password_hash, email, email_verified_at, status, created_at, updated_at)
                 values (?, ?, 'hash', ?, ?, 'ACTIVE', ?, ?)
@@ -306,14 +307,18 @@ class ParticipantCertificateIntegrationTests {
         return jdbc.queryForObject("""
                 insert into activities(
                     event_id, location_id, title, activity_type, start_at, end_at,
-                    registration_required, capacity, is_certificate_enabled, status,
-                    created_at, updated_at, published_at)
-                values (?, ?, ?, 'TALKSHOW', ?, ?, true, 50, true, 'COMPLETED', ?, ?, ?)
+                    registration_required, registration_deadline_at, capacity,
+                    attendance_qr_token, is_certificate_enabled, status,
+                    created_at, updated_at, published_at, completed_at)
+                values (?, ?, ?, 'TALKSHOW', ?, ?, true, ?, 50,
+                    ?, true, 'COMPLETED', ?, ?, ?, ?)
                 returning activity_id
                 """, Long.class, evId, locId, title,
-                Timestamp.from(BASE.minus(Duration.ofHours(3))),
                 Timestamp.from(BASE.minus(Duration.ofHours(2))),
-                Timestamp.from(BASE), Timestamp.from(BASE), Timestamp.from(BASE));
+                Timestamp.from(BASE.minus(Duration.ofHours(1))),
+                Timestamp.from(BASE.minus(Duration.ofHours(3))), UUID.randomUUID(),
+                Timestamp.from(BASE.minus(Duration.ofDays(1))), Timestamp.from(BASE),
+                Timestamp.from(BASE.minus(Duration.ofDays(1))), Timestamp.from(BASE));
     }
 
     private long insertEventRegistration(long evId, long uId) {
@@ -327,26 +332,29 @@ class ParticipantCertificateIntegrationTests {
     private long insertActivityRegistration(long actId, long evRegId) {
         return jdbc.queryForObject("""
                 insert into activity_registrations(activity_id, event_registration_id, status, registered_at, activated_at, updated_at)
-                values (?, ?, 'ATTENDED', ?, ?, ?)
+                values (?, ?, 'ACTIVE', ?, ?, ?)
                 returning activity_registration_id
                 """, Long.class, actId, evRegId, Timestamp.from(BASE), Timestamp.from(BASE), Timestamp.from(BASE));
     }
 
     private long insertAttendance(long actRegId, String status) {
+        Timestamp voidedAt = "VOIDED".equals(status) ? Timestamp.from(BASE.plusSeconds(3600)) : null;
+        Timestamp updatedAt = "VOIDED".equals(status) ? Timestamp.from(BASE.plusSeconds(3600)) : Timestamp.from(BASE);
         return jdbc.queryForObject("""
-                insert into attendances(activity_registration_id, status, recorded_source, attended_at, created_at, updated_at)
-                values (?, ?, 'QR_SCAN', ?, ?, ?)
+                insert into attendances(activity_registration_id, status, recorded_source, attended_at, voided_at, created_at, updated_at)
+                values (?, ?, 'SELF_SCAN', ?, ?, ?, ?)
                 returning attendance_id
-                """, Long.class, actRegId, status, Timestamp.from(BASE), Timestamp.from(BASE), Timestamp.from(BASE));
+                """, Long.class, actRegId, status, Timestamp.from(BASE), voidedAt, Timestamp.from(BASE), updatedAt);
     }
 
     private long insertCertificate(long attId, String code, String nameSnapshot, String status, Instant revokedAt) {
         Timestamp revoked = revokedAt == null ? null : Timestamp.from(revokedAt);
+        Timestamp updatedAt = revokedAt == null ? Timestamp.from(BASE) : Timestamp.from(revokedAt);
         return jdbc.queryForObject("""
                 insert into certificates(attendance_id, certificate_code, recipient_name_snapshot, status, issued_at, revoked_at, created_at, updated_at)
                 values (?, ?, ?, ?, ?, ?, ?, ?)
                 returning certificate_id
-                """, Long.class, attId, code, nameSnapshot, status, Timestamp.from(BASE), revoked, Timestamp.from(BASE), Timestamp.from(BASE));
+                """, Long.class, attId, code, nameSnapshot, status, Timestamp.from(BASE), revoked, Timestamp.from(BASE), updatedAt);
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor participant(long userId) {
