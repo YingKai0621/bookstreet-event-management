@@ -22,4 +22,3 @@ export function resolveAdminTab(pathname: string): AdminTab | null {
   const normalized = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
   return PATH_TABS.get(normalized) ?? null;
 }
-

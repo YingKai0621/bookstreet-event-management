@@ -4,7 +4,6 @@ function timestamp(value: string): number | null {
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : null;
 }
-
 export function selectOperationalEvents(
   events: OrganizerEvent[],
   now = Date.now(),

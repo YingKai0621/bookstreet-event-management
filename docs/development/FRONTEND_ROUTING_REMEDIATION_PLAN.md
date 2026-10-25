@@ -1,9 +1,9 @@
 # Frontend Routing Remediation Plan
 
-> Status: Implemented — automated verification passed; final manual browser QA remains  
-> Audit date: 2026-10-24  
-> Implementation verified: 2026-10-24  
-> Scope: Public, Participant, Partner, Organizer and Admin frontend navigation  
+> Status: Implemented — automated verification passed; final manual browser QA remains
+> Audit date: 2026-10-24
+> Implementation verified: 2026-10-24
+> Scope: Public, Participant, Partner, Organizer and Admin frontend navigation
 > Backend/API/database impact: None expected
 
 ## 1. Purpose
@@ -509,4 +509,3 @@ Still intentionally left for final human QA:
 - opening representative canonical links in a real new browser tab;
 - role-switch/logout isolation across real authenticated accounts;
 - the complete unauthenticated Event registration login round-trip against the running backend.
-

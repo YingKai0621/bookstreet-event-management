@@ -29,7 +29,6 @@ export interface OrganizerRouteState {
   tab: OrganizerTab;
   eventId: string | null;
 }
-
 function normalizePathname(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith('/')) return pathname.slice(0, -1);
   return pathname;

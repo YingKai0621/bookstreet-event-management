@@ -26,4 +26,3 @@ export const OrganizerEventStatusChip: React.FC<OrganizerEventStatusChipProps> =
     {STATUS_LABELS[status][language === 'vi' ? 'vi' : 'en']}
   </span>
 );
-
