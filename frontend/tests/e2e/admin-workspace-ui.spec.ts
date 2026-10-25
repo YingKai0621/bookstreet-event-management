@@ -1,7 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-async function setup(page: Page, tab: string) {
+async function setup(page: Page, _tab: string) {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.addInitScript(tab => localStorage.setItem('admin_active_tab', tab), tab);
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
     let body: unknown = [];
@@ -19,7 +18,7 @@ async function setup(page: Page, tab: string) {
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }]) {
 for (const tab of ['booths', 'audit', 'badges', 'profile']) {
   test(`${tab} layout fits ${viewport.width}x${viewport.height} and uses Nunito`, async ({ page }) => {
-    await setup(page, tab); await page.goto('/admin');
+    await setup(page, tab); await page.goto(`/admin/${tab}`);
     await page.setViewportSize(viewport);
     await expect(page.locator('.admin-main-viewport')).toBeVisible();
     await page.waitForTimeout(250);
@@ -73,7 +72,7 @@ for (const tab of ['booths', 'audit', 'badges', 'profile']) {
 test('booth access denial is not displayed as an empty catalog', async ({ page }) => {
   await setup(page, 'booths');
   await page.route('**/api/v1/organizer/booths?**', route => route.fulfill({ status: 403, json: { code: 'ACCESS_DENIED', message: 'You do not have permission to access this resource.' } }));
-  await page.goto('/admin');
+  await page.goto('/admin/booths');
   await expect(page.getByRole('heading', { name: 'Chưa có quyền truy cập danh mục' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Tạo gian hàng đầu tiên' })).toHaveCount(0);
@@ -83,10 +82,27 @@ test('booth access denial is not displayed as an empty catalog', async ({ page }
 
 test('booth search without matches offers filter reset instead of first booth creation', async ({ page }) => {
   await setup(page, 'booths');
-  await page.goto('/admin');
+  await page.goto('/admin/booths');
   await page.locator('.booth-search-box input').fill('no-such-booth');
   await expect(page.getByRole('heading', { name: 'Không có kết quả phù hợp' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tạo gian hàng đầu tiên' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click();
   await expect(page.locator('.booth-table')).toBeVisible();
+});
+
+test('admin canonical routes control the screen and browser history', async ({ page }) => {
+  await setup(page, 'dashboard');
+  await page.addInitScript(() => localStorage.setItem('admin_active_tab', 'profile'));
+  await page.goto('/admin/users');
+
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  await expect(page.getByRole('button', { name: 'Quản lý người dùng', exact: true })).toHaveAttribute('aria-current', 'page');
+
+  await page.getByRole('button', { name: 'Nhật ký hệ thống', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/audit$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/users$/);
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Quản lý người dùng', exact: true })).toHaveAttribute('aria-current', 'page');
 });

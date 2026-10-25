@@ -376,7 +376,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 gian hàng');
 
   await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
-  await page.getByRole('button', { name: 'Xem', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click();
   await page.locator('.org-tabs-bar').getByRole('button', { name: 'Gian hàng', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Cấu hình gian hàng & giá sự kiện' })).toBeVisible();
   const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
@@ -707,4 +707,23 @@ test('Public visitor switches published Events and sees only Booths with valid c
   await expect(marker).toBeVisible();
   await expect(page.locator('img[src=""]')).toHaveCount(0);
   expect(emptySourceWarnings).toEqual([]);
+
+  await page.goto('/gian-hang/11?eventId=101');
+  await expect(page.getByRole('dialog')).toContainText(physicalBooth.name);
+  await page.reload();
+  await expect(page.getByRole('dialog')).toContainText(physicalBooth.name);
+  await page.getByRole('button', { name: 'Đóng' }).click();
+  await expect(page).toHaveURL(/\/gian-hang\?eventId=101$/);
+
+  await page.goto('/su-kien/101');
+  await expect(page.getByRole('dialog')).toContainText(event.name);
+  await page.reload();
+  await expect(page.getByRole('dialog')).toContainText(event.name);
+
+  await page.goto('/gian-hang/khong-ton-tai?eventId=101');
+  await expect(page.getByRole('alert')).toContainText('Không tìm thấy gian hàng');
+  await expect(page).toHaveURL(/\/gian-hang\/khong-ton-tai\?eventId=101$/);
+  await page.goto('/su-kien/khong-ton-tai');
+  await expect(page.getByRole('alert')).toContainText('Không tìm thấy sự kiện');
+  await expect(page).toHaveURL(/\/su-kien\/khong-ton-tai$/);
 });

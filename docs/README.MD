@@ -22,6 +22,10 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 | `api/` | API Contract theo Sprint và cross-cutting contract |
 | `development/` | Coding guideline, review, handoff và báo cáo hoàn thành kỹ thuật |
 
+## Kế hoạch kỹ thuật đang chờ duyệt
+
+- Khắc phục routing frontend theo toàn bộ vai trò: [`development/FRONTEND_ROUTING_REMEDIATION_PLAN.md`](development/FRONTEND_ROUTING_REMEDIATION_PLAN.md)
+
 ## Baseline hiện tại
 
 - Requirement: v6 (approved Sprint 5 Activity rules)

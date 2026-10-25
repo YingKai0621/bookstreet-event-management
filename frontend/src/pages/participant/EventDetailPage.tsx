@@ -1,6 +1,6 @@
 import { ArrowLeft, Search } from 'lucide-react';
-import React, { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Language, ParticipantActivity, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 
@@ -21,13 +21,38 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
 }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'activities' | 'booths' | 'map' | 'info'>('activities');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all-days');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  type EventSection = 'overview' | 'activities' | 'booths' | 'map' | 'info';
+  const sectionCandidate = searchParams.get('section');
+  const activeTab: EventSection = ['overview', 'activities', 'booths', 'map', 'info'].includes(sectionCandidate || '')
+    ? sectionCandidate as EventSection
+    : 'overview';
+  const categoryFilter = searchParams.get('category') || 'all';
+  const dateFilter = searchParams.get('date') || 'all-days';
+  const searchQuery = searchParams.get('search') || '';
+  React.useEffect(() => {
+    if (!sectionCandidate || ['overview', 'activities', 'booths', 'map', 'info'].includes(sectionCandidate)) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('section');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, sectionCandidate, setSearchParams]);
+  const updateParams = (updates: Record<string, string | null>, replace = false) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(updates)) {
+      if (!value) next.delete(key);
+      else next.set(key, value);
+    }
+    setSearchParams(next, { replace });
+  };
+  const selectSection = (section: EventSection) => updateParams({
+    section: section === 'overview' ? null : section,
+    category: section === 'activities' ? categoryFilter === 'all' ? null : categoryFilter : null,
+    date: section === 'activities' ? dateFilter === 'all-days' ? null : dateFilter : null,
+    search: section === 'activities' ? searchQuery || null : null,
+  });
 
   // Find event
-  const currentEvent = events.find(e => e.id === eventId) || events[0];
+  const currentEvent = events.find(e => e.id === eventId);
   if (!currentEvent) {
     return <div className="event-detail-for-participant"><p>{language === 'vi' ? 'Không tìm thấy sự kiện.' : 'Event not found.'}</p></div>;
   }
@@ -91,35 +116,35 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('overview')}
+          onClick={() => selectSection('overview')}
         >
           {language === 'vi' ? 'Tổng quan' : 'Overview'}
         </button>
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'activities' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('activities')}
+          onClick={() => selectSection('activities')}
         >
           {language === 'vi' ? `Hoạt động (${eventActivities.length})` : `Activities (${eventActivities.length})`}
         </button>
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'booths' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('booths')}
+          onClick={() => selectSection('booths')}
         >
           {language === 'vi' ? 'Gian hàng' : 'Bookstalls'}
         </button>
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'map' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('map')}
+          onClick={() => selectSection('map')}
         >
           {language === 'vi' ? 'Bản đồ' : 'Map'}
         </button>
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'info' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('info')}
+          onClick={() => selectSection('info')}
         >
           {language === 'vi' ? 'Thông tin' : 'Information'}
         </button>
@@ -143,7 +168,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
               <select 
                 className="part-select"
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => updateParams({ category: e.target.value === 'all' ? null : e.target.value }, true)}
               >
                 <option value="all">{language === 'vi' ? 'Tất cả loại' : 'All Categories'}</option>
                 <option value="Talkshow">Talkshow</option>
@@ -152,7 +177,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 <option value="Exhibition">{language === 'vi' ? 'Triển lãm' : 'Exhibition'}</option>
               </select>
 
-              <select className="part-select" value={dateFilter} onChange={event => setDateFilter(event.target.value)}>
+              <select className="part-select" value={dateFilter} onChange={event => updateParams({ date: event.target.value === 'all-days' ? null : event.target.value }, true)}>
                 <option value="all-days">{language === 'vi' ? 'Tất cả ngày' : 'All Dates'}</option>
                 {activityDates.map(date => <option value={date} key={date}>{date}</option>)}
               </select>
@@ -164,7 +189,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 type="text"
                 placeholder={language === 'vi' ? 'Tìm hoạt động...' : 'Search activity...'}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => updateParams({ search: e.target.value || null }, true)}
               />
             </div>
           </div>

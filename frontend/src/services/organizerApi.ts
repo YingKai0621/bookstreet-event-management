@@ -66,6 +66,26 @@ export interface OrganizerPartnerApplication {
   withdrawnAt: string;
 }
 
+export type OrganizerDashboardTaskType = 'PARTNER_APPLICATION' | 'BOOTH_REQUEST';
+
+export interface OrganizerDashboardTask {
+  type: OrganizerDashboardTaskType;
+  id: number;
+  eventId: number;
+  eventName: string;
+  subjectName: string;
+  submittedAt: string;
+}
+
+export interface OrganizerDashboardSummary {
+  activeEventCount: number;
+  pendingPartnerApplicationCount: number;
+  pendingBoothRequestCount: number;
+  eventStatusCounts: Record<OrganizerEventStatus, number>;
+  partnerApplicationStatusCounts: Record<'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN', number>;
+  priorityTasks: OrganizerDashboardTask[];
+}
+
 interface OrganizerPartnerApplicationResponse {
   applicationId: number;
   eventId: number;
@@ -237,12 +257,15 @@ export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent 
     maxBoothsPerPartner: event.maxBoothsPerPartner,
     maxActivitiesPerPartner: event.maxActivitiesPerPartner,
     bannerUrl: event.bannerUrl,
+    cancelledAt: event.cancelledAt ?? null,
+    cancellationReason: event.cancellationReason ?? null,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
   };
 }
 
 export const organizerApi = {
+  getDashboardSummary: () => apiClient.get<OrganizerDashboardSummary>('/organizer/dashboard'),
   async getProfile(): Promise<OrganizerProfile> {
     const user = await apiClient.get<any>('/organizer/profile');
     return { id: user.id, name: user.fullName, role: 'ORGANIZER', department: user.department || '', organization: user.organization || '', email: user.email, phone: user.phone || '', avatarInitials: user.fullName.split(' ').map((part: string) => part[0]).join('').slice(-2).toUpperCase(), avatarUrl: user.avatarUrl || undefined, notificationPreferences: user.notificationPreferences };

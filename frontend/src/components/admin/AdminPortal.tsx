@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Language } from '../../types';
 import { AdminAuditLogsView } from './AdminAuditLogsView';
 import { AdminBadgeRulesView } from './AdminBadgeRulesView';
@@ -15,6 +16,7 @@ import { AdminTopBar } from './AdminTopBar';
 import { AdminUserManagementView } from './AdminUserManagementView';
 import { FacilityManagementView } from './FacilityManagementView';
 import { OrganizerBoothManagementView } from '../organizer/OrganizerBoothManagementView';
+import { ADMIN_ROOT, ADMIN_TAB_PATHS, resolveAdminTab } from '../../routing/adminRoutes';
 
 import {
   adminApi,
@@ -44,11 +46,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   language,
   onLogout
 }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
-    const saved = localStorage.getItem('admin_active_tab') as AdminTab | null;
-    return saved || 'dashboard';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const resolvedTab = resolveAdminTab(location.pathname);
+  const activeTab: AdminTab = resolvedTab ?? 'dashboard';
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!resolvedTab) navigate(ADMIN_ROOT, { replace: true });
+  }, [navigate, resolvedTab]);
+
+  const navigateToTab = (tab: AdminTab) => navigate(ADMIN_TAB_PATHS[tab]);
 
   // Core Data States
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
@@ -65,11 +73,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [profile, setProfile] = useState<AdminProfile>({ id: '', name: '', role: '', department: '', email: '', phone: '', avatarInitials: '', lastLogin: '' });
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
   const [loadError, setLoadError] = useState('');
-
-  // Persist activeTab on changes
-  useEffect(() => {
-    localStorage.setItem('admin_active_tab', activeTab);
-  }, [activeTab]);
 
   const refreshAdminData = async () => {
     try {
@@ -216,8 +219,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         notifications={notifications}
         onMarkAllNotifsRead={handleMarkAllNotifsAsRead}
         onMarkNotifRead={handleMarkNotifAsRead}
-        onOpenNotifications={() => setActiveTab('notifications')}
-        onOpenProfile={() => setActiveTab('profile')}
+        onOpenNotifications={() => navigateToTab('notifications')}
+        onOpenProfile={() => navigateToTab('profile')}
         onLogout={onLogout}
         onOpenMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
       />
@@ -229,7 +232,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           language={language}
           activeTab={activeTab}
           onSelectTab={(tab: AdminTab) => {
-            setActiveTab(tab);
+            navigateToTab(tab);
             setIsMobileSidebarOpen(false);
           }}
           unreadNotificationsCount={unreadNotificationsCount}
@@ -247,11 +250,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           {activeTab === 'dashboard' && (
             <AdminDashboardView
               stats={dashboardStats}
-              onNavigateTab={(tab) => setActiveTab(tab as AdminTab)}
+              onNavigateTab={(tab) => navigateToTab(tab as AdminTab)}
               auditLogs={auditLogs}
               users={users}
               onOpenAddUser={() => {
-                setActiveTab('users');
+                navigateToTab('users');
               }}
             />
           )}
@@ -303,7 +306,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               notifications={notifications}
               onMarkAllAsRead={handleMarkAllNotifsAsRead}
               onMarkAsRead={handleMarkNotifAsRead}
-              onNavigateTab={(tab) => setActiveTab(tab as AdminTab)}
+              onNavigateTab={(tab) => navigateToTab(tab as AdminTab)}
             />
           )}
 

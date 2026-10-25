@@ -46,6 +46,7 @@ import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
 import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
 import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
+import { migrateLegacyOrganizerUrl } from './routing/organizerRoutes';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
@@ -86,7 +87,7 @@ export function App() {
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
-  const isPortalRoute = location.pathname === '/portal' || location.pathname === '/organizer';
+  const isPortalRoute = /^\/(?:portal|organizer)(?:\/|$)/.test(location.pathname);
   const isAuthenticated = authenticationStatus === 'authenticated';
   const isPortalAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ORGANIZER'));
   const isParticipantAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
@@ -165,9 +166,17 @@ export function App() {
   const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
   const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const publicEventId = events.some(event => event.id === selectedPublicEventId)
-    ? selectedPublicEventId
-    : events[0]?.id || '';
+  const publicEventIdFromUrl = isBooths ? new URLSearchParams(location.search).get('eventId') : null;
+  const publicEventId = events.some(event => event.id === publicEventIdFromUrl)
+    ? publicEventIdFromUrl as string
+    : events.some(event => event.id === selectedPublicEventId)
+      ? selectedPublicEventId
+      : events[0]?.id || '';
+
+  const selectPublicEvent = (eventId: string) => {
+    setSelectedPublicEventId(eventId);
+    if (isBooths) navigate(`/gian-hang?eventId=${encodeURIComponent(eventId)}`);
+  };
 
   // Load real data from Backend REST API
   useEffect(() => {
@@ -344,7 +353,7 @@ export function App() {
   };
 
   const handleOpenEventActivities = (eventId: string) => {
-    navigate(`/participant/events/${eventId}`);
+    navigate(`/participant/events/${eventId}?section=activities`);
   };
 
   const handleJoinParticipantEvent = async (eventId: string) => {
@@ -434,10 +443,17 @@ export function App() {
       return (
         <PortalLoginPage 
           language={language}
-          onLoginSuccess={() => navigate('/portal')}
+          onLoginSuccess={() => navigate(
+            migrateLegacyOrganizerUrl(location.pathname, location.search)
+              || `${location.pathname}${location.search}`,
+            { replace: true },
+          )}
         />
       );
     }
+
+    const migratedOrganizerUrl = migrateLegacyOrganizerUrl(location.pathname, location.search);
+    if (migratedOrganizerUrl) return <Navigate to={migratedOrganizerUrl} replace />;
 
     return (
       <div className="duongsach-app-root portal-mode-active">
@@ -480,7 +496,7 @@ export function App() {
     }
 
     if (!isParticipantAuthenticated) {
-      return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+      return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
     }
 
     if (participantProfileError) return <p role="alert">Không tải được hồ sơ: {participantProfileError}</p>;
@@ -557,6 +573,7 @@ export function App() {
               userEmail={participantProfile.email}
             />
           } />
+          <Route path="/participant/*" element={<Navigate to="/participant" replace />} />
         </Routes>
       </ParticipantLayout>
     );
@@ -697,6 +714,7 @@ export function App() {
               }}
             />
           } />
+          <Route path="/partner/*" element={<Navigate to="/partner" replace />} />
         </Routes>
       </PartnerLayout>
     );
@@ -717,7 +735,7 @@ export function App() {
       return (
         <AdminLoginPage
           language={language}
-          onLoginSuccess={() => navigate('/admin')}
+          onLoginSuccess={() => navigate(`${location.pathname}${location.search}`, { replace: true })}
         />
       );
     }
@@ -771,7 +789,7 @@ export function App() {
             error={publicBoothsError}
             events={events}
             selectedEventId={publicEventId}
-            onSelectEventId={setSelectedPublicEventId}
+            onSelectEventId={selectPublicEvent}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
             onSearchQueryChange={setBoothSearchQuery}
@@ -801,7 +819,7 @@ export function App() {
             language={language}
             events={events}
             selectedEventId={publicEventId}
-            onSelectEventId={setSelectedPublicEventId}
+            onSelectEventId={selectPublicEvent}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
@@ -826,8 +844,9 @@ export function App() {
         open={isBooths} 
         booths={booths} 
         events={events}
+        isLoading={isPublicDataLoading || isPublicBoothsLoading}
         selectedEventId={publicEventId}
-        onSelectEventId={setSelectedPublicEventId}
+        onSelectEventId={selectPublicEvent}
         error={publicBoothsError}
         onSelectBoothOnMap={handleSelectBoothOnMap} 
       />
@@ -835,6 +854,7 @@ export function App() {
         language={language} 
         open={isEvents} 
         events={events} 
+        isLoading={isPublicDataLoading}
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onJoinEvent={handleOpenEventActivities}

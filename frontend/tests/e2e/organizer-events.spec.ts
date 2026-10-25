@@ -72,9 +72,11 @@ test('organizer creates, completes, and publishes an event', async ({ page }) =>
   await expect(page.getByText('Bản nháp').first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Công bố', exact: true }).click();
-  await expect(page.getByRole('alert')).toBeVisible();
+  const incompletePublishDialog = page.getByRole('dialog', { name: 'Chưa thể công bố' });
+  await expect(incompletePublishDialog).toBeVisible();
+  await expect(incompletePublishDialog.getByText('Hạn đối tác đăng ký chưa được thiết lập.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).first().click();
+  await incompletePublishDialog.getByRole('button', { name: 'Chỉnh sửa bản nháp' }).click();
   await expect(page.getByRole('heading', { name: 'Chỉnh sửa bản nháp' })).toBeVisible();
 
   await page.getByLabel('Hạn đối tác đăng ký').fill(futureDateTimeLocal(10, 9));
@@ -92,6 +94,9 @@ test('organizer creates, completes, and publishes an event', async ({ page }) =>
 
   await expect(page.getByRole('heading', { name: uniqueEventName })).toBeVisible();
   await page.getByRole('button', { name: 'Công bố', exact: true }).click();
+  const publishDialog = page.getByRole('dialog', { name: 'Công bố sự kiện' });
+  await expect(publishDialog).toBeVisible();
+  await publishDialog.getByRole('button', { name: 'Công bố', exact: true }).click();
 
   await expect(page.getByText('Đã công bố').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Công bố', exact: true })).toHaveCount(0);

@@ -355,6 +355,8 @@ button {
   position: absolute;
   top: 1.25rem;
   right: 1.25rem;
+  z-index: 2;
+  background-color: rgba(255, 255, 255, 0.94);
   color: var(--figma-text-muted);
   width: 36px;
   height: 36px;
