@@ -86,7 +86,9 @@ public class ParticipantNotificationService {
     @Transactional
     public ParticipantNotificationBatchReadResponse markAllAsRead() {
         Long participantId = currentUser.requireParticipantId();
-        int updatedCount = notificationRepository.markAllAsRead(participantId, clock.instant());
+        int updatedCount = notificationRepository.markAllAsRead(
+                participantId,
+                clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         return new ParticipantNotificationBatchReadResponse(updatedCount);
     }
 

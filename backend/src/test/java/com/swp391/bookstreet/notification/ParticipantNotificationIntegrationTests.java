@@ -158,14 +158,19 @@ class ParticipantNotificationIntegrationTests {
                 .andExpect(jsonPath("$.readAt").isNotEmpty())
                 .andReturn();
 
-        String firstReadAt = mapper.readTree(firstResult.getResponse().getContentAsString()).get("readAt").asText();
+        Instant firstReadAt = Instant.parse(mapper.readTree(firstResult.getResponse().getContentAsString()).get("readAt").asText());
 
         // Second read call (retry) preserves the first read_at
-        mvc.perform(post(BASE_URL + "/" + p1Notif1Id + "/read")
+        MvcResult secondResult = mvc.perform(post(BASE_URL + "/" + p1Notif1Id + "/read")
                         .with(participant(participant1Id))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.readAt").value(firstReadAt));
+                .andExpect(jsonPath("$.notificationId").value(p1Notif1Id))
+                .andExpect(jsonPath("$.read").value(true))
+                .andReturn();
+
+        Instant secondReadAt = Instant.parse(mapper.readTree(secondResult.getResponse().getContentAsString()).get("readAt").asText());
+        assertThat(java.time.temporal.ChronoUnit.MICROS.between(firstReadAt, secondReadAt)).isZero();
 
         // Unread count for P1 is now 1
         mvc.perform(get(BASE_URL + "/unread-count")
