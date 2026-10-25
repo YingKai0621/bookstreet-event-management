@@ -18,6 +18,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     Optional<Attendance> findByActivityRegistrationId(Long activityRegistrationId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Attendance a where a.activityRegistrationId = :activityRegistrationId")
+    Optional<Attendance> findByActivityRegistrationIdForUpdate(
+            @Param("activityRegistrationId") Long activityRegistrationId);
+
     List<Attendance> findByActivityRegistrationIdIn(Collection<Long> activityRegistrationIds);
 
     boolean existsByActivityRegistrationIdAndStatus(Long activityRegistrationId,

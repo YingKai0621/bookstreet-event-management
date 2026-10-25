@@ -16,5 +16,20 @@ public interface ActivityRatingRepository extends JpaRepository<ActivityRating, 
     Optional<ActivityRating> findByAttendanceIdForUpdate(
             @Param("attendanceId") Long attendanceId);
 
+    Optional<ActivityRating> findByAttendanceId(Long attendanceId);
+
     List<ActivityRating> findByAttendanceIdIn(Collection<Long> attendanceIds);
+
+    @Query("""
+            select r
+            from ActivityRating r, Attendance att, ActivityRegistration ar, EventRegistration er
+            where r.attendanceId = att.attendanceId
+              and att.activityRegistrationId = ar.activityRegistrationId
+              and ar.eventRegistrationId = er.eventRegistrationId
+              and er.userId = :userId
+              and ar.activityId = :activityId
+            """)
+    Optional<ActivityRating> findOwnedRating(
+            @Param("userId") Long userId,
+            @Param("activityId") Long activityId);
 }
