@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import {
   AlertCircle,
   Building2,
@@ -225,10 +226,10 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
       {/* 1. Header */}
       <header className="obr-header">
         <div className="obr-title-group">
-          <h1 id="organizer-booth-request-title" className="organizer-view-title">
+          <h1 id="organizer-booth-request-title" className="organizer-view-title workspace-page-title">
             Yêu cầu gian hàng theo sự kiện
           </h1>
-          <p className="organizer-view-sub">
+          <p className="organizer-view-sub workspace-page-subtitle">
             Xét duyệt yêu cầu thuê, khóa giá và theo dõi thời hạn thanh toán giữ chỗ của đối tác.
           </p>
         </div>
@@ -452,8 +453,8 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
           </p>
         </div>
       ) : (
-        <div className="obr-request-list s2-request-list">
-          {filteredRequests.map(request => (
+        <PaginatedList items={filteredRequests}>{pageItems => (<div className="obr-request-list s2-request-list">
+          {pageItems.map(request => (
             <article
               className={`obr-request-card s2-request-card status-${request.status.toLowerCase()} ${
                 request.status === 'PENDING' ? 'is-pending' : ''
@@ -659,7 +660,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
               </div>
             </article>
           ))}
-        </div>
+        </div>)}</PaginatedList>
       )}
 
       {/* Modal: Reject Request */}

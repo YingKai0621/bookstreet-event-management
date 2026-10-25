@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
 import {
   AlertCircle,
@@ -156,7 +156,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       return matchesSearch && matchesStatus;
     });
   }, [booths, searchKeyword, filterStatus]);
-  const pagination = useViewportPagination(filteredBooths, 510, viewMode === 'grid' ? 300 : 95, viewMode === 'grid' ? 3 : 1);
+  const pagination = useListPagination(filteredBooths);
 
   const mapMarkers = useMemo<BoothMapMarker[]>(() => filteredBooths.flatMap(booth => {
     const draft = draftCoords[booth.boothId];
@@ -368,9 +368,9 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       {/* 1. HEADER SECTION */}
       <div className="booth-crud-header">
         <div className="booth-crud-title-group">
-          <span className="admin-page-eyebrow admin-booth-eyebrow">KHÔNG GIAN ĐƯỜNG SÁCH</span>
-          <h1>{language === 'vi' ? 'Quản lý Gian hàng' : 'Booth Management Catalog'}</h1>
-          <p>
+
+          <h1 className="workspace-page-title">{language === 'vi' ? 'Quản lý Gian hàng' : 'Booth Management Catalog'}</h1>
+          <p className="workspace-page-subtitle">
             {language === 'vi'
               ? 'Quản lý toàn bộ danh mục gian hàng vật lý hiện có tại Đường Sách và phân loại danh mục.'
               : 'Manage physical booth inventory, categories, and active statuses across the Book Street.'}

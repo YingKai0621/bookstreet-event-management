@@ -75,9 +75,6 @@ export const ActivityQrPage: React.FC<ActivityQrPageProps> = ({
 
       {/* Screen 6 Sketch Card */}
       <div className="qr-screen-card">
-        <div className="qr-eyebrow">
-          {language === 'vi' ? 'Mã Check-in Hoạt Động' : 'Activity Check-in Pass'}
-        </div>
 
         <h1 className="qr-activity-name">{activity?.title}</h1>
         <p className="qr-event-name">{activity?.eventName}</p>

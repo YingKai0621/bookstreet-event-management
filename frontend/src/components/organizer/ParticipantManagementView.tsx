@@ -1,7 +1,7 @@
+import { ListPagination } from '../ui/ListPagination';
+import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
-  ChevronLeft,
-  ChevronRight,
   Download,
   Edit2,
   Search
@@ -31,7 +31,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = LIST_PAGE_SIZE;
 
   // Manual Override Dialog State
   const [overrideModalParticipant, setOverrideModalParticipant] = useState<OrganizerParticipantItem | null>(null);
@@ -48,8 +48,11 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
     return true;
   });
 
-  const totalPages = Math.ceil(filteredParticipants.length / itemsPerPage) || 1;
-  const paginatedParticipants = filteredParticipants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = getPageCount(filteredParticipants.length, itemsPerPage);
+  const safePage = clampPage(currentPage, totalPages);
+  if (currentPage !== safePage) setCurrentPage(safePage);
+  const pageOffset = getPageOffset(safePage, itemsPerPage);
+  const paginatedParticipants = filteredParticipants.slice(pageOffset, pageOffset + itemsPerPage);
   const attendedCount = participants.filter(item => item.status === 'attended').length;
   const pendingCount = participants.filter(item => item.status === 'not_attended').length;
   const cancelledCount = participants.filter(item => item.status === 'cancelled').length;
@@ -97,10 +100,10 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
         marginBottom: '1.5rem'
       }}>
         <div>
-          <h1 className="organizer-view-title">
+          <h1 className="organizer-view-title workspace-page-title">
             {language === 'vi' ? 'Danh sách người tham gia' : 'Participant Management'}
           </h1>
-          <p className="organizer-view-sub">
+          <p className="organizer-view-sub workspace-page-subtitle">
             {language === 'vi' ? 'Theo dõi danh sách đăng ký, tình trạng tham gia và xử lý điểm danh' : 'Monitor registration, attendance states, and supervisor check-ins'}
           </p>
         </div>
@@ -282,52 +285,11 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
             {filteredParticipants.length === 0
               ? (language === 'vi' ? 'Hiển thị 0 của 0 độc giả' : 'Showing 0 of 0 participants')
               : (language === 'vi'
-                ? `Hiển thị ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} của ${filteredParticipants.length} độc giả`
-                : `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, filteredParticipants.length)} of ${filteredParticipants.length} participants`)}
+                ? `Hiển thị ${pageOffset + 1}–${Math.min(pageOffset + itemsPerPage, filteredParticipants.length)} của ${filteredParticipants.length} độc giả`
+                : `Showing ${pageOffset + 1}–${Math.min(pageOffset + itemsPerPage, filteredParticipants.length)} of ${filteredParticipants.length} participants`)}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <button
-              type="button"
-              className="organizer-icon-button"
-              style={{ width: '30px', height: '30px' }}
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-              <button
-                key={pg}
-                type="button"
-                onClick={() => setCurrentPage(pg)}
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '6px',
-                  border: currentPage === pg ? '1px solid #17382E' : '1px solid #D6E0DB',
-                  background: currentPage === pg ? '#17382E' : '#FFFFFF',
-                  color: currentPage === pg ? '#FFFFFF' : '#172421',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer'
-                }}
-              >
-                {pg}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className="organizer-icon-button"
-              style={{ width: '30px', height: '30px' }}
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
+          <ListPagination page={safePage} pages={totalPages} onPage={setCurrentPage} />
         </div>
       </div>
 

@@ -29,10 +29,10 @@ export const PartnerReportsPage: React.FC<PartnerReportsPageProps> = ({
       {/* 1. Header matching Sketch Screen 7 */}
       <div className="partner-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="partner-page-title" style={{ margin: 0 }}>
+          <h1 className="partner-page-title workspace-page-title">
             {language === 'vi' ? 'Thống kê sau sự kiện' : 'Reports & Statistics'}
           </h1>
-          <p className="partner-page-sub">
+          <p className="partner-page-sub workspace-page-subtitle">
             {language === 'vi' 
               ? 'Báo cáo hiệu quả tham gia gian hàng và các hoạt động tương tác độc giả.' 
               : 'Post-event performance, attendance metrics and reader feedback.'}

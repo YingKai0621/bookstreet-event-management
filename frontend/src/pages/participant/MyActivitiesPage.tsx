@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, QrCode, XCircle } from 'lucide-react';
 import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -53,10 +54,10 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
     <div className="my-activities-page">
       {/* 1. Header */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi' 
             ? 'Theo dõi các hoạt động bạn đã đăng ký trong những sự kiện mình tham gia, nhận chứng nhận và xuất trình mã QR check-in.'
             : 'Track activities registered in your events, access check-in QR codes and view earned certificates.'}
@@ -111,8 +112,8 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
           </Link>
         </div>
       ) : (
-        <div className="activities-list-stack">
-          {displayedList.map((act) => (
+        <PaginatedList items={displayedList}>{pageItems => (<div className="activities-list-stack">
+          {pageItems.map((act) => (
             <div key={act.id} className="activity-row-card">
               {/* Thumbnail */}
               <img src={act.imageUrl || undefined} alt={act.title} className="activity-thumb" />
@@ -208,7 +209,7 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
               </div>
             </div>
           ))}
-        </div>
+        </div>)}</PaginatedList>
       )}
     </div>
   );

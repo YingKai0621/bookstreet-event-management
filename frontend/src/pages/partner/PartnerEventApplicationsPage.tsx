@@ -1,3 +1,5 @@
+import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../../components/ui/ListPagination';
 import {
   AlertCircle,
   ArrowRight,
@@ -38,7 +40,7 @@ interface PartnerEventApplicationsPageProps {
 type ApplicationFilter = 'all' | PartnerEventApplication['status'];
 type SortOrder = 'newest' | 'oldest';
 type TimeFilter = 'all' | 'active' | 'past';
-const APPLICATIONS_PER_PAGE = 10;
+const APPLICATIONS_PER_PAGE = LIST_PAGE_SIZE;
 
 function matchesTimeFilter(endAt: string | undefined, timeFilter: TimeFilter, now: number): boolean {
   if (timeFilter === 'all') return true;
@@ -47,18 +49,6 @@ function matchesTimeFilter(endAt: string | undefined, timeFilter: TimeFilter, no
   return timeFilter === 'past' ? endTimestamp < now : endTimestamp >= now;
 }
 
-function paginationItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
-  const pages = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages])]
-    .filter(page => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
-  const items: Array<number | 'ellipsis'> = [];
-  pages.forEach((page, index) => {
-    if (index > 0 && page - pages[index - 1] > 1) items.push('ellipsis');
-    items.push(page);
-  });
-  return items;
-}
 
 export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPageProps> = ({ language }) => {
   const location = useLocation();
@@ -121,9 +111,10 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
       return sortOrder === 'newest' ? difference : -difference;
     }), [activeFilter, applications, filterReferenceTime, keyword, sortOrder, timeFilter]);
 
-  const applicationPageCount = Math.ceil(visibleApplications.length / APPLICATIONS_PER_PAGE);
-  const currentApplicationPage = Math.min(applicationPage, Math.max(applicationPageCount, 1));
-  const applicationRangeStart = (currentApplicationPage - 1) * APPLICATIONS_PER_PAGE;
+  const applicationPageCount = getPageCount(visibleApplications.length, APPLICATIONS_PER_PAGE);
+  const currentApplicationPage = clampPage(applicationPage, applicationPageCount);
+  if (applicationPage !== currentApplicationPage) setApplicationPage(currentApplicationPage);
+  const applicationRangeStart = getPageOffset(currentApplicationPage, APPLICATIONS_PER_PAGE);
   const paginatedApplications = visibleApplications.slice(applicationRangeStart, applicationRangeStart + APPLICATIONS_PER_PAGE);
 
   const filters: Array<{ value: ApplicationFilter; label: string; count: number }> = [
@@ -209,7 +200,7 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
 
       {isLoading ? <PartnerEventLoading label="Đang tải hồ sơ sự kiện…" /> : (
         <section aria-labelledby="applications-title">
-          <div className="event-hub-section-heading"><div><span>HỒ SƠ ĐÃ GỬI</span><h2 id="applications-title">{filteredHeading}</h2></div><p>{visibleApplications.length} hồ sơ phù hợp</p></div>
+          <div className="event-hub-section-heading"><div><h2 id="applications-title">{filteredHeading}</h2></div><p>{visibleApplications.length} hồ sơ phù hợp</p></div>
           <div className="event-application-list">
             {paginatedApplications.map(application => {
               const previewNote = application.reviewNote || application.applicationNote;
@@ -233,10 +224,10 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
             })}
           </div>
           {visibleApplications.length > 0 && (
-            <nav className="event-application-pagination" aria-label="Phân trang hồ sơ tham gia">
+            <div className="event-application-pagination">
               <p>Hiển thị <strong>{applicationRangeStart + 1}–{Math.min(applicationRangeStart + APPLICATIONS_PER_PAGE, visibleApplications.length)}</strong> trong tổng số <strong>{visibleApplications.length}</strong> hồ sơ</p>
-              {applicationPageCount > 1 && <div className="event-pagination-controls"><button type="button" onClick={() => setApplicationPage(currentApplicationPage - 1)} disabled={currentApplicationPage === 1} aria-label="Trang hồ sơ trước">Trước</button>{paginationItems(currentApplicationPage, applicationPageCount).map((item, index) => item === 'ellipsis' ? <span key={`ellipsis-${index}`} aria-hidden="true">…</span> : <button type="button" key={item} onClick={() => setApplicationPage(item)} className={item === currentApplicationPage ? 'is-active' : ''} aria-current={item === currentApplicationPage ? 'page' : undefined} aria-label={`Trang hồ sơ ${item}`}>{item}</button>)}<button type="button" onClick={() => setApplicationPage(currentApplicationPage + 1)} disabled={currentApplicationPage === applicationPageCount} aria-label="Trang hồ sơ tiếp theo">Tiếp</button></div>}
-            </nav>
+              <ListPagination page={currentApplicationPage} pages={applicationPageCount} onPage={setApplicationPage} />
+            </div>
           )}
           {visibleApplications.length === 0 && <div className="event-hub-empty"><FileText size={30} /><h2>{search ? 'Không tìm thấy hồ sơ phù hợp' : 'Chưa có hồ sơ ở trạng thái này'}</h2><p>Khám phá các sự kiện đang mở để bắt đầu hành trình tham gia cùng Đường Sách.</p><Link className="event-hub-empty-link" to="/partner/events/apply">Khám phá sự kiện <ArrowRight size={15} /></Link></div>}
         </section>

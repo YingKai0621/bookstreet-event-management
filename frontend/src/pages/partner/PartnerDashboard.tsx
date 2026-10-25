@@ -284,9 +284,9 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
     <div className="partner-dashboard-page partner-workspace">
       <header className="partner-workspace-hero">
         <div className="partner-workspace-hero-copy">
-          <span className="partner-workspace-eyebrow"><BookOpen size={15} /> TRUNG TÂM LÀM VIỆC ĐỐI TÁC</span>
-          <h1>{language === 'vi' ? `Xin chào, ${organization.name}!` : `Welcome, ${organization.name}!`}</h1>
-          <p>{language === 'vi' ? 'Cùng quản lý gian hàng và tham gia các sự kiện tại Đường Sách TP.HCM.' : 'Manage booths and take part in events at Ho Chi Minh City Book Street.'}</p>
+
+          <h1 className="workspace-page-title">{language === 'vi' ? `Xin chào, ${organization.name}!` : `Welcome, ${organization.name}!`}</h1>
+          <p className="workspace-page-subtitle">{language === 'vi' ? 'Cùng quản lý gian hàng và tham gia các sự kiện tại Đường Sách TP.HCM.' : 'Manage booths and take part in events at Ho Chi Minh City Book Street.'}</p>
           <div className="partner-workspace-actions">
             <Link to="/partner/events/apply" className="partner-workspace-primary-action"><PlusCircle size={17} />Đăng ký sự kiện mới<ArrowRight size={16} /></Link>
             <Link to="/partner/booth-requests" className="partner-workspace-secondary-action"><MapPin size={17} />Tìm gian hàng trên bản đồ</Link>
@@ -298,7 +298,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       {dataError && <div className="partner-workspace-alert" role="alert"><AlertCircle size={18} /><div><strong>Chưa thể tải đầy đủ dữ liệu tổng quan</strong><p>{dataError}</p></div></div>}
 
       <section className="partner-workspace-section" aria-labelledby="quick-overview-title">
-        <div className="partner-workspace-section-heading"><div><span>TỔNG HỢP</span><h2 id="quick-overview-title">Tổng quan nhanh</h2></div><p>Dữ liệu nghiệp vụ hiện tại của tổ chức</p></div>
+        <div className="partner-workspace-section-heading"><div><h2 id="quick-overview-title">Tổng quan nhanh</h2></div><p>Dữ liệu nghiệp vụ hiện tại của tổ chức</p></div>
         <div className="partner-workspace-stats" aria-busy={isLoading}>
           <Link to="/partner/events" className="partner-workspace-stat"><span className="partner-workspace-stat-icon"><FileClock size={21} /></span><div><strong>{isLoading ? '—' : applications.length}</strong><span>Hồ sơ sự kiện</span><small>{isLoading ? 'Đang tải dữ liệu…' : applicationBreakdown}</small></div><ArrowRight size={17} /></Link>
           <Link to="/partner/booths" className="partner-workspace-stat"><span className="partner-workspace-stat-icon is-success"><Store size={21} /></span><div><strong>{boothRequests === null ? '—' : completedBooths.length}</strong><span>Gian hàng đã được cấp</span><small>{boothRequestsError || (boothRequests === null ? 'Đang cập nhật dữ liệu' : 'Đã hoàn tất thuê gian hàng')}</small></div><ArrowRight size={17} /></Link>
@@ -309,7 +309,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
 
       <div className="partner-workspace-operations">
         <section className="partner-workspace-panel" aria-labelledby="upcoming-event-title">
-          <div className="partner-workspace-panel-heading"><div><span>SỰ KIỆN CỦA BẠN</span><h2 id="upcoming-event-title">Sự kiện sắp diễn ra của bạn</h2></div><Link to="/partner/events">Xem tất cả <ArrowRight size={14} /></Link></div>
+          <div className="partner-workspace-panel-heading"><div><h2 id="upcoming-event-title">Sự kiện sắp diễn ra của bạn</h2></div><Link to="/partner/events">Xem tất cả <ArrowRight size={14} /></Link></div>
           {nextEvent ? (
             <article className="partner-workspace-event">
               <div className={`partner-workspace-event-image ${nextEvent.imageUrl ? 'has-image' : ''}`}>{nextEvent.imageUrl ? <img src={nextEvent.imageUrl} alt={`Ảnh sự kiện ${nextEvent.eventTitle}`} /> : <BookOpen size={30} />}<span>{nextEventIsOngoing ? 'Đang diễn ra' : 'Sắp diễn ra'}</span></div>
@@ -321,7 +321,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
         </section>
 
         <section className="partner-workspace-panel" aria-labelledby="attention-title">
-          <div className="partner-workspace-panel-heading"><div><span>ƯU TIÊN</span><h2 id="attention-title">Công việc cần xử lý</h2></div>{tasks.length > 0 && <strong>{tasks.length} việc</strong>}</div>
+          <div className="partner-workspace-panel-heading"><div><h2 id="attention-title">Công việc cần xử lý</h2></div>{tasks.length > 0 && <strong>{tasks.length} việc</strong>}</div>
           {tasks.length > 0 ? (
             <div className="partner-workspace-task-list">
               {tasks.slice(0, 4).map(task => (
@@ -335,7 +335,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
       </div>
 
       <section className="partner-workspace-section partner-workspace-activity" aria-labelledby="recent-activity-title">
-        <div className="partner-workspace-section-heading"><div><span>DÒNG HOẠT ĐỘNG</span><h2 id="recent-activity-title">Hoạt động gần đây</h2></div><p>Các mốc cập nhật có thời gian xác định</p></div>
+        <div className="partner-workspace-section-heading"><div><h2 id="recent-activity-title">Hoạt động gần đây</h2></div><p>Các mốc cập nhật có thời gian xác định</p></div>
         {recentRecords.length > 0 ? (
           <div className="partner-workspace-table-wrap"><table className="partner-workspace-table"><thead><tr><th>Thời gian</th><th>Hoạt động</th><th>Nội dung</th><th>Trạng thái</th><th><span className="sr-only">Thao tác</span></th></tr></thead><tbody>{recentRecords.map(record => <tr key={record.id}><td data-label="Thời gian">{record.time}</td><td data-label="Hoạt động">{record.activity}</td><td data-label="Nội dung"><strong>{record.content}</strong></td><td data-label="Trạng thái"><span className={`partner-workspace-status is-${record.tone}`}><i />{record.status}</span></td><td><Link to={record.link} aria-label={`Xem ${record.content}`}>Xem <ArrowRight size={14} /></Link></td></tr>)}</tbody></table></div>
         ) : (

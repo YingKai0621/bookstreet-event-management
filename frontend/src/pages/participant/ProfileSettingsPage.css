@@ -45,7 +45,6 @@
 @media (max-width: 600px) {
   .participant-main-viewport:has(.reader-profile-page) { padding: 12px; }
   .reader-profile-page .participant-page-title { font-size: 1.3rem; }
-  .reader-profile-page .participant-page-sub { display: none; }
   .reader-profile-page .profile-card-header { padding: 16px; flex-wrap: wrap; gap: 12px; }
   .reader-profile-page .profile-user-summary { gap: 12px; }
   .reader-profile-page .profile-avatar-large { width: 56px; height: 56px; }

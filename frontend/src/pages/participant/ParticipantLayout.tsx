@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import {
   Award,
   Bell,
@@ -263,7 +264,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                       <p>{language === 'vi' ? 'Không có thông báo nào' : 'No notifications'}</p>
                     </div>
                   ) : (
-                    notifications.map((notif) => (
+                    <PaginatedList items={notifications}>{pageItems => pageItems.map((notif) => (
                       <div 
                         key={notif.id}
                         className={`notif-dropdown-item ${!notif.isRead ? 'unread' : ''}`}
@@ -288,7 +289,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                           </span>
                         </div>
                       </div>
-                    ))
+                    ))}</PaginatedList>
                   )}
                 </div>
 

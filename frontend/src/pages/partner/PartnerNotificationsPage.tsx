@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import {
   Bell,
   Calendar,
@@ -52,10 +53,10 @@ export const PartnerNotificationsPage: React.FC<PartnerNotificationsPageProps> =
       {/* 1. Header matching Sketch Screen 8 */}
       <div className="partner-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="partner-page-title" style={{ margin: 0 }}>
+          <h1 className="partner-page-title workspace-page-title">
             {language === 'vi' ? 'Thông báo' : 'Notifications'}
           </h1>
-          <p className="partner-page-sub">
+          <p className="partner-page-sub workspace-page-subtitle">
             {language === 'vi' 
               ? 'Cập nhật phê duyệt, phản hồi gian hàng và lịch trình từ Ban Quản Lý.' 
               : 'Updates on activity approvals, booth requests, and schedule reminders.'}
@@ -93,13 +94,13 @@ export const PartnerNotificationsPage: React.FC<PartnerNotificationsPageProps> =
       </div>
 
       {/* 2. Notifications List Container matching Sketch Screen 8 */}
-      <div className="notifications-list-container">
+      <PaginatedList items={filteredNotifs}>{pageItems => (<div className="notifications-list-container">
         {filteredNotifs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#637771' }}>
             <p>{language === 'vi' ? 'Không có thông báo mới nào.' : 'No notifications found.'}</p>
           </div>
         ) : (
-          filteredNotifs.map((item) => (
+          pageItems.map((item) => (
             <div 
               key={item.id} 
               className={`notification-row-item ${!item.isRead ? 'unread' : ''}`}
@@ -132,7 +133,7 @@ export const PartnerNotificationsPage: React.FC<PartnerNotificationsPageProps> =
             </div>
           ))
         )}
-      </div>
+      </div>)}</PaginatedList>
     </div>
   );
 };

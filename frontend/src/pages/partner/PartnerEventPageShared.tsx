@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ChevronRight, Clock3, RefreshCw } from 'lucide-react';
+import { BookOpen, CalendarDays, Clock3, RefreshCw } from 'lucide-react';
 import React, { useState } from 'react';
 import { formatPartnerEventDateTime } from './PartnerEventPageUtils';
 
@@ -10,13 +10,13 @@ interface PartnerEventHeroProps {
   onRefresh: () => void;
 }
 
-export function PartnerEventHero({ title, description, breadcrumb, isLoading, onRefresh }: PartnerEventHeroProps) {
+export function PartnerEventHero({ title, description, isLoading, onRefresh }: PartnerEventHeroProps) {
   return (
     <header className="event-hub-hero">
       <div className="event-hub-hero-copy">
-        <span className="event-hub-eyebrow">ĐỐI TÁC <ChevronRight size={13} /> {breadcrumb}</span>
-        <h1>{title}</h1>
-        <p>{description}</p>
+
+        <h1 className="workspace-page-title">{title}</h1>
+        <p className="workspace-page-subtitle">{description}</p>
       </div>
       <div className="event-hub-hero-visual" aria-hidden="true" />
       <button type="button" className="event-hub-refresh" onClick={onRefresh} disabled={isLoading}>

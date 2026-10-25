@@ -81,8 +81,8 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title">Cài đặt Hệ thống</h1>
-          <p className="adm-page-subtitle">
+          <h1 className="adm-page-title workspace-page-title">Cài đặt Hệ thống</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Cấu hình thông số vận hành chung, chính sách bảo mật phiên làm việc và cảnh báo nền tảng.
           </p>
         </div>

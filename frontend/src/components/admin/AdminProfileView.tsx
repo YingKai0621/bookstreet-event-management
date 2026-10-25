@@ -129,9 +129,9 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
         {/* Header */}
         <div className="adm-page-header">
           <div>
-            <span className="admin-page-eyebrow">TÀI KHOẢN & BẢO MẬT</span>
-            <h1 className="adm-page-title">Hồ sơ Quản trị viên</h1>
-            <p className="adm-page-subtitle">
+
+            <h1 className="adm-page-title workspace-page-title">Hồ sơ Quản trị viên</h1>
+            <p className="adm-page-subtitle workspace-page-subtitle">
               Quản lý thông tin định danh quản trị và chính sách bảo mật tài khoản cá nhân.
             </p>
           </div>
@@ -165,7 +165,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                     profile.avatarInitials
                   )}
                 </div>
-                
+
                 {/* Upload Button overlay */}
                 <button
                   type="button"

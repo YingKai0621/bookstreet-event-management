@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import {
   AlertCircle,
   CheckCircle2,
@@ -71,7 +72,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
         u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.phone.includes(searchTerm) ||
         u.code.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesRole = selectedRole === 'all' || u.role === selectedRole;
       const matchesStatus = selectedStatus === 'all' || u.status === selectedStatus;
 
@@ -190,8 +191,8 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title">Quản lý Tài khoản</h1>
-          <p className="adm-page-subtitle">
+          <h1 className="adm-page-title workspace-page-title">Quản lý Tài khoản</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Tra cứu, cấp quyền, khóa/mở khóa và thiết lập tài khoản người dùng trên toàn hệ thống.
           </p>
         </div>
@@ -271,7 +272,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
           <span>Tìm thấy <strong>{filteredUsers.length}</strong> tài khoản phù hợp</span>
         </div>
 
-        <div className="adm-table-responsive">
+        <PaginatedList items={filteredUsers}>{pageItems => (<div className="adm-table-responsive">
           <table className="adm-table">
             <thead>
               <tr>
@@ -292,7 +293,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                pageItems.map((user) => (
                   <tr key={user.id} className={user.status === 'locked' ? 'adm-row-locked' : ''}>
                     {/* Name & Code */}
                     <td>
@@ -385,7 +386,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
               )}
             </tbody>
           </table>
-        </div>
+        </div>)}</PaginatedList>
       </div>
 
       {/* Modal: Add New User */}

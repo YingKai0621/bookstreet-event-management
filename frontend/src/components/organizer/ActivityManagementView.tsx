@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertTriangle,
@@ -123,10 +124,10 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
         marginBottom: '1.5rem'
       }}>
         <div>
-          <h1 className="organizer-view-title">
+          <h1 className="organizer-view-title workspace-page-title">
             {language === 'vi' ? 'Danh sách hoạt động' : 'Activity Management'}
           </h1>
-          <p className="organizer-view-sub">
+          <p className="organizer-view-sub workspace-page-subtitle">
             {language === 'vi' ? 'Xét duyệt đề xuất từ đối tác, điều phối địa điểm và phê duyệt xuất bản lịch trình' : 'Review proposals, manage locations and publish official activities'}
           </p>
         </div>
@@ -271,8 +272,8 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {filteredActivities.map((act) => (
+        <PaginatedList items={filteredActivities}>{pageItems => (<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {pageItems.map((act) => (
           <div
             key={act.id}
             className="organizer-card"
@@ -405,7 +406,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
             </div>
           </div>
         ))}
-      </div>
+      </div>)}</PaginatedList>
       )}
 
       {/* Detail & Edit Modal if viewing or editing an activity */}

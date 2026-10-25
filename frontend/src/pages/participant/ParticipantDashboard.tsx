@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
@@ -275,10 +276,10 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
       {/* 1. Header with Welcome Greeting */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? `Xin chào, ${profile.name}!` : `Welcome back, ${profile.name}!`}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi'
             ? 'Theo dõi lịch sự kiện và các hoạt động văn hóa đọc hấp dẫn diễn ra tại Đường Sách TP.HCM.'
             : 'Track literary events and community reading activities on HCMC Book Street calendar.'}
@@ -647,8 +648,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
             </div>
 
             <div className="calendar-modal-body">
-              <div className="calendar-modal-events-list">
-                {selectedDayEvents.events.map((evt) => (
+              <PaginatedList items={selectedDayEvents.events}>{pageItems => (<div className="calendar-modal-events-list">
+                {pageItems.map((evt) => (
                   <div key={evt.id} className="calendar-modal-event-card">
                     <div className="modal-event-card-left" style={{ borderLeftColor: evt.badgeColor || '#185E48' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -674,9 +675,9 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                           </span>
                         )}
                       </div>
-                      
+
                       <h4 className="modal-event-title">{evt.title}</h4>
-                      
+
                       <div className="modal-event-meta-row">
                         {evt.time && (
                           <span className="modal-event-meta-item">
@@ -719,7 +720,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                     </div>
                   </div>
                 ))}
-              </div>
+              </div>)}</PaginatedList>
             </div>
           </div>
         </div>

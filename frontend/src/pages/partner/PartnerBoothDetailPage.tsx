@@ -1,3 +1,5 @@
+import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../../components/ui/ListPagination';
 import {
   AlertCircle,
   ArrowLeft,
@@ -74,7 +76,7 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
       const [requestResult, assignmentResult, historyResult] = await Promise.allSettled([
         boothApi.getPartnerRequest(requestId!),
         paymentApi.getAssignment(requestId!),
-        paymentApi.listPayments(requestId!, { page, size: 10 }),
+        paymentApi.listPayments(requestId!, { page, size: LIST_PAGE_SIZE }),
       ]);
       if (!active) return;
 
@@ -97,6 +99,8 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
       setError('');
       if (historyResult.status === 'fulfilled') {
         setHistory(historyResult.value);
+        const lastPage = getPageCount(historyResult.value.totalElements, LIST_PAGE_SIZE);
+        if (page >= lastPage) { setPage(toPageIndex(lastPage)); return; }
         setNotice('');
       } else {
         setHistory(null);
@@ -124,11 +128,11 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
 
       <header className="partner-booth-detail-header">
         <div>
-          <span className="partner-booth-detail-eyebrow">Đối tác <b>/</b> Gian hàng của tôi <b>/</b> Chi tiết</span>
-          <h1 id="partner-booth-detail-title">
+
+          <h1 id="partner-booth-detail-title" className="workspace-page-title">
             {language === 'vi' ? `Gian ${assignment?.boothCode || request?.boothCode || ''}` : `Booth ${assignment?.boothCode || request?.boothCode || ''}`}
           </h1>
-          <p>Thông tin cấp gian, mã nhận diện và lịch sử thanh toán của gian hàng.</p>
+          <p className="workspace-page-subtitle">Thông tin cấp gian, mã nhận diện và lịch sử thanh toán của gian hàng.</p>
         </div>
         <button
           type="button"
@@ -213,7 +217,7 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
           <section className="partner-booth-detail-history" aria-labelledby="partner-booth-payment-history-title">
             <div className="partner-booth-detail-section-heading">
               <div>
-                <span>Thông tin tài chính</span>
+
                 <h2 id="partner-booth-payment-history-title">Lịch sử thanh toán</h2>
               </div>
               {history && <strong>{history.totalElements} giao dịch</strong>}
@@ -253,12 +257,8 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
               </div>
             )}
 
-            {history && history.totalPages > 1 && (
-              <nav className="partner-booth-detail-pagination" aria-label="Phân trang lịch sử thanh toán">
-                <button type="button" disabled={page === 0 || loading} onClick={() => { setLoading(true); setPage(value => value - 1); }}>Trang trước</button>
-                <span>Trang {page + 1} / {history.totalPages}</span>
-                <button type="button" disabled={page + 1 >= history.totalPages || loading} onClick={() => { setLoading(true); setPage(value => value + 1); }}>Trang sau</button>
-              </nav>
+            {history && getPageCount(history.totalElements, LIST_PAGE_SIZE) > 1 && (
+              <ListPagination page={page + 1} pages={getPageCount(history.totalElements, LIST_PAGE_SIZE)} disabled={loading} onPage={value => { setLoading(true); setPage(toPageIndex(value)); }} />
             )}
           </section>
         </>

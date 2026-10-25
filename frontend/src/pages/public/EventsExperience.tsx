@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
@@ -253,8 +254,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               </button>
             </div>
           ) : (
-            <div className="events-collection-grid">
-              {filteredEvents.map((evt) => (
+            <PaginatedList items={filteredEvents}>{pageItems => (<div className="events-collection-grid">
+              {pageItems.map((evt) => (
                 <article 
                   key={evt.id} 
                   className="event-card-item"
@@ -286,7 +287,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   </div>
                 </article>
               ))}
-            </div>
+            </div>)}</PaginatedList>
           )}
         </section>
 

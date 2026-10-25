@@ -1,0 +1,76 @@
+/* Workspace page headings follow the Organizer Dashboard reference. */
+:root {
+  --workspace-title-font: "Noto Serif", Georgia, serif;
+  --workspace-title-size: clamp(1.875rem, 2.4vw, 2rem);
+  --workspace-title-color: #10251f;
+  --workspace-subtitle-font: "Be Vietnam Pro", var(--font-sans, sans-serif);
+  --workspace-subtitle-size: 0.975rem;
+  --workspace-subtitle-color: #5c7069;
+  --workspace-heading-gap: 0.2rem;
+  --workspace-page-top-space: 36px;
+  --workspace-page-inline-space: 48px;
+  --workspace-page-bottom-space: 64px;
+  --workspace-page-max-width: 1440px;
+}
+
+/* Keep page headings the same distance below the application header. */
+:is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell)
+  :is(.organizer-main-viewport, .admin-main-viewport, .partner-main-viewport, .participant-main-viewport) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--workspace-page-max-width);
+  margin-inline: auto;
+  padding: var(--workspace-page-top-space) var(--workspace-page-inline-space) var(--workspace-page-bottom-space);
+}
+
+/* Page wrappers must not add a second top inset before the heading. */
+:is(.organizer-main-viewport, .admin-main-viewport, .partner-main-viewport, .participant-main-viewport)
+  :where(div, section, header):has(.workspace-page-title) {
+  margin-top: 0 !important;
+  margin-inline: 0 !important;
+  padding-top: 0 !important;
+  padding-inline: 0 !important;
+}
+
+:is(.organizer-main-viewport, .admin-main-viewport, .partner-main-viewport, .participant-main-viewport)
+  > :has(.workspace-page-title) {
+  max-width: 100%;
+  width: 100%;
+  padding-bottom: 0 !important;
+}
+
+.partner-app-shell :is(.event-hub-hero-copy, .partner-workspace-hero-copy) {
+  align-self: start;
+}
+
+:is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) h1.workspace-page-title {
+  margin: 0;
+  padding: 0;
+  font-family: var(--workspace-title-font);
+  font-size: var(--workspace-title-size);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  color: var(--workspace-title-color);
+  text-align: left;
+  text-transform: none;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) p.workspace-page-subtitle {
+  margin: var(--workspace-heading-gap) 0 0;
+  padding: 0;
+  max-width: 80ch;
+  font-family: var(--workspace-subtitle-font);
+  font-size: var(--workspace-subtitle-size);
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.35;
+  letter-spacing: normal;
+  color: var(--workspace-subtitle-color);
+  text-align: left;
+  text-transform: none;
+  text-wrap: pretty;
+}

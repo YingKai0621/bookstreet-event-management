@@ -28,9 +28,9 @@ for (const tab of ['booths', 'audit', 'badges', 'profile']) {
     expect(metrics.bottom).toBeLessThanOrEqual(viewport.height + 1);
     expect(metrics.scroll).toBeLessThanOrEqual(metrics.height + 1);
     if (tab === 'audit' || tab === 'booths') {
-      await expect(page.getByRole('navigation', { name: 'Phân trang' })).toBeVisible();
-      await page.getByRole('button', { name: 'Sau', exact: true }).click();
-      await expect(page.getByRole('navigation', { name: 'Phân trang' })).toContainText('Trang 2/');
+      await expect(page.getByRole('navigation', { name: 'pagination' })).toBeVisible();
+      await page.getByRole('link', { name: 'Trang sau', exact: true }).click();
+      await expect(page.getByRole('navigation', { name: 'pagination' }).locator('[aria-current=page]')).toHaveText('2');
     }
     if (tab === 'profile') {
       await page.getByRole('button', { name: 'Chỉnh sửa thông tin', exact: true }).click();
@@ -76,7 +76,7 @@ test('booth access denial is not displayed as an empty catalog', async ({ page }
   await expect(page.getByRole('heading', { name: 'Chưa có quyền truy cập danh mục' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Tạo gian hàng đầu tiên' })).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Phân trang' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'pagination' })).toHaveCount(0);
   await expect(page.locator('.booth-kpi-info strong').first()).toHaveText('—');
 });
 

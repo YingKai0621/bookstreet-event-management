@@ -158,16 +158,16 @@ test('event discovery paginates after filtering and resets to the first page', a
   await page.goto('/partner/events/apply');
 
   const cards = page.locator('.event-discovery-card');
-  await expect(cards).toHaveCount(6);
-  await expect(page.getByText('Hiển thị 1–6 trong tổng số 14 sự kiện')).toBeVisible();
-  await page.getByRole('button', { name: 'Trang sự kiện 3', exact: true }).click();
-  await expect(cards).toHaveCount(2);
-  await expect(page.getByText('Hiển thị 13–14 trong tổng số 14 sự kiện')).toBeVisible();
+  await expect(cards).toHaveCount(10);
+  await expect(page.getByText('Hiển thị 1–10 trong tổng số 14 sự kiện')).toBeVisible();
+  await page.getByRole('link', { name: 'Trang 2', exact: true }).click();
+  await expect(cards).toHaveCount(4);
+  await expect(page.getByText('Hiển thị 11–14 trong tổng số 14 sự kiện')).toBeVisible();
 
   await page.getByLabel('Tìm kiếm sự kiện công khai').fill('Sự kiện phân trang 14');
   await expect(cards).toHaveCount(1);
   await expect(page.getByText('Hiển thị 1–1 trong tổng số 1 sự kiện')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Trang sự kiện trước' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
 });
 
 test('event discovery links an already applied event to its application detail', async ({ page }) => {
@@ -211,14 +211,14 @@ test('application pagination runs after filtering and resets to the first page',
   const cards = page.locator('.event-application-card');
   await expect(cards).toHaveCount(10);
   await expect(page.getByText('Hiển thị 1–10 trong tổng số 23 hồ sơ')).toBeVisible();
-  await page.getByRole('button', { name: 'Trang hồ sơ 3', exact: true }).click();
+  await page.getByRole('link', { name: 'Trang 3', exact: true }).click();
   await expect(cards).toHaveCount(3);
   await expect(page.getByText('Hiển thị 21–23 trong tổng số 23 hồ sơ')).toBeVisible();
 
   await page.getByLabel('Tìm kiếm hồ sơ sự kiện').fill('31');
   await expect(cards).toHaveCount(1);
   await expect(page.getByText('Hiển thị 1–1 trong tổng số 1 hồ sơ')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Trang hồ sơ trước' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
 });
 
 test('pending withdrawal requires confirmation and uses existing withdrawal API', async ({ page }) => {

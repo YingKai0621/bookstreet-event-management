@@ -1,33 +1,175 @@
-.organizer-location-toolbar .facility-search { max-width: none; }
-.organizer-location-toolbar .facility-filter { margin-left: 0; }
-.organizer-location-toolbar .facility-search + .facility-filter { margin-left: auto; }
-.organizer-location-page .facility-name > span:last-child { display: grid; gap: 3px; }
-.organizer-location-page .facility-name small { color: #7b8b84; font-size: 10px; font-weight: 750; letter-spacing: .07em; }
-.organizer-location-type { display: inline-flex; padding: 5px 9px; color: #49675d; background: #f0f5f2; border: 1px solid #d5e2dc; border-radius: 20px; font-size: 11px; font-weight: 750; }
-.organizer-location-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 750; }
-.organizer-location-status i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.organizer-location-status.is-active { color: #24805f; }
-.organizer-location-status.is-inactive { color: #8a9691; }
-.organizer-location-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.organizer-location-footer > div { display: flex; align-items: center; gap: 10px; }
-.organizer-location-footer button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #d2ddd7; border-radius: 6px; background: white; color: #355448; cursor: pointer; }
-.organizer-location-footer button:disabled { opacity: .4; cursor: not-allowed; }
-.organizer-location-dialog { width: min(700px, calc(100vw - 32px)); }
-.organizer-location-fields { grid-template-columns: 1fr 1fr; }
-.organizer-location-fields select,
-.organizer-location-fields textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; padding: 12px; border-radius: 8px; border: 1px solid #d4dfd7; font: inherit; color: #172421; background: white; }
-.organizer-location-fields textarea { resize: vertical; }
-.organizer-location-wide { grid-column: 1 / -1; }
-.organizer-location-active { padding: 13px; border: 1px solid #d6e1db; border-radius: 8px; background: #f7faf8; display: flex !important; align-items: flex-start; gap: 10px; cursor: pointer; }
-.organizer-location-active input { width: auto !important; margin: 3px 0 0 !important; accent-color: #245640; }
-.organizer-location-active > span { color: inherit !important; display: grid; gap: 2px; }
-.organizer-location-active small { margin-top: 0; }
-@media (max-width: 900px) {
-  .organizer-location-toolbar .facility-search + .facility-filter { margin-left: 0; }
-  .organizer-location-toolbar .facility-search { flex-basis: 100%; }
+/* Dashboard is the visual owner: typography and panel headings
+   reuse OrganizerPortal.css. Only venue-specific layout is defined here. */
+.organizer-location-page .venue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 6px;
+}
+.organizer-location-page .venue-heading > div { min-width: 0; }
+.organizer-location-page .btn-org-primary,
+.organizer-location-page .btn-org-secondary { min-height: 40px; white-space: nowrap; }
+.organizer-location-page .venue-panel { overflow: hidden; }
+.organizer-location-page .venue-list-heading { align-items: center; }
+
+.organizer-location-page .venue-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid #e5ece8;
+  background: #fbfcfb;
+}
+.organizer-location-page .venue-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 160px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #cbd9d2;
+  border-radius: 5px;
+  background: white;
+  color: #667a72;
+}
+.organizer-location-page .venue-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: #203b32;
+  font: inherit;
+  font-size: 13px;
+}
+.organizer-location-page .venue-search:focus-within { outline: 2px solid #1f624d; outline-offset: 2px; }
+.organizer-location-page .venue-search input:focus { outline: none; }
+.organizer-location-page .venue-filter { display: grid; gap: 5px; min-width: 160px; }
+.organizer-location-page .venue-filter > span { color: #667a72; font-size: 11px; font-weight: 600; }
+.organizer-location-page .venue-filter select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #cbd9d2;
+  border-radius: 5px;
+  background: white;
+  color: #203b32;
+  font: 600 13px/1.3 "Be Vietnam Pro", sans-serif;
+}
+.organizer-location-page .venue-table-scroll { overflow-x: auto; }
+.organizer-location-page .venue-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.organizer-location-page .venue-table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5ece8;
+  background: #f3f7f5;
+  color: #61756e;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.organizer-location-page .venue-table td { padding: 16px 14px; border-bottom: 1px solid #e7edea; vertical-align: middle; }
+.organizer-location-page .venue-table tr:last-child td { border-bottom: 0; }
+.organizer-location-page .venue-table tbody tr:hover { background: #f7faf8; box-shadow: inset 3px 0 0 #c79531; }
+.organizer-location-page .venue-table th:first-child { width: 34%; }
+.organizer-location-page .venue-name { display: flex; align-items: flex-start; gap: 12px; }
+.organizer-location-page .venue-row-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 46px;
+  border: 1px solid #e3d8bd;
+  border-radius: 5px;
+  background: #fbf6e9;
+  color: #936a1c;
+}
+.organizer-location-page .venue-name > span:last-child { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.organizer-location-page .venue-name strong { color: #142a23; font-size: 14px; font-weight: 700; line-height: 1.4; }
+.organizer-location-page .venue-name small { color: #61756e; font-size: 11px; }
+.organizer-location-page .venue-description { display: -webkit-box; margin: 3px 0 0; overflow: hidden; color: #687a74; font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.organizer-location-page .organizer-location-type { color: #4d655b; font-size: 12px; white-space: nowrap; }
+.organizer-location-page .venue-capacity,
+.organizer-location-page .venue-coordinate { display: inline-flex; align-items: center; gap: 5px; color: #61756e; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.organizer-location-page .venue-capacity strong { color: #203b32; font-weight: 650; }
+.organizer-location-page .venue-muted { color: #7b8984; font-size: 12px; }
+.organizer-location-page .organizer-location-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #cce5d8; border-radius: 4px; background: #edf7f1; color: #216147; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.organizer-location-page .organizer-location-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.organizer-location-page .organizer-location-status.is-inactive { border-color: #dfe5e2; background: #f3f5f4; color: #667970; }
+.organizer-location-page .venue-actions { text-align: right; }
+.organizer-location-page .venue-row-actions { display: flex; justify-content: flex-end; }
+.organizer-location-page .venue-row-actions button { gap: 5px; font-size: 12px; white-space: nowrap; }
+.organizer-location-page .venue-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-top: 1px solid #e5ece8; color: #61756e; font-size: 12px; }
+.organizer-location-page .venue-table-footer > nav { display: flex; align-items: center; gap: 10px; }
+.organizer-location-page .venue-table-footer button { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 9px; display: inline-flex; gap: 4px; border: 1px solid #cbd9d2; border-radius: 5px; background: white; color: #203b32; cursor: pointer; }
+.organizer-location-page .venue-empty { display: grid; justify-items: center; gap: 12px; padding: 52px 20px; text-align: center; color: #61756e; }
+.organizer-location-page .venue-empty h3 { margin: 0; font-size: 17px; color: #203b32; }
+.organizer-location-page .venue-empty p { margin: 0; font-size: 13px; }
+.organizer-location-page .venue-notice { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid #cce5d8; border-radius: 6px; background: #edf7f1; color: #216147; font-size: 13px; }
+.organizer-location-page .venue-dialog { width: min(700px, calc(100vw - 32px)); max-height: 90dvh; margin: auto; padding: 0; border: 1px solid #dbe5e0; border-radius: 8px; background: white; color: #172a24; box-shadow: 0 20px 60px #13241f30; }
+.organizer-location-page .venue-dialog::backdrop { background: #13241f99; }
+.organizer-location-page .venue-dialog-heading { padding: 20px 24px; }
+.organizer-location-page .venue-dialog-heading h2 { margin: 0; font-size: 20px; }
+.organizer-location-page .venue-dialog-heading p { margin: 6px 0 0; color: #687a74; font-size: 12px; }
+.organizer-location-page .venue-close { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border: 1px solid #cbd9d2; border-radius: 5px; background: white; color: #536a62; cursor: pointer; }
+.organizer-location-page .venue-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px; }
+.organizer-location-page .venue-fields label { display: block; min-width: 0; color: #334b43; font-size: 13px; font-weight: 600; }
+.organizer-location-page .venue-fields label > span { color: #b8322c; }
+.organizer-location-page .venue-fields input,
+.organizer-location-page .venue-fields select,
+.organizer-location-page .venue-fields textarea { display: block; width: 100%; min-height: 40px; margin-top: 7px; padding: 10px; border: 1px solid #cbd9d2; border-radius: 5px; background: white; color: #203b32; font: inherit; font-weight: 400; }
+.organizer-location-page .venue-fields select:disabled { background: #f4f7f5; color: #7b8984; }
+.organizer-location-page .venue-fields textarea { resize: vertical; }
+.organizer-location-page .venue-fields small { display: block; margin-top: 6px; color: #687a74; font-size: 11px; font-weight: 400; line-height: 1.5; }
+.organizer-location-page .organizer-location-wide { grid-column: 1 / -1; }
+.organizer-location-page .organizer-location-active { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid #dbe5e0; border-radius: 6px; background: #f7faf8; cursor: pointer; }
+.organizer-location-page .organizer-location-active input { flex-shrink: 0; width: 16px; min-height: 16px; margin: 3px 0 0; accent-color: #1c5a47; }
+.organizer-location-page .organizer-location-active > span { color: #334b43; }
+.organizer-location-page .venue-dialog-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e5ece8; background: #f7faf8; }
+.organizer-location-page .venue-error { margin: 0 24px 20px; padding: 12px; border: 1px solid #edb1ad; border-radius: 5px; background: #fff6f5; color: #8d2823; font-size: 13px; }
+.organizer-location-page .venue-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.organizer-location-page button:disabled { opacity: .5; cursor: not-allowed; }
+.organizer-location-page :focus-visible { outline: 2px solid #1f624d; outline-offset: 2px; }
+@media (max-width: 1100px) {
+  .organizer-location-page .venue-toolbar { flex-wrap: wrap; }
+  .organizer-location-page .venue-search { flex-basis: 100%; }
+  .organizer-location-page .venue-filter { flex: 1; }
 }
 @media (max-width: 620px) {
-  .organizer-location-fields { grid-template-columns: 1fr; }
-  .organizer-location-wide { grid-column: auto; }
-  .organizer-location-footer { align-items: flex-start; flex-direction: column; }
+  .organizer-location-page .venue-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .organizer-location-page .venue-list-heading { align-items: flex-start; }
+  .organizer-location-page .venue-list-heading > button { font-size: 11px; }
+  .organizer-location-page .venue-filter { min-width: 0; flex-basis: calc(50% - 12px); }
+  .organizer-location-page .venue-filter select { font-size: 12px; }
+  .organizer-location-page .venue-table-footer { flex-wrap: wrap; }
+  .organizer-location-page .venue-fields { grid-template-columns: 1fr; padding: 20px; }
+  .organizer-location-page .organizer-location-wide { grid-column: auto; }
+  .organizer-location-page .venue-dialog-heading, .organizer-location-page .venue-dialog-footer { padding: 18px 20px; }
+}
+
+/* Keep the form actions visible while its fields scroll. */
+.organizer-location-page .venue-dialog > form { display: flex; flex-direction: column; max-height: calc(90dvh - 2px); }
+.organizer-location-page .venue-dialog-heading,
+.organizer-location-page .venue-dialog-footer,
+.organizer-location-page .venue-error { flex-shrink: 0; }
+.organizer-location-page .venue-fields { min-height: 0; overflow-y: auto; align-content: start; }
+@media (max-width: 620px) {
+  .organizer-location-page .venue-table { display: block; min-width: 0; }
+  .organizer-location-page .venue-table thead { display: none; }
+  .organizer-location-page .venue-table tbody { display: block; }
+  .organizer-location-page .venue-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 12px; padding: 18px 14px; border-bottom: 1px solid #e5ece8; }
+  .organizer-location-page .venue-table tr:last-child { border-bottom: 0; }
+  .organizer-location-page .venue-table td { display: block; padding: 0; border: 0; }
+  .organizer-location-page .venue-table td:first-child,
+  .organizer-location-page .venue-table .venue-action-cell { grid-column: 1 / -1; }
+  .organizer-location-page .venue-table td[data-label]::before { display: block; margin-bottom: 5px; color: #687a74; font-size: 11px; content: attr(data-label); }
+  .organizer-location-page .venue-row-actions { justify-content: flex-start; }
+  .organizer-location-page .venue-row-actions button { min-height: 36px; padding-left: 0; }
 }

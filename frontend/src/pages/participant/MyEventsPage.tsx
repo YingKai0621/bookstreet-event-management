@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ArrowRight, Calendar, CheckCircle2, Download, MapPin, QrCode, Tag, User, X } from 'lucide-react';
 import React, { useState } from 'react';
@@ -38,10 +39,10 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
     <div className="participant-my-events-view">
       {/* Title */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi'
             ? 'Theo dõi danh sách các lễ hội và sự kiện sách bạn đã đăng ký tham gia.'
             : 'Track the book festivals and cultural events you have joined.'}
@@ -79,8 +80,8 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
           <p>{language === 'vi' ? 'Không có sự kiện nào trong danh mục này.' : 'No events found in this category.'}</p>
         </div>
       ) : (
-        <div className="participant-events-grid">
-          {filteredEvents.map((evt) => (
+        <PaginatedList items={filteredEvents}>{pageItems => (<div className="participant-events-grid">
+          {pageItems.map((evt) => (
             <div key={evt.id} className="participant-event-card">
               <div className="event-card-media">
                 <img src={evt.imageUrl} alt={evt.title} />
@@ -153,7 +154,7 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
               </div>
             </div>
           ))}
-        </div>
+        </div>)}</PaginatedList>
       )}
 
       {/* POPUP CHI TIẾT SỰ KIỆN */}
@@ -359,9 +360,6 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
               >
                 <X size={18} />
               </button>
-              <span style={{ fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#E9BC63', fontWeight: 800 }}>
-                {language === 'vi' ? 'Mã Vé & Check-in' : 'Event Pass & Check-in'}
-              </span>
               <h3 style={{ margin: '0.4rem 0 0.2rem', fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
                 {selectedQrEvent.title}
               </h3>

@@ -34,7 +34,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [editEmail, setEditEmail] = useState(profile.email);
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
-  
+
   // Notifications toggles state
   const [notifyNewBooth, setNotifyNewBooth] = useState(profile.notificationPreferences?.newBooth ?? true);
   const [notifyNewActivity, setNotifyNewActivity] = useState(profile.notificationPreferences?.newActivity ?? true);
@@ -107,17 +107,10 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
       <div className="org-profile-container">
         {/* 1. Page Header matching prompt */}
         <div style={{ marginBottom: '1.75rem' }}>
-          <h1 style={{ 
-            fontSize: '1.45rem', 
-            fontWeight: 700, 
-            color: '#13241F', 
-            margin: '0 0 0.35rem 0',
-            fontFamily: 'var(--font-serif, "Cinzel", Georgia, serif)',
-            letterSpacing: '0.01em'
-          }}>
+          <h1 className="workspace-page-title">
             {language === 'vi' ? 'Hồ sơ Ban Quản Lý' : 'Organizer Profile'}
           </h1>
-          <p style={{ fontSize: '0.88rem', color: '#6B7280', margin: 0 }}>
+          <p className="workspace-page-subtitle">
             {language === 'vi' 
               ? 'Quản lý thông tin cá nhân và tùy chọn tài khoản.'
               : 'Manage personal profile and account preferences.'}
@@ -126,10 +119,10 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
 
         {/* 2-Column Balanced Layout on Desktop (320px left, 1fr right) */}
         <div className="org-profile-layout">
-          
+
           {/* LEFT COLUMN: Profile Summary & Session */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
+
             {/* Profile Summary Card */}
             <div className="organizer-card" style={{ padding: '1.5rem', textAlign: 'center' }}>
               <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 0.85rem auto' }}>
@@ -273,7 +266,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
               <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.5rem 0' }}>
                 {language === 'vi' ? 'Phiên làm việc' : 'Session Management'}
               </h3>
-              
+
               <div style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, marginBottom: '1rem' }}>
                 <div>Trình duyệt hiện tại: <strong>Chrome trên Windows</strong></div>
                 <div style={{ marginTop: 2 }}>Kết nối mã hóa phiên an toàn.</div>
@@ -724,7 +717,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 <X size={18} />
               </button>
             </div>
-            
+
             <div style={{ padding: '1.25rem 1.5rem', fontSize: '0.88rem', color: '#4B5563', lineHeight: 1.5 }}>
               {language === 'vi' 
                 ? 'Bạn có chắc chắn muốn kết thúc phiên làm việc của Ban Quản Lý và đăng xuất khỏi cổng?'

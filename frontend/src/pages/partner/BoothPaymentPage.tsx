@@ -1,3 +1,5 @@
+import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../../components/ui/ListPagination';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -49,7 +51,7 @@ export function BoothPaymentPage() {
       try {
         const [nextRequest, nextHistory, focused] = await Promise.all([
           boothApi.getPartnerRequest(requestId!),
-          paymentApi.listPayments(requestId!, { page, size: 10 }),
+          paymentApi.listPayments(requestId!, { page, size: LIST_PAGE_SIZE }),
           selectedPaymentId === null ? Promise.resolve(null) : paymentApi.getPayment(selectedPaymentId),
         ]);
         if (!active) return;
@@ -65,6 +67,8 @@ export function BoothPaymentPage() {
         if (!active) return;
         setRequest(nextRequest);
         setHistory(nextHistory);
+        const lastPage = getPageCount(nextHistory.totalElements, LIST_PAGE_SIZE);
+        if (page >= lastPage) { setPage(toPageIndex(lastPage)); return; }
         setSelectedPayment(focused);
         setAssignment(nextAssignment);
         setError('');
@@ -102,8 +106,8 @@ export function BoothPaymentPage() {
             <Store size={14} />
             <span>Thanh toán & Cấp gian hàng</span>
           </div>
-          <h1>Gian hàng {request?.boothCode || ''}</h1>
-          <p>Theo dõi kết quả xác thực thanh toán thời gian thực, lịch sử đối soát và thông tin gian hàng đã được cấp.</p>
+          <h1 className="workspace-page-title">Gian hàng {request?.boothCode || ''}</h1>
+          <p className="workspace-page-subtitle">Theo dõi kết quả xác thực thanh toán thời gian thực, lịch sử đối soát và thông tin gian hàng đã được cấp.</p>
         </div>
         <button
           type="button"
@@ -304,26 +308,8 @@ export function BoothPaymentPage() {
               </div>
             )}
 
-            {history && history.totalPages > 1 && (
-              <nav className="s3-pagination-nav" aria-label="Phân trang lịch sử thanh toán">
-                <button
-                  type="button"
-                  className="s3-page-btn"
-                  disabled={page === 0 || loading}
-                  onClick={() => { setLoading(true); setPage(value => value - 1); }}
-                >
-                  Trang trước
-                </button>
-                <span className="s3-page-indicator">Trang {page + 1} / {history.totalPages}</span>
-                <button
-                  type="button"
-                  className="s3-page-btn"
-                  disabled={page + 1 >= history.totalPages || loading}
-                  onClick={() => { setLoading(true); setPage(value => value + 1); }}
-                >
-                  Trang sau
-                </button>
-              </nav>
+            {history && getPageCount(history.totalElements, LIST_PAGE_SIZE) > 1 && (
+              <ListPagination page={page + 1} pages={getPageCount(history.totalElements, LIST_PAGE_SIZE)} disabled={loading} onPage={value => { setLoading(true); setPage(toPageIndex(value)); }} />
             )}
           </section>
         </>

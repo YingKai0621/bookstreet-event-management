@@ -90,10 +90,10 @@ export const OrganizerReportsView: React.FC<OrganizerReportsViewProps> = ({
       {/* 1. Top Header & Event Switcher */}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.75rem' }}>
         <div>
-          <h1 className="organizer-view-title" style={{ margin: 0, fontSize: '1.75rem' }}>
+          <h1 className="organizer-view-title workspace-page-title">
             {language === 'vi' ? 'Báo cáo sự kiện' : 'Event Reports'}
           </h1>
-          <p className="organizer-view-sub" style={{ margin: '0.25rem 0 0 0', color: '#556B65' }}>
+          <p className="organizer-view-sub workspace-page-subtitle">
             {language === 'vi'
               ? 'Số liệu được tổng hợp trực tiếp từ đăng ký, điểm danh và đánh giá.'
               : 'Live registration, attendance and rating data.'}

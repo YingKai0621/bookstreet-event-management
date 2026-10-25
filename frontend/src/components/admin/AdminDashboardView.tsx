@@ -46,7 +46,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 }) => {
   const lockedUsersCount = users.filter(user => user.status === 'locked').length;
   const pendingUsersCount = users.filter(user => user.status === 'pending_verification').length;
-  
+
   const totalAuditsLast7Days = stats.auditByDay.reduce((acc, curr) => acc + curr.count, 0);
   const maxAudit = Math.max(1, ...stats.auditByDay.map(item => item.count));
 
@@ -80,10 +80,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       {/* 1. Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', color: '#172421', margin: 0 }}>
+          <h1 className="adm-page-title workspace-page-title">
             Tổng quan Quản trị Hệ thống
           </h1>
-          <p className="adm-page-subtitle" style={{ fontSize: '0.85rem', color: '#637771', margin: '0.35rem 0 0 0' }}>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Theo dõi vận hành, tài khoản và hoạt động tại Đường Sách TP.HCM.
           </p>
         </div>

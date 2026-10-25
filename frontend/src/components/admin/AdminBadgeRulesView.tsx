@@ -12,7 +12,7 @@ import {
 import React, { useState } from 'react';
 import { AdminBadgeRule } from '../../types/admin';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
 
 interface AdminBadgeRulesViewProps {
@@ -31,7 +31,7 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AdminBadgeRule | null>(null);
   useModalDismiss(isModalOpen, () => setIsModalOpen(false));
-  const pagination = useViewportPagination(badgeRules, 300, 400, 3);
+  const pagination = useListPagination(badgeRules);
 
   // Form states
   const [formCode, setFormCode] = useState('');
@@ -128,8 +128,8 @@ export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <span className="admin-page-eyebrow">CỘNG ĐỒNG ĐỘC GIẢ</span><h1 className="adm-page-title">Quy tắc Điểm & Huy hiệu</h1>
-          <p className="adm-page-subtitle">
+          <h1 className="adm-page-title workspace-page-title">Quy tắc Điểm & Huy hiệu</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Cấu hình tiêu chí xét danh hiệu, điểm sàn tích lũy và đặc quyền độc giả tại Đường Sách TP.HCM.
           </p>
         </div>

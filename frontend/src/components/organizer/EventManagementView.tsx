@@ -1,7 +1,7 @@
+import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../ui/ListPagination';
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Edit3,
   Eye,
   ImageOff,
@@ -10,7 +10,7 @@ import {
   Send,
   SlidersHorizontal,
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Language } from '../../types';
 import { OrganizerEvent, OrganizerEventStatus } from '../../types/organizer';
@@ -32,7 +32,7 @@ interface EventManagementViewProps {
 type StatusFilter = 'ALL' | OrganizerEventStatus;
 type EventSort = 'updated_desc' | 'start_asc' | 'title_asc';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = LIST_PAGE_SIZE;
 
 const STATUS_FILTERS: Array<{ value: StatusFilter; vi: string; en: string }> = [
   { value: 'ALL', vi: 'Tất cả', en: 'All' },
@@ -48,18 +48,6 @@ function dateValue(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function buildPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
-
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
-  const sortedPages = [...pages].filter(page => page >= 1 && page <= totalPages).sort((a, b) => a - b);
-  const items: Array<number | 'ellipsis'> = [];
-  sortedPages.forEach((page, index) => {
-    if (index > 0 && page - sortedPages[index - 1] > 1) items.push('ellipsis');
-    items.push(page);
-  });
-  return items;
-}
 
 function EventArtwork({ event }: { event: OrganizerEvent }) {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
@@ -162,11 +150,16 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
     });
   }, [activeStatusFilter, events, language, searchQuery, sortBy]);
 
-  const totalPages = Math.max(1, Math.ceil(processedEvents.length / PAGE_SIZE));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const pageStartIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const totalPages = getPageCount(processedEvents.length, PAGE_SIZE);
+  const safeCurrentPage = clampPage(currentPage, totalPages);
+  useEffect(() => {
+    if (isLoading || loadError || events.length === 0 || currentPage === safeCurrentPage) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('page', String(safeCurrentPage));
+    setSearchParams(next, { replace: true });
+  }, [currentPage, events.length, isLoading, loadError, safeCurrentPage, searchParams, setSearchParams]);
+  const pageStartIndex = getPageOffset(safeCurrentPage, PAGE_SIZE);
   const visibleEvents = processedEvents.slice(pageStartIndex, pageStartIndex + PAGE_SIZE);
-  const pageItems = buildPageItems(safeCurrentPage, totalPages);
 
   const selectStatus = (status: StatusFilter) => {
     updateListParams({ status: status === 'ALL' ? null : status, page: null });
@@ -191,8 +184,8 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
     <div className="organizer-content org-event-management">
       <div className="org-event-page-header">
         <div>
-          <h1 className="organizer-view-title">{language === 'vi' ? 'Danh sách sự kiện' : 'Event Management'}</h1>
-          <p className="organizer-view-sub">{language === 'vi' ? 'Tạo bản nháp, cập nhật thông tin và công bố sự kiện' : 'Create drafts, update details, and publish events'}</p>
+          <h1 className="organizer-view-title workspace-page-title">{language === 'vi' ? 'Danh sách sự kiện' : 'Event Management'}</h1>
+          <p className="organizer-view-sub workspace-page-subtitle">{language === 'vi' ? 'Tạo bản nháp, cập nhật thông tin và công bố sự kiện' : 'Create drafts, update details, and publish events'}</p>
         </div>
         <button type="button" className="btn-org-primary" onClick={onOpenCreateEvent}>
           <Plus size={16} />{language === 'vi' ? 'Tạo sự kiện mới' : 'Create Event'}
@@ -314,15 +307,7 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
 
           <div className="org-event-pagination">
             <span>{language === 'vi' ? `Hiển thị ${resultStart}–${resultEnd} trên ${processedEvents.length} sự kiện` : `Showing ${resultStart}–${resultEnd} of ${processedEvents.length} events`}</span>
-            {totalPages > 1 && (
-              <nav className="org-event-page-controls" aria-label={language === 'vi' ? 'Phân trang sự kiện' : 'Event pagination'}>
-                <button type="button" aria-label={language === 'vi' ? 'Trang trước' : 'Previous page'} disabled={safeCurrentPage === 1} onClick={() => updateListParams({ page: safeCurrentPage - 1 })}><ChevronLeft size={17} /></button>
-                {pageItems.map((item, index) => item === 'ellipsis'
-                  ? <span key={`ellipsis-${index}`} className="org-event-page-ellipsis">…</span>
-                  : <button key={item} type="button" className={item === safeCurrentPage ? 'is-active' : ''} aria-current={item === safeCurrentPage ? 'page' : undefined} onClick={() => updateListParams({ page: item === 1 ? null : item })}>{item}</button>)}
-                <button type="button" aria-label={language === 'vi' ? 'Trang sau' : 'Next page'} disabled={safeCurrentPage === totalPages} onClick={() => updateListParams({ page: safeCurrentPage + 1 })}><ChevronRight size={17} /></button>
-              </nav>
-            )}
+            <ListPagination page={safeCurrentPage} pages={totalPages} onPage={value => updateListParams({ page: value })} />
           </div>
         </>
       )}

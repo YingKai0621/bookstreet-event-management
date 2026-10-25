@@ -244,7 +244,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   return (
     <div className="organizer-content org-dashboard">
       <header className="org-dashboard-header">
-        <div><h1 className="org-dashboard-title">{copy.title}</h1><p className="org-dashboard-subtitle">{copy.subtitle}</p></div>
+        <div><h1 className="org-dashboard-title workspace-page-title">{copy.title}</h1><p className="org-dashboard-subtitle workspace-page-subtitle">{copy.subtitle}</p></div>
       </header>
 
       {eventsError && (

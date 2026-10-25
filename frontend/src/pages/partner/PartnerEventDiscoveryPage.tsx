@@ -1,3 +1,5 @@
+import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../../components/ui/ListPagination';
 import {
   AlertCircle,
   ArrowRight,
@@ -38,20 +40,8 @@ interface PartnerEventDiscoveryPageProps {
 type AvailabilityFilter = 'all' | 'open' | 'applied';
 type EventTimeFilter = 'all' | 'upcoming' | 'month';
 type EventSortOrder = 'nearest' | 'farthest';
-const EVENTS_PER_PAGE = 6;
+const EVENTS_PER_PAGE = LIST_PAGE_SIZE;
 
-function paginationItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
-  const pages = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages])]
-    .filter(page => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
-  const items: Array<number | 'ellipsis'> = [];
-  pages.forEach((page, index) => {
-    if (index > 0 && page - pages[index - 1] > 1) items.push('ellipsis');
-    items.push(page);
-  });
-  return items;
-}
 
 export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps> = ({ language, organization }) => {
   const location = useLocation();
@@ -140,9 +130,10 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
       return sortOrder === 'nearest' ? difference : -difference;
     }), [applicationByEventId, availabilityFilter, events, filterReferenceTime, keyword, sortOrder, timeFilter]);
 
-  const eventPageCount = Math.ceil(visibleEvents.length / EVENTS_PER_PAGE);
-  const currentEventPage = Math.min(eventPage, Math.max(eventPageCount, 1));
-  const eventRangeStart = (currentEventPage - 1) * EVENTS_PER_PAGE;
+  const eventPageCount = getPageCount(visibleEvents.length, EVENTS_PER_PAGE);
+  const currentEventPage = clampPage(eventPage, eventPageCount);
+  if (eventPage !== currentEventPage) setEventPage(currentEventPage);
+  const eventRangeStart = getPageOffset(currentEventPage, EVENTS_PER_PAGE);
   const paginatedEvents = visibleEvents.slice(eventRangeStart, eventRangeStart + EVENTS_PER_PAGE);
 
   const goToEventPage = (page: number) => {
@@ -217,7 +208,7 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
 
       {isLoading ? <PartnerEventLoading label="Đang tải sự kiện công khai…" /> : (
         <section ref={resultsSectionRef} aria-labelledby="available-events-title">
-          <div className="event-hub-section-heading"><div><span>SỰ KIỆN CÔNG KHAI</span><h2 id="available-events-title">Sự kiện dành cho đối tác</h2></div><p>{visibleEvents.length} kết quả phù hợp</p></div>
+          <div className="event-hub-section-heading"><div><h2 id="available-events-title">Sự kiện dành cho đối tác</h2></div><p>{visibleEvents.length} kết quả phù hợp</p></div>
           <div className="event-hub-grid">
             {paginatedEvents.map(event => {
               const existingApplication = applicationByEventId.get(event.id);
@@ -239,10 +230,10 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
             })}
           </div>
           {visibleEvents.length > 0 && (
-            <nav className="event-application-pagination" aria-label="Phân trang sự kiện công khai">
+            <div className="event-application-pagination">
               <p>Hiển thị <strong>{eventRangeStart + 1}–{Math.min(eventRangeStart + EVENTS_PER_PAGE, visibleEvents.length)}</strong> trong tổng số <strong>{visibleEvents.length}</strong> sự kiện</p>
-              {eventPageCount > 1 && <div className="event-pagination-controls"><button type="button" onClick={() => goToEventPage(currentEventPage - 1)} disabled={currentEventPage === 1} aria-label="Trang sự kiện trước">Trước</button>{paginationItems(currentEventPage, eventPageCount).map((item, index) => item === 'ellipsis' ? <span key={`ellipsis-${index}`} aria-hidden="true">…</span> : <button type="button" key={item} onClick={() => goToEventPage(item)} className={item === currentEventPage ? 'is-active' : ''} aria-current={item === currentEventPage ? 'page' : undefined} aria-label={`Trang sự kiện ${item}`}>{item}</button>)}<button type="button" onClick={() => goToEventPage(currentEventPage + 1)} disabled={currentEventPage === eventPageCount} aria-label="Trang sự kiện tiếp theo">Tiếp</button></div>}
-            </nav>
+              <ListPagination page={currentEventPage} pages={eventPageCount} onPage={goToEventPage} />
+            </div>
           )}
           {visibleEvents.length === 0 && <div className="event-hub-empty"><Search size={30} /><h2>Không tìm thấy sự kiện phù hợp</h2><p>Hãy thử từ khóa hoặc bộ lọc khác, hoặc quay lại sau khi Ban tổ chức công bố sự kiện mới.</p></div>}
         </section>

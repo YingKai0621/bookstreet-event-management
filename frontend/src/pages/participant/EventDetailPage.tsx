@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { ArrowLeft, Search } from 'lucide-react';
 import React from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -195,8 +196,8 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           </div>
 
           {/* List of Activities matching Sketch Screen 3 */}
-          <div className="activities-list-stack">
-            {filteredActivities.map((act) => {
+          <PaginatedList items={filteredActivities}>{pageItems => (<div className="activities-list-stack">
+            {pageItems.map((act) => {
               const isRegistered = act.status === 'registered';
               const isFull = act.status === 'full' || act.registeredCount >= act.capacity;
               const seatsLeft = Math.max(0, act.capacity - act.registeredCount);
@@ -274,7 +275,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                 </div>
               );
             })}
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 
@@ -293,7 +294,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
             {language === 'vi' ? 'Gian hàng tiêu biểu trong lễ hội' : 'Featured Bookstalls'}
           </h2>
           <div className="activities-list-stack">
-            {(currentEvent.booths || []).map(booth => <div className="activity-row-card" key={booth.id}>{booth.imageUrl && <img src={booth.imageUrl} alt={booth.name} className="activity-thumb" />}<div className="activity-row-info"><h3>{booth.code} · {booth.name}</h3><p>{booth.organizationName}</p></div></div>)}
+            <PaginatedList items={currentEvent.booths || []}>{pageItems => pageItems.map(booth => <div className="activity-row-card" key={booth.id}>{booth.imageUrl && <img src={booth.imageUrl} alt={booth.name} className="activity-thumb" />}<div className="activity-row-info"><h3>{booth.code} · {booth.name}</h3><p>{booth.organizationName}</p></div></div>)}</PaginatedList>
             {!currentEvent.booths?.length && <p>{language === 'vi' ? 'Chưa có gian hàng được phân bổ.' : 'No booths have been assigned.'}</p>}
           </div>
         </div>
