@@ -1,13 +1,14 @@
 import { PaginatedList } from '../ui/PaginatedList';
 import {
+  AlertCircle,
   ArrowLeft,
-  Calendar,
+  CalendarDays,
   Check,
+  ChevronRight,
+  Clock3,
   Edit3,
-  Layers,
-  Map,
+  RefreshCw,
   Send,
-  Star,
   Store,
   Users
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
 import { EventBoothConfigurationPanel } from './EventBoothConfigurationPanel';
 import { OrganizerEventStatusChip } from './OrganizerEventStatusChip';
+import { OrganizerPartnerApplicationsPanel } from './OrganizerPartnerApplicationsPanel';
 
 interface EventDetailViewProps {
   language: Language;
@@ -28,13 +30,59 @@ interface EventDetailViewProps {
   activities: OrganizerActivityItem[];
   participants: OrganizerParticipantItem[];
   partnerApplications?: OrganizerPartnerApplication[];
-  onApprovePartnerApplication?: (applicationId: string, reviewNote?: string) => void | Promise<void>;
-  onRejectPartnerApplication?: (applicationId: string, reviewNote: string) => void | Promise<void>;
+  activePhysicalBoothCount: number;
+  isLoadingOperations: boolean;
+  operationsError: string;
+  onApprovePartnerApplication?: (applicationId: string, reviewNote?: string) => Promise<void>;
+  onRejectPartnerApplication?: (applicationId: string, reviewNote: string) => Promise<void>;
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
+  onNavigateToBoothRequests: () => void;
+  onRetryOperations: () => void;
   onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (event: OrganizerEvent) => void;
+}
+
+type DeadlineState = 'open' | 'elapsed' | 'missing';
+
+function formatDateTime(value: string | null | undefined, language: Language): string {
+  if (!value) return language === 'vi' ? 'Chưa thiết lập' : 'Not configured';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return language === 'vi' ? 'Không hợp lệ' : 'Invalid date';
+  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+  const datePart = date.toLocaleDateString(locale, {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString(locale, {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return `${datePart} · ${timePart}`;
+}
+
+function deadlineState(value: string | null | undefined): DeadlineState {
+  if (!value) return 'missing';
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return 'missing';
+  return timestamp < Date.now() ? 'elapsed' : 'open';
+}
+
+function formatHoldWindow(minutes: number, language: Language): string {
+  if (minutes > 0 && minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return language === 'vi' ? `${days} ngày` : `${days} ${days === 1 ? 'day' : 'days'}`;
+  }
+  if (minutes > 0 && minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return language === 'vi' ? `${hours} giờ` : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+  return language === 'vi' ? `${minutes} phút` : `${minutes} minutes`;
 }
 
 export const EventDetailView: React.FC<EventDetailViewProps> = ({
@@ -45,10 +93,15 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   activities,
   participants,
   partnerApplications = [],
+  activePhysicalBoothCount,
+  isLoadingOperations,
+  operationsError,
   onApprovePartnerApplication,
   onRejectPartnerApplication,
   onBack,
   onNavigateToBoothsMap,
+  onNavigateToBoothRequests,
+  onRetryOperations,
   onBoothConfigurationChanged,
   onEditEvent,
   onPublishEvent
@@ -67,82 +120,121 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
     setSearchParams(next);
   };
 
-  const handleApprovePartner = (id: string) => {
-    const reviewNote = window.prompt(
-      language === 'vi'
-        ? 'Ghi chú xét duyệt (không bắt buộc):'
-        : 'Review note (optional):',
-      '',
-    );
-    if (reviewNote === null) return;
-    void onApprovePartnerApplication?.(id, reviewNote.trim());
-  };
+  const pendingPartnerCount = partnerApplications.filter((application) => application.status === 'pending').length;
+  const pendingBoothRequestCount = boothRequests.filter((request) => request.status === 'PENDING').length;
+  const activeHoldCount = boothRequests.filter((request) => request.hold?.status === 'ACTIVE').length;
 
-  const handleRejectPartner = (id: string) => {
-    const reviewNote = window.prompt(
-      language === 'vi'
-        ? 'Nhập lý do từ chối hồ sơ:'
-        : 'Enter the rejection reason:',
-      '',
-    );
-    if (reviewNote === null) return;
-    void onRejectPartnerApplication?.(id, reviewNote.trim());
+  const operationMetrics = [
+    {
+      key: 'partners',
+      icon: Users,
+      value: partnerApplications.length.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US'),
+      label: language === 'vi' ? 'Hồ sơ đối tác' : 'Partner applications',
+      detail: language === 'vi' ? `${pendingPartnerCount} chờ duyệt` : `${pendingPartnerCount} pending`,
+      tone: 'green',
+      onClick: () => selectSection('partners'),
+    },
+    {
+      key: 'booths',
+      icon: Store,
+      value: activePhysicalBoothCount > 0 ? `${booths.length}/${activePhysicalBoothCount}` : String(booths.length),
+      label: language === 'vi' ? 'Gian hàng đã cấu hình' : 'Configured booths',
+      detail: activePhysicalBoothCount > 0
+        ? (language === 'vi' ? 'Trên tổng số đang khả dụng' : 'Of all active physical booths')
+        : (language === 'vi' ? 'Chưa có gian hàng vật lý khả dụng' : 'No active physical booths'),
+      tone: 'gold',
+      onClick: () => selectSection('booths'),
+    },
+    {
+      key: 'requests',
+      icon: Clock3,
+      value: pendingBoothRequestCount.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US'),
+      label: language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth requests',
+      detail: language === 'vi' ? 'Chờ xử lý' : 'Pending review',
+      tone: 'blue',
+      onClick: onNavigateToBoothRequests,
+    },
+    {
+      key: 'holds',
+      icon: Check,
+      value: activeHoldCount.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US'),
+      label: language === 'vi' ? 'Giữ chỗ hiệu lực' : 'Active holds',
+      detail: language === 'vi' ? 'Đang hoạt động' : 'Currently active',
+      tone: 'teal',
+      onClick: onNavigateToBoothRequests,
+    },
+  ];
+
+  const registrationDeadlines = [
+    {
+      label: language === 'vi' ? 'Đăng ký đối tác' : 'Partner applications',
+      value: event.partnerApplicationDeadlineAt,
+    },
+    {
+      label: language === 'vi' ? 'Đăng ký người tham gia' : 'Participant registration',
+      value: event.participantRegistrationDeadlineAt,
+    },
+  ];
+
+  const otherDeadlines = [
+    {
+      label: language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth requests',
+      value: event.boothRequestDeadlineAt,
+    },
+    {
+      label: language === 'vi' ? 'Đề xuất hoạt động' : 'Activity proposals',
+      value: event.activityProposalDeadlineAt,
+    },
+    {
+      label: language === 'vi' ? 'Rút hồ sơ đối tác' : 'Partner withdrawal',
+      value: event.partnerWithdrawalCutoffAt,
+    },
+    {
+      label: language === 'vi' ? 'Hủy gian hàng' : 'Booth cancellation',
+      value: event.boothCancellationCutoffAt,
+    },
+    {
+      label: language === 'vi' ? 'Hủy hoạt động' : 'Activity cancellation',
+      value: event.activityCancellationCutoffAt,
+    },
+  ];
+
+  const deadlineLabel = (state: DeadlineState) => {
+    if (state === 'open') return language === 'vi' ? 'Còn hiệu lực' : 'Open';
+    if (state === 'elapsed') return language === 'vi' ? 'Đã qua' : 'Elapsed';
+    return language === 'vi' ? 'Chưa thiết lập' : 'Not configured';
   };
 
   return (
-    <div className="organizer-content">
-      {/* 1. Back button */}
-      <div style={{ marginBottom: '1rem' }}>
-        <button
-          type="button"
-          className="btn-org-secondary"
-          onClick={onBack}
-          style={{ padding: '0.35rem 0.85rem', height: '34px' }}
-        >
-          <ArrowLeft size={14} />
-          <span>{language === 'vi' ? 'Quay lại danh sách sự kiện' : 'Back to Events'}</span>
-        </button>
-      </div>
+    <div className="organizer-content org-event-detail">
+      <button type="button" className="org-event-detail-back" onClick={onBack}>
+        <ArrowLeft size={17} aria-hidden="true" />
+        <span>{language === 'vi' ? 'Quay lại danh sách sự kiện' : 'Back to events'}</span>
+      </button>
 
-      {/* 2. Event Header Card matching Sketch Screen 3 */}
-      <div className="organizer-card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1.25rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, minWidth: '320px' }}>
-            {event.imageUrl && <img
-              src={event.imageUrl} 
-              alt={event.title}
-              style={{ width: '110px', height: '80px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #DCE5E0' }}
-            />}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                <h1 className="workspace-page-title">
-                  {event.title}
-                </h1>
-                <OrganizerEventStatusChip language={language} status={event.apiStatus} />
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.82rem', color: '#556B65' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Calendar size={14} color="#17382E" />
-                  <span>{event.dateRange}</span>
-                </span>
-              </div>
-            </div>
+      <header className="org-event-detail-header">
+        <div className="org-event-detail-heading">
+          <div className="org-event-detail-title-row">
+            <h1>{event.title}</h1>
+            <OrganizerEventStatusChip language={language} status={event.apiStatus} />
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onPublishEvent(event)}><Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}</button>}
-            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}><Edit3 size={15} />{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</button>}
+          <div className="org-event-detail-actions">
+            {event.apiStatus === 'DRAFT' && (
+              <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}>
+                <Edit3 size={16} />
+                {language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
+              </button>
+            )}
+            {event.apiStatus === 'DRAFT' && (
+              <button type="button" className="btn-org-primary org-event-detail-publish" onClick={() => onPublishEvent(event)}>
+                <Send size={16} />
+                {language === 'vi' ? 'Công bố' : 'Publish'}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Navigation Tabs matching Sketch Screen 3 */}
-        <div className="org-tabs-bar" style={{ marginTop: '1.25rem', marginBottom: 0 }}>
+        <nav className="org-event-detail-tabs" aria-label={language === 'vi' ? 'Điều hướng chi tiết sự kiện' : 'Event detail navigation'}>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
@@ -171,218 +263,157 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           >
             {language === 'vi' ? 'Cài đặt' : 'Settings'}
           </button>
-        </div>
-      </div>
+        </nav>
+      </header>
 
       {/* 3. TAB CONTENT */}
 
-      {/* TAB: TỔNG QUAN (Matching Sketch Screen 3 layout) */}
       {activeTab === 'overview' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(280px, 0.8fr)',
-          gap: '1.5rem',
-          alignItems: 'start'
-        }}>
-          {/* Left: Thông tin chung */}
-          <div className="organizer-card">
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: '0 0 1rem 0' }}>
-              {language === 'vi' ? 'Thông tin chung' : 'General Overview'}
-            </h2>
-
-            <div style={{ marginBottom: '1.25rem' }}>
-              <span style={{ fontSize: '0.78rem', color: '#637771', display: 'block', marginBottom: '0.35rem' }}>
-                {language === 'vi' ? 'Mô tả sự kiện' : 'Description'}
-              </span>
-              <p style={{ margin: 0, fontSize: '0.88rem', color: '#243833', lineHeight: 1.6 }}>
-                {event.description}
-              </p>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem',
-              borderTop: '1px solid #EEF2F0',
-              paddingTop: '1rem',
-              fontSize: '0.85rem'
-            }}>
+        <div className="org-event-overview">
+          <section className="org-event-operations" aria-labelledby="event-operations-title">
+            <div className="org-event-section-heading">
               <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Thời gian' : 'Date'}</span>
-                <strong style={{ color: '#172421' }}>{event.dateRange}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Hạn đăng ký đối tác' : 'Partner application deadline'}</span>
-                <strong style={{ color: '#172421' }}>{event.partnerApplicationDeadlineAt ? new Date(event.partnerApplicationDeadlineAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Trạng thái' : 'Status'}</span>
-                <OrganizerEventStatusChip language={language} status={event.apiStatus} className="org-event-detail-status" />
-              </div>
-              <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Gian hàng đã cấu hình' : 'Configured booths'}</span>
-                <strong style={{ color: '#172421' }}>{booths.length} gian</strong>
-              </div>
-              <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Thời hạn giữ chỗ' : 'Hold window'}</span>
-                <strong style={{ color: '#172421' }}>{event.boothPaymentWindowMinutes} phút</strong>
-              </div>
-              <div>
-                <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Giới hạn gian hàng mỗi đối tác' : 'Booth limit per partner'}</span>
-                <strong style={{ color: '#172421' }}>{event.maxBoothsPerPartner}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Thống kê nhanh & Thao tác nhanh */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* 4 Box Thống kê nhanh matching Sketch Screen 3 */}
-            <div className="organizer-card">
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', color: '#172421', margin: '0 0 1rem 0' }}>
-                {language === 'vi' ? 'Thống kê nhanh' : 'Quick Stats'}
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
-                  <Users size={16} color="#17382E" />
-                  <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {partnerApplications.length.toLocaleString('vi-VN')}
-                  </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Hồ sơ đối tác</span>
-                </div>
-
-                <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
-                  <Store size={16} color="#B48A3C" />
-                  <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {booths.length}
-                  </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Gian hàng đã cấu hình</span>
-                </div>
-
-                <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
-                  <Layers size={16} color="#059669" />
-                  <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {boothRequests.filter(item => item.status === 'PENDING').length}
-                  </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Yêu cầu chờ chọn</span>
-                </div>
-
-                <div style={{ background: '#F8FAF9', padding: '0.85rem', borderRadius: '8px', border: '1px solid #E2EAE5' }}>
-                  <Star size={16} color="#E9BC63" />
-                  <strong style={{ display: 'block', fontSize: '1.3rem', color: '#172421', margin: '0.35rem 0 0.1rem' }}>
-                    {boothRequests.filter(item => item.hold?.status === 'ACTIVE').length}
-                  </strong>
-                  <span style={{ fontSize: '0.74rem', color: '#556B65' }}>Giữ chỗ đang hoạt động</span>
-                </div>
+                <h2 id="event-operations-title">{language === 'vi' ? 'Tình hình sự kiện' : 'Event operations'}</h2>
+                <p>{language === 'vi' ? 'Số liệu vận hành hiện tại của riêng sự kiện này.' : 'Current operational data for this event.'}</p>
               </div>
             </div>
 
-            {/* Thao tác nhanh matching Sketch Screen 3 */}
-            <div className="organizer-card">
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem', color: '#172421', margin: '0 0 1rem 0' }}>
-                {language === 'vi' ? 'Thao tác nhanh' : 'Quick Actions'}
-              </h3>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                <button
-                  type="button"
-                  className="btn-org-secondary"
-                  style={{ justifyContent: 'flex-start', gap: '0.75rem' }}
-                  onClick={onNavigateToBoothsMap}
-                >
-                  <Map size={15} color="#17382E" />
-                  <span>{language === 'vi' ? 'Quản lý sơ đồ vật lý' : 'Manage physical map'}</span>
+            {operationsError && (
+              <div className="org-event-data-notice" role="alert">
+                <AlertCircle size={18} aria-hidden="true" />
+                <span>{operationsError}</span>
+                <button type="button" onClick={onRetryOperations}>
+                  <RefreshCw size={15} aria-hidden="true" />
+                  {language === 'vi' ? 'Thử lại' : 'Retry'}
                 </button>
               </div>
+            )}
+
+            <div className="org-event-metric-grid">
+              {operationMetrics.map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <button
+                    key={metric.key}
+                    type="button"
+                    className={`org-event-metric org-event-metric--${metric.tone}`}
+                    onClick={metric.onClick}
+                    aria-label={`${metric.label}: ${isLoadingOperations || operationsError ? '—' : metric.value}`}
+                  >
+                    <span className="org-event-metric-icon"><Icon size={20} aria-hidden="true" /></span>
+                    <span className="org-event-metric-copy">
+                      {isLoadingOperations ? (
+                        <span className="org-event-metric-skeleton" aria-label={language === 'vi' ? 'Đang tải' : 'Loading'} />
+                      ) : (
+                        <strong>{operationsError ? '—' : metric.value}</strong>
+                      )}
+                      <span>{metric.label}</span>
+                      <small>{operationsError ? (language === 'vi' ? 'Chưa thể tải dữ liệu' : 'Data unavailable') : metric.detail}</small>
+                    </span>
+                    <ChevronRight size={18} aria-hidden="true" />
+                  </button>
+                );
+              })}
             </div>
+          </section>
+
+          <div className="org-event-overview-grid org-event-overview-grid--equal">
+            <section className="org-event-overview-card">
+              <div className="org-event-card-title">
+                <CalendarDays size={20} aria-hidden="true" />
+                <h2>{language === 'vi' ? 'Thời gian sự kiện' : 'Event schedule'}</h2>
+              </div>
+              <dl className="org-event-time-list">
+                <div>
+                  <dt>{language === 'vi' ? 'Bắt đầu' : 'Starts'}</dt>
+                  <dd>{formatDateTime(event.startDate, language)}</dd>
+                </div>
+                <div>
+                  <dt>{language === 'vi' ? 'Kết thúc' : 'Ends'}</dt>
+                  <dd>{formatDateTime(event.endDate, language)}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="org-event-overview-card">
+              <div className="org-event-card-title">
+                <Clock3 size={20} aria-hidden="true" />
+                <h2>{language === 'vi' ? 'Thời hạn đăng ký' : 'Registration deadlines'}</h2>
+              </div>
+              <div className="org-event-deadline-list org-event-deadline-list--registration">
+                {registrationDeadlines.map((deadline) => {
+                  const state = deadlineState(deadline.value);
+                  return (
+                    <div className="org-event-deadline-row" key={deadline.label}>
+                      <div>
+                        <span>{deadline.label}</span>
+                        <strong>{formatDateTime(deadline.value, language)}</strong>
+                      </div>
+                      <span className={`org-event-deadline-state is-${state}`}>{deadlineLabel(state)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          <div className="org-event-overview-grid org-event-overview-grid--details">
+            <section className="org-event-overview-card org-event-information-card">
+              <div className="org-event-card-title">
+                <h2>{language === 'vi' ? 'Thông tin sự kiện' : 'Event information'}</h2>
+              </div>
+              <p className={`org-event-description ${event.description ? '' : 'is-empty'}`}>
+                {event.description || (language === 'vi' ? 'Chưa có mô tả cho sự kiện này.' : 'No event description has been provided.')}
+              </p>
+              <dl className="org-event-rule-list">
+                <div>
+                  <dt>{language === 'vi' ? 'Thời hạn giữ chỗ' : 'Booth hold window'}</dt>
+                  <dd>{formatHoldWindow(event.boothPaymentWindowMinutes, language)}</dd>
+                </div>
+                <div>
+                  <dt>{language === 'vi' ? 'Gian hàng tối đa / đối tác' : 'Maximum booths / partner'}</dt>
+                  <dd>{event.maxBoothsPerPartner}</dd>
+                </div>
+                <div>
+                  <dt>{language === 'vi' ? 'Hoạt động tối đa / đối tác' : 'Maximum activities / partner'}</dt>
+                  <dd>{event.maxActivitiesPerPartner}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="org-event-overview-card">
+              <div className="org-event-card-title">
+                <h2>{language === 'vi' ? 'Mốc thời hạn khác' : 'Other deadlines'}</h2>
+              </div>
+              <div className="org-event-deadline-list">
+                {otherDeadlines.map((deadline) => {
+                  const state = deadlineState(deadline.value);
+                  return (
+                    <div className="org-event-deadline-row org-event-deadline-row--compact" key={deadline.label}>
+                      <div>
+                        <span>{deadline.label}</span>
+                        <strong>{formatDateTime(deadline.value, language)}</strong>
+                      </div>
+                      <span className={`org-event-deadline-state is-${state}`}>{deadlineLabel(state)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         </div>
       )}
 
-      {/* TAB: HỒ SƠ ĐỐI TÁC (PARTNER APPLICATION REVIEW) */}
       {activeTab === 'partners' && (
-        <div className="organizer-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <div>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: 0 }}>
-                {language === 'vi' ? 'Hồ sơ đơn vị đăng ký tham gia sự kiện' : 'Partner Event Applications'}
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: '#556B65', margin: '0.25rem 0 0 0' }}>
-                {language === 'vi' ? 'Đơn vị đối tác cần được Ban Quản Lý phê duyệt trước khi chọn gian hàng hoặc đề xuất hoạt động' : 'Partners must be approved before requesting booths or submitting activity proposals'}
-              </p>
-            </div>
-          </div>
-
-          <PaginatedList items={partnerApplications}>{pageItems => (<div className="org-table-container">
-            <table className="org-table">
-              <thead>
-                <tr>
-                  <th>{language === 'vi' ? 'Tên tổ chức' : 'Organization'}</th>
-                  <th>{language === 'vi' ? 'Loại hình' : 'Category'}</th>
-                  <th>{language === 'vi' ? 'Ngày nộp' : 'Submitted Date'}</th>
-                  <th>{language === 'vi' ? 'Nội dung đăng ký' : 'Application Summary'}</th>
-                  <th>{language === 'vi' ? 'Trạng thái' : 'Status'}</th>
-                  <th style={{ textAlign: 'right' }}>{language === 'vi' ? 'Thao tác' : 'Actions'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageItems.map((pa) => (
-                  <tr key={pa.id}>
-                    <td>
-                      <strong style={{ color: '#172421' }}>{pa.orgName}</strong>
-                    </td>
-                    <td>
-                      <span className="org-chip">{pa.categoryCode}</span>
-                    </td>
-                    <td>{pa.date}</td>
-                    <td style={{ maxWidth: '320px', fontSize: '0.82rem', color: '#556B65' }}>
-                      <div>{pa.applicationNote || 'Không có ghi chú đăng ký.'}</div>
-                      {pa.reviewNote && (
-                        <div style={{ marginTop: '0.35rem', color: '#7C5E1B' }}>
-                          Phản hồi: {pa.reviewNote}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      {pa.status === 'approved' && <span className="org-chip approved">● Đã duyệt</span>}
-                      {pa.status === 'pending' && <span className="org-chip pending">● Chờ duyệt</span>}
-                      {pa.status === 'rejected' && <span className="org-chip rejected">● Đã từ chối</span>}
-                      {pa.status === 'withdrawn' && <span className="org-chip">● Đã rút</span>}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {pa.status === 'pending' ? (
-                        <div style={{ display: 'inline-flex', gap: '0.45rem' }}>
-                          <button
-                            type="button"
-                            className="btn-org-primary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
-                            onClick={() => handleApprovePartner(pa.id)}
-                          >
-                            <Check size={13} />
-                            <span>Duyệt</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-org-secondary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', color: '#C84C32' }}
-                            onClick={() => handleRejectPartner(pa.id)}
-                          >
-                            <span>Từ chối</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.78rem', color: '#8E9F97' }}>Đã hoàn tất</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {partnerApplications.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', color: '#637771' }}>Chưa có hồ sơ đối tác cho sự kiện này.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>)}</PaginatedList>
-        </div>
+        <OrganizerPartnerApplicationsPanel
+          language={language}
+          applications={partnerApplications}
+          isLoading={isLoadingOperations}
+          error={operationsError}
+          onRetry={onRetryOperations}
+          onApprove={onApprovePartnerApplication}
+          onReject={onRejectPartnerApplication}
+        />
       )}
 
       {/* TAB: GIAN HÀNG */}
@@ -495,7 +526,13 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               <h2 style={{ margin: 0 }}>Cấu hình sự kiện</h2>
               <p style={{ margin: '0.35rem 0 0', color: '#556B65', fontSize: '0.82rem' }}>Các giá trị đang được lưu trên backend.</p>
             </div>
-            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <button type="button" className="btn-org-secondary" onClick={onNavigateToBoothsMap}>
+                <Store size={15} />
+                {language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth map'}
+              </button>
+              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
+            </div>
           </div>
           <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '0.75rem 1rem', margin: 0 }}>
             {[

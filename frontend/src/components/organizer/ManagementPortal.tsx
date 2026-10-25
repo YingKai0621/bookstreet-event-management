@@ -127,6 +127,10 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   });
   const [partnerApplications, setPartnerApplications] = useState<OrganizerPartnerApplication[]>([]);
   const [boothRequests, setBoothRequests] = useState<BoothRequest[]>([]);
+  const [activePhysicalBoothCount, setActivePhysicalBoothCount] = useState(0);
+  const [isLoadingEventOperations, setIsLoadingEventOperations] = useState(false);
+  const [eventOperationsError, setEventOperationsError] = useState('');
+  const [eventOperationsReloadKey, setEventOperationsReloadKey] = useState(0);
   const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -162,7 +166,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, [refreshOrganizerData]);
 
   useEffect(() => {
-    if (activeTab === 'overview') return;
+    if (activeTab === 'overview' || activeTab === 'event_detail') return;
     let active = true;
     if (!activeEventScopeId) {
       setBoothsList([]);
@@ -209,6 +213,59 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       window.removeEventListener('duongsach:data-changed', handleFocusOrData);
     };
   }, [activeEventScopeId, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'event_detail' || !selectedEventId) return;
+    let active = true;
+    const requestedEventId = selectedEventId;
+
+    setIsLoadingEventOperations(true);
+    setEventOperationsError('');
+    setBoothsList([]);
+    setPartnerApplications([]);
+    setBoothRequests([]);
+    setActivePhysicalBoothCount(0);
+
+    const refreshEventOperations = async (showLoading: boolean) => {
+      if (showLoading) setIsLoadingEventOperations(true);
+      try {
+        const [booths, applications, requests, physicalBooths] = await Promise.all([
+          organizerApi.getBooths(requestedEventId),
+          organizerApi.getPartnerApplications(requestedEventId),
+          boothApi.listAllOrganizerRequests(requestedEventId),
+          boothApi.listAllPhysicalBooths(true),
+        ]);
+        if (!active || requestedEventId !== selectedEventId) return;
+        setBoothsList(booths);
+        setPartnerApplications(applications);
+        setBoothRequests(requests);
+        setActivePhysicalBoothCount(physicalBooths.length);
+        setEventOperationsError('');
+      } catch (error) {
+        if (!active || requestedEventId !== selectedEventId) return;
+        setEventOperationsError(error instanceof Error
+          ? error.message
+          : 'Không tải được tình hình vận hành của sự kiện.');
+      } finally {
+        if (active && requestedEventId === selectedEventId && showLoading) {
+          setIsLoadingEventOperations(false);
+        }
+      }
+    };
+
+    void refreshEventOperations(true);
+    const intervalId = window.setInterval(() => void refreshEventOperations(false), 15000);
+    const handleRefresh = () => void refreshEventOperations(false);
+    window.addEventListener('focus', handleRefresh);
+    window.addEventListener('duongsach:data-changed', handleRefresh);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleRefresh);
+      window.removeEventListener('duongsach:data-changed', handleRefresh);
+    };
+  }, [activeTab, eventOperationsReloadKey, selectedEventId]);
 
   useEffect(() => {
     if (activeTab !== 'overview') return;
@@ -281,28 +338,18 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     applicationId: string,
     reviewNote = '',
   ) => {
-    if (!selectedEventId) return;
-    setActionError('');
-    try {
-      await organizerApi.approvePartnerApplication(applicationId, reviewNote);
-      setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Không thể duyệt hồ sơ đối tác.');
-    }
+    if (!selectedEventId) throw new Error('Không xác định được sự kiện đang xét duyệt.');
+    await organizerApi.approvePartnerApplication(applicationId, reviewNote);
+    setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
   };
 
   const handleRejectPartnerApplication = async (
     applicationId: string,
     reviewNote: string,
   ) => {
-    if (!selectedEventId) return;
-    setActionError('');
-    try {
-      await organizerApi.rejectPartnerApplication(applicationId, reviewNote);
-      setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Không thể từ chối hồ sơ đối tác.');
-    }
+    if (!selectedEventId) throw new Error('Không xác định được sự kiện đang xét duyệt.');
+    await organizerApi.rejectPartnerApplication(applicationId, reviewNote);
+    setPartnerApplications(await organizerApi.getPartnerApplications(selectedEventId));
   };
 
   const handleUpdateProfile = async (updates: Partial<OrganizerProfile>) => {
@@ -529,12 +576,17 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             event={currentSelectedEvent}
             booths={boothsList}
             boothRequests={boothRequests}
+            activePhysicalBoothCount={activePhysicalBoothCount}
+            isLoadingOperations={isLoadingEventOperations}
+            operationsError={eventOperationsError}
             activities={activitiesList}
             participants={participantsList}
             partnerApplications={partnerApplications}
             onApprovePartnerApplication={handleApprovePartnerApplication}
             onRejectPartnerApplication={handleRejectPartnerApplication}
             onBack={() => navigateToTab('events')}
+            onRetryOperations={() => setEventOperationsReloadKey(current => current + 1)}
+            onNavigateToBoothRequests={() => navigateToTab('booth_requests', currentSelectedEvent.id)}
             onNavigateToBoothsMap={() => {
               navigateToTab('booths', currentSelectedEvent.id);
             }}
