@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Building2,
@@ -212,10 +213,10 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
       {/* 1. Page Header */}
       <div className="participant-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
-          <h1 className="participant-page-title" style={{ margin: '0 0 0.35rem 0' }}>
+          <h1 className="participant-page-title workspace-page-title">
             {language === 'vi' ? 'Đánh giá & Góp ý của tôi' : 'My Feedback & Inquiries'}
           </h1>
-          <p className="participant-page-sub">
+          <p className="participant-page-sub workspace-page-subtitle">
             {language === 'vi' 
               ? 'Theo dõi danh sách các ý kiến, góp ý trải nghiệm bạn đã gửi tới Ban Quản Lý Đường Sách TP.HCM.' 
               : 'Track and manage your submitted reviews, feedback, and management responses.'}
@@ -343,7 +344,7 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
       </div>
 
       {/* 3. Feedback Cards List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <PaginatedList items={filteredList}>{pageItems => (<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {filteredList.length === 0 ? (
           <div style={{
             background: '#FFFFFF',
@@ -386,7 +387,7 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
             </button>
           </div>
         ) : (
-          filteredList.map((fb) => (
+          pageItems.map((fb) => (
             <div 
               key={fb.id}
               style={{
@@ -480,7 +481,7 @@ export const ParticipantFeedbackPage: React.FC<ParticipantFeedbackPageProps> = (
             </div>
           ))
         )}
-      </div>
+      </div>)}</PaginatedList>
 
       {/* 4. Modal: Gửi Góp Ý Mới */}
       {isModalOpen && (

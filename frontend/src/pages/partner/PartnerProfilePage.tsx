@@ -112,10 +112,10 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     <div className="partner-profile-page profile-settings-page">
       {/* 1. Header */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? 'Hồ sơ tổ chức & Cài đặt' : 'Organization Profile & Settings'}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi'
             ? 'Quản lý thông tin hồ sơ doanh nghiệp / nhà xuất bản và thông tin liên hệ.'
             : 'Manage your organization profile, representative, and contact information.'}

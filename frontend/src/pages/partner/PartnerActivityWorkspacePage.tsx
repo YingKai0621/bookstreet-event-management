@@ -1,9 +1,10 @@
+import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../../components/ui/ListPagination';
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import {
   AlertCircle,
   Ban,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Eye,
   FilePenLine,
@@ -56,7 +57,7 @@ interface PageMeta {
   totalPages: number;
 }
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = LIST_PAGE_SIZE;
 const EMPTY_META: PageMeta = { page: 0, size: PAGE_SIZE, totalElements: 0, totalPages: 0 };
 const VIEW_CONFIG: Array<{ id: WorkspaceView; label: string; hint: string; icon: React.ComponentType<{ size?: number }> }> = [
   { id: 'proposals', label: 'Đề xuất của tôi', hint: 'Gửi và theo dõi xét duyệt', icon: Layers3 },
@@ -219,7 +220,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
   const status = VIEW_STATUS_OPTIONS[view].includes(statusCandidate) ? statusCandidate : '';
   const lateOnly = searchParams.get('late') === 'true';
   const pageCandidate = Number.parseInt(searchParams.get('page') || '1', 10);
-  const page = Number.isFinite(pageCandidate) && pageCandidate > 0 ? pageCandidate - 1 : 0;
+  const page = Number.isFinite(pageCandidate) && pageCandidate > 0 ? toPageIndex(pageCandidate) : 0;
   const [records, setRecords] = useState<WorkspaceRecord[]>([]);
   const [activitiesById, setActivitiesById] = useState<Record<number, PartnerActivityResponse>>({});
   const [proposalsById, setProposalsById] = useState<Record<number, PartnerActivityProposalResponse>>({});
@@ -283,6 +284,13 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
           : partnerApi.getActivityCancellationRequests({ ...common, status: status as ActivityRequestStatus || undefined, late: lateOnly || undefined, sort: 'submittedAt,desc' });
     void request.then(response => {
       if (sequence !== requestSequence.current) return;
+      const lastPage = getPageCount(response.totalElements, PAGE_SIZE);
+      if (page >= lastPage) {
+        const next = new URLSearchParams(window.location.search);
+        next.set('page', String(lastPage));
+        setSearchParams(next, { replace: true });
+        return;
+      }
       setRecords(response.content);
       setMeta({ page: response.page, size: response.size, totalElements: response.totalElements, totalPages: response.totalPages });
     }).catch(cause => {
@@ -293,7 +301,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
     }).finally(() => {
       if (sequence === requestSequence.current) setLoading(false);
     });
-  }, [deferredSearch, lateOnly, page, reload, selectedEventId, status, view]);
+  }, [deferredSearch, lateOnly, page, reload, selectedEventId, setSearchParams, status, view]);
 
   useEffect(() => {
     if (!selectedEventId || view === 'activities') return;
@@ -380,7 +388,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
   return (
     <section className="paw-shell">
       <header className="paw-header">
-        <div><span>ĐỐI TÁC / HOẠT ĐỘNG</span><h1>Quản lý hoạt động</h1><p>Đề xuất chương trình và theo dõi toàn bộ quá trình xét duyệt theo từng sự kiện.</p></div>
+        <div><h1 className="workspace-page-title">Quản lý hoạt động</h1><p className="workspace-page-subtitle">Đề xuất chương trình và theo dõi toàn bộ quá trình xét duyệt theo từng sự kiện.</p></div>
         <div className="paw-header-actions">
           <button type="button" className="paw-button paw-button--secondary" onClick={() => setReload(value => value + 1)} disabled={loading}><RefreshCw size={18} /> Làm mới</button>
           <button type="button" className="paw-button paw-button--primary" onClick={() => setProposalForm('create')} disabled={!selectedApplication}><Plus size={18} /> Đề xuất hoạt động</button>
@@ -436,7 +444,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
             })}
           </div>
 
-          {meta.totalPages > 1 && <div className="paw-pagination"><span>Trang {meta.page + 1}/{meta.totalPages}</span><div><button type="button" aria-label="Trang trước" disabled={page === 0} onClick={() => updateWorkspaceParams({ page })}><ChevronLeft size={18} /></button><button type="button" aria-label="Trang sau" disabled={page + 1 >= meta.totalPages} onClick={() => updateWorkspaceParams({ page: page + 2 })}><ChevronRight size={18} /></button></div></div>}
+          {getPageCount(meta.totalElements, PAGE_SIZE) > 1 && <ListPagination page={page + 1} pages={getPageCount(meta.totalElements, PAGE_SIZE)} disabled={loading} onPage={value => updateWorkspaceParams({ page: value })} />}
         </>
       )}
 
@@ -598,7 +606,7 @@ function RecordDialog({ record, activity, sourceProposal, onClose, onEditProposa
     finally { setSubmitting(false); }
   };
 
-  return <PartnerDialog title={dialogTitle} onClose={onClose}><div className="paw-detail"><StatusBadge kind={recordKind(record)} status={record.status} />{(isProposal(record) || isActivity(record)) && <dl><div><dt>{isProposal(record) ? 'Thời gian đề xuất' : 'Lịch chính thức hiện tại'}</dt><dd>{formatRange(isProposal(record) ? record.proposedStartAt : record.startAt, isProposal(record) ? record.proposedEndAt : record.endAt)}</dd></div><div><dt>{isProposal(record) ? 'Địa điểm đề xuất' : 'Địa điểm hiện tại'}</dt><dd>{record.location.code} · {record.location.name}</dd></div><div><dt>Sức chứa</dt><dd>{record.capacity} người</dd></div><div><dt>Loại hoạt động</dt><dd>{record.activityType}</dd></div></dl>}{isProposal(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.reviewNote && <div className="paw-review-note"><strong>Phản hồi Ban quản lý</strong><p>{record.reviewNote}</p></div>}{record.status === 'APPROVED' && record.activityId && onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}{isActivity(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.sourceProposalId && onOpenSourceProposal && <SourceProposalNotice proposalId={record.sourceProposalId} proposal={sourceProposal || undefined} onOpen={onOpenSourceProposal} />}<ActivityCancellationNotice activity={record} /><div className="paw-revisions"><h3><History size={17} /> Lịch sử điều chỉnh</h3>{revisions.length === 0 ? <p>Chưa có lần điều chỉnh nào.</p> : revisions.map(revision => <div key={revision.activityRevisionId}><strong>{formatDateTime(revision.changedAt)}</strong><span>{revision.changeReason || REVISION_SOURCE_LABELS[revision.revisionSource] || revision.revisionSource}</span></div>)}</div></>}{!isProposal(record) && !isActivity(record) && <><div className="paw-review-note"><strong>Lý do yêu cầu</strong><p>{record.reason}</p>{record.reviewNote && <p><b>Phản hồi Ban quản lý:</b> {record.reviewNote}</p>}</div>{isChange(record) && <ChangeRequestSummary request={record} activity={currentActivity} />}{'late' in record && record.late && <p className="paw-late-note">Yêu cầu này được gửi sau mốc hủy thông thường.</p>}{onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}
+  return <PartnerDialog title={dialogTitle} onClose={onClose}><div className="paw-detail"><StatusBadge kind={recordKind(record)} status={record.status} />{(isProposal(record) || isActivity(record)) && <dl><div><dt>{isProposal(record) ? 'Thời gian đề xuất' : 'Lịch chính thức hiện tại'}</dt><dd>{formatRange(isProposal(record) ? record.proposedStartAt : record.startAt, isProposal(record) ? record.proposedEndAt : record.endAt)}</dd></div><div><dt>{isProposal(record) ? 'Địa điểm đề xuất' : 'Địa điểm hiện tại'}</dt><dd>{record.location.code} · {record.location.name}</dd></div><div><dt>Sức chứa</dt><dd>{record.capacity} người</dd></div><div><dt>Loại hoạt động</dt><dd>{record.activityType}</dd></div></dl>}{isProposal(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.reviewNote && <div className="paw-review-note"><strong>Phản hồi Ban quản lý</strong><p>{record.reviewNote}</p></div>}{record.status === 'APPROVED' && record.activityId && onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}{isActivity(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.sourceProposalId && onOpenSourceProposal && <SourceProposalNotice proposalId={record.sourceProposalId} proposal={sourceProposal || undefined} onOpen={onOpenSourceProposal} />}<ActivityCancellationNotice activity={record} /><PaginatedList items={revisions}>{pageItems => (<div className="paw-revisions"><h3><History size={17} /> Lịch sử điều chỉnh</h3>{revisions.length === 0 ? <p>Chưa có lần điều chỉnh nào.</p> : pageItems.map(revision => <div key={revision.activityRevisionId}><strong>{formatDateTime(revision.changedAt)}</strong><span>{revision.changeReason || REVISION_SOURCE_LABELS[revision.revisionSource] || revision.revisionSource}</span></div>)}</div>)}</PaginatedList></>}{!isProposal(record) && !isActivity(record) && <><div className="paw-review-note"><strong>Lý do yêu cầu</strong><p>{record.reason}</p>{record.reviewNote && <p><b>Phản hồi Ban quản lý:</b> {record.reviewNote}</p>}</div>{isChange(record) && <ChangeRequestSummary request={record} activity={currentActivity} />}{'late' in record && record.late && <p className="paw-late-note">Yêu cầu này được gửi sau mốc hủy thông thường.</p>}{onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}
     {action && <div className="paw-request-panel"><h3>{action === 'change' ? 'Yêu cầu thay đổi hoạt động' : 'Yêu cầu hủy hoạt động'}</h3>{action === 'change' && <><label><span>Trường cần đổi</span><select value={changeField} onChange={event => { setChangeField(event.target.value as typeof changeField); setChangeValue(''); setChangeEndValue(''); }}><option value="title">Tên hoạt động</option><option value="description">Mô tả</option><option value="type">Loại hoạt động</option><option value="location">Địa điểm</option><option value="schedule">Thời gian bắt đầu và kết thúc</option><option value="capacity">Sức chứa</option><option value="image">URL hình ảnh</option></select></label>{changeField === 'schedule' ? <div className="paw-request-range"><label><span>Bắt đầu mới</span><input aria-label="Bắt đầu mới" type="datetime-local" value={changeValue} onChange={event => setChangeValue(event.target.value)} /></label><label><span>Kết thúc mới</span><input aria-label="Kết thúc mới" type="datetime-local" value={changeEndValue} onChange={event => setChangeEndValue(event.target.value)} /></label></div> : <label><span>Nội dung mới</span>{changeField === 'description' ? <textarea rows={3} value={changeValue} onChange={event => setChangeValue(event.target.value)} /> : changeField === 'location' ? <select value={changeValue} onChange={event => setChangeValue(event.target.value)}><option value="">Chọn địa điểm mới</option>{requestLocations.map(location => <option key={location.locationId} value={location.locationId} disabled={!location.eligible}>{location.code} · {location.name}{location.eligible ? '' : ` — ${location.ineligibleReason || 'Không khả dụng'}`}</option>)}</select> : <input type={changeField === 'capacity' ? 'number' : changeField === 'image' ? 'url' : 'text'} value={changeValue} onChange={event => setChangeValue(event.target.value)} placeholder={changeField === 'image' ? 'Để trống nếu muốn gỡ ảnh' : undefined} />}</label>}</>}<label><span>Lý do *</span><textarea rows={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label></div>}
     {error && <p className="paw-form-error" role="alert">{error}</p>}
     <footer><button type="button" className="paw-button paw-button--secondary" onClick={onClose}>Đóng</button><div>{isProposal(record) && ['PENDING', 'NEED_CHANGES'].includes(record.status) && <><button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút đề xuất</button><button type="button" className="paw-button paw-button--secondary" onClick={() => onEditProposal(record)}>Chỉnh sửa</button>{record.status === 'NEED_CHANGES' && <button type="button" className="paw-button paw-button--primary" disabled={submitting} onClick={() => void resubmit()}>Gửi lại xét duyệt</button>}</>}{isActivity(record) && !action && <>{['DRAFT', 'PUBLISHED'].includes(record.status) && <button type="button" className="paw-button paw-button--secondary" onClick={() => setAction('change')}>Yêu cầu thay đổi</button>}{['DRAFT', 'PUBLISHED', 'ONGOING'].includes(record.status) && <button type="button" className="paw-button paw-button--danger" onClick={() => setAction('cancel')}>Yêu cầu hủy</button>}</>}{!isProposal(record) && !isActivity(record) && record.status === 'PENDING' && <button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút yêu cầu</button>}{action && <><button type="button" className="paw-button paw-button--secondary" onClick={() => { setAction(null); setError(''); }}>Quay lại</button><button type="button" className="paw-button paw-button--primary" disabled={submitting} onClick={() => void submitRequest()}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button></>}</div></footer></div></PartnerDialog>;

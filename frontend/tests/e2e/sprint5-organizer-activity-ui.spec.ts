@@ -152,8 +152,12 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockOrganizerSprint5(page: Page) {
-  let locations = [location];
+async function mockOrganizerSprint5(page: Page, locationCount = 1) {
+  let locations = Array.from({ length: locationCount }, (_, index) => ({ ...location,
+    locationId: location.locationId + index,
+    code: index === 0 ? location.code : `STAGE-${index + 1}`,
+    name: index === 0 ? location.name : `Sân khấu ${index + 1}`,
+  }));
   let activities = [activity];
   let createdLocationPayload: Record<string, unknown> | null = null;
   let createdActivityPayload: Record<string, unknown> | null = null;
@@ -274,12 +278,22 @@ async function mockOrganizerSprint5(page: Page) {
       locations = locations.map(item => item.locationId === 41 ? { ...item, ...updatedLocationPayload } as typeof location : item);
       return json(route, locations[0]);
     }
-    if (path.endsWith('/organizer/locations') && method === 'GET') return json(route, pageOf(locations));
+    if (path.endsWith('/organizer/locations') && method === 'GET') {
+      const query = new URL(request.url()).searchParams;
+      const pageIndex = Number(query.get('page') || 0);
+      const size = Number(query.get('size') || 10);
+      const filtered = locations.filter(item => (!query.get('search') || item.name.includes(query.get('search')!))
+        && (!query.get('type') || item.locationType === query.get('type'))
+        && (!query.has('active') || item.active === (query.get('active') === 'true')))
+        .sort((left, right) => left.code.localeCompare(right.code));
+      return json(route, { content: filtered.slice(pageIndex * size, (pageIndex + 1) * size),
+        page: pageIndex, size, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / size) });
+    }
     if (path.endsWith('/organizer/locations') && method === 'POST') {
       createdLocationPayload = request.postDataJSON();
       const created = {
         ...createdLocationPayload,
-        locationId: 42,
+        locationId: Math.max(...locations.map(item => item.locationId)) + 1,
         active: true,
         boothAssignmentId: null,
         eligible: true,
@@ -428,8 +442,8 @@ test('Organizer loads and creates a shared activity location through Organizer A
   await dialog.getByLabel(/Tên địa điểm/).fill('Phòng workshop B');
   await dialog.getByLabel(/Loại địa điểm/).selectOption('WORKSHOP');
   await dialog.getByLabel(/Sức chứa tối đa/).fill('45');
-  await dialog.getByLabel('Tọa độ X').fill('20.5');
-  await dialog.getByLabel('Tọa độ Y').fill('65');
+  await expect(dialog.getByLabel('Tọa độ X')).toHaveCount(0);
+  await expect(dialog.getByLabel('Tọa độ Y')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
 
   await expect(page.getByText('Đã thêm địa điểm tổ chức mới.', { exact: true })).toBeVisible();
@@ -438,8 +452,8 @@ test('Organizer loads and creates a shared activity location through Organizer A
     name: 'Phòng workshop B',
     locationType: 'WORKSHOP',
     maxCapacity: 45,
-    mapX: 20.5,
-    mapY: 65,
+    mapX: null,
+    mapY: null,
   });
 
   await page.getByRole('button', { name: 'Sửa Sân khấu trung tâm' }).click();
@@ -447,6 +461,8 @@ test('Organizer loads and creates a shared activity location through Organizer A
   await editDialog.getByLabel(/Cho phép sử dụng địa điểm/).uncheck();
   await editDialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
   expect(state.getUpdatedLocationPayload()).toMatchObject({ active: false });
+  expect(state.getUpdatedLocationPayload()).not.toHaveProperty('mapX');
+  expect(state.getUpdatedLocationPayload()).not.toHaveProperty('mapY');
 });
 
 test('Organizer navigation is URL-driven and restores Activity views with browser history', async ({ page }) => {
@@ -491,3 +507,135 @@ test('Organizer Event list and detail state survive refresh through canonical UR
   await page.reload();
   await expect(page.getByRole('button', { name: /Hồ sơ đối tác/ })).toHaveClass(/is-active/);
 });
+
+test('Organizer location list shows ten per page and resets filters with visible page controls', async ({ page }) => {
+  await mockOrganizerSprint5(page);
+  const locations = Array.from({ length: 23 }, (_, index) => ({
+    ...location, locationId: index + 1, code: `AREA-${String(index + 1).padStart(2, '0')}`,
+    name: `Địa điểm ${String(index + 1).padStart(2, '0')}`,
+  }));
+  let locationLimit = 23;
+  await page.route('**/api/v1/organizer/locations?**', route => {
+    const query = new URL(route.request().url()).searchParams;
+    const index = Number(query.get('page') || 0);
+    expect(query.get('size')).toBe('10');
+    const filtered = locations.slice(0, locationLimit).filter(item => item.name.includes(query.get('search') || ''));
+    return json(route, { content: filtered.slice(index * 10, index * 10 + 10), page: index,
+      size: 10, totalElements: filtered.length, totalPages: Math.ceil(filtered.length / 10) });
+  });
+  await page.goto('/organizer/venues');
+  const rows = page.locator('.venue-table tbody tr');
+  const controls = page.getByRole('navigation', { name: 'pagination' });
+  await expect(rows).toHaveCount(10);
+  await expect(page.locator('.venue-list-heading h2')).toHaveText('Danh sách địa điểm');
+  await expect(page.locator('.venue-list-heading h2 span')).toHaveCount(0);
+  await expect(controls.locator('[aria-current=page]')).toHaveText('1');
+  await expect(controls.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
+  await controls.getByRole('link', { name: 'Trang sau' }).click();
+  await expect(rows).toHaveCount(10);
+  await expect(rows.first()).toContainText('Địa điểm 11');
+  await controls.getByRole('link', { name: 'Trang sau' }).click();
+  await expect(rows).toHaveCount(3);
+  await expect(rows.first()).toContainText('Địa điểm 21');
+  await expect(controls.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+  await controls.getByRole('link', { name: 'Trang trước' }).click();
+  await expect(rows.first()).toContainText('Địa điểm 11');
+  await page.getByRole('textbox', { name: 'Tìm địa điểm' }).fill('Địa điểm 23');
+  await expect(rows).toHaveCount(1);
+  await expect(controls.locator('[aria-current=page]')).toHaveText('1');
+  await expect(controls.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
+  await expect(controls.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+  await page.getByRole('textbox', { name: 'Tìm địa điểm' }).fill('Không có kết quả');
+  await expect(rows).toHaveCount(0);
+  await expect(controls.locator('[aria-current=page]')).toHaveText('1');
+  await page.getByRole('textbox', { name: 'Tìm địa điểm' }).fill('');
+  await expect(rows).toHaveCount(10);
+  await controls.getByRole('link', { name: 'Trang 3', exact: true }).click();
+  await expect(rows.first()).toContainText('Địa điểm 21');
+  locationLimit = 3;
+  await page.getByRole('button', { name: 'Tải lại danh sách' }).click();
+  await expect(rows).toHaveCount(3);
+  await expect(rows.first()).toContainText('Địa điểm 01');
+  await expect(controls.locator('[aria-current=page]')).toHaveText('1');
+  await expect(controls.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+});
+
+
+test('Creating the eleventh Organizer location adds a reachable second page', async ({ page }) => {
+  await mockOrganizerSprint5(page, 10);
+  await page.goto('/organizer/venues');
+  const rows = page.locator('.venue-table tbody tr');
+  const pagination = page.getByRole('navigation', { name: 'pagination', exact: true });
+  await expect(rows).toHaveCount(10);
+  await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Thêm địa điểm' });
+  await dialog.getByLabel(/Mã địa điểm/).fill('ZZZ-11');
+  await dialog.getByLabel(/Tên địa điểm/).fill('Địa điểm thứ 11');
+  await dialog.getByLabel(/Sức chứa tối đa/).fill('30');
+  await dialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(rows).toHaveCount(10);
+  await expect(pagination.getByRole('link', { name: 'Trang 2', exact: true })).toBeVisible();
+  await pagination.getByRole('link', { name: 'Trang 2', exact: true }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Địa điểm thứ 11');
+  await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+});
+
+
+test('Organizer event list displays the shared pagination even with a single event', async ({ page }) => {
+  await mockOrganizerSprint5(page);
+  await page.goto('/organizer/events');
+  await expect(page.getByRole('heading', { name: 'Danh sách sự kiện' })).toBeVisible();
+  await expect(page.locator('.org-event-row')).toHaveCount(1);
+  const pagination = page.getByRole('navigation', { name: 'pagination', exact: true });
+  await expect(pagination).toBeVisible();
+  await expect(pagination.locator('[aria-current="page"]')).toHaveText('1');
+  await expect(pagination.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
+  await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+});
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  test(`Organizer event list uses numbered pagination with ten cards at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockOrganizerSprint5(page);
+    const events = Array.from({ length: 81 }, (_, index) => ({ ...event,
+      eventId: event.eventId + index, name: `Sự kiện ${String(index + 1).padStart(3, '0')}`,
+    }));
+    await page.route('**/api/v1/organizer/events?**', route => json(route, {
+      content: events, page: 0, size: 100, totalElements: events.length, totalPages: 1,
+    }));
+    await page.goto('/organizer/events?sort=title_asc');
+    const cards = page.locator('.org-event-row');
+    const pagination = page.getByRole('navigation', { name: 'pagination', exact: true });
+    await expect(cards).toHaveCount(10);
+    await expect(cards.first()).toContainText('Sự kiện 001');
+    await pagination.getByRole('link', { name: 'Trang 2', exact: true }).click();
+    await expect(cards).toHaveCount(10);
+    await expect(cards.first()).toContainText('Sự kiện 011');
+    await expect(pagination.locator('[aria-current="page"]')).toHaveText('2');
+    await expect(pagination.locator('.list-pagination-ellipsis')).toBeVisible();
+    await expect(page).toHaveURL(/page=2/);
+    await page.reload();
+    await expect(cards.first()).toContainText('Sự kiện 011');
+    await expect(pagination.locator('[aria-current="page"]')).toHaveText('2');
+    await pagination.scrollIntoViewIfNeeded();
+    const bounds = await pagination.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewport);
+    await page.screenshot({ path: test.info().outputPath('event-list-pagination.png'), fullPage: true });
+    await pagination.getByRole('link', { name: 'Trang 9', exact: true }).click();
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('Sự kiện 081');
+    await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+    await page.getByPlaceholder('Tìm tên sự kiện...').fill('Sự kiện 081');
+    await expect(cards).toHaveCount(1);
+    await expect(pagination.locator('[aria-current="page"]')).toHaveText('1');
+    await expect(pagination.getByRole('link', { name: 'Trang trước' })).toBeDisabled();
+    await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+  });
+}

@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { ArrowRight, Award, Calendar, Download, Eye, QrCode, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
@@ -154,10 +155,10 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
     <div className="certificates-page">
       {/* 1. Header */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? 'Chứng nhận của tôi' : 'My Certificates'}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi' 
             ? 'Danh sách chứng chỉ tham gia hoạt động và sự kiện văn hóa tại Đường Sách TP.HCM.' 
             : 'Verified certificates earned from attended activities and cultural workshops.'}
@@ -285,8 +286,8 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
           </div>
         </div>
       ) : (
-        <div className="certificates-list-container">
-          {certificates.map((cert) => (
+        <PaginatedList items={certificates}>{pageItems => (<div className="certificates-list-container">
+          {pageItems.map((cert) => (
             <div key={cert.id} className="certificate-card-row">
               {/* Mini preview frame with gold border */}
               <div className="certificate-mini-preview" title="Chứng nhận số">
@@ -336,7 +337,7 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
               </div>
             </div>
           ))}
-        </div>
+        </div>)}</PaginatedList>
       )}
 
       {/* Modal preview when user clicks 'Xem trước' */}

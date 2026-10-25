@@ -88,8 +88,8 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
   return (
     <div className="profile-settings-page reader-profile-page">
       <header className="participant-page-header">
-        <h1 className="participant-page-title">{vi ? 'Hồ sơ cá nhân & Cài đặt' : 'Profile & Settings'}</h1>
-        <p className="participant-page-sub">{vi ? 'Cập nhật thông tin cá nhân và quản lý tài khoản của bạn.' : 'Update your personal information and manage your account.'}</p>
+        <h1 className="participant-page-title workspace-page-title">{vi ? 'Hồ sơ cá nhân & Cài đặt' : 'Profile & Settings'}</h1>
+        <p className="participant-page-sub workspace-page-subtitle">{vi ? 'Cập nhật thông tin cá nhân và quản lý tài khoản của bạn.' : 'Update your personal information and manage your account.'}</p>
       </header>
       {saveError && <div className="reader-profile-notice error" role="alert">{saveError}</div>}
       {saveSuccess && <div className="reader-profile-notice success" role="status"><Check size={18} />{vi ? 'Đã lưu thay đổi hồ sơ thành công!' : 'Profile changes saved successfully!'}</div>}
@@ -105,7 +105,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
               <input type="file" ref={fileInputRef} accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={isSaving} onChange={handleAvatarFileSelect} />
             </div>
             <div className="profile-names">
-              <span className="reader-profile-eyebrow">{vi ? 'TÀI KHOẢN CỦA BẠN' : 'YOUR ACCOUNT'}</span>
+
               <h2>{profile.name}</h2>
               <p>{profile.email || (vi ? 'Chưa có email' : 'No email added')}</p>
               <span className="reader-role">{vi ? 'Độc giả' : 'Participant'}</span>

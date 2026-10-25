@@ -29,7 +29,7 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 function paged(content: unknown[], page = 0, totalPages = 1) {
-  return { content, page, size: 10, totalElements: content.length, totalPages };
+  return { content, page, size: 10, totalElements: totalPages > 1 ? (totalPages - 1) * 10 + content.length : content.length, totalPages };
 }
 
 type Scenario = {
@@ -175,10 +175,10 @@ test('Expired Hold preserves payment history and has no checkout', async ({ page
 test('History pagination loads the requested backend page', async ({ page }) => {
   await mock(page, { status: 'SUCCESS', pagination: true });
   await page.goto('/partner/booth-requests/77/payment');
-  await page.getByRole('button', { name: 'Trang sau' }).click();
+  await page.getByRole('link', { name: 'Trang sau' }).click();
   await expect(page.getByRole('table')).toContainText('#72');
   await expect(page.getByRole('table')).not.toContainText('#81');
-  await page.getByRole('button', { name: 'Trang trước' }).click();
+  await page.getByRole('link', { name: 'Trang trước' }).click();
   await expect(page.getByRole('table')).toContainText('#81');
 });
 

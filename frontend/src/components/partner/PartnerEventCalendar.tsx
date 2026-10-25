@@ -1,4 +1,5 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
+import { PaginatedList } from '../ui/PaginatedList';
+import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { partnerApi, type PartnerAvailableEvent } from '../../services/partnerApi';
@@ -62,7 +63,7 @@ export function PartnerEventCalendar({ language, events: suppliedEvents, onSelec
   const shiftMonth = (amount: number) => setMonth(new Date(Date.UTC(year, monthNumber - 1 + amount, 1)).toISOString().slice(0, 7));
   const weekdayLabels = language === 'vi' ? ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'] : ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
   return <section className="partner-calendar" aria-label={language === 'vi' ? 'Lịch sự kiện' : 'Event calendar'}>
-    <div className="partner-calendar-heading"><div><span className="partner-eyebrow"><CalendarDays size={15} />{language === 'vi' ? 'LỊCH SỰ KIỆN' : 'EVENT CALENDAR'}</span>
+    <div className="partner-calendar-heading"><div>
       <h2>{first.toLocaleDateString(language === 'vi' ? 'vi-VN' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}</h2></div>
       <div className="partner-calendar-controls"><button className="partner-square-button" aria-label="Tháng trước" onClick={() => shiftMonth(-1)}><ChevronLeft size={18} /></button>
         <button className="btn-part-secondary" onClick={() => setMonth(today.slice(0, 7))}>{language === 'vi' ? 'Hôm nay' : 'Today'}</button>
@@ -90,8 +91,8 @@ export function PartnerEventCalendar({ language, events: suppliedEvents, onSelec
     {selectedDay && (() => {
       const isSelectedPast = selectedDay < today;
       return <PartnerDialog title={`${language === 'vi' ? 'Lịch ngày' : 'Schedule for'} ${selectedDay.split('-').reverse().join('/')}`} onClose={() => setSelectedDay(null)}>
-      <div className="partner-dialog-body"><div className="partner-day-events">{onDate(selectedDay).map(event => <article key={event.id}><h3>{event.name}</h3><p>{partnerDateTime(event.startAt, language)} – {partnerDateTime(event.endAt, language)}</p><p>{event.description}</p>
-        {onSelectEvent ? <button className="btn-part-secondary" onClick={() => { setSelectedDay(null); onSelectEvent(event); }}>{language === 'vi' ? 'Xem chi tiết' : 'View Details'}</button> : <Link className="btn-part-secondary" to={`/partner/events/apply?event=${encodeURIComponent(event.id)}`}>{isSelectedPast ? (language === 'vi' ? 'Xem chi tiết' : 'View details') : (language === 'vi' ? 'Xem chi tiết / đăng ký' : 'View details / apply')}</Link>}</article>)}</div>
+      <div className="partner-dialog-body"><PaginatedList items={onDate(selectedDay)}>{pageItems => (<div className="partner-day-events">{pageItems.map(event => <article key={event.id}><h3>{event.name}</h3><p>{partnerDateTime(event.startAt, language)} – {partnerDateTime(event.endAt, language)}</p><p>{event.description}</p>
+        {onSelectEvent ? <button className="btn-part-secondary" onClick={() => { setSelectedDay(null); onSelectEvent(event); }}>{language === 'vi' ? 'Xem chi tiết' : 'View Details'}</button> : <Link className="btn-part-secondary" to={`/partner/events/apply?event=${encodeURIComponent(event.id)}`}>{isSelectedPast ? (language === 'vi' ? 'Xem chi tiết' : 'View details') : (language === 'vi' ? 'Xem chi tiết / đăng ký' : 'View details / apply')}</Link>}</article>)}</div>)}</PaginatedList>
         {onDate(selectedDay).length === 0 && <p className="partner-muted">{language === 'vi' ? 'Ngày này chưa có sự kiện.' : 'No events on this day.'}</p>}
         {!isSelectedPast && (onAddDate ? <button className="btn-part-primary" onClick={() => { const date = selectedDay; setSelectedDay(null); onAddDate(date); }}><Plus size={16} />{language === 'vi' ? 'Thêm đề xuất' : 'Add proposal'}</button>
           : <Link className="btn-part-primary" to={`/partner/events/apply?proposeDate=${selectedDay}`}><Plus size={16} />{language === 'vi' ? 'Thêm đề xuất vào ngày này' : 'Propose event on this day'}</Link>)}

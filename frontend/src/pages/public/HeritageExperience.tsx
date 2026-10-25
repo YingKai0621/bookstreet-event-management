@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
@@ -327,7 +328,7 @@ export function HeritageExperience({
                       ? "Khám phá các điểm đến và câu chuyện văn hóa đang được lưu giữ trong hệ thống Đường Sách."
                       : "Explore the places and cultural stories maintained in the Book Street system."}
                   </p>
-                  
+
                   <div className="heritage-hero-footnote">
                     <strong>{heritageList.length}</strong>
                     <span>{vi ? "di sản tiêu biểu" : "heritage stories"}</span>
@@ -418,8 +419,8 @@ export function HeritageExperience({
                   {items.length} / {heritageList.length} {vi ? "di sản" : "sites"}
                 </span>
               </div>
-              <div className="heritage-collection-grid">
-                {items.map((h) => (
+              <PaginatedList items={items}>{pageItems => (<div className="heritage-collection-grid">
+                {pageItems.map((h) => (
                   <Link
                     to={`/di-san/${h.id}`}
                     key={h.id}
@@ -443,7 +444,7 @@ export function HeritageExperience({
                     </div>
                   </Link>
                 ))}
-              </div>
+              </div>)}</PaginatedList>
               {!items.length && (
                 <div className="heritage-empty">
                   <h3>

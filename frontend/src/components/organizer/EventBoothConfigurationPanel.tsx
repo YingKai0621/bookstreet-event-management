@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import { AlertCircle, Check, DollarSign, Loader2, RefreshCw, Store } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
@@ -187,8 +188,8 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
       ) : rows.length === 0 ? (
         <div className="s2-empty"><Store size={34} /><strong>Chưa có gian vật lý đang hoạt động</strong><span>Hãy tạo hoặc kích hoạt gian tại màn hình Gian hàng.</span></div>
       ) : (
-        <div className="s2-config-list">
-          {rows.map(row => {
+        <PaginatedList items={rows}>{pageItems => (<div className="s2-config-list">
+          {pageItems.map(row => {
             const saving = savingIds.has(row.booth.boothId);
             return (
               <div className="s2-config-row" key={row.booth.boothId}>
@@ -232,7 +233,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
               </div>
             );
           })}
-        </div>
+        </div>)}</PaginatedList>
       )}
     </div>
   );

@@ -4,7 +4,7 @@
   --font-display: 'Be Vietnam Pro', sans-serif;
   font-family: 'Be Vietnam Pro', sans-serif;
 }
-.admin-app-shell *, .participant-app-shell * { font-family: inherit !important; }
+.admin-app-shell :not(.workspace-page-title), .participant-app-shell :not(.workspace-page-title) { font-family: inherit !important; }
 .compact-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; color: #637771; font-size: .82rem; }
 .compact-pagination > div { display: flex; gap: 8px; }
 .compact-pagination button { min-height: 36px; padding: 7px 14px; border: 1px solid #dce5df; border-radius: 8px; background: white; color: #245441; cursor: pointer; font: inherit; }
@@ -79,3 +79,7 @@
   .admin-main-viewport:has(.booth-crud-page, .adm-badges-view, .adm-audit-view, .adm-profile-view) { padding: 16px; }
   .admin-app-shell .adm-progression-note { display: none; }
 }
+
+.compact-pagination { grid-column: 1 / -1; width: 100%; flex-wrap: wrap; }
+.compact-pagination button:focus-visible { outline: 2px solid #1f624d; outline-offset: 2px; }
+@media (max-width: 620px) { .compact-pagination { gap: 10px; font-size: .75rem; } }

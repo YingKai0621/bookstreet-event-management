@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
@@ -488,8 +489,8 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     return (
       <section className="partner-page">
         <div className="partner-page-header">
-          <h1 className="partner-page-title">Chọn gian hàng</h1>
-          <p className="partner-page-sub">Bạn cần một hồ sơ tham gia sự kiện đã được duyệt trước khi gửi yêu cầu gian hàng.</p>
+          <h1 className="partner-page-title workspace-page-title">Chọn gian hàng</h1>
+          <p className="partner-page-sub workspace-page-subtitle">Bạn cần một hồ sơ tham gia sự kiện đã được duyệt trước khi gửi yêu cầu gian hàng.</p>
         </div>
         <div className="s2-empty s2-panel">
           <Store size={34} />
@@ -504,9 +505,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     <section className="partner-page s2-booth-page" aria-labelledby="partner-booth-title">
       <header className="s2-booth-header">
         <div>
-          <span className="s2-booth-header-eyebrow">Đối tác <b>/</b> Chọn và thuê gian hàng</span>
-          <h1 id="partner-booth-title">Chọn và thuê gian hàng</h1>
-          <p>Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi yêu cầu thuê gian hàng theo từng sự kiện.</p>
+
+          <h1 id="partner-booth-title" className="workspace-page-title">Chọn và thuê gian hàng</h1>
+          <p className="workspace-page-subtitle">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi yêu cầu thuê gian hàng theo từng sự kiện.</p>
         </div>
         <button className="s2-booth-refresh" type="button" onClick={() => void loadData()} disabled={loading}>
           <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
@@ -643,14 +644,14 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
         >
           <div className="s2-partner-request-intro">
             <div>
-              <span>THEO DÕI XỬ LÝ</span>
+
               <h2>Yêu cầu thuê gian hàng</h2>
               <p>Kiểm tra tiến trình xét duyệt, thời hạn giữ chỗ và các thao tác cần hoàn tất cho từng gian hàng.</p>
             </div>
             <strong>{requests.length} yêu cầu</strong>
           </div>
-          <div className="s2-request-list">
-            {requests.map(request => {
+          <PaginatedList items={requests}>{pageItems => (<div className="s2-request-list">
+            {pageItems.map(request => {
               const isHoldActive = request.hold?.status === 'ACTIVE';
               const boothInfo = booths.find(b => b.booth.boothId === request.boothId);
               const boothName = boothInfo?.booth.name;
@@ -803,7 +804,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
                 )}
               </div>
             )}
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 

@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import {
   ArrowLeft,
   Calendar,
@@ -120,7 +121,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             />}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', color: '#172421', margin: 0 }}>
+                <h1 className="workspace-page-title">
                   {event.title}
                 </h1>
                 <OrganizerEventStatusChip language={language} status={event.apiStatus} />
@@ -312,7 +313,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             </div>
           </div>
 
-          <div className="org-table-container">
+          <PaginatedList items={partnerApplications}>{pageItems => (<div className="org-table-container">
             <table className="org-table">
               <thead>
                 <tr>
@@ -325,7 +326,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {partnerApplications.map((pa) => (
+                {pageItems.map((pa) => (
                   <tr key={pa.id}>
                     <td>
                       <strong style={{ color: '#172421' }}>{pa.orgName}</strong>
@@ -380,7 +381,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 )}
               </tbody>
             </table>
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 
@@ -400,8 +401,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             {language === 'vi' ? 'Danh sách hoạt động thuộc sự kiện' : 'Event Activities'}
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {activities.map((act) => (
+          <PaginatedList items={activities}>{pageItems => (<div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {pageItems.map((act) => (
               <div 
                 key={act.id}
                 style={{
@@ -426,7 +427,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 </div>
               </div>
             ))}
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 
@@ -437,7 +438,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             {language === 'vi' ? 'Độc giả đăng ký tham gia sự kiện' : 'Registered Participants'}
           </h2>
 
-          <div className="org-table-container">
+          <PaginatedList items={participants}>{pageItems => (<div className="org-table-container">
             <table className="org-table">
               <thead>
                 <tr>
@@ -449,7 +450,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {participants.map((p) => (
+                {pageItems.map((p) => (
                   <tr key={p.id}>
                     <td><strong>{p.fullName}</strong></td>
                     <td>{p.email}</td>
@@ -462,7 +463,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 
@@ -473,8 +474,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             {language === 'vi' ? 'Khung thời gian & Lịch trình điều hành' : 'Operational Schedule'}
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {activities.map((activity) => (
+          <PaginatedList items={activities}>{pageItems => (<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {pageItems.map((activity) => (
               <div key={activity.id} style={{ borderLeft: '3px solid #17382E', paddingLeft: '1rem' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 750, color: '#17382E' }}>{activity.dateStr} · {activity.timeStr}</span>
                 <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#445752' }}>
@@ -483,7 +484,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </div>
             ))}
             {activities.length === 0 && <p style={{ color: '#637771' }}>Chưa có hoạt động trong lịch sự kiện.</p>}
-          </div>
+          </div>)}</PaginatedList>
         </div>
       )}
 

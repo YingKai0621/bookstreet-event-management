@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import {
   AlertCircle,
   ArrowRight,
@@ -184,9 +185,9 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
     <section className="partner-page my-booths-page" aria-labelledby="my-booths-title">
       <header className="my-booths-hero">
         <div className="my-booths-hero-copy">
-          <span className="my-booths-eyebrow">Đối tác <b>/</b> Quản lý gian hàng</span>
-          <h1 id="my-booths-title">{language === 'vi' ? 'Gian hàng của tôi' : 'My booths'}</h1>
-          <p>Quản lý gian hàng đã được cấp, xem mã QR và theo dõi hoạt động tại từng sự kiện.</p>
+
+          <h1 id="my-booths-title" className="workspace-page-title">{language === 'vi' ? 'Gian hàng của tôi' : 'My booths'}</h1>
+          <p className="workspace-page-subtitle">Quản lý gian hàng đã được cấp, xem mã QR và theo dõi hoạt động tại từng sự kiện.</p>
         </div>
         <button type="button" className="my-booths-refresh" onClick={() => void loadAssignments()} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'my-booths-spin' : ''} />
@@ -251,7 +252,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
 
       <div className="my-booths-list-heading">
         <div>
-          <span className="my-booths-section-kicker">Danh sách quản lý</span>
+
           <h2>Gian hàng đã được cấp</h2>
         </div>
         <p><strong>{visibleItems.length}</strong> / {items.length} gian hàng</p>
@@ -280,8 +281,8 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
           <button type="button" onClick={() => { setSearch(''); setFilter('all'); }}>Xóa bộ lọc</button>
         </div>
       ) : (
-        <div className="my-booths-grid">
-          {visibleItems.map(item => {
+        <PaginatedList items={visibleItems}>{pageItems => (<div className="my-booths-grid">
+          {pageItems.map(item => {
             const application = item.application;
             const eventTitle = application?.eventTitle || `Sự kiện #${item.assignment.eventId}`;
             const mapLink = `/partner/booth-requests?eventId=${item.assignment.eventId}&boothId=${item.assignment.boothId}`;
@@ -339,7 +340,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
               </article>
             );
           })}
-        </div>
+        </div>)}</PaginatedList>
       )}
 
       {selectedItem && (
@@ -355,7 +356,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
               <X size={20} />
             </button>
             <span className="my-booths-modal-icon"><QrCode size={22} /></span>
-            <span className="my-booths-modal-eyebrow">Mã nhận diện gian hàng</span>
+
             <h2 id="my-booth-qr-title">Gian {selectedItem.assignment.boothCode}</h2>
             <p>{selectedApplication?.eventTitle || `Sự kiện #${selectedItem.assignment.eventId}`}</p>
             <div className="my-booths-qr-frame">

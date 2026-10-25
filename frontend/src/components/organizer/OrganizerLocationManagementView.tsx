@@ -1,13 +1,14 @@
+import { getPageCount, getPageOffset, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../ui/ListPagination';
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
+  Check,
+  Users,
   MapPin,
   Pencil,
   Plus,
   RefreshCw,
   Search,
-  Users,
   X,
 } from 'lucide-react';
 import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
@@ -17,7 +18,6 @@ import type {
   CreateOrganizerLocationRequest,
   OrganizerLocationResponse,
 } from '../../types/activity';
-import '../admin/FacilityManagementView.css';
 import './OrganizerLocationManagementView.css';
 
 type SharedLocationType = 'STAGE' | 'WORKSHOP' | 'AREA';
@@ -29,20 +29,16 @@ interface LocationForm {
   locationType: SharedLocationType;
   maxCapacity: string;
   description: string;
-  mapX: string;
-  mapY: string;
   active: boolean;
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = LIST_PAGE_SIZE;
 const EMPTY_FORM: LocationForm = {
   code: '',
   name: '',
   locationType: 'STAGE',
   maxCapacity: '',
   description: '',
-  mapX: '',
-  mapY: '',
   active: true,
 };
 
@@ -58,10 +54,6 @@ function safeError(cause: unknown, fallback: string): string {
   return message;
 }
 
-function nullableCoordinate(value: string): number | null {
-  return value.trim() === '' ? null : Number(value);
-}
-
 export function OrganizerLocationManagementView() {
   const [rows, setRows] = useState<OrganizerLocationResponse[]>([]);
   const [search, setSearch] = useState('');
@@ -70,7 +62,6 @@ export function OrganizerLocationManagementView() {
   const [statusFilter, setStatusFilter] = useState<LocationStatusFilter>('all');
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -100,7 +91,8 @@ export function OrganizerLocationManagementView() {
       if (!active) return;
       setRows(response.content);
       setTotalElements(response.totalElements);
-      setTotalPages(response.totalPages);
+      const lastPage = getPageCount(response.totalElements, PAGE_SIZE);
+      if (page >= lastPage) setPage(toPageIndex(lastPage));
     }).catch(cause => {
       if (!active) return;
       setRows([]);
@@ -128,8 +120,6 @@ export function OrganizerLocationManagementView() {
       locationType: location.locationType as SharedLocationType,
       maxCapacity: String(location.maxCapacity),
       description: location.description || '',
-      mapX: location.mapX === null ? '' : String(location.mapX),
-      mapY: location.mapY === null ? '' : String(location.mapY),
       active: location.active,
     });
     setFormError('');
@@ -156,12 +146,6 @@ export function OrganizerLocationManagementView() {
     if (!name || name.length > 100) return 'Tên địa điểm phải có từ 1 đến 100 ký tự.';
     if (!Number.isInteger(capacity) || capacity < 1) return 'Sức chứa phải là số nguyên dương.';
     if (form.description.trim().length > 5000) return 'Mô tả không được vượt quá 5.000 ký tự.';
-    for (const [label, value] of [['X', form.mapX], ['Y', form.mapY]]) {
-      if (value.trim() === '') continue;
-      const coordinate = Number(value);
-      if (!Number.isFinite(coordinate) || coordinate < 0 || coordinate > 100) return `Tọa độ ${label} phải nằm trong khoảng 0–100.`;
-      if (!/^\d{1,3}(\.\d{1,2})?$/.test(value.trim())) return `Tọa độ ${label} chỉ được có tối đa 2 chữ số thập phân.`;
-    }
     return '';
   };
 
@@ -181,13 +165,13 @@ export function OrganizerLocationManagementView() {
         name: form.name.trim().replace(/\s+/g, ' '),
         description: form.description.trim() || null,
         maxCapacity: Number(form.maxCapacity),
-        mapX: nullableCoordinate(form.mapX),
-        mapY: nullableCoordinate(form.mapY),
       };
       if (editing === 'new') {
         await organizerApi.createActivityLocation({
           ...common,
           locationType: form.locationType,
+          mapX: null,
+          mapY: null,
         } satisfies CreateOrganizerLocationRequest);
         setNotice('Đã thêm địa điểm tổ chức mới.');
       } else {
@@ -207,56 +191,54 @@ export function OrganizerLocationManagementView() {
     }
   };
 
-  const currentCapacity = rows.reduce((sum, row) => sum + row.maxCapacity, 0);
+  const hasFilters = Boolean(search.trim() || type || statusFilter !== 'all');
+  const clearFilters = () => { setSearch(''); setType(''); setStatusFilter('all'); setPage(0); };
+
 
   return (
-    <section className="facility-page organizer-location-page">
-      <header className="facility-heading">
+    <section className="org-dashboard organizer-location-page">
+      <header className="org-dashboard-header venue-heading">
         <div>
-          <span className="facility-eyebrow">HOẠT ĐỘNG / KHÔNG GIAN DÙNG CHUNG</span>
-          <h1>Địa điểm tổ chức</h1>
-          <p>Quản lý sân khấu, phòng workshop và khu vực dùng chung cho các hoạt động.</p>
+          <h1 className="org-dashboard-title workspace-page-title">Địa điểm tổ chức</h1>
+          <p className="org-dashboard-subtitle workspace-page-subtitle">Quản lý không gian tổ chức hoạt động tại đường sách.</p>
         </div>
-        <button type="button" className="facility-button primary" onClick={openCreate}><Plus size={18} />Thêm địa điểm</button>
+        <button type="button" className="btn-org-primary" onClick={openCreate}><Plus size={18} />Thêm địa điểm</button>
       </header>
 
-      <div className="facility-summary">
-        <div className="facility-stat"><span className="facility-stat-icon"><Building2 size={24} /></span><div><span>Tổng trong danh mục</span><strong>{loading || error ? '—' : totalElements}<small>địa điểm</small></strong></div></div>
-        <div className="facility-stat"><span className="facility-stat-icon gold"><Users size={24} /></span><div><span>Sức chứa trên trang hiện tại</span><strong>{loading || error ? '—' : currentCapacity.toLocaleString('vi-VN')}<small>người</small></strong></div></div>
-      </div>
-
-      {notice && <div className="facility-notice" role="status">{notice}</div>}
-      <div className="facility-panel">
-        <div className="facility-toolbar organizer-location-toolbar">
-          <label className="facility-search"><Search size={18} /><input aria-label="Tìm địa điểm" placeholder="Tìm theo mã, tên hoặc mô tả…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
-          <label className="facility-filter"><MapPin size={17} /><select aria-label="Lọc loại địa điểm" value={type} onChange={event => { setType(event.target.value as SharedLocationType | ''); setPage(0); }}><option value="">Tất cả loại</option><option value="STAGE">Sân khấu</option><option value="WORKSHOP">Phòng workshop</option><option value="AREA">Khu vực</option></select></label>
-          <label className="facility-filter"><select aria-label="Lọc trạng thái" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as LocationStatusFilter); setPage(0); }}><option value="all">Tất cả trạng thái</option><option value="active">Đang hoạt động</option><option value="inactive">Tạm ngưng</option></select></label>
-          <button type="button" className="facility-button" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Tải lại danh sách"><RefreshCw size={17} /></button>
+      {notice && <div className="venue-notice" role="status"><Check size={18} />{notice}</div>}
+      <div className="org-dashboard-panel venue-panel" aria-busy={loading}>
+        <div className="org-dashboard-panel-heading venue-list-heading">
+          <div><h2>Danh sách địa điểm</h2><p>Tra cứu và cập nhật thông tin không gian dùng chung.</p></div>
+          {hasFilters && <button type="button" className="org-dashboard-text-action" onClick={clearFilters}><X size={15} />Xóa bộ lọc</button>}
+        </div>
+        <div className="venue-toolbar organizer-location-toolbar">
+          <label className="venue-search"><Search size={18} /><input aria-label="Tìm địa điểm" placeholder="Tìm theo mã, tên hoặc mô tả…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
+          <label className="venue-filter"><span>Loại địa điểm</span><select aria-label="Lọc loại địa điểm" value={type} onChange={event => { setType(event.target.value as SharedLocationType | ''); setPage(0); }}><option value="">Tất cả loại</option><option value="STAGE">Sân khấu</option><option value="WORKSHOP">Phòng workshop</option><option value="AREA">Khu vực</option></select></label>
+          <label className="venue-filter"><span>Trạng thái</span><select aria-label="Lọc trạng thái" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as LocationStatusFilter); setPage(0); }}><option value="all">Tất cả trạng thái</option><option value="active">Đang hoạt động</option><option value="inactive">Tạm ngưng</option></select></label>
+          <button type="button" className="btn-org-secondary" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Tải lại danh sách"><RefreshCw size={17} /></button>
         </div>
 
-        {error ? <div className="facility-empty" role="alert"><p>{error}</p><button type="button" className="facility-button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
-          : loading ? <div className="facility-empty" role="status">Đang tải danh sách…</div>
-            : rows.length === 0 ? <div className="facility-empty"><Building2 size={38} /><h3>Không có địa điểm phù hợp</h3><p>Thử thay đổi từ khóa hoặc bộ lọc đang chọn.</p><button type="button" className="facility-button" onClick={() => { setSearch(''); setType(''); setStatusFilter('all'); setPage(0); }}>Xóa bộ lọc</button></div>
-              : <div className="facility-table-scroll"><table><caption className="facility-sr-only">Danh sách địa điểm tổ chức</caption><thead><tr><th>Mã và tên</th><th>Loại</th><th>Sức chứa</th><th>Vị trí bản đồ</th><th>Trạng thái</th><th className="facility-actions">Thao tác</th></tr></thead><tbody>{rows.map(location => <tr key={location.locationId}><td><div className="facility-name"><span className="facility-row-icon"><Building2 size={19} /></span><span><strong>{location.name}</strong><small>{location.code}</small></span></div></td><td><span className="organizer-location-type">{TYPE_LABELS[location.locationType as SharedLocationType]}</span></td><td><span className="facility-quantity">{location.maxCapacity.toLocaleString('vi-VN')}</span> <span className="facility-muted">người</span></td><td>{location.mapX === null || location.mapY === null ? <span className="facility-muted">Chưa đặt</span> : `${location.mapX}, ${location.mapY}`}</td><td><span className={`organizer-location-status ${location.active ? 'is-active' : 'is-inactive'}`}><i />{location.active ? 'Đang hoạt động' : 'Tạm ngưng'}</span></td><td><div className="facility-row-actions"><button type="button" onClick={() => openEdit(location)} aria-label={`Sửa ${location.name}`} title="Chỉnh sửa"><Pencil size={17} /></button></div></td></tr>)}</tbody></table></div>}
+        {error ? <div className="venue-empty" role="alert"><p>{error}</p><button type="button" className="btn-org-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
+          : loading ? <div className="venue-empty" role="status">Đang tải danh sách…</div>
+            : rows.length === 0 ? <div className="venue-empty"><Building2 size={32} /><h3>{hasFilters ? 'Không tìm thấy địa điểm' : 'Chưa có địa điểm tổ chức'}</h3><p>{hasFilters ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem lại danh sách.' : 'Thêm địa điểm để bố trí không gian cho các hoạt động.'}</p><button type="button" className="btn-org-secondary" onClick={hasFilters ? clearFilters : openCreate}>{hasFilters ? 'Xóa bộ lọc' : 'Thêm địa điểm'}</button></div>
+              : <div className="venue-table-scroll"><table className="venue-table"><caption className="venue-sr-only">Danh sách địa điểm tổ chức</caption><thead><tr><th>Địa điểm</th><th>Loại</th><th>Sức chứa</th><th>Vị trí bản đồ</th><th>Trạng thái</th><th className="venue-actions">Thao tác</th></tr></thead><tbody>{rows.map(location => <tr key={location.locationId}><td><div className="venue-name"><span className="venue-row-icon"><Building2 size={19} /></span><span><strong>{location.name}</strong><small>{location.code}</small>{location.description && <p className="venue-description">{location.description}</p>}</span></div></td><td data-label="Loại địa điểm"><span className="organizer-location-type">{TYPE_LABELS[location.locationType as SharedLocationType]}</span></td><td data-label="Sức chứa"><span className="venue-capacity"><Users size={14} /><strong>{location.maxCapacity.toLocaleString('vi-VN')}</strong><span>người</span></span></td><td data-label="Vị trí bản đồ">{location.mapX === null || location.mapY === null ? <span className="venue-muted">Chưa đặt</span> : <span className="venue-coordinate"><MapPin size={14} />{location.mapX}, {location.mapY}</span>}</td><td data-label="Trạng thái"><span className={`organizer-location-status ${location.active ? 'is-active' : 'is-inactive'}`}><i />{location.active ? 'Đang hoạt động' : 'Tạm ngưng'}</span></td><td className="venue-action-cell"><div className="venue-row-actions"><button type="button" className="org-dashboard-text-action" onClick={() => openEdit(location)} aria-label={`Sửa ${location.name}`} title="Chỉnh sửa"><Pencil size={15} /><span>Chỉnh sửa</span></button></div></td></tr>)}</tbody></table></div>}
 
-        {!loading && !error && <footer className="facility-table-footer organizer-location-footer"><span>Hiển thị {rows.length} / {totalElements} địa điểm</span>{totalPages > 1 && <div><button type="button" onClick={() => setPage(value => value - 1)} disabled={page === 0}><ChevronLeft size={17} /></button><span>Trang {page + 1}/{totalPages}</span><button type="button" onClick={() => setPage(value => value + 1)} disabled={page >= totalPages - 1}><ChevronRight size={17} /></button></div>}</footer>}
+        {!loading && !error && <footer className="venue-table-footer organizer-location-footer"><span>{totalElements === 0 ? '0 địa điểm' : `${getPageOffset(page + 1, PAGE_SIZE) + 1}–${getPageOffset(page + 1, PAGE_SIZE) + rows.length} trong ${totalElements} địa điểm`}</span><ListPagination page={page + 1} pages={getPageCount(totalElements, PAGE_SIZE)} onPage={value => setPage(toPageIndex(value))} /></footer>}
       </div>
 
-      <dialog ref={dialog} className="facility-dialog organizer-location-dialog" aria-labelledby="location-dialog-title" onCancel={event => { event.preventDefault(); close(); }}>
+      <dialog ref={dialog} className="venue-dialog organizer-location-dialog" aria-labelledby="location-dialog-title" onCancel={event => { event.preventDefault(); close(); }}>
         <form onSubmit={save}>
-          <div className="facility-dialog-heading"><div><span className="facility-eyebrow">KHÔNG GIAN HOẠT ĐỘNG</span><h2 id="location-dialog-title">{editing === 'new' ? 'Thêm địa điểm' : 'Chỉnh sửa địa điểm'}</h2></div><button type="button" disabled={saving} className="facility-close" onClick={close} aria-label="Đóng"><X size={20} /></button></div>
-          <div className="facility-fields organizer-location-fields">
+          <div className="org-dashboard-panel-heading venue-dialog-heading"><div><h2 id="location-dialog-title">{editing === 'new' ? 'Thêm địa điểm' : 'Chỉnh sửa địa điểm'}</h2><p>Thông tin dùng để sắp xếp địa điểm cho hoạt động.</p></div><button type="button" disabled={saving} className="venue-close" onClick={close} aria-label="Đóng"><X size={20} /></button></div>
+          <div className="venue-fields organizer-location-fields">
             <label>Mã địa điểm <span>*</span><input autoFocus required maxLength={30} value={form.code} onChange={event => setField('code', event.target.value.toUpperCase())} placeholder="Ví dụ: STAGE-A" /><small>Chỉ dùng A–Z, 0–9, dấu “-” hoặc “_”.</small></label>
             <label>Tên địa điểm <span>*</span><input required maxLength={100} value={form.name} onChange={event => setField('name', event.target.value)} placeholder="Ví dụ: Sân khấu trung tâm" /></label>
             <label>Loại địa điểm <span>*</span><select required disabled={editing !== 'new'} value={form.locationType} onChange={event => setField('locationType', event.target.value as SharedLocationType)}><option value="STAGE">Sân khấu</option><option value="WORKSHOP">Phòng workshop</option><option value="AREA">Khu vực</option></select><small>Không thể đổi loại sau khi đã tạo.</small></label>
             <label>Sức chứa tối đa <span>*</span><input type="number" required min="1" step="1" value={form.maxCapacity} onChange={event => setField('maxCapacity', event.target.value)} placeholder="Ví dụ: 120" /></label>
-            <label>Tọa độ X<input type="number" min="0" max="100" step="0.01" value={form.mapX} onChange={event => setField('mapX', event.target.value)} placeholder="0–100" /></label>
-            <label>Tọa độ Y<input type="number" min="0" max="100" step="0.01" value={form.mapY} onChange={event => setField('mapY', event.target.value)} placeholder="0–100" /></label>
             <label className="organizer-location-wide">Mô tả<textarea maxLength={5000} rows={4} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length}/5000</small></label>
             {editing !== 'new' && <label className="organizer-location-active organizer-location-wide"><input type="checkbox" checked={form.active} onChange={event => setField('active', event.target.checked)} /><span><strong>Cho phép sử dụng địa điểm</strong><small>Không thể tạm ngưng nếu địa điểm đang được một hoạt động hiện tại hoặc tương lai sử dụng.</small></span></label>}
           </div>
-          {formError && <p className="facility-error" role="alert">{formError}</p>}
-          <div className="facility-dialog-footer"><button type="button" className="facility-button" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="facility-button primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>
+          {formError && <p className="venue-error" role="alert">{formError}</p>}
+          <div className="venue-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>
         </form>
       </dialog>
     </section>

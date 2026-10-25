@@ -157,8 +157,8 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title">Vai trò & Phân quyền</h1>
-          <p className="adm-page-subtitle">
+          <h1 className="adm-page-title workspace-page-title">Vai trò & Phân quyền</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Cấu hình ma trận quyền hạn cho từng nhóm đối tượng trên cổng vận hành Đường Sách.
           </p>
         </div>

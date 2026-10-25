@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   ArrowLeft,
@@ -261,8 +262,8 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               </button>
             </div>
           ) : (
-            <div className="heritage-collection-grid">
-              {filteredBooths.map((booth) => (
+            <PaginatedList items={filteredBooths}>{pageItems => (<div className="heritage-collection-grid">
+              {pageItems.map((booth) => (
                 <article
                   key={booth.id}
                   className="heritage-collection-card"
@@ -290,7 +291,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                   </div>
                 </article>
               ))}
-            </div>
+            </div>)}</PaginatedList>
           )}
         </section>
 

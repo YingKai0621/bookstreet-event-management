@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { AdminAuditLogItem } from '../../types/admin';
-import { useViewportPagination } from '../../hooks/useViewportPagination';
+import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 
@@ -40,7 +40,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       return matchQuery && matchAction && matchStatus;
     });
   }, [logs, searchTerm, filterAction, filterStatus]);
-  const pagination = useViewportPagination(filteredLogs, 460, 140);
+  const pagination = useListPagination(filteredLogs);
 
   const handleExportCSV = () => {
     const headers = ['Mã log', 'Thời gian', 'Người thực hiện', 'Vai trò', 'Hành động', 'Đối tượng', 'Chi tiết', 'Trạng thái', 'IP'];
@@ -97,9 +97,9 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <span className="admin-page-eyebrow">GIÁM SÁT HỆ THỐNG</span>
-          <h1 className="adm-page-title">Nhật ký Hoạt động (Audit Logs)</h1>
-          <p className="adm-page-subtitle">
+
+          <h1 className="adm-page-title workspace-page-title">Nhật ký Hoạt động (Audit Logs)</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Truy vết các thao tác quản trị, cấp quyền, cấu hình hệ thống và sự kiện an ninh.
           </p>
         </div>

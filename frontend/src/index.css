@@ -586,6 +586,17 @@ button:active:not(:disabled),
   box-shadow: 0 0 10px rgba(233, 188, 99, 0.35);
 }
 
+/* Hide modal scrollbars while preserving wheel, touch and keyboard scrolling. */
+:is(dialog, [role="dialog"], [aria-modal="true"], .modal, [class$="-modal"], [class*="modal-backdrop"], [class*="modal-overlay"], [class*="modal-content"], [class*="modal-box"]),
+:is(dialog, [role="dialog"], [aria-modal="true"], .modal, [class$="-modal"], [class*="modal-backdrop"], [class*="modal-overlay"], [class*="modal-content"], [class*="modal-box"]) * {
+  scrollbar-width: none;
+}
+
+:is(dialog, [role="dialog"], [aria-modal="true"], .modal, [class$="-modal"], [class*="modal-backdrop"], [class*="modal-overlay"], [class*="modal-content"], [class*="modal-box"])::-webkit-scrollbar,
+:is(dialog, [role="dialog"], [aria-modal="true"], .modal, [class$="-modal"], [class*="modal-backdrop"], [class*="modal-overlay"], [class*="modal-content"], [class*="modal-box"]) *::-webkit-scrollbar {
+  display: none;
+}
+
 /* Tôn trọng người dùng thiết lập reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

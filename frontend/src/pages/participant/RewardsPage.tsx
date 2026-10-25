@@ -1,3 +1,4 @@
+import { PaginatedList } from '../../components/ui/PaginatedList';
 import { Award, Bookmark, BookOpen, Clock, Compass, Crown, Gift, HelpCircle, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import React from 'react';
 import { Language, ParticipantBadge, ParticipantProfile } from '../../types';
@@ -43,10 +44,10 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
     <div className="rewards-page">
       {/* 1. Header */}
       <div className="participant-page-header">
-        <h1 className="participant-page-title">
+        <h1 className="participant-page-title workspace-page-title">
           {language === 'vi' ? 'Điểm thưởng & Huy hiệu' : 'Rewards & Badges'}
         </h1>
-        <p className="participant-page-sub">
+        <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi' 
             ? 'Theo dõi điểm tích lũy và bộ sưu tập huy hiệu độc giả của bạn.' 
             : 'Track your reader loyalty points and badge milestones.'}
@@ -84,8 +85,8 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
           </h2>
         </div>
 
-        <div className="badges-collection-grid">
-          {badges.map((badge) => {
+        <PaginatedList items={badges}>{pageItems => (<div className="badges-collection-grid">
+          {pageItems.map((badge) => {
             const isLocked = badge.isLocked;
             return (
               <div 
@@ -111,7 +112,7 @@ export const RewardsPage: React.FC<RewardsPageProps> = ({
               <span className="badge-date">{language === 'vi' ? 'Chưa mở khóa' : 'Locked'}</span>
             </div>
           )}
-        </div>
+        </div>)}</PaginatedList>
       </div>
 
       {/* 4. How to Earn More Points & Benefits */}

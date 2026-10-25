@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import {
   Bell,
   CheckCheck,
@@ -59,10 +60,10 @@ export const OrganizerNotificationsView: React.FC<OrganizerNotificationsViewProp
         marginBottom: '1.5rem'
       }}>
         <div>
-          <h1 className="organizer-view-title">
+          <h1 className="organizer-view-title workspace-page-title">
             {language === 'vi' ? 'Thông báo' : 'Notifications'}
           </h1>
-          <p className="organizer-view-sub">
+          <p className="organizer-view-sub workspace-page-subtitle">
             {language === 'vi' ? 'Cập nhật kịp thời về đơn đăng ký, đề xuất hoạt động và phản hồi độc giả' : 'Operational alerts and participant updates'}
           </p>
         </div>
@@ -103,8 +104,8 @@ export const OrganizerNotificationsView: React.FC<OrganizerNotificationsViewProp
       </div>
 
       {/* 3. Notification Rows List matching Sketch Screen 9 */}
-      <div className="organizer-card" style={{ padding: 0, overflow: 'hidden' }}>
-        {filteredNotifs.map((item) => (
+      <PaginatedList items={filteredNotifs}>{pageItems => (<div className="organizer-card" style={{ padding: 0, overflow: 'hidden' }}>
+        {pageItems.map((item) => (
           <div
             key={item.id}
             onClick={() => item.targetTab && onNavigateTab(item.targetTab as OrganizerTab)}
@@ -156,7 +157,7 @@ export const OrganizerNotificationsView: React.FC<OrganizerNotificationsViewProp
             </div>
           </div>
         ))}
-      </div>
+      </div>)}</PaginatedList>
     </div>
   );
 };

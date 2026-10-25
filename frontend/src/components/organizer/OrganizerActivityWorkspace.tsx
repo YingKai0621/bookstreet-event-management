@@ -1,11 +1,12 @@
+import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
+import { ListPagination } from '../ui/ListPagination';
+import { PaginatedList } from '../ui/PaginatedList';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Ban,
   Building2,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Eye,
   FilePenLine,
@@ -61,7 +62,7 @@ interface PageMeta {
   totalPages: number;
 }
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = LIST_PAGE_SIZE;
 
 const VIEW_CONFIG: Array<{
   id: WorkspaceView;
@@ -244,7 +245,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
   const status = searchParams.get('status') || '';
   const lateOnly = searchParams.get('late') === 'true';
   const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10);
-  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage - 1 : 0;
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? toPageIndex(requestedPage) : 0;
   const [records, setRecords] = useState<WorkspaceRecord[]>([]);
   const [activitiesById, setActivitiesById] = useState<Record<number, OrganizerActivityResponse>>({});
   const [proposalsById, setProposalsById] = useState<Record<number, OrganizerActivityProposalResponse>>({});
@@ -308,6 +309,13 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
     void request
       .then(response => {
         if (sequence !== requestSequence.current) return;
+        const lastPage = getPageCount(response.totalElements, PAGE_SIZE);
+        if (page >= lastPage) {
+          const next = new URLSearchParams(window.location.search);
+          next.set('page', String(lastPage));
+          setSearchParams(next, { replace: true });
+          return;
+        }
         setRecords(response.content);
         setMeta({
           page: response.page,
@@ -324,7 +332,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
       .finally(() => {
         if (sequence === requestSequence.current) setLoading(false);
       });
-  }, [activeView, debouncedSearch, effectiveEventId, lateOnly, page, reloadKey, status]);
+  }, [activeView, debouncedSearch, effectiveEventId, lateOnly, page, reloadKey, setSearchParams, status]);
 
   useEffect(() => {
     if (activeView === 'activities') return;
@@ -425,9 +433,8 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
     <section className="oaw-shell">
       <header className="oaw-header">
         <div>
-          <p className="oaw-eyebrow">ĐIỀU HÀNH / HOẠT ĐỘNG</p>
-          <h1>Quản lý hoạt động</h1>
-          <p>Theo dõi lịch chính thức và xử lý hồ sơ từ đối tác theo từng sự kiện.</p>
+          <h1 className="workspace-page-title">Quản lý hoạt động</h1>
+          <p className="workspace-page-subtitle">Theo dõi lịch chính thức và xử lý hồ sơ từ đối tác theo từng sự kiện.</p>
         </div>
         <div className="oaw-header-actions">
           <button className="oaw-refresh" type="button" onClick={() => setReloadKey(value => value + 1)} disabled={loading}>
@@ -598,22 +605,8 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
         })}
       </div>
 
-      {meta.totalPages > 1 && (
-        <footer className="oaw-pagination">
-          <span>Trang {meta.page + 1} / {meta.totalPages}</span>
-          <div>
-            <button type="button" onClick={() => updateWorkspaceParams({ page })} disabled={page === 0 || loading} aria-label="Trang trước"><ChevronLeft size={18} /></button>
-            {Array.from({ length: meta.totalPages }, (_, index) => index)
-              .filter(index => index === 0 || index === meta.totalPages - 1 || Math.abs(index - page) <= 1)
-              .map((index, position, visible) => (
-                <React.Fragment key={index}>
-                  {position > 0 && index - visible[position - 1] > 1 && <span>…</span>}
-                  <button type="button" className={page === index ? 'is-active' : ''} onClick={() => updateWorkspaceParams({ page: index + 1 })} disabled={loading}>{index + 1}</button>
-                </React.Fragment>
-              ))}
-            <button type="button" onClick={() => updateWorkspaceParams({ page: page + 2 })} disabled={page >= meta.totalPages - 1 || loading} aria-label="Trang sau"><ChevronRight size={18} /></button>
-          </div>
-        </footer>
+      {getPageCount(meta.totalElements, PAGE_SIZE) > 1 && (
+        <ListPagination page={page + 1} pages={getPageCount(meta.totalElements, PAGE_SIZE)} disabled={loading} onPage={value => updateWorkspaceParams({ page: value })} />
       )}
 
       {selectedRecord && (
@@ -948,7 +941,7 @@ function CreateActivityModal({
     <div className="oaw-modal-backdrop" role="presentation" onMouseDown={mouseEvent => { if (mouseEvent.target === mouseEvent.currentTarget && !submitting) onClose(); }}>
       <section className="oaw-modal oaw-create-modal" role="dialog" aria-modal="true" aria-labelledby="oaw-create-title">
         <header>
-          <div><span>TẠO TRỰC TIẾP BỞI BAN TỔ CHỨC</span><h2 id="oaw-create-title">Hoạt động mới</h2></div>
+          <div><h2 id="oaw-create-title">Hoạt động mới</h2></div>
           <button type="button" onClick={onClose} disabled={submitting} aria-label="Đóng"><X size={21} /></button>
         </header>
         <form onSubmit={submit}>
@@ -1065,13 +1058,6 @@ function RecordDetailModal({
     && (record.sourceProposalId === null
       ? ['DRAFT', 'PUBLISHED'].includes(record.status)
       : record.status === 'DRAFT');
-  const detailEyebrow = isActivity(record)
-    ? 'CHI TIẾT HOẠT ĐỘNG'
-    : isProposal(record)
-      ? 'CHI TIẾT ĐỀ XUẤT'
-      : isChangeRequest(record)
-        ? 'YÊU CẦU THAY ĐỔI'
-        : 'YÊU CẦU HỦY';
   const approveActionLabel = isProposal(record)
     ? 'Duyệt và tạo Activity'
     : isChangeRequest(record)
@@ -1165,7 +1151,7 @@ function RecordDetailModal({
     <div className="oaw-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="oaw-modal" role="dialog" aria-modal="true" aria-labelledby="oaw-modal-title">
         <header>
-          <div><span>{detailEyebrow}</span><h2 id="oaw-modal-title">{title}</h2></div>
+          <div><h2 id="oaw-modal-title">{title}</h2></div>
           <button type="button" onClick={onClose} aria-label="Đóng"><X size={21} /></button>
         </header>
         <div className="oaw-modal-body">
@@ -1325,10 +1311,10 @@ function ActivityRevisionHistory({
 
   return (
     <section className="oaw-revisions" aria-label="Lịch sử chỉnh sửa">
-      <div className="oaw-section-heading"><div><span>LỊCH SỬ THAY ĐỔI</span><h3>Revision đã lưu</h3></div><b>{revisions.length}</b></div>
+      <div className="oaw-section-heading"><div><h3>Revision đã lưu</h3></div><b>{revisions.length}</b></div>
       {loading ? <p>Đang tải lịch sử...</p> : revisions.length === 0 ? (
         <p>Hoạt động chưa có bản chỉnh sửa nào.</p>
-      ) : revisions.map(revision => {
+      ) : <PaginatedList items={revisions}>{pageItems => pageItems.map(revision => {
         const changedFields = Object.keys(revision.newSnapshot).filter(key =>
           JSON.stringify(revision.oldSnapshot[key]) !== JSON.stringify(revision.newSnapshot[key]));
         return (
@@ -1340,7 +1326,7 @@ function ActivityRevisionHistory({
               : 'Đã lưu snapshot kiểm toán.'}</small>
           </article>
         );
-      })}
+      })}</PaginatedList>}
     </section>
   );
 }
@@ -1489,7 +1475,7 @@ function EditActivityModal({
   return (
     <div className="oaw-modal-backdrop" role="presentation">
       <section className="oaw-modal oaw-create-modal" role="dialog" aria-modal="true" aria-labelledby="oaw-edit-title">
-        <header><div><span>CẤU HÌNH HOẠT ĐỘNG</span><h2 id="oaw-edit-title">Chỉnh sửa “{activity.title}”</h2></div><button type="button" onClick={onBack} disabled={submitting} aria-label="Quay lại"><X size={21} /></button></header>
+        <header><div><h2 id="oaw-edit-title">Chỉnh sửa “{activity.title}”</h2></div><button type="button" onClick={onBack} disabled={submitting} aria-label="Quay lại"><X size={21} /></button></header>
         <form onSubmit={submit}>
           <div className="oaw-modal-body">
             {!coreEditable && <p className="oaw-form-hint">Hoạt động bắt nguồn từ đề xuất đã duyệt. Ban tổ chức chỉ cấu hình hình ảnh, đăng ký và chứng nhận; nội dung cốt lõi phải đi qua yêu cầu thay đổi của đối tác.</p>}

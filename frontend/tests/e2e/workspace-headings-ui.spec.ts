@@ -1,0 +1,85 @@
+import { expect, test, type Page } from '@playwright/test';
+
+type Role = 'ADMIN' | 'ORGANIZER' | 'PARTNER' | 'PARTICIPANT';
+const emptyPage = { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 };
+const sampleEvent = { eventId: 501, organizerUserId: 1, name: 'Sự kiện kiểm thử', description: 'Đọc sách tại đường sách',
+  startAt: '2027-03-20T02:00:00Z', endAt: '2027-03-21T10:00:00Z', status: 'PUBLISHED',
+  createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z',
+};
+async function mockWorkspace(page: Page, role: Role) {
+  await page.route('**/api/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    let body: unknown = [];
+    if (path.endsWith('/auth/me')) body = { userId: 1, username: 'testreader', fullName: 'Tài khoản kiểm thử', email: 'reader@example.com', emailVerified: true, status: 'ACTIVE', roles: [role] };
+    else if (path.endsWith('/auth/csrf')) body = { headerName: 'X-CSRF-TOKEN', token: 'test' };
+    else if (path.endsWith('/auth/profile') || path.endsWith('/admin/profile')) body = { id: 1, fullName: 'Tài khoản kiểm thử', email: 'reader@example.com', phone: '0901234567', department: 'Quản trị hệ thống' };
+    else if ((path.endsWith('/organizations/me') || path.endsWith('/partner/organization'))) body = { partnerOrganizationId: 9, representativeUserId: 1, name: 'Nhà xuất bản kiểm thử', description: '', categoryCode: 'PUBLISHER', logoUrl: null, address: null, contactEmail: 'partner@example.com', contactPhone: '0901234567', status: 'ACTIVE' };
+    else if (path === '/api/v1/events' || path === '/api/v1/organizer/events') body = { ...emptyPage, content: [sampleEvent], totalElements: 1, totalPages: 1 };
+    else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
+    else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
+    else if (path === '/api/v1/organizer/reports') body = { eventId: 501, eventName: 'Sự kiện kiểm thử', totalParticipants: 0, attended: 0, pending: 0, cancelled: 0, totalBooths: 0, totalActivities: 0, attendanceRate: 0, averageRating: 0, ratingCount: 0, activityStats: [], ratingDistribution: [] };
+    else if (path.endsWith('/dashboard') || path.endsWith('/dashboard/summary')) body = {};
+    else if (path.includes('/organizer/') && /booths|locations|activities|requests|proposals|applications/.test(path)) body = emptyPage;
+    else if (path.includes('/partner/') && /applications|booth-requests|activities|proposals/.test(path)) body = emptyPage;
+    await route.fulfill({ json: body });
+  });
+}
+
+const workspaces: Array<{ role: Role; routes: string[] }> = [
+  { role: 'ORGANIZER', routes: ['/organizer', '/organizer/events', '/organizer/booths', '/organizer/venues', '/organizer/activities', '/organizer/assets', '/organizer/booth-requests', '/organizer/participants', '/organizer/reports', '/organizer/feedback', '/organizer/public-content', '/organizer/notifications', '/organizer/profile'] },
+  { role: 'ADMIN', routes: ['/admin', '/admin/users', '/admin/badges', '/admin/assets', '/admin/booths', '/admin/venues', '/admin/roles', '/admin/settings', '/admin/audit', '/admin/notifications', '/admin/profile'] },
+  { role: 'PARTNER', routes: ['/partner', '/partner/events', '/partner/events/apply', '/partner/profile', '/partner/booths', '/partner/booth-requests', '/partner/activities', '/partner/reports', '/partner/notifications'] },
+  { role: 'PARTICIPANT', routes: ['/participant', '/participant/feedback', '/participant/certificates', '/participant/profile', '/participant/events', '/participant/rewards'] },
+];
+for (const workspace of workspaces) for (const width of [1440, 390]) {
+  test(`${workspace.role} page headings match Dashboard typography at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const pageErrors: string[] = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await mockWorkspace(page, workspace.role);
+    for (const route of workspace.routes) {
+      await page.goto(route);
+      const title = page.locator('h1.workspace-page-title').first();
+      const subtitle = page.locator('p.workspace-page-subtitle').first();
+      if (route === '/partner/reports') {
+        await expect(page.locator('main')).toHaveCSS('padding-top', '36px');
+        await expect(page.locator('main')).toContainText('Chưa có API báo cáo');
+        continue;
+      }
+      await expect(title).toBeVisible();
+      await expect(subtitle).toBeVisible();
+      const topInset = await title.evaluate(element => {
+        const main = element.closest('main')!;
+        return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
+      });
+      expect(Math.abs(topInset - 36), route).toBeLessThanOrEqual(1);
+      const inlineInset = await title.evaluate(element => {
+        const main = element.closest('main')!;
+        return element.getBoundingClientRect().left - main.getBoundingClientRect().left;
+      });
+      expect(Math.abs(inlineInset - 48), route).toBeLessThanOrEqual(1);
+      const styles = await title.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { family: style.fontFamily, size: style.fontSize, weight: style.fontWeight, color: style.color, lineHeight: style.lineHeight, margin: style.margin, width: element.getBoundingClientRect().width };
+      });
+      expect(styles.family, route).toContain('Noto Serif');
+      expect(styles.size, route).toBe(width === 1440 ? '32px' : '30px');
+      expect(styles.weight, route).toBe('700');
+      expect(styles.color, route).toBe('rgb(16, 37, 31)');
+      expect(styles.lineHeight, route).toBe(width === 1440 ? '38.4px' : '36px');
+      expect(styles.margin, route).toBe('0px');
+      const subStyles = await subtitle.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { family: style.fontFamily, size: style.fontSize, color: style.color, marginTop: style.marginTop, weight: style.fontWeight, lineHeight: style.lineHeight };
+      });
+      expect(subStyles.family, route).toContain('Be Vietnam Pro');
+      expect(subStyles.size, route).toBe('15.6px');
+      expect(subStyles.color, route).toBe('rgb(92, 112, 105)');
+      expect(subStyles.marginTop, route).toBe('3.2px');
+      expect(subStyles.weight, route).toBe('400');
+      expect(subStyles.lineHeight, route).toBe('21.06px');
+    }
+    expect(pageErrors).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath('workspace-headings.png'), fullPage: true });
+  });
+}

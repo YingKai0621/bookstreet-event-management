@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import {
   ArrowRight,
   Bell,
@@ -68,8 +69,8 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({
       {/* Header */}
       <div className="adm-page-header">
         <div>
-          <h1 className="adm-page-title">Thông báo Quản trị</h1>
-          <p className="adm-page-subtitle">
+          <h1 className="adm-page-title workspace-page-title">Thông báo Quản trị</h1>
+          <p className="adm-page-subtitle workspace-page-subtitle">
             Cảnh báo hệ thống, nhật ký đăng nhập bất thường và yêu cầu cần xác thực từ người dùng.
           </p>
         </div>
@@ -114,8 +115,8 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({
             <p>Không có thông báo nào trong danh mục này.</p>
           </div>
         ) : (
-          <div className="adm-notif-list">
-            {filteredNotifs.map((notif) => (
+          <PaginatedList items={filteredNotifs}>{pageItems => (<div className="adm-notif-list">
+            {pageItems.map((notif) => (
               <div 
                 key={notif.id}
                 className={`adm-notif-item ${!notif.isRead ? 'unread' : ''}`}
@@ -146,7 +147,7 @@ export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({
                 )}
               </div>
             ))}
-          </div>
+          </div>)}</PaginatedList>
         )}
       </div>
     </div>

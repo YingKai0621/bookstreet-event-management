@@ -69,6 +69,8 @@ import {
   PartnerTodoItem
 } from './types';
 
+import './WorkspacePageHeading.css';
+
 const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,
 };

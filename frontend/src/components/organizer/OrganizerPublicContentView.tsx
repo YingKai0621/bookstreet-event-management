@@ -1,3 +1,4 @@
+import { PaginatedList } from '../ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Calendar,
@@ -211,10 +212,10 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
         marginBottom: '1.5rem'
       }}>
         <div>
-          <h1 className="organizer-view-title" style={{ margin: '0 0 0.35rem 0' }}>
+          <h1 className="organizer-view-title workspace-page-title">
             {language === 'vi' ? 'Nội dung công khai & Di sản văn hóa' : 'Public Content & Heritage'}
           </h1>
-          <p className="organizer-view-sub" style={{ margin: 0 }}>
+          <p className="organizer-view-sub workspace-page-subtitle">
             {language === 'vi' 
               ? 'Quản lý thông tin các điểm di sản kiến trúc, câu chuyện văn hóa kết nối với Đường Sách' 
               : 'Manage architectural heritage sites and cultural stories for the public website'}
@@ -257,12 +258,12 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
       </div>
 
       {/* Heritage Cards Grid */}
-      <div style={{
+      <PaginatedList items={filteredHeritage}>{pageItems => (<div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: '1.25rem'
       }}>
-        {filteredHeritage.map(item => (
+        {pageItems.map(item => (
           <div key={item.id} className="organizer-card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: 10 }}>
             <div style={{ height: 165, position: 'relative', background: '#E2E8F0', overflow: 'hidden' }}>
               {item.image?.url ? <img src={item.image.url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: '#94A3B8' }}><ImageIcon size={36} /></div>}
@@ -431,7 +432,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
             </div>
           </div>
         ))}
-      </div>
+      </div>)}</PaginatedList>
 
       {/* ======================================================== */}
       {/* 1. PREVIEW MODAL (Xem trước di sản) */}
