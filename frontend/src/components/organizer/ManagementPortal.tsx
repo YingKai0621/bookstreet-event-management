@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import {
   ExtendedHeritageProfile,
   Language
@@ -8,8 +10,7 @@ import { EventDetailView } from './EventDetailView';
 import { EventManagementView } from './EventManagementView';
 import { OrganizerDashboard } from './OrganizerDashboard';
 import {
-  OrganizerSidebar,
-  OrganizerTab
+  OrganizerSidebar
 } from './OrganizerSidebar';
 import { OrganizerTopBar } from './OrganizerTopBar';
 
@@ -18,6 +19,8 @@ import { OrganizerBoothRequestsView } from './OrganizerBoothRequestsView';
 import { OrganizerActivityWorkspace } from './OrganizerActivityWorkspace';
 import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
 import { OrganizerCreateEventModal } from './OrganizerCreateEventModal';
+import { OrganizerPublishEventModal } from './OrganizerPublishEventModal';
+import type { EventPublishFailure } from './OrganizerPublishEventModal';
 import { OrganizerFeedbackView } from './OrganizerFeedbackView';
 import { OrganizerNotificationsView } from './OrganizerNotificationsView';
 import { OrganizerLocationManagementView } from './OrganizerLocationManagementView';
@@ -25,9 +28,21 @@ import { OrganizerProfileView } from './OrganizerProfileView';
 import { OrganizerPublicContentView } from './OrganizerPublicContentView';
 import { OrganizerReportsView } from './OrganizerReportsView';
 import { ParticipantManagementView } from './ParticipantManagementView';
+import {
+  ORGANIZER_ROOT,
+  normalizeOrganizerSearch,
+  organizerTabPath,
+  organizerTabUrl,
+  resolveOrganizerRoute,
+} from '../../routing/organizerRoutes';
 
 import { useAuth } from '../../auth/useAuth';
-import { organizerApi, OrganizerPartnerApplication } from '../../services/organizerApi';
+import {
+  organizerApi,
+  type OrganizerDashboardSummary,
+  OrganizerPartnerApplication,
+} from '../../services/organizerApi';
+import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { BoothRequest } from '../../types/booth';
 import {
@@ -37,7 +52,8 @@ import {
   OrganizerEventRequest,
   OrganizerNotificationItem,
   OrganizerParticipantItem,
-  OrganizerProfile
+  OrganizerProfile,
+  OrganizerTab,
 } from '../../types/organizer';
 
 import './OrganizerPortal.css';
@@ -52,10 +68,40 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   onLogout
 }) => {
   const { user } = useAuth();
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<OrganizerTab>('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeState = useMemo(
+    () => resolveOrganizerRoute(location.pathname, location.search),
+    [location.pathname, location.search],
+  );
+  const activeTab = routeState?.tab ?? 'overview';
+  const selectedEventId = routeState?.eventId ?? null;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!routeState) navigate(ORGANIZER_ROOT, { replace: true });
+  }, [navigate, routeState]);
+
+  useEffect(() => {
+    if (!routeState) return;
+    const normalized = normalizeOrganizerSearch(routeState.tab, location.search);
+    const normalizedSearch = normalized.toString();
+    const currentSearch = new URLSearchParams(location.search).toString();
+    if (normalizedSearch === currentSearch) return;
+    navigate(`${location.pathname}${normalizedSearch ? `?${normalizedSearch}` : ''}`, { replace: true });
+  }, [location.pathname, location.search, navigate, routeState]);
+
+  const navigateToTab = useCallback((tab: OrganizerTab, eventId?: string | null) => {
+    navigate(organizerTabUrl(tab, { eventId }));
+  }, [navigate]);
+
+  const selectEventForCurrentScreen = useCallback((eventId: string | null) => {
+    const params = new URLSearchParams(location.search);
+    params.delete('activityView');
+    if (eventId && eventId !== 'all') params.set('eventId', eventId);
+    else params.delete('eventId');
+    navigate(organizerTabUrl(activeTab === 'event_detail' ? 'events' : activeTab, { search: params }));
+  }, [activeTab, location.search, navigate]);
 
 
 
@@ -63,6 +109,10 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OrganizerEvent | null>(null);
+  const [eventPendingPublish, setEventPendingPublish] = useState<OrganizerEvent | null>(null);
+  const [isPublishingEvent, setIsPublishingEvent] = useState(false);
+  const [publishFailure, setPublishFailure] = useState<EventPublishFailure | null>(null);
+  const [publishSuccess, setPublishSuccess] = useState('');
 
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
@@ -82,14 +132,17 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [actionError, setActionError] = useState('');
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const firstEventId = eventsList[0]?.id;
+  const [dashboardSummary, setDashboardSummary] = useState<OrganizerDashboardSummary | null>(null);
+  const [isLoadingDashboardSummary, setIsLoadingDashboardSummary] = useState(false);
+  const [dashboardSummaryError, setDashboardSummaryError] = useState('');
 
-  const refreshOrganizerData = async (preferredEventId?: string | null) => {
+  const activeEventScopeId = selectedEventId || firstEventId || null;
+
+  const refreshOrganizerData = useCallback(async (preferredEventId?: string | null) => {
     try {
       const events = await organizerApi.getEvents();
       setEventsList(events);
-      if (preferredEventId && !events.some(event => event.id === preferredEventId)) {
-        setSelectedEventId(null);
-      }
+      if (preferredEventId && !events.some(event => event.id === preferredEventId)) navigateToTab('events');
       setLoadError('');
     } catch (error) {
       console.warn('Could not load organizer data', error);
@@ -97,7 +150,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     } finally {
       setIsLoadingEvents(false);
     }
-  };
+  }, [navigateToTab]);
 
   useEffect(() => {
     void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); setIsLoadingEvents(false); });
@@ -106,33 +159,92 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     window.addEventListener('focus', refresh);
     window.addEventListener('duongsach:data-changed', refresh);
     return () => { window.clearInterval(intervalId); window.removeEventListener('focus', refresh); window.removeEventListener('duongsach:data-changed', refresh); };
-  }, []);
+  }, [refreshOrganizerData]);
+
+  useEffect(() => {
+    if (activeTab === 'overview') return;
+    let active = true;
+    if (!activeEventScopeId) {
+      setBoothsList([]);
+      setBoothRequests([]);
+      setPartnerApplications([]);
+      return;
+    }
+
+    organizerApi.getBooths(activeEventScopeId).then(rows => {
+      if (active) setBoothsList(rows);
+    }).catch(error => {
+      if (!active) return;
+      setBoothsList([]);
+      setActionError(error instanceof Error ? error.message : 'Không tải được gian hàng sự kiện.');
+    });
+
+    const refreshTasks = () => {
+      Promise.all([
+        organizerApi.getPartnerApplications(activeEventScopeId),
+        boothApi.listAllOrganizerRequests(activeEventScopeId),
+      ]).then(([apps, reqs]) => {
+        if (!active) return;
+        setPartnerApplications(apps);
+        setBoothRequests(reqs);
+      }).catch(error => {
+        if (!active) return;
+        const msg = error instanceof Error ? error.message : 'Không tải được việc cần xử lý.';
+        setActionError(msg);
+      });
+    };
+
+    refreshTasks();
+
+    const intervalId = window.setInterval(refreshTasks, 15000);
+    const handleFocusOrData = () => refreshTasks();
+
+    window.addEventListener('focus', handleFocusOrData);
+    window.addEventListener('duongsach:data-changed', handleFocusOrData);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocusOrData);
+      window.removeEventListener('duongsach:data-changed', handleFocusOrData);
+    };
+  }, [activeEventScopeId, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'overview') return;
+    let active = true;
+
+    const refreshSummary = async (showLoading: boolean) => {
+      if (showLoading) setIsLoadingDashboardSummary(true);
+      try {
+        const summary = await organizerApi.getDashboardSummary();
+        if (!active) return;
+        setDashboardSummary(summary);
+        setDashboardSummaryError('');
+      } catch (error) {
+        if (!active) return;
+        setDashboardSummaryError(error instanceof Error ? error.message : 'Không tải được dữ liệu Dashboard.');
+      } finally {
+        if (active && showLoading) setIsLoadingDashboardSummary(false);
+      }
+    };
+
+    void refreshSummary(true);
+    const intervalId = window.setInterval(() => void refreshSummary(false), 15000);
+    const handleRefresh = () => void refreshSummary(false);
+    window.addEventListener('focus', handleRefresh);
+    window.addEventListener('duongsach:data-changed', handleRefresh);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleRefresh);
+      window.removeEventListener('duongsach:data-changed', handleRefresh);
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     let active = true;
-    const targetEventId = selectedEventId || firstEventId;
-    if (targetEventId) {
-      setBoothsList([]);
-      setBoothRequests([]);
-      organizerApi.getBooths(targetEventId).then(rows => {
-        if (active) setBoothsList(rows);
-      }).catch(error => {
-        if (!active) return;
-        setBoothsList([]);
-        setActionError(error instanceof Error ? error.message : 'Không tải được gian hàng sự kiện.');
-      });
-      boothApi.listAllOrganizerRequests(targetEventId).then(rows => {
-        if (active) setBoothRequests(rows);
-      }).catch(error => {
-        if (!active) return;
-        setBoothRequests([]);
-        setActionError(error instanceof Error ? error.message : 'Không tải được yêu cầu gian hàng.');
-      });
-    } else {
-      setBoothsList([]);
-      setBoothRequests([]);
-    }
-
     if (selectedEventId) {
       organizerApi.getEvent(selectedEventId).then(event => {
         if (active) setEventsList(current => current.map(item => item.id === event.id ? event : item));
@@ -140,44 +252,10 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         if (active) setActionError(error instanceof Error ? error.message : 'Không tải được chi tiết sự kiện.');
       });
     }
-
     return () => {
       active = false;
     };
-  }, [firstEventId, selectedEventId]);
-
-  useEffect(() => {
-    let active = true;
-    const targetEventId = selectedEventId || firstEventId;
-    if (!targetEventId) {
-      setPartnerApplications([]);
-      return;
-    }
-
-    const refreshApplications = () => {
-      void organizerApi.getPartnerApplications(targetEventId)
-        .then(rows => {
-          if (active) setPartnerApplications(rows);
-        })
-        .catch(error => {
-          if (!active) return;
-          setPartnerApplications([]);
-          setActionError(error instanceof Error ? error.message : 'Không tải được hồ sơ đối tác.');
-        });
-    };
-
-    refreshApplications();
-    const intervalId = window.setInterval(refreshApplications, 15000);
-    window.addEventListener('focus', refreshApplications);
-    window.addEventListener('duongsach:data-changed', refreshApplications);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshApplications);
-      window.removeEventListener('duongsach:data-changed', refreshApplications);
-    };
-  }, [firstEventId, selectedEventId]);
+  }, [selectedEventId]);
 
   // Unread notifications count
   const unreadCount = notificationsList.filter(n => !n.isRead).length;
@@ -284,7 +362,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   };
 
   const handleSaveEvent = async (request: OrganizerEventRequest, eventId?: string) => {
-    setActionError('');
     const savedEvent = eventId
       ? await organizerApi.updateEvent(eventId, request)
       : await organizerApi.createEvent(request);
@@ -294,19 +371,40 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       return [savedEvent, ...current];
     });
     setEditingEvent(null);
-    setSelectedEventId(savedEvent.id);
-    setActiveTab('events');
+    navigateToTab('event_detail', savedEvent.id);
   };
 
-  const handlePublishEvent = async (eventId: string) => {
-    setActionError('');
+  const requestPublishEvent = (event: OrganizerEvent) => {
+    setPublishFailure(null);
+    setEventPendingPublish(event);
+  };
+
+  const handlePublishEvent = async () => {
+    if (!eventPendingPublish || isPublishingEvent) return;
+    setPublishFailure(null);
+    setIsPublishingEvent(true);
     try {
-      const publishedEvent = await organizerApi.publishEvent(eventId);
+      const publishedEvent = await organizerApi.publishEvent(eventPendingPublish.id);
       setEventsList(current => current.map(event => event.id === publishedEvent.id ? publishedEvent : event));
+      setEventPendingPublish(null);
+      setPublishSuccess(language === 'vi' ? 'Đã công bố sự kiện thành công.' : 'Event published successfully.');
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Không thể công bố sự kiện.');
+      setPublishFailure({
+        message: error instanceof ApiError
+          ? (language === 'vi' ? 'Máy chủ chưa chấp nhận công bố. Vui lòng kiểm tra lại thông tin bên dưới.' : 'The server did not accept publication. Review the details below.')
+          : (error instanceof Error ? error.message : (language === 'vi' ? 'Không thể công bố sự kiện.' : 'Unable to publish event.')),
+        fieldErrors: error instanceof ApiError ? error.fieldErrors : [],
+      });
+    } finally {
+      setIsPublishingEvent(false);
     }
   };
+
+  useEffect(() => {
+    if (!publishSuccess) return;
+    const timeoutId = window.setTimeout(() => setPublishSuccess(''), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [publishSuccess]);
 
   // Notification Mark All as Read
   const handleMarkAllNotificationsRead = async () => {
@@ -315,7 +413,28 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   };
 
   // Find currently selected event
-  const currentSelectedEvent = eventsList.find(e => e.id === selectedEventId) || eventsList[0];
+  const matchingSelectedEvent = eventsList.find(event => event.id === selectedEventId);
+  const currentSelectedEvent = activeTab === 'event_detail'
+    ? matchingSelectedEvent
+    : matchingSelectedEvent || eventsList[0];
+
+  useEffect(() => {
+    if (activeTab !== 'event_detail' || isLoadingEvents || !selectedEventId || matchingSelectedEvent) return;
+    navigateToTab('events');
+  }, [activeTab, isLoadingEvents, matchingSelectedEvent, navigateToTab, selectedEventId]);
+
+  const handleRetryDashboardSummary = useCallback(async () => {
+    setIsLoadingDashboardSummary(true);
+    setDashboardSummaryError('');
+    try {
+      setDashboardSummary(await organizerApi.getDashboardSummary());
+    } catch (error) {
+      setDashboardSummaryError(error instanceof Error ? error.message : 'Không tải được dữ liệu Dashboard.');
+    } finally {
+      setIsLoadingDashboardSummary(false);
+    }
+  }, []);
+
 
   return (
     <div className="organizer-app-shell">
@@ -325,16 +444,16 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         profile={profile}
         unreadCount={unreadCount}
         notifications={notificationsList}
-        onOpenNotifications={() => setActiveTab('notifications')}
-        onOpenProfile={() => setActiveTab('profile')}
+        onOpenNotifications={() => navigateToTab('notifications')}
+        onOpenProfile={() => navigateToTab('profile')}
         onLogout={onLogout}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-        onNavigateTab={(tab) => {
-          setActiveTab(tab);
-          if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'activities' && tab !== 'participants' && tab !== 'reports') {
-            setSelectedEventId(null);
-          }
+        onSearch={(query) => {
+          const params = new URLSearchParams();
+          params.set('search', query);
+          navigate(organizerTabUrl('events', { search: params }));
         }}
+        onNavigateTab={(tab) => navigateToTab(tab)}
         onMarkNotificationRead={(id) => { void organizerApi.markNotificationRead(id).then(() => organizerApi.getNotifications()).then(setNotificationsList); }}
         onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
       />
@@ -345,12 +464,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         <OrganizerSidebar 
           language={language}
           activeTab={activeTab}
-          onSelectTab={(tab: OrganizerTab) => {
-            setActiveTab(tab);
-            if (tab !== 'events' && tab !== 'booth_requests' && tab !== 'booths' && tab !== 'activities' && tab !== 'participants' && tab !== 'reports') {
-              setSelectedEventId(null);
-            }
-          }}
+          onSelectTab={(tab: OrganizerTab) => navigateToTab(tab)}
           unreadNotificationsCount={unreadCount}
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
@@ -360,49 +474,56 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         {/* Main Viewport */}
         <main className="organizer-main-viewport">
 
-        {loadError && <p className="app-loading-state" role="alert">{loadError}</p>}
-        {isLoadingEvents && <p className="app-loading-state" role="status">Đang tải danh sách sự kiện...</p>}
-        {actionError && <p className="app-loading-state" role="alert">{actionError}</p>}
+        {loadError && (activeTab !== 'events' || selectedEventId) && activeTab !== 'overview' && <p className="app-loading-state" role="alert">{loadError}</p>}
+        {isLoadingEvents && activeTab !== 'events' && activeTab !== 'overview' && <p className="app-loading-state" role="status">Đang tải danh sách sự kiện...</p>}
+        {actionError && activeTab !== 'events' && activeTab !== 'overview' && <p className="app-loading-state" role="alert">{actionError}</p>}
 
         {/* Dynamic Views Rendering based on activeTab */}
         {activeTab === 'venues' && <OrganizerLocationManagementView />}
         {activeTab === 'assets' && <FacilityManagementView key="assets" kind="assets" />}
-        {activeTab === 'overview' && currentSelectedEvent && (
+        {activeTab === 'overview' && (
           <OrganizerDashboard 
             language={language}
-            profile={profile}
-            activeEvent={currentSelectedEvent}
             events={eventsList}
-            booths={boothsList}
-            boothRequests={boothRequests}
-            partnerApplications={partnerApplications}
-            onNavigateTab={(tab: OrganizerTab, extraState?: { eventId?: string }) => {
-              setActiveTab(tab === 'event_detail' ? 'events' : tab);
-              if (extraState?.eventId) setSelectedEventId(extraState.eventId);
-              else if (tab !== 'events' && tab !== 'activities') setSelectedEventId(null);
+            summary={dashboardSummary}
+            isLoadingEvents={isLoadingEvents}
+            eventsError={loadError}
+            isLoadingSummary={isLoadingDashboardSummary}
+            summaryError={dashboardSummaryError}
+            onRetryEvents={() => {
+              setIsLoadingEvents(true);
+              void refreshOrganizerData();
             }}
-            onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
-            onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
+            onRetrySummary={handleRetryDashboardSummary}
+            onNavigateTab={(tab: OrganizerTab, extraState?: { eventId?: string; section?: string }) => {
+              if (tab === 'event_detail' && extraState?.eventId) {
+                const search = extraState.section ? `?section=${encodeURIComponent(extraState.section)}` : '';
+                navigate(`${organizerTabPath('event_detail', extraState.eventId)}${search}`);
+                return;
+              }
+              navigateToTab(tab, extraState?.eventId);
+            }}
           />
-        )}
-
-        {activeTab === 'overview' && !currentSelectedEvent && !loadError && !isLoadingEvents && (
-          <div className="organizer-content"><div className="organizer-card"><h2>Chưa có sự kiện</h2><p>Hãy tạo sự kiện đầu tiên để bắt đầu điều hành.</p><button type="button" className="btn-org-primary" onClick={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}>Tạo sự kiện</button></div></div>
         )}
 
         {activeTab === 'events' && !selectedEventId && (
           <EventManagementView 
             language={language}
             events={eventsList}
-            actionError={actionError}
-            onSelectEvent={(eventId: string) => { setActionError(''); setSelectedEventId(eventId); }}
+            isLoading={isLoadingEvents}
+            loadError={loadError}
+            onRetry={() => {
+              setIsLoadingEvents(true);
+              void refreshOrganizerData();
+            }}
+            onSelectEvent={(eventId: string) => navigateToTab('event_detail', eventId)}
             onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
-            onPublishEvent={handlePublishEvent}
+            onPublishEvent={requestPublishEvent}
           />
         )}
 
-        {activeTab === 'events' && selectedEventId && currentSelectedEvent && (
+        {activeTab === 'event_detail' && currentSelectedEvent && (
           <EventDetailView 
             language={language}
             event={currentSelectedEvent}
@@ -413,9 +534,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             partnerApplications={partnerApplications}
             onApprovePartnerApplication={handleApprovePartnerApplication}
             onRejectPartnerApplication={handleRejectPartnerApplication}
-            onBack={() => setSelectedEventId(null)}
+            onBack={() => navigateToTab('events')}
             onNavigateToBoothsMap={() => {
-              setActiveTab('booths');
+              navigateToTab('booths', currentSelectedEvent.id);
             }}
             onBoothConfigurationChanged={async () => {
               try {
@@ -425,7 +546,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
               }
             }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
-            onPublishEvent={handlePublishEvent}
+            onPublishEvent={requestPublishEvent}
           />
         )}
 
@@ -434,14 +555,14 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}
-            onSelectEventId={(id: string) => setSelectedEventId(id)}
+            onSelectEventId={selectEventForCurrentScreen}
           />
         )}
 
         {activeTab === 'booths' && (
           <OrganizerBoothManagementView
             language={language}
-            onOpenRequests={() => setActiveTab('booth_requests')}
+            onOpenRequests={() => navigateToTab('booth_requests', selectedEventId)}
           />
         )}
 
@@ -450,7 +571,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             events={eventsList}
             selectedEventId={selectedEventId}
-            onSelectEventId={setSelectedEventId}
           />
         )}
 
@@ -459,7 +579,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}
-            onSelectEventId={(id: string) => setSelectedEventId(id)}
+            onSelectEventId={selectEventForCurrentScreen}
             participants={participantsList}
             onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
             onManualOverrideStatus={handleManualOverrideStatus}
@@ -471,7 +591,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}
-            onSelectEventId={(id: string) => setSelectedEventId(id)}
+            onSelectEventId={selectEventForCurrentScreen}
           />
         )}
 
@@ -492,7 +612,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             language={language}
             notifications={notificationsList}
             onMarkAllRead={handleMarkAllNotificationsRead}
-            onNavigateTab={(tab: OrganizerTab) => setActiveTab(tab)}
+            onNavigateTab={(tab: OrganizerTab) => navigateToTab(tab)}
           />
         )}
 
@@ -513,6 +633,27 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         isOpen={isAttendanceModalOpen}
         onClose={() => setIsAttendanceModalOpen(false)}
         onRecordScan={handleRecordScan}
+      />
+
+      {publishSuccess && <div className="org-toast-banner" role="status"><CheckCircle2 size={18} />{publishSuccess}</div>}
+
+      <OrganizerPublishEventModal
+        language={language}
+        event={eventPendingPublish}
+        isPublishing={isPublishingEvent}
+        failure={publishFailure}
+        onClose={() => {
+          if (isPublishingEvent) return;
+          setEventPendingPublish(null);
+          setPublishFailure(null);
+        }}
+        onConfirm={handlePublishEvent}
+        onEdit={(event) => {
+          setEventPendingPublish(null);
+          setPublishFailure(null);
+          setEditingEvent(event);
+          setIsCreateEventOpen(true);
+        }}
       />
 
       {/* Global Create Event Modal */}

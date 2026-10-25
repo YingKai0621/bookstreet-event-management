@@ -1,4 +1,6 @@
 export type OrganizerTab = 
+  | 'venues'
+  | 'assets'
   | 'overview'
   | 'events'
   | 'event_detail'
@@ -7,6 +9,7 @@ export type OrganizerTab =
   | 'activities'
   | 'participants'
   | 'reports'
+  | 'feedback'
   | 'public_content'
   | 'notifications'
   | 'profile';
@@ -57,6 +60,8 @@ export interface OrganizerEventResponse extends OrganizerEventRequest {
   eventId: number;
   organizerUserId: number;
   status: OrganizerEventStatus;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -114,6 +119,8 @@ export interface OrganizerEvent {
   maxBoothsPerPartner: number;
   maxActivitiesPerPartner: number;
   bannerUrl: string | null;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }

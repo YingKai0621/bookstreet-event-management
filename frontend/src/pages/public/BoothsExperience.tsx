@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
 import './BoothsExperience.css';
 
@@ -18,9 +18,19 @@ interface BoothsExperienceProps {
   booths: Booth[];
   events: EventItem[];
   selectedEventId: string;
+  isLoading?: boolean;
   onSelectEventId: (eventId: string) => void;
   error?: string;
   onSelectBoothOnMap?: (boothId: string) => void;
+}
+
+function decodePathIdentifier(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }
 
 export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
@@ -29,19 +39,27 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   booths,
   events,
   selectedEventId,
+  isLoading = false,
   onSelectEventId,
   error,
   onSelectBoothOnMap,
 }) => {
   const vi = language === 'vi';
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [activeModalBooth, setActiveModalBooth] = useState<Booth | null>(null);
-  useModalDismiss(open, () => navigate('/'));
-  useModalDismiss(Boolean(activeModalBooth), () => setActiveModalBooth(null));
-
-
+  const boothPathMatch = location.pathname.match(/^\/gian-hang\/([^/]+)\/?$/);
+  const hasBoothDetailPath = boothPathMatch !== null;
+  const routeBoothId = decodePathIdentifier(boothPathMatch?.[1]);
+  const activeModalBooth = boothPathMatch
+    ? booths.find(booth => booth.id === routeBoothId) || null
+    : null;
+  useModalDismiss(open && !activeModalBooth, () => navigate('/'));
+  const boothCatalogUrl = selectedEventId
+    ? `/gian-hang?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/gian-hang';
+  useModalDismiss(Boolean(activeModalBooth), () => navigate(boothCatalogUrl));
 
   const categories = [
     { id: 'all', labelVi: 'Tất cả gian hàng', labelEn: 'All Stalls', count: booths.length },
@@ -138,7 +156,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
-                onClick={() => setActiveModalBooth(featuredBooth)}
+                onClick={() => navigate(`/gian-hang/${encodeURIComponent(featuredBooth.id)}?eventId=${encodeURIComponent(selectedEventId)}`)}
                 role="button"
                 tabIndex={0}
                 aria-label={`Khám phá ${featuredBooth.name}`}
@@ -164,6 +182,9 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
         <section className="heritage-inner heritage-collection" id="booths-collection">
 
           {error && <p role="alert">{error}</p>}
+          {hasBoothDetailPath && !isLoading && !activeModalBooth && !error && (
+            <p role="alert">{vi ? 'Không tìm thấy gian hàng được yêu cầu.' : 'The requested booth was not found.'}</p>
+          )}
           <div className="heritage-collection-title">
             <div>
               <span className="heritage-section-marker">
@@ -245,7 +266,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 <article
                   key={booth.id}
                   className="heritage-collection-card"
-                  onClick={() => setActiveModalBooth(booth)}
+                  onClick={() => navigate(`/gian-hang/${encodeURIComponent(booth.id)}?eventId=${encodeURIComponent(selectedEventId)}`)}
                   tabIndex={0}
                   role="button"
                   style={{ cursor: 'pointer' }}
@@ -283,9 +304,9 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Detail Modal — rendered via Portal to escape fixed-panel stacking context */}
         {activeModalBooth && createPortal(
-          <div className="modal-overlay" onClick={() => setActiveModalBooth(null)} role="dialog" aria-modal="true">
+          <div className="modal-overlay" onClick={() => navigate(boothCatalogUrl)} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setActiveModalBooth(null)} aria-label="Đóng">
+              <button className="modal-close" onClick={() => navigate(boothCatalogUrl)} aria-label="Đóng">
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
@@ -311,7 +332,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 style={{ width: '100%' }}
                 onClick={() => {
                   const bId = activeModalBooth.id;
-                  setActiveModalBooth(null);
+                  navigate(boothCatalogUrl);
                   handleLocateOnMap(bId);
                 }}
               >

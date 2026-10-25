@@ -238,7 +238,7 @@ function holdStatusLabel(status: NonNullable<BoothRequest['hold']>['status']): s
 }
 
 export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests }) => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
@@ -259,8 +259,14 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     () => (allRequests || []).find(request => approvedEventIds.has(String(request.eventId)))?.eventId.toString() || '',
     [allRequests, approvedEventIds],
   );
-  const [selectedEventId, setSelectedEventId] = useState(() => searchParams.get('eventId') || '');
-  const [tab, setTab] = useState<'browse' | 'requests'>('browse');
+  const requestedEventId = searchParams.get('eventId') || '';
+  const tab: 'browse' | 'requests' = searchParams.get('view') === 'requests' ? 'requests' : 'browse';
+  const setTab = useCallback((nextTab: 'browse' | 'requests', replace = false) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextTab === 'browse') next.delete('view');
+    else next.set('view', 'requests');
+    setSearchParams(next, { replace });
+  }, [searchParams, setSearchParams]);
   const [booths, setBooths] = useState<EventBooth[]>([]);
   const [requests, setRequests] = useState<BoothRequest[]>([]);
   const [selectedBooth, setSelectedBooth] = useState<EventBooth | null>(null);
@@ -275,8 +281,8 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   const [now, setNow] = useState(0);
   useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
 
-  const eventId = approvedApplications.some(application => application.eventId === selectedEventId)
-    ? selectedEventId
+  const eventId = approvedApplications.some(application => application.eventId === requestedEventId)
+    ? requestedEventId
     : preferredRequestEventId || approvedApplications[0]?.eventId || '';
   const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
   const alternativeRequestApplication = approvedApplications.find(application =>
@@ -289,6 +295,17 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   useEffect(() => {
     currentEventIdRef.current = eventId;
   }, [eventId]);
+
+  useEffect(() => {
+    const normalized = new URLSearchParams();
+    if (eventId) normalized.set('eventId', eventId);
+    if (tab === 'requests') normalized.set('view', 'requests');
+    const boothId = Number.parseInt(searchParams.get('boothId') || '', 10);
+    if (Number.isInteger(boothId) && boothId > 0) normalized.set('boothId', String(boothId));
+    if (normalized.toString() !== new URLSearchParams(searchParams).toString()) {
+      setSearchParams(normalized, { replace: true });
+    }
+  }, [eventId, searchParams, setSearchParams, tab]);
 
   const loadData = useCallback(async (clearCurrent = false) => {
     const requestedEventId = eventId;
@@ -406,7 +423,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     setTab('browse');
     setSelectedBooth(row);
     setRequestNote('');
-  }, [booths, eventId, loading, searchParams]);
+  }, [booths, eventId, loading, searchParams, setTab]);
 
   const submitRequest = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
@@ -516,7 +533,10 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
             value={eventId}
             onChange={event => {
               currentEventIdRef.current = event.target.value;
-              setSelectedEventId(event.target.value);
+              const next = new URLSearchParams(searchParams);
+              next.set('eventId', event.target.value);
+              next.delete('boothId');
+              setSearchParams(next);
             }}
           >
             {approvedApplications.map(application => (
@@ -766,7 +786,10 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
                       type="button"
                       onClick={() => {
                         currentEventIdRef.current = alternativeRequestApplication.eventId;
-                        setSelectedEventId(alternativeRequestApplication.eventId);
+                        const next = new URLSearchParams(searchParams);
+                        next.set('eventId', alternativeRequestApplication.eventId);
+                        next.delete('boothId');
+                        setSearchParams(next);
                       }}
                     >
                       Xem yêu cầu ở sự kiện đó <ChevronRight size={15} />

@@ -10,12 +10,14 @@ import {
   Store,
   Users
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { OrganizerPartnerApplication } from '../../services/organizerApi';
 import type { BoothRequest } from '../../types/booth';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
 import { EventBoothConfigurationPanel } from './EventBoothConfigurationPanel';
+import { OrganizerEventStatusChip } from './OrganizerEventStatusChip';
 
 interface EventDetailViewProps {
   language: Language;
@@ -31,7 +33,7 @@ interface EventDetailViewProps {
   onNavigateToBoothsMap: () => void;
   onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
-  onPublishEvent: (eventId: string) => void | Promise<void>;
+  onPublishEvent: (event: OrganizerEvent) => void;
 }
 
 export const EventDetailView: React.FC<EventDetailViewProps> = ({
@@ -50,7 +52,19 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onEditEvent,
   onPublishEvent
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings'>('overview');
+  type EventSection = 'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionCandidate = searchParams.get('section');
+  const validSections: EventSection[] = ['overview', 'partners', 'booths', 'activities', 'participants', 'schedule', 'settings'];
+  const activeTab: EventSection = validSections.includes(sectionCandidate as EventSection)
+    ? sectionCandidate as EventSection
+    : 'overview';
+  const selectSection = (section: EventSection) => {
+    const next = new URLSearchParams(searchParams);
+    if (section === 'overview') next.delete('section');
+    else next.set('section', section);
+    setSearchParams(next);
+  };
 
   const handleApprovePartner = (id: string) => {
     const reviewNote = window.prompt(
@@ -109,9 +123,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', color: '#172421', margin: 0 }}>
                   {event.title}
                 </h1>
-                <span className="org-chip happening">
-                  ● {event.statusLabelVi}
-                </span>
+                <OrganizerEventStatusChip language={language} status={event.apiStatus} />
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.82rem', color: '#556B65' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -123,7 +135,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => void onPublishEvent(event.id)}><Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}</button>}
+            {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onPublishEvent(event)}><Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}</button>}
             {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}><Edit3 size={15} />{language === 'vi' ? 'Chỉnh sửa' : 'Edit'}</button>}
           </div>
         </div>
@@ -133,28 +145,28 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => selectSection('overview')}
           >
             {language === 'vi' ? 'Tổng quan' : 'Overview'}
           </button>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'partners' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('partners')}
+            onClick={() => selectSection('partners')}
           >
             {language === 'vi' ? `Hồ sơ đối tác (${partnerApplications.length})` : `Partners (${partnerApplications.length})`}
           </button>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'booths' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('booths')}
+            onClick={() => selectSection('booths')}
           >
             {language === 'vi' ? 'Gian hàng' : 'Booths'}
           </button>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'settings' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('settings')}
+            onClick={() => selectSection('settings')}
           >
             {language === 'vi' ? 'Cài đặt' : 'Settings'}
           </button>
@@ -204,7 +216,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </div>
               <div>
                 <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Trạng thái' : 'Status'}</span>
-                <span className="org-chip happening" style={{ marginTop: '0.2rem' }}>● {event.statusLabelVi}</span>
+                <OrganizerEventStatusChip language={language} status={event.apiStatus} className="org-event-detail-status" />
               </div>
               <div>
                 <span style={{ color: '#637771', fontSize: '0.76rem', display: 'block' }}>{language === 'vi' ? 'Gian hàng đã cấu hình' : 'Configured booths'}</span>

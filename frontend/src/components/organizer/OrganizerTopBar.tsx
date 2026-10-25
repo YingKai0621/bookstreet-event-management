@@ -26,6 +26,7 @@ interface OrganizerTopBarProps {
   onOpenProfile: () => void;
   onLogout?: () => void;
   onOpenMobileMenu: () => void;
+  onSearch?: (query: string) => void;
   onNavigateTab?: (tab: OrganizerTab) => void;
   onMarkNotificationRead?: (id: string) => void;
   onMarkAllNotificationsRead?: () => void;
@@ -40,6 +41,7 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
   onOpenProfile,
   onLogout,
   onOpenMobileMenu,
+  onSearch,
   onNavigateTab,
   onMarkNotificationRead,
   onMarkAllNotificationsRead
@@ -78,6 +80,8 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const query = searchQuery.trim();
+    if (query) onSearch?.(query);
   };
 
   return (

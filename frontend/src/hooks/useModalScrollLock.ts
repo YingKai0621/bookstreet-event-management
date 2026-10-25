@@ -8,10 +8,14 @@ export function useModalScrollLock(open: boolean) {
   useEffect(() => {
     if (!open) return;
     if (lockCount++ === 0) {
-      const nodes = [document.documentElement, document.body,
-        ...document.querySelectorAll<HTMLElement>('.admin-main-viewport, .participant-main-viewport, .partner-main-viewport, .organizer-main-viewport')];
+      const viewportRoots = [document.documentElement, document.body];
+      const scrollContainers = Array.from(document.querySelectorAll<HTMLElement>(
+        '.admin-main-viewport, .participant-main-viewport, .partner-main-viewport, .organizer-main-viewport',
+      ));
+      const nodes = [...viewportRoots, ...scrollContainers];
       const previous = nodes.map(node => ({ node, overflow: node.style.overflow, overscroll: node.style.overscrollBehavior }));
-      nodes.forEach(node => { node.style.overflow = 'hidden'; node.style.overscrollBehavior = 'none'; });
+      viewportRoots.forEach(node => { node.style.overflow = 'clip'; node.style.overscrollBehavior = 'none'; });
+      scrollContainers.forEach(node => { node.style.overflow = 'hidden'; node.style.overscrollBehavior = 'none'; });
       restore = () => previous.forEach(({ node, overflow, overscroll }) => {
         node.style.overflow = overflow; node.style.overscrollBehavior = overscroll;
       });

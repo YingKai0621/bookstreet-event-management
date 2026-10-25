@@ -13,23 +13,10 @@ import {
   Users
 } from 'lucide-react';
 import { Language } from '../../types';
+import type { OrganizerTab } from '../../types/organizer';
 import { RoleSidebar } from '../ui/RoleSidebar';
 
-export type OrganizerTab = 
-  | 'venues'
-  | 'assets'
-  | 'overview'
-  | 'events'
-  | 'event_detail'
-  | 'booth_requests'
-  | 'booths'
-  | 'activities'
-  | 'participants'
-  | 'reports'
-  | 'feedback'
-  | 'public_content'
-  | 'notifications'
-  | 'profile';
+export type { OrganizerTab } from '../../types/organizer';
 
 export interface OrganizerSidebarProps {
   language: Language;

@@ -65,3 +65,17 @@ test('failed database write shows an error without a success message', async ({ 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Bạn Đọc Mới', exact: true })).toBeVisible();
 });
+
+test('participant registration tabs and search are restored from the URL', async ({ page }) => {
+  await setup(page);
+  await page.goto('/participant/events?status=cancelled&search=workshop');
+
+  await expect(page.getByRole('button', { name: /Đã hủy/ })).toHaveClass(/is-active/);
+  await expect(page).toHaveURL(/status=cancelled/);
+  await expect(page).toHaveURL(/search=workshop/);
+
+  await page.getByRole('button', { name: /Đã tham gia/ }).click();
+  await expect(page).toHaveURL(/status=attended/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Đã tham gia/ })).toHaveClass(/is-active/);
+});

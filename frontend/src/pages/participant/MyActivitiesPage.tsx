@@ -1,6 +1,6 @@
 import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, QrCode, XCircle } from 'lucide-react';
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Language, ParticipantActivity } from '../../types';
 import './ParticipantPages.css';
 
@@ -15,18 +15,39 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
   activities,
   onCancelActivity,
 }) => {
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'attended' | 'cancelled'>('upcoming');
+  type RegistrationStatus = 'upcoming' | 'attended' | 'cancelled';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusCandidate = searchParams.get('status');
+  const activeTab: RegistrationStatus = ['upcoming', 'attended', 'cancelled'].includes(statusCandidate || '')
+    ? statusCandidate as RegistrationStatus
+    : 'upcoming';
+  const searchQuery = (searchParams.get('search') || '').trim().toLocaleLowerCase(language === 'vi' ? 'vi-VN' : 'en-US');
+  React.useEffect(() => {
+    if (!statusCandidate || ['upcoming', 'attended', 'cancelled'].includes(statusCandidate)) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('status');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, statusCandidate]);
+  const selectStatus = (status: RegistrationStatus) => {
+    const next = new URLSearchParams(searchParams);
+    if (status === 'upcoming') next.delete('status');
+    else next.set('status', status);
+    setSearchParams(next);
+  };
 
   const upcomingActivities = activities.filter(a => a.status === 'registered');
   const attendedActivities = activities.filter(a => a.status === 'attended');
   const cancelledActivities = activities.filter(a => a.status === 'cancelled');
 
-  const displayedList = 
+  const statusList =
     activeTab === 'upcoming' 
       ? upcomingActivities 
       : activeTab === 'attended' 
         ? attendedActivities 
         : cancelledActivities;
+  const displayedList = statusList.filter(activity => !searchQuery
+    || activity.title.toLocaleLowerCase(language === 'vi' ? 'vi-VN' : 'en-US').includes(searchQuery)
+    || activity.eventName.toLocaleLowerCase(language === 'vi' ? 'vi-VN' : 'en-US').includes(searchQuery));
 
   return (
     <div className="my-activities-page">
@@ -47,7 +68,7 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'upcoming' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('upcoming')}
+          onClick={() => selectStatus('upcoming')}
         >
           {language === 'vi' ? `Sắp diễn ra (${upcomingActivities.length})` : `Upcoming (${upcomingActivities.length})`}
         </button>
@@ -55,7 +76,7 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'attended' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('attended')}
+          onClick={() => selectStatus('attended')}
         >
           {language === 'vi' ? `Đã tham gia (${attendedActivities.length})` : `Attended (${attendedActivities.length})`}
         </button>
@@ -63,7 +84,7 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
         <button
           type="button"
           className={`participant-tab-btn ${activeTab === 'cancelled' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('cancelled')}
+          onClick={() => selectStatus('cancelled')}
         >
           {language === 'vi' ? `Đã hủy (${cancelledActivities.length})` : `Cancelled (${cancelledActivities.length})`}
         </button>

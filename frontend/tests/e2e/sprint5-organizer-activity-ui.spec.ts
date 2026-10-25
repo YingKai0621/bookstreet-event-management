@@ -448,3 +448,46 @@ test('Organizer loads and creates a shared activity location through Organizer A
   await editDialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
   expect(state.getUpdatedLocationPayload()).toMatchObject({ active: false });
 });
+
+test('Organizer navigation is URL-driven and restores Activity views with browser history', async ({ page }) => {
+  await mockOrganizerSprint5(page);
+  await page.goto('/portal');
+
+  await expect(page).toHaveURL(/\/organizer$/);
+  await page.getByRole('button', { name: 'Hoạt động', exact: true }).click();
+  await expect(page).toHaveURL(/\/organizer\/activities$/);
+  await expect(page.getByRole('heading', { name: 'Quản lý hoạt động' })).toBeVisible();
+
+  await page.getByRole('button', { name: /Đề xuất từ đối tác/ }).click();
+  await expect(page).toHaveURL(/\/organizer\/activities\?view=proposals$/);
+  await expect(page.getByText(proposal.title, { exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText(proposal.title, { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
+  await expect(page).toHaveURL(/\/organizer\/booth-requests$/);
+  await expect(page).not.toHaveURL(/view=|activityView=/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/organizer\/activities\?view=proposals$/);
+  await expect(page.getByText(proposal.title, { exact: true })).toBeVisible();
+});
+
+test('Organizer Event list and detail state survive refresh through canonical URLs', async ({ page }) => {
+  await mockOrganizerSprint5(page);
+  await page.goto('/organizer/events?status=PUBLISHED&search=V%C4%83n%20h%C3%B3a');
+
+  await expect(page.getByPlaceholder('Tìm tên sự kiện...')).toHaveValue('Văn hóa');
+  await expect(page.getByText(event.name, { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByPlaceholder('Tìm tên sự kiện...')).toHaveValue('Văn hóa');
+
+  await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await expect(page).toHaveURL(/\/organizer\/events\/501$/);
+  await page.getByRole('button', { name: /Hồ sơ đối tác/ }).click();
+  await expect(page).toHaveURL(/\/organizer\/events\/501\?section=partners$/);
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Hồ sơ đối tác/ })).toHaveClass(/is-active/);
+});

@@ -1,4 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Ban,
   Building2,
@@ -51,7 +52,6 @@ interface OrganizerActivityWorkspaceProps {
   language: Language;
   events: OrganizerEvent[];
   selectedEventId?: string | null;
-  onSelectEventId: (eventId: string) => void;
 }
 
 interface PageMeta {
@@ -233,18 +233,18 @@ function ActivityCancellationNotice({ activity }: { activity: OrganizerActivityR
 export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProps> = ({
   events,
   selectedEventId,
-  onSelectEventId,
 }) => {
-  const initialView = useMemo<WorkspaceView>(() => {
-    const candidate = new URLSearchParams(window.location.search).get('activityView');
-    return VIEW_CONFIG.some(view => view.id === candidate) ? candidate as WorkspaceView : 'activities';
-  }, []);
-  const [activeView, setActiveView] = useState<WorkspaceView>(initialView);
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewCandidate = searchParams.get('view') || searchParams.get('activityView');
+  const activeView: WorkspaceView = VIEW_CONFIG.some(view => view.id === viewCandidate)
+    ? viewCandidate as WorkspaceView
+    : 'activities';
+  const search = searchParams.get('search') || '';
   const debouncedSearch = useDeferredValue(search.trim());
-  const [status, setStatus] = useState('');
-  const [lateOnly, setLateOnly] = useState(false);
-  const [page, setPage] = useState(0);
+  const status = searchParams.get('status') || '';
+  const lateOnly = searchParams.get('late') === 'true';
+  const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage - 1 : 0;
   const [records, setRecords] = useState<WorkspaceRecord[]>([]);
   const [activitiesById, setActivitiesById] = useState<Record<number, OrganizerActivityResponse>>({});
   const [proposalsById, setProposalsById] = useState<Record<number, OrganizerActivityProposalResponse>>({});
@@ -257,6 +257,19 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
   const [createOpen, setCreateOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const requestSequence = useRef(0);
+
+  const updateWorkspaceParams = (
+    updates: Record<string, string | number | boolean | null | undefined>,
+    replace = false,
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('activityView');
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null || value === undefined || value === '' || value === false) next.delete(key);
+      else next.set(key, String(value));
+    }
+    setSearchParams(next, { replace });
+  };
 
   const effectiveEventId = events.some(event => event.id === selectedEventId)
     ? selectedEventId as string
@@ -364,13 +377,6 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
     return () => { active = false; };
   }, [effectiveEventId, reloadKey]);
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('activityView', activeView);
-    if (effectiveEventId) url.searchParams.set('eventId', effectiveEventId);
-    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
-  }, [activeView, effectiveEventId]);
-
   const statusOptions = activeView === 'activities'
     ? ACTIVITY_STATUS_OPTIONS
     : activeView === 'proposals'
@@ -378,28 +384,19 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
       : REQUEST_STATUS_OPTIONS;
 
   const selectView = (view: WorkspaceView) => {
-    setActiveView(view);
-    setStatus('');
-    setLateOnly(false);
-    setPage(0);
+    updateWorkspaceParams({ view, status: null, late: null, page: null });
     setSelectedRecord(null);
   };
 
   const selectEvent = (eventId: string) => {
-    onSelectEventId(eventId);
-    setStatus('');
-    setSearch('');
-    setPage(0);
+    updateWorkspaceParams({ eventId, status: null, search: null, late: null, page: null });
     setSelectedRecord(null);
   };
 
   const openActivity = async (activityId: number) => {
     try {
       const activity = activitiesById[activityId] || await organizerApi.getActivity(activityId);
-      setActiveView('activities');
-      setStatus('');
-      setLateOnly(false);
-      setPage(0);
+      updateWorkspaceParams({ view: 'activities', status: null, late: null, page: null });
       setSelectedRecord(activity);
     } catch (cause) {
       setNotice(userFacingError(cause, 'Không tải được hoạt động liên kết. Vui lòng thử lại.'));
@@ -410,10 +407,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
     try {
       const proposal = proposalsById[proposalId]
         || await organizerApi.getActivityProposal(proposalId);
-      setActiveView('proposals');
-      setStatus('');
-      setLateOnly(false);
-      setPage(0);
+      updateWorkspaceParams({ view: 'proposals', status: null, late: null, page: null });
       setSelectedRecord(proposal);
     } catch (cause) {
       setNotice(userFacingError(cause, 'Không tải được đề xuất nguồn. Vui lòng thử lại.'));
@@ -494,20 +488,20 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
           <Search size={19} />
           <input
             value={search}
-            onChange={event => { setSearch(event.target.value); setPage(0); }}
+            onChange={event => updateWorkspaceParams({ search: event.target.value, page: null }, true)}
             placeholder={activeView === 'activities' ? 'Tìm theo tên hoạt động...' : 'Tìm hoạt động hoặc đối tác...'}
           />
-          {search && <button type="button" onClick={() => setSearch('')} aria-label="Xóa từ khóa"><X size={16} /></button>}
+          {search && <button type="button" onClick={() => updateWorkspaceParams({ search: null, page: null })} aria-label="Xóa từ khóa"><X size={16} /></button>}
         </label>
         <label className="oaw-filter">
           <Filter size={17} />
-          <select value={status} onChange={event => { setStatus(event.target.value); setPage(0); }}>
+          <select value={status} onChange={event => updateWorkspaceParams({ status: event.target.value, page: null })}>
             {statusOptions.map(value => <option key={value || 'all'} value={value}>{value ? activityStatusLabel(viewKind(activeView), value) : 'Tất cả trạng thái'}</option>)}
           </select>
         </label>
         {activeView === 'cancellations' && (
           <label className="oaw-late-filter">
-            <input type="checkbox" checked={lateOnly} onChange={event => { setLateOnly(event.target.checked); setPage(0); }} />
+            <input type="checkbox" checked={lateOnly} onChange={event => updateWorkspaceParams({ late: event.target.checked, page: null })} />
             Chỉ yêu cầu trễ hạn
           </label>
         )}
@@ -608,16 +602,16 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
         <footer className="oaw-pagination">
           <span>Trang {meta.page + 1} / {meta.totalPages}</span>
           <div>
-            <button type="button" onClick={() => setPage(value => value - 1)} disabled={page === 0 || loading} aria-label="Trang trước"><ChevronLeft size={18} /></button>
+            <button type="button" onClick={() => updateWorkspaceParams({ page })} disabled={page === 0 || loading} aria-label="Trang trước"><ChevronLeft size={18} /></button>
             {Array.from({ length: meta.totalPages }, (_, index) => index)
               .filter(index => index === 0 || index === meta.totalPages - 1 || Math.abs(index - page) <= 1)
               .map((index, position, visible) => (
                 <React.Fragment key={index}>
                   {position > 0 && index - visible[position - 1] > 1 && <span>…</span>}
-                  <button type="button" className={page === index ? 'is-active' : ''} onClick={() => setPage(index)} disabled={loading}>{index + 1}</button>
+                  <button type="button" className={page === index ? 'is-active' : ''} onClick={() => updateWorkspaceParams({ page: index + 1 })} disabled={loading}>{index + 1}</button>
                 </React.Fragment>
               ))}
-            <button type="button" onClick={() => setPage(value => value + 1)} disabled={page >= meta.totalPages - 1 || loading} aria-label="Trang sau"><ChevronRight size={18} /></button>
+            <button type="button" onClick={() => updateWorkspaceParams({ page: page + 2 })} disabled={page >= meta.totalPages - 1 || loading} aria-label="Trang sau"><ChevronRight size={18} /></button>
           </div>
         </footer>
       )}
@@ -655,9 +649,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
           onClose={() => setCreateOpen(false)}
           onCreated={activity => {
             setCreateOpen(false);
-            setActiveView('activities');
-            setStatus('');
-            setPage(0);
+            updateWorkspaceParams({ view: 'activities', status: null, late: null, page: null });
             setNotice(`Đã tạo bản nháp hoạt động “${activity.title}”.`);
             setReloadKey(value => value + 1);
             window.dispatchEvent(new Event('duongsach:data-changed'));

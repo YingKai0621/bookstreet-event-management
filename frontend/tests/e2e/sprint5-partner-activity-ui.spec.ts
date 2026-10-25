@@ -236,7 +236,7 @@ test('Approved proposal shows the current state of its cancelled official activi
   await expect(proposalCard.getByText('Đã duyệt đề xuất', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Xem hoạt động' }).click();
 
-  await expect(page).toHaveURL(/activityView=activities/);
+  await expect(page).toHaveURL(/view=activities/);
   const dialog = page.getByRole('dialog', { name: new RegExp(`Hoạt động #71 · ${activity.title}`) });
   await expect(dialog.getByText('Đã hủy', { exact: true })).toBeVisible();
 });

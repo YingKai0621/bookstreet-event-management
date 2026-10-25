@@ -15,8 +15,8 @@ import {
   Search,
   Users,
 } from 'lucide-react';
-import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
 import { partnerApi } from '../../services/partnerApi';
 import type { Language, PartnerEventApplication } from '../../types';
@@ -198,29 +198,28 @@ function ActivityCancellationNotice({ activity }: { activity: PartnerActivityRes
 }
 
 export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) => {
-  const route = useLocation();
   const navigate = useNavigate();
   const { activityId: routeActivityId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
   );
-  const [initialParams] = useState(() => new URLSearchParams(route.search));
-  const requestedEventId = initialParams.get('eventId');
-  const initialView = initialParams.get('activityView');
-  const [selectedEventId, setSelectedEventId] = useState(() =>
-    approvedApplications.some(application => application.eventId === requestedEventId)
-      ? requestedEventId || ''
-      : approvedApplications[0]?.eventId || '',
-  );
-  const [view, setView] = useState<WorkspaceView>(
-    VIEW_CONFIG.some(item => item.id === initialView) ? initialView as WorkspaceView : 'proposals',
-  );
-  const [search, setSearch] = useState(initialParams.get('search') || '');
+  const requestedEventId = searchParams.get('eventId');
+  const selectedEventId = approvedApplications.some(application => application.eventId === requestedEventId)
+    ? requestedEventId || ''
+    : approvedApplications[0]?.eventId || '';
+  const viewCandidate = searchParams.get('view') || searchParams.get('activityView');
+  const view: WorkspaceView = VIEW_CONFIG.some(item => item.id === viewCandidate)
+    ? viewCandidate as WorkspaceView
+    : 'proposals';
+  const search = searchParams.get('search') || '';
   const deferredSearch = useDeferredValue(search.trim());
-  const [status, setStatus] = useState('');
-  const [lateOnly, setLateOnly] = useState(false);
-  const [page, setPage] = useState(0);
+  const statusCandidate = searchParams.get('status') || '';
+  const status = VIEW_STATUS_OPTIONS[view].includes(statusCandidate) ? statusCandidate : '';
+  const lateOnly = searchParams.get('late') === 'true';
+  const pageCandidate = Number.parseInt(searchParams.get('page') || '1', 10);
+  const page = Number.isFinite(pageCandidate) && pageCandidate > 0 ? pageCandidate - 1 : 0;
   const [records, setRecords] = useState<WorkspaceRecord[]>([]);
   const [activitiesById, setActivitiesById] = useState<Record<number, PartnerActivityResponse>>({});
   const [proposalsById, setProposalsById] = useState<Record<number, PartnerActivityProposalResponse>>({});
@@ -233,26 +232,33 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
   const [proposalForm, setProposalForm] = useState<PartnerActivityProposalResponse | 'create' | null>(null);
   const requestSequence = useRef(0);
 
+  const updateWorkspaceParams = useCallback((
+    updates: Record<string, string | number | boolean | null | undefined>,
+    replace = false,
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('activityView');
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null || value === undefined || value === '' || value === false) next.delete(key);
+      else next.set(key, String(value));
+    }
+    setSearchParams(next, { replace });
+  }, [searchParams, setSearchParams]);
+
   const selectedApplication = approvedApplications.find(item => item.eventId === selectedEventId);
 
   useEffect(() => {
-    if (selectedEventId || approvedApplications.length === 0) return;
-    const preferred = approvedApplications.find(application => application.eventId === requestedEventId);
-    // Synchronize the selector after the applications request has completed.
-    // oxlint-disable-next-line react/set-state-in-effect
-    setSelectedEventId(preferred?.eventId || approvedApplications[0].eventId);
-  }, [approvedApplications, requestedEventId, selectedEventId]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(route.search);
-    params.set('activityView', view);
-    if (selectedEventId) params.set('eventId', selectedEventId);
-    else params.delete('eventId');
-    if (search.trim()) params.set('search', search.trim());
-    else params.delete('search');
-    const next = `${route.pathname}?${params.toString()}`;
-    window.history.replaceState(window.history.state, '', next);
-  }, [route.pathname, route.search, selectedEventId, view, search]);
+    const normalized = new URLSearchParams();
+    if (selectedEventId) normalized.set('eventId', selectedEventId);
+    if (view !== 'proposals') normalized.set('view', view);
+    if (search.trim()) normalized.set('search', search.trim());
+    if (status) normalized.set('status', status);
+    if (view === 'cancellations' && lateOnly) normalized.set('late', 'true');
+    if (page > 0) normalized.set('page', String(page + 1));
+    if (normalized.toString() !== new URLSearchParams(searchParams).toString()) {
+      setSearchParams(normalized, { replace: true });
+    }
+  }, [lateOnly, page, search, searchParams, selectedEventId, setSearchParams, status, view]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -324,15 +330,16 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
     if (!routeActivityId) return;
     // A direct detail route opens the official-activity workspace and dialog.
     // oxlint-disable-next-line react/set-state-in-effect
-    setView('activities');
+    updateWorkspaceParams({ view: 'activities', status: null, late: null, page: null }, true);
     void partnerApi.getActivity(routeActivityId).then(activity => {
       setSelected(activity);
-      if (activity.eventId) setSelectedEventId(String(activity.eventId));
+      if (activity.eventId) updateWorkspaceParams({ eventId: String(activity.eventId), view: 'activities' }, true);
     }).catch(cause => setError(friendlyError(cause, 'Không tìm thấy hoạt động này.')));
-  }, [routeActivityId]);
+  }, [routeActivityId, updateWorkspaceParams]);
 
   const changeView = (next: WorkspaceView) => {
-    setView(next); setStatus(''); setLateOnly(false); setPage(0); setSelected(null);
+    updateWorkspaceParams({ view: next === 'proposals' ? null : next, status: null, late: null, page: null });
+    setSelected(null);
   };
   const refresh = (message?: string) => {
     if (message) setNotice(message);
@@ -342,10 +349,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
   const openActivity = async (activityId: number) => {
     try {
       const activity = activitiesById[activityId] || await partnerApi.getActivity(activityId);
-      setView('activities');
-      setStatus('');
-      setLateOnly(false);
-      setPage(0);
+      updateWorkspaceParams({ view: 'activities', status: null, late: null, page: null });
       setSelected(activity);
     } catch (cause) {
       setNotice(friendlyError(cause, 'Không tải được hoạt động liên kết. Vui lòng thử lại.'));
@@ -361,10 +365,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
     try {
       const proposal = proposalsById[activity.sourceProposalId]
         || await partnerApi.getActivityProposal(activity.sourceProposalId);
-      setView('proposals');
-      setStatus('');
-      setLateOnly(false);
-      setPage(0);
+      updateWorkspaceParams({ view: null, status: null, late: null, page: null });
       setSelected(proposal);
     } catch (cause) {
       setNotice(friendlyError(cause, 'Không tải được đề xuất nguồn. Vui lòng thử lại.'));
@@ -394,7 +395,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
         <>
           <div className="paw-event-bar">
             <div><CalendarDays size={23} /><span><small>SỰ KIỆN ĐANG XEM</small><strong>{selectedApplication?.eventTitle}</strong><em>{selectedApplication?.dateRange}</em></span></div>
-            <label><span>Đổi sự kiện</span><select value={selectedEventId} onChange={event => { setSelectedEventId(event.target.value); setPage(0); setSelected(null); }}>{approvedApplications.map(application => <option key={application.id} value={application.eventId}>{application.eventTitle}</option>)}</select></label>
+            <label><span>Đổi sự kiện</span><select value={selectedEventId} onChange={event => { updateWorkspaceParams({ eventId: event.target.value, page: null }); setSelected(null); }}>{approvedApplications.map(application => <option key={application.id} value={application.eventId}>{application.eventTitle}</option>)}</select></label>
           </div>
 
           <nav className="paw-tabs" aria-label="Nhóm dữ liệu hoạt động">
@@ -402,9 +403,9 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
           </nav>
 
           <div className="paw-toolbar">
-            <label className="paw-search"><Search size={18} /><input value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} placeholder="Tìm theo tên hoạt động..." /></label>
-            <select aria-label="Lọc trạng thái" value={status} onChange={event => { setStatus(event.target.value); setPage(0); }}>{VIEW_STATUS_OPTIONS[view].map(value => <option value={value} key={value || 'all'}>{value ? activityStatusLabel(viewKind(view), value) : 'Tất cả trạng thái'}</option>)}</select>
-            {view === 'cancellations' && <label className="paw-check"><input type="checkbox" checked={lateOnly} onChange={event => { setLateOnly(event.target.checked); setPage(0); }} /> Chỉ yêu cầu trễ hạn</label>}
+            <label className="paw-search"><Search size={18} /><input value={search} onChange={event => updateWorkspaceParams({ search: event.target.value, page: null }, true)} placeholder="Tìm theo tên hoạt động..." /></label>
+            <select aria-label="Lọc trạng thái" value={status} onChange={event => updateWorkspaceParams({ status: event.target.value, page: null })}>{VIEW_STATUS_OPTIONS[view].map(value => <option value={value} key={value || 'all'}>{value ? activityStatusLabel(viewKind(view), value) : 'Tất cả trạng thái'}</option>)}</select>
+            {view === 'cancellations' && <label className="paw-check"><input type="checkbox" checked={lateOnly} onChange={event => updateWorkspaceParams({ late: event.target.checked, page: null })} /> Chỉ yêu cầu trễ hạn</label>}
             <span>{meta.totalElements} kết quả</span>
           </div>
 
@@ -435,7 +436,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
             })}
           </div>
 
-          {meta.totalPages > 1 && <div className="paw-pagination"><span>Trang {meta.page + 1}/{meta.totalPages}</span><div><button type="button" aria-label="Trang trước" disabled={page === 0} onClick={() => setPage(value => value - 1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Trang sau" disabled={page + 1 >= meta.totalPages} onClick={() => setPage(value => value + 1)}><ChevronRight size={18} /></button></div></div>}
+          {meta.totalPages > 1 && <div className="paw-pagination"><span>Trang {meta.page + 1}/{meta.totalPages}</span><div><button type="button" aria-label="Trang trước" disabled={page === 0} onClick={() => updateWorkspaceParams({ page })}><ChevronLeft size={18} /></button><button type="button" aria-label="Trang sau" disabled={page + 1 >= meta.totalPages} onClick={() => updateWorkspaceParams({ page: page + 2 })}><ChevronRight size={18} /></button></div></div>}
         </>
       )}
 
