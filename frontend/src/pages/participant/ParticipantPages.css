@@ -278,6 +278,152 @@
   flex: 1 1 auto;
 }
 
+.event-card-activity-count {
+  margin: 0 0 1rem;
+  color: #48645b;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.participant-data-state {
+  min-height: 240px;
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed #c8d8d1;
+  border-radius: 14px;
+  background: #fff;
+  color: #637771;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.participant-data-state.compact { min-height: 190px; }
+.participant-data-state.participant-detail-state { margin-top: 2rem; }
+.participant-data-state.is-error { border-color: #e6b9b2; background: #fff9f8; }
+.participant-data-state strong { color: #17382e; font-size: 1.08rem; }
+.participant-data-state p { max-width: 560px; margin: 0; line-height: 1.55; }
+.participant-data-state .btn-part-primary,
+.participant-data-state .btn-part-secondary { margin-top: 0.35rem; }
+
+.participant-state-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #d9e5df;
+  border-top-color: #185e48;
+  border-radius: 50%;
+  animation: participant-state-spin .75s linear infinite;
+}
+
+@keyframes participant-state-spin { to { transform: rotate(360deg); } }
+
+.participant-inline-error {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid #c84c32;
+  background: #fff2ef;
+  color: #a93f2a;
+  font-size: 0.86rem;
+}
+
+.participant-back-button { margin-bottom: 1rem; }
+
+.participant-event-summary {
+  margin-bottom: 1.25rem;
+  padding: 1.6rem;
+  border: 1px solid #d9e4df;
+  border-left: 4px solid #b3862a;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.participant-event-summary-main { min-width: 0; }
+.participant-event-summary h1 { margin: 0.55rem 0; color: #142f27; font-family: var(--font-serif); font-size: clamp(1.55rem, 3vw, 2rem); }
+.participant-registration-pill { display: inline-flex; padding: 0.28rem 0.65rem; border-radius: 999px; background: #eaf7f1; color: #1c7658; font-size: 0.75rem; font-weight: 750; }
+.participant-registration-pill.ended { background: #eef1ef; color: #60736c; }
+.participant-event-summary-meta { display: flex; flex-wrap: wrap; gap: 0.65rem 1.2rem; color: #60756d; font-size: 0.88rem; }
+.participant-event-summary-meta span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.participant-event-summary-counts { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); border: 1px solid #dfe8e4; border-radius: 12px; overflow: hidden; }
+.participant-event-summary-counts div { min-height: 78px; padding: 0.8rem 1rem; display: grid; place-items: center; align-content: center; border-right: 1px solid #e4ebe8; }
+.participant-event-summary-counts div:last-child { border-right: 0; }
+.participant-event-summary-counts strong { color: #17382e; font-size: 1.35rem; }
+.participant-event-summary-counts span { color: #71837c; font-size: 0.72rem; white-space: nowrap; }
+
+.participant-event-overview-card {
+  padding: 1.5rem;
+  border: 1px solid #dfe8e4;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.participant-event-overview-card > div { flex: 1; }
+.participant-event-overview-card h2 { margin: 0 0 0.45rem; color: #17382e; font-family: var(--font-serif); font-size: 1.2rem; }
+.participant-event-overview-card p { margin: 0; color: #5b7068; line-height: 1.6; }
+
+.participant-section-heading--actions { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.participant-section-heading--actions p { margin: 0.3rem 0 0; color: #6b7f77; font-size: 0.82rem; }
+.participant-tabs-bar--wrap { flex-wrap: wrap; }
+
+.participant-registration-row .activity-row-title a { color: inherit; text-decoration: none; }
+.participant-registration-row .activity-tag { text-decoration: none; }
+.participant-catalog-description { margin: 0 0 0.55rem; color: #61756e; font-size: 0.82rem; line-height: 1.5; }
+.participant-catalog-note { color: #667b73; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.participant-catalog-row .activity-row-meta { flex-wrap: wrap; }
+.participant-activity-mark { width: 52px; height: 52px; flex: 0 0 52px; display: grid; place-items: center; border-radius: 12px; background: #edf5f1; color: #23664f; }
+.participant-activity-status { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.24rem 0.55rem; border-radius: 999px; font-size: 0.73rem; font-weight: 750; }
+.participant-activity-status.is-registered { background: #fff5dc; color: #8b6418; }
+.participant-activity-status.is-attended { background: #e7f7ef; color: #187355; }
+.participant-activity-status.is-cancelled,
+.participant-activity-status.is-no-show { background: #fff0ed; color: #b54634; }
+
+.participant-detail-breadcrumbs { margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+.participant-detail-breadcrumbs > a:last-child { color: #526b62; font-size: 0.83rem; font-weight: 650; }
+.participant-registration-detail { overflow: hidden; border: 1px solid #dce7e2; border-radius: 16px; background: #fff; box-shadow: 0 6px 24px rgba(20, 55, 44, 0.05); }
+.participant-registration-detail > header { padding: 1.6rem 1.8rem; border-bottom: 1px solid #e7eeeb; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; background: #f8fbf9; }
+.participant-registration-detail h1 { margin: 0.35rem 0; color: #15362c; font-family: var(--font-serif); font-size: clamp(1.5rem, 3vw, 2rem); }
+.participant-registration-detail header p { margin: 0; color: #61766e; }
+.participant-detail-eyebrow { color: #89631c; font-size: 0.73rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.participant-registration-facts { margin: 0; padding: 1.5rem 1.8rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.participant-registration-facts div { padding-bottom: 0.9rem; border-bottom: 1px solid #edf2ef; }
+.participant-registration-facts dt { margin-bottom: 0.4rem; color: #73867f; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; }
+.participant-registration-facts dd { margin: 0; color: #1b382f; font-size: 0.9rem; font-weight: 650; }
+.participant-attendance-guidance { margin: 0 1.8rem 1.5rem; padding: 1rem; border: 1px solid #e5d19f; border-radius: 10px; background: #fffaf0; color: #614b20; display: flex; gap: 0.75rem; }
+.participant-attendance-guidance.is-success { border-color: #b8dfcd; background: #eff9f4; color: #1d684f; }
+.participant-attendance-guidance strong { display: block; margin-bottom: 0.25rem; }
+.participant-attendance-guidance p { margin: 0; line-height: 1.55; font-size: 0.86rem; }
+.participant-registration-detail > .participant-inline-error { margin: 0 1.8rem 1rem; }
+.participant-registration-detail > footer { padding: 1rem 1.8rem; border-top: 1px solid #e7eeeb; display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+@media (max-width: 900px) {
+  .participant-event-summary { align-items: stretch; flex-direction: column; }
+  .participant-event-summary-counts { width: 100%; }
+  .participant-event-overview-card { align-items: stretch; flex-direction: column; }
+  .participant-registration-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .participant-event-summary { padding: 1.1rem; }
+  .participant-event-summary-counts { grid-template-columns: 1fr; }
+  .participant-event-summary-counts div { min-height: 58px; border-right: 0; border-bottom: 1px solid #e4ebe8; }
+  .participant-event-summary-counts div:last-child { border-bottom: 0; }
+  .participant-section-heading--actions { align-items: stretch; flex-direction: column; }
+  .participant-section-heading--actions .part-search-input input { width: 100%; }
+  .participant-registration-row { align-items: flex-start; flex-wrap: wrap; }
+  .participant-registration-row .activity-row-actions { width: 100%; }
+  .participant-registration-facts { grid-template-columns: 1fr; padding: 1.2rem; }
+  .participant-registration-detail > header { padding: 1.2rem; flex-direction: column; }
+  .participant-attendance-guidance { margin: 0 1.2rem 1.2rem; }
+  .participant-registration-detail > footer { padding: 1rem 1.2rem; }
+}
+
 /* BUTTON STYLES IN PARTICIPANT FLOW */
   .btn-part-primary {
     display: inline-flex;
