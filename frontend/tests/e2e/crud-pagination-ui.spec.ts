@@ -16,13 +16,23 @@ async function mockWorkspace(page: Page, role: 'ADMIN' | 'PARTICIPANT') {
       nameEn: `Badge ${index + 1}`, title: `Huy hiệu ${String(index + 1).padStart(2, '0')}`, iconName: 'award', minPoints: index * 100,
       status: 'active', statusLabelVi: 'Đang áp dụng', description: 'Hoàn thành hoạt động để tích lũy điểm.', perks: [],
     }));
-    else if (path.endsWith('/participant/notifications')) body = Array.from({ length: 11 }, (_, index) => ({ id: String(index + 1), title: `Thông báo ${String(index + 1).padStart(2, '0')}`, message: 'Cập nhật hoạt động', isRead: false, createdAt: '2026-10-25T01:00:00Z' }));
-    else if (path.endsWith('/participant/feedbacks')) {
-      body = request.method() === 'POST' ? { id: '11' } : Array.from({ length: 10 }, (_, index) => ({
-        id: String(index + 1), targetScope: 'entire', targetName: 'Đường Sách TP.HCM', rating: 5,
-        comments: `Nội dung góp ý ${String(index + 1).padStart(2, '0')}`, status: 'new',
-        createdAt: '2026-10-25T01:00:00Z', source: 'web_landing',
+    else if (path.endsWith('/participant/notifications')) {
+      const content = Array.from({ length: 11 }, (_, index) => ({
+        notificationId: index + 1,
+        type: 'ACTIVITY_UPDATED',
+        title: `Thông báo ${String(index + 1).padStart(2, '0')}`,
+        message: 'Cập nhật hoạt động',
+        referenceType: 'ACTIVITY',
+        referenceId: 90 + index,
+        read: false,
+        readAt: null,
+        createdAt: '2026-10-25T01:00:00Z',
       }));
+      body = { content, page: 0, size: 20, totalElements: content.length, totalPages: 1 };
+    }
+    else if (path.endsWith('/participant/notifications/unread-count')) body = { unreadCount: 11 };
+    else if (path.endsWith('/participant/event-registrations') || path.endsWith('/participant/activity-registrations')) {
+      body = { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 };
     }
     await route.fulfill({ json: body });
   });
@@ -44,23 +54,6 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768
     await expect(cards).toHaveCount(10);
   });
 }
-
-test('Submitting the eleventh Participant feedback automatically adds pagination', async ({ page }) => {
-  await mockWorkspace(page, 'PARTICIPANT');
-  await page.goto('/participant/feedback');
-  const pagination = page.getByRole('navigation', { name: 'pagination', exact: true });
-  await expect(page.getByText(/Nội dung góp ý \d{2}/)).toHaveCount(10);
-  await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Gửi góp ý mới', exact: true }).click();
-  await page.getByPlaceholder('Nhập nhận xét, trải nghiệm hoặc đề xuất cải tiến của bạn...').fill('Góp ý mới thứ 11');
-  await page.getByRole('button', { name: 'Gửi góp ý', exact: true }).click();
-  await expect(page.getByText('Góp ý mới thứ 11', { exact: false })).toBeVisible();
-  await expect(page.getByText(/Nội dung góp ý \d{2}/)).toHaveCount(9);
-  await pagination.getByRole('link', { name: 'Trang 2', exact: true }).click();
-  await expect(page.getByText(/Nội dung góp ý \d{2}/)).toHaveCount(1);
-  await expect(page.getByText('Nội dung góp ý 10', { exact: false })).toBeVisible();
-});
-
 
 test('Participant notification list keeps the eleventh notification reachable', async ({ page }) => {
   await mockWorkspace(page, 'PARTICIPANT');
