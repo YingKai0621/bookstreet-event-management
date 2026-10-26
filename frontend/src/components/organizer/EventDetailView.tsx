@@ -234,7 +234,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           </div>
         </div>
 
-        <nav className="org-event-detail-tabs" aria-label={language === 'vi' ? 'Điều hướng chi tiết sự kiện' : 'Event detail navigation'}>
+        <nav className="org-event-detail-tabs org-tabs-bar" aria-label={language === 'vi' ? 'Điều hướng chi tiết sự kiện' : 'Event detail navigation'}>
           <button
             type="button"
             className={`org-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}

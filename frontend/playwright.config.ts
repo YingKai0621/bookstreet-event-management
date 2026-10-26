@@ -13,7 +13,7 @@ try {
   }
 }
 
-const baseURL = process.env.E2E_BASE_URL || 'http://localhost:5173';
+const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:5173';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -35,7 +35,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --host localhost --strictPort',
+    command: 'npm run dev -- --host 127.0.0.1 --strictPort',
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,
