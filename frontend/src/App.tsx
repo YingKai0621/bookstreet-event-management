@@ -109,6 +109,7 @@ export function App() {
   const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
   const isAdminAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ADMIN'));
   const currentParticipantId = useRef<number | undefined>(undefined);
+  const participantActivityMutations = useRef(new Map<string, Promise<void>>());
   const participantUserId = isParticipantAuthenticated ? authenticatedUser?.userId : undefined;
   useEffect(() => { currentParticipantId.current = participantUserId; }, [participantUserId]);
 
@@ -382,27 +383,54 @@ export function App() {
   }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute]);
 
   // Participant Action Handlers
-  const handleRegisterActivity = async (activityId: string) => {
-    await participantApi.registerActivity(activityId);
-    const [profile, certs, badges, eventList] = await Promise.all([
-      participantApi.getProfile(), participantApi.getCertificates(),
-      participantApi.getBadges(), participantApi.getEvents(),
-    ]);
-    const acts = await participantApi.getMyActivities(eventList);
-    if (profile) setParticipantProfile(profile);
-    setParticipantActivities(acts);
-    setParticipantCertificates(certs);
-    setParticipantBadges(badges);
-    setParticipantEvents(eventList);
+  const applyParticipantActivityRegistration = (
+    registration: Awaited<ReturnType<typeof participantApi.registerActivity>>,
+    events: ParticipantEvent[],
+  ) => {
+    const activity = participantApi.mapActivityRegistration(registration, events);
+    setParticipantActivities(current => {
+      const existingIndex = current.findIndex(item =>
+        item.registrationId === activity.registrationId || item.id === activity.id);
+      if (existingIndex < 0) return [activity, ...current];
+      return current.map((item, index) => index === existingIndex ? activity : item);
+    });
   };
 
-  const handleCancelActivity = async (activityId: string) => {
-    await participantApi.cancelActivity(activityId);
-    const events = await participantApi.getEvents();
-    const activities = await participantApi.getMyActivities(events);
-    setParticipantActivities(activities);
-    setParticipantEvents(events);
+  const refreshParticipantEventsAfterActivityMutation = async () => {
+    try {
+      const events = await participantApi.getEvents();
+      setParticipantEvents(events);
+      return events;
+    } catch (error) {
+      console.warn('Hoạt động đã được cập nhật nhưng chưa thể làm mới danh sách sự kiện', error);
+      return participantEvents;
+    }
   };
+
+  const runParticipantActivityMutation = (activityId: string, mutation: () => Promise<void>) => {
+    const inFlight = participantActivityMutations.current.get(activityId);
+    if (inFlight) return inFlight;
+
+    const request = Promise.resolve()
+      .then(mutation)
+      .finally(() => participantActivityMutations.current.delete(activityId));
+    participantActivityMutations.current.set(activityId, request);
+    return request;
+  };
+
+  const handleRegisterActivity = (activityId: string) =>
+    runParticipantActivityMutation(activityId, async () => {
+      const registration = await participantApi.registerActivity(activityId);
+      const events = await refreshParticipantEventsAfterActivityMutation();
+      applyParticipantActivityRegistration(registration, events);
+    });
+
+  const handleCancelActivity = (activityId: string) =>
+    runParticipantActivityMutation(activityId, async () => {
+      const registration = await participantApi.cancelActivity(activityId);
+      const events = await refreshParticipantEventsAfterActivityMutation();
+      applyParticipantActivityRegistration(registration, events);
+    });
 
   const handleJoinParticipantEvent = async (eventId: string) => {
     await participantApi.joinEvent(eventId);
