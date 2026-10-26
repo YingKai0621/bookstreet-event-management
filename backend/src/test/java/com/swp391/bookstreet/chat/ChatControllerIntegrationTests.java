@@ -41,4 +41,19 @@ class ChatControllerIntegrationTests {
                         .content("{\"message\":\"Tôi đã đăng ký hoạt động nào?\"}"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void missingAiKeyReturnsServiceUnavailableInsteadOfAuthenticationError() throws Exception {
+        var csrf = mvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk()).andReturn();
+        String token = com.jayway.jsonpath.JsonPath.read(
+                csrf.getResponse().getContentAsString(), "$.token");
+        Cookie cookie = csrf.getResponse().getCookie("XSRF-TOKEN");
+        mvc.perform(post("/api/v1/chat/messages")
+                        .cookie(cookie)
+                        .header("X-XSRF-TOKEN", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Hướng dẫn đăng ký tài khoản\"}"))
+                .andExpect(status().isServiceUnavailable());
+    }
 }

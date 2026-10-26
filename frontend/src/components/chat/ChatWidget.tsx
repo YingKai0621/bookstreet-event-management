@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
-import { askChatbot, type ChatSource } from '../../services/chatApi';
+import { askChatbot, ChatRequestError, type ChatSource } from '../../services/chatApi';
 import './ChatWidget.css';
 
 interface Message { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] }
@@ -33,9 +33,16 @@ export function ChatWidget() {
       setMessages(previous => [...previous, {
         role: 'assistant', text: result.answer, sources: result.sources,
       }]);
-    } catch {
+    } catch (error) {
+      const text = error instanceof ChatRequestError && error.status === 503
+        ? 'Chatbot chưa được cấu hình API key trên backend.'
+        : error instanceof ChatRequestError && error.status === 429
+          ? 'Bạn đã gửi quá nhiều câu hỏi. Vui lòng thử lại sau một phút.'
+          : error instanceof ChatRequestError && error.status === 502
+            ? 'Dịch vụ AI đang không phản hồi. Vui lòng thử lại sau.'
+            : 'Chatbot hiện chưa trả lời được. Vui lòng thử lại sau.';
       setMessages(previous => [...previous, {
-        role: 'assistant', text: 'Chatbot hiện chưa trả lời được. Vui lòng thử lại sau.',
+        role: 'assistant', text,
       }]);
     } finally {
       setBusy(false);

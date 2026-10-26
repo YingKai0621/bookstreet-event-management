@@ -4,6 +4,14 @@ import { getCsrfToken } from './csrfToken';
 export interface ChatSource { title: string; url: string }
 export interface ChatResponse { answer: string; sources: ChatSource[] }
 
+export class ChatRequestError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(`Chatbot request failed: ${status}`);
+    this.status = status;
+  }
+}
+
 export async function askChatbot(message: string,
   history: Array<{ role: 'user' | 'assistant'; text: string }>): Promise<ChatResponse> {
   const csrf = await getCsrfToken();
@@ -17,6 +25,6 @@ export async function askChatbot(message: string,
     },
     body: JSON.stringify({ message, history: history.slice(-6) }),
   });
-  if (!response.ok) throw new Error(`Chatbot request failed: ${response.status}`);
+  if (!response.ok) throw new ChatRequestError(response.status);
   return response.json() as Promise<ChatResponse>;
 }
