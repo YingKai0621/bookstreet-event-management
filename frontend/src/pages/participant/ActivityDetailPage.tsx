@@ -1,329 +1,142 @@
-import {
-  AlertCircle,
-  ArrowLeft,
-  Calendar,
-  CalendarPlus,
-  CheckCircle2,
-  Clock,
-  MapPin,
-  UserCheck,
-  XCircle
-} from 'lucide-react';
-import React from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Language, ParticipantActivity } from '../../types';
+import { ArrowLeft, Award, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import type { Language, ParticipantActivity } from '../../types';
 import './ParticipantPages.css';
 
 interface ActivityDetailPageProps {
   language: Language;
   activities: ParticipantActivity[];
-  onRegisterActivity: (activityId: string) => void;
-  onCancelActivity: (activityId: string) => void;
+  isLoading: boolean;
+  loadError: string;
+  onRetry: () => void;
+  onCancelActivity: (activityId: string) => void | Promise<void>;
 }
 
-export const ActivityDetailPage: React.FC<ActivityDetailPageProps> = ({
+function formatRegisteredAt(value: string | undefined, language: Language): string {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(new Date(value));
+}
+
+export const ActivityDetailPage = ({
   language,
   activities,
-  onRegisterActivity,
+  isLoading,
+  loadError,
+  onRetry,
   onCancelActivity,
-}) => {
+}: ActivityDetailPageProps) => {
+  const vi = language === 'vi';
   const { activityId } = useParams<{ activityId: string }>();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState('');
 
-  const activity = activities.find(a => a.id === activityId) || activities[0];
-
-  if (!activity) {
+  if (isLoading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>{language === 'vi' ? 'Không tìm thấy thông tin hoạt động.' : 'Activity not found.'}</p>
-        <button 
-          type="button" 
-          className="btn-part-primary" 
-          onClick={() => navigate('/participant/activities')}
-        >
-          {language === 'vi' ? 'Quay lại danh sách hoạt động' : 'Back to activities'}
-        </button>
+      <div className="participant-data-state participant-detail-state" role="status">
+        <span className="participant-state-spinner" aria-hidden="true" />
+        <strong>{vi ? 'Đang tải đăng ký hoạt động' : 'Loading activity registration'}</strong>
+        <p>{vi ? 'Hệ thống đang kiểm tra trạng thái đăng ký và điểm danh.' : 'The registration and attendance state is being checked.'}</p>
       </div>
     );
   }
 
-  const isRegistered = activity.status === 'registered';
-  const isAttended = activity.status === 'attended';
-  const isFull = activity.status === 'full' || activity.registeredCount >= activity.capacity;
-  const seatsLeft = Math.max(0, activity.capacity - activity.registeredCount);
+  if (loadError) {
+    return (
+      <div className="participant-data-state participant-detail-state is-error" role="alert">
+        <strong>{vi ? 'Chưa tải được hoạt động' : 'Unable to load activity'}</strong>
+        <p>{loadError}</p>
+        <button type="button" className="btn-part-secondary" onClick={onRetry}><RefreshCw size={16} />{vi ? 'Thử lại' : 'Try again'}</button>
+      </div>
+    );
+  }
 
-  const handleDownloadCalendar = () => {
-    // Generate an .ics calendar file download
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Duong Sach TP.HCM//Participant//VI',
-      'BEGIN:VEVENT',
-      `SUMMARY:${activity.title}`,
-      `DESCRIPTION:${(activity.description || '').replace(/\n/g, ' ')}`,
-      `LOCATION:${activity.venue}, Đường Sách TP.HCM`,
-      'STATUS:CONFIRMED',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\r\n');
+  const activity = activities.find(item => item.id === activityId);
+  if (!activity) {
+    return (
+      <div className="participant-data-state participant-detail-state">
+        <strong>{vi ? 'Không tìm thấy đăng ký hoạt động' : 'Activity registration not found'}</strong>
+        <p>{vi ? 'Hoạt động không thuộc tài khoản hiện tại hoặc đường dẫn không còn hợp lệ.' : 'This activity does not belong to the current account or the link is no longer valid.'}</p>
+        <Link className="btn-part-secondary" to="/participant/activities"><ArrowLeft size={16} />{vi ? 'Về hoạt động của tôi' : 'Back to my activities'}</Link>
+      </div>
+    );
+  }
 
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${activity.id}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const status = activity.status === 'attended'
+    ? { label: vi ? 'Đã điểm danh' : 'Attended', tone: 'attended', icon: CheckCircle2 }
+    : activity.status === 'cancelled'
+      ? { label: vi ? 'Đã hủy đăng ký' : 'Cancelled', tone: 'cancelled', icon: XCircle }
+      : activity.status === 'no_show'
+        ? { label: vi ? 'Không tham dự' : 'No-show', tone: 'no-show', icon: XCircle }
+        : { label: vi ? 'Đăng ký còn hiệu lực' : 'Active registration', tone: 'registered', icon: Calendar };
+  const StatusIcon = status.icon;
+
+  const cancelRegistration = async () => {
+    setSubmitting(true);
+    setActionError('');
+    try {
+      await onCancelActivity(activity.id);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : (vi ? 'Không thể hủy đăng ký hoạt động.' : 'Unable to cancel the activity registration.'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="activity-detail-page">
-      {/* Back button */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <button
-          type="button"
-          className="btn-part-secondary"
-          onClick={() => navigate(-1)}
-          style={{ gap: '0.4rem', padding: '0.35rem 0.85rem', height: '34px' }}
-        >
-          <ArrowLeft size={14} />
-          <span>{language === 'vi' ? 'Quay lại' : 'Back'}</span>
-        </button>
+    <div className="participant-activity-detail-page">
+      <div className="participant-detail-breadcrumbs">
+        <Link className="btn-part-secondary" to={`/participant/events/${encodeURIComponent(activity.eventId)}?section=activities`}><ArrowLeft size={15} />{activity.eventName}</Link>
+        <Link to="/participant/activities">{vi ? 'Tất cả hoạt động của tôi' : 'All my activities'}</Link>
       </div>
 
-      {/* Main Container */}
-      <div className="activity-detail-view">
-        {/* Banner Media */}
-        <div className="activity-detail-hero-media">
-          <img src={activity.imageUrl || undefined} alt={activity.title} />
-          <div className="event-detail-overlay"></div>
-          <div style={{
-            position: 'absolute',
-            bottom: '1.5rem',
-            left: '2rem',
-            right: '2rem',
-            zIndex: 2,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap'
-          }}>
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <span className="activity-tag" style={{ background: 'rgba(255,255,255,0.9)', color: '#17382E' }}>
-                  {activity.category}
-                </span>
-                <span className="activity-tag" style={{ background: 'rgba(255,255,255,0.9)', color: '#17382E' }}>
-                  {activity.eventName}
-                </span>
-              </div>
-              <h1 style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '1.9rem',
-                fontWeight: 700,
-                color: '#FFFFFF',
-                margin: 0,
-                lineHeight: 1.2
-              }}>
-                {activity.title}
-              </h1>
-            </div>
-
-            {/* Status indicator pill */}
-            <div>
-              {isRegistered && (
-                <span className="activity-capacity-badge registered" style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}>
-                  ✓ {language === 'vi' ? 'Đã đăng ký thành công' : 'Registered'}
-                </span>
-              )}
-              {isAttended && (
-                <span className="activity-capacity-badge available" style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}>
-                  ✓ {language === 'vi' ? 'Đã tham gia' : 'Attended'}
-                </span>
-              )}
-              {!isRegistered && !isAttended && isFull && (
-                <span className="activity-capacity-badge full" style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}>
-                  {language === 'vi' ? `Hết chỗ: ${activity.capacity}/${activity.capacity}` : `Full: ${activity.capacity}/${activity.capacity}`}
-                </span>
-              )}
-              {!isRegistered && !isAttended && !isFull && (
-                <span className="activity-capacity-badge available" style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}>
-                  {language === 'vi' ? `Còn chỗ: ${seatsLeft}/${activity.capacity}` : `Available: ${seatsLeft}/${activity.capacity}`}
-                </span>
-              )}
-            </div>
+      <article className="participant-registration-detail">
+        <header>
+          <div>
+            <span className="participant-detail-eyebrow">{activity.category}</span>
+            <h1>{activity.title}</h1>
+            <p>{activity.eventName}</p>
           </div>
-        </div>
+          <span className={`participant-activity-status is-${status.tone}`}><StatusIcon size={16} />{status.label}</span>
+        </header>
 
-        {/* Content Body */}
-        <div className="activity-detail-content">
-          {/* Meta Information Bar */}
-          <div className="activity-detail-meta-row">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Calendar size={16} color="#B3862A" />
-              <strong>{language === 'vi' ? 'Ngày:' : 'Date:'}</strong> {activity.date}
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Clock size={16} color="#B3862A" />
-              <strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activity.time}
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <MapPin size={16} color="#B3862A" />
-              <strong>{language === 'vi' ? 'Địa điểm:' : 'Venue:'}</strong> {activity.venue}
-            </span>
+        <dl className="participant-registration-facts">
+          <div><dt><Calendar size={17} />{vi ? 'Ngày' : 'Date'}</dt><dd>{activity.date}</dd></div>
+          <div><dt><Clock size={17} />{vi ? 'Thời gian' : 'Time'}</dt><dd>{activity.time}</dd></div>
+          <div><dt><MapPin size={17} />{vi ? 'Địa điểm' : 'Venue'}</dt><dd>{activity.venue || '—'}</dd></div>
+          <div><dt>{vi ? 'Đăng ký lúc' : 'Registered at'}</dt><dd>{formatRegisteredAt(activity.registeredAt, language)}</dd></div>
+          <div><dt>{vi ? 'Trạng thái hoạt động' : 'Activity status'}</dt><dd>{activity.activityStatus || '—'}</dd></div>
+          <div><dt>{vi ? 'Kết quả điểm danh' : 'Attendance outcome'}</dt><dd>{activity.attendanceStatus === 'VALID' || activity.status === 'attended' ? (vi ? 'Đã ghi nhận hợp lệ' : 'Valid attendance recorded') : (vi ? 'Chưa có điểm danh hợp lệ' : 'No valid attendance recorded')}</dd></div>
+        </dl>
+
+        {activity.status === 'registered' && (
+          <div className="participant-attendance-guidance">
+            <div><strong>{vi ? 'Cách điểm danh' : 'How to check in'}</strong><p>{vi ? 'Khi đến địa điểm, hãy quét mã QR của hoạt động do Ban tổ chức hiển thị. Tài khoản này phải còn đăng ký hợp lệ.' : 'At the venue, scan the Activity QR displayed by the Organizer. This account must still have an active registration.'}</p></div>
           </div>
+        )}
 
-          {/* 2-Column Grid matching Screen 4 Sketch */}
-          <div className="activity-body-grid">
-            {/* Left Column: Description + Speaker */}
-            <div>
-              <div className="detail-section-block">
-                <h3>{language === 'vi' ? 'Giới thiệu hoạt động' : 'About the Activity'}</h3>
-                <p>{activity.description}</p>
-              </div>
-
-              {activity.speaker && (
-                <div className="detail-section-block">
-                  <h3>{language === 'vi' ? 'Diễn giả / Khách mời' : 'Speaker / Host'}</h3>
-                  <div className="speaker-card-mini">
-                    <div className="speaker-avatar-circle">
-                      {activity.speaker.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '0.95rem', color: '#172421', fontFamily: 'var(--font-serif)' }}>
-                        {activity.speaker.name}
-                      </strong>
-                      <span style={{ fontSize: '0.8rem', color: '#637771' }}>
-                        {activity.speaker.title}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: Important Notes matching Sketch Screen 4 */}
-            <div>
-              <div className="detail-notes-card">
-                <h4>{language === 'vi' ? 'Lưu ý khi tham gia' : 'Important Notes'}</h4>
-                <ul>
-                  {activity.extraNotes && activity.extraNotes.length > 0 ? (
-                    activity.extraNotes.map((note, idx) => (
-                      <li key={idx}>{note}</li>
-                    ))
-                  ) : (
-                    <>
-                      <li>{language === 'vi' ? 'Phù hợp cho người mới bắt đầu' : 'Suitable for beginners'}</li>
-                      <li>{language === 'vi' ? 'Mang theo sổ tay (nếu có)' : 'Bring a notebook if possible'}</li>
-                      <li>{language === 'vi' ? 'Có chứng nhận tham gia sau khi check-in' : 'Certificate provided after check-in'}</li>
-                    </>
-                  )}
-                </ul>
-              </div>
-            </div>
+        {activity.status === 'attended' && (
+          <div className="participant-attendance-guidance is-success">
+            <CheckCircle2 size={22} />
+            <div><strong>{vi ? 'Điểm danh đã được ghi nhận' : 'Attendance recorded'}</strong><p>{vi ? 'Sau khi hoạt động hoàn tất và đủ điều kiện, chứng nhận sẽ xuất hiện trong mục Chứng nhận.' : 'After the activity is completed and eligibility is confirmed, the certificate will appear in Certificates.'}</p></div>
           </div>
+        )}
 
-          {/* Bottom Action Bar matching Sketch Screen 4 */}
-          <div className="activity-detail-cta-bar">
-            {isRegistered ? (
-              <>
-                <button
-                  type="button"
-                  className="btn-part-danger-outline"
-                  style={{ height: '42px', padding: '0 1.15rem' }}
-                  onClick={() => {
-                    if (window.confirm(language === 'vi' ? 'Bạn có chắc muốn hủy đăng ký hoạt động này?' : 'Are you sure you want to cancel registration?')) {
-                      onCancelActivity(activity.id);
-                    }
-                  }}
-                >
-                  <XCircle size={16} />
-                  <span>{language === 'vi' ? 'Hủy đăng ký' : 'Cancel Registration'}</span>
-                </button>
+        {actionError && <p className="participant-inline-error" role="alert">{actionError}</p>}
 
-                <button
-                  type="button"
-                  className="btn-part-secondary"
-                  style={{ height: '42px', padding: '0 1.15rem' }}
-                  onClick={handleDownloadCalendar}
-                >
-                  <CalendarPlus size={16} />
-                  <span>{language === 'vi' ? 'Thêm vào lịch' : 'Add to Calendar'}</span>
-                </button>
-              </>
-            ) : isAttended ? (
-              <>
-                <Link
-                  to="/participant/certificates"
-                  className="btn-part-primary"
-                  style={{ height: '42px', padding: '0 1.35rem' }}
-                >
-                  <CheckCircle2 size={18} />
-                  <span>{language === 'vi' ? 'Xem chứng nhận' : 'View Certificate'}</span>
-                </Link>
-
-                <button
-                  type="button"
-                  className="btn-part-secondary"
-                  style={{ height: '42px', padding: '0 1.15rem' }}
-                  onClick={handleDownloadCalendar}
-                >
-                  <CalendarPlus size={16} />
-                  <span>{language === 'vi' ? 'Lưu sự kiện' : 'Save Event'}</span>
-                </button>
-              </>
-            ) : isFull ? (
-              <>
-                <button
-                  type="button"
-                  className="btn-part-primary"
-                  disabled
-                  style={{ height: '42px', padding: '0 1.35rem' }}
-                >
-                  <AlertCircle size={18} />
-                  <span>{language === 'vi' ? 'Hoạt động đã hết chỗ' : 'Full Capacity'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-part-secondary"
-                  style={{ height: '42px', padding: '0 1.15rem' }}
-                  onClick={handleDownloadCalendar}
-                >
-                  <CalendarPlus size={16} />
-                  <span>{language === 'vi' ? 'Thêm vào lịch' : 'Add to Calendar'}</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn-part-primary"
-                  style={{ height: '42px', padding: '0 1.5rem', fontSize: '0.9rem' }}
-                  onClick={() => onRegisterActivity(activity.id)}
-                >
-                  <UserCheck size={18} />
-                  <span>{language === 'vi' ? 'Đăng ký tham gia' : 'Register Now'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-part-secondary"
-                  style={{ height: '42px', padding: '0 1.15rem' }}
-                  onClick={handleDownloadCalendar}
-                >
-                  <CalendarPlus size={16} />
-                  <span>{language === 'vi' ? 'Thêm vào lịch' : 'Add to Calendar'}</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+        <footer>
+          {activity.status === 'registered' && (
+            <button type="button" className="btn-part-danger-outline" disabled={submitting} onClick={() => {
+              if (window.confirm(vi ? 'Bạn có chắc muốn hủy đăng ký hoạt động này?' : 'Are you sure you want to cancel this activity registration?')) void cancelRegistration();
+            }}><XCircle size={16} />{submitting ? (vi ? 'Đang hủy...' : 'Cancelling...') : (vi ? 'Hủy đăng ký' : 'Cancel registration')}</button>
+          )}
+          {activity.status === 'attended' && <Link className="btn-part-primary" to="/participant/certificates"><Award size={17} />{vi ? 'Xem chứng nhận' : 'View certificates'}</Link>}
+        </footer>
+      </article>
     </div>
   );
 };
-

@@ -245,6 +245,9 @@ export function App() {
   const [participantProfileError, setParticipantProfileError] = useState('');
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
+  const [participantParticipationLoading, setParticipantParticipationLoading] = useState(true);
+  const [participantParticipationError, setParticipantParticipationError] = useState('');
+  const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
 
@@ -266,6 +269,8 @@ export function App() {
     setParticipantProfileError('');
     setParticipantEvents([]);
     setParticipantActivities([]);
+    setParticipantParticipationLoading(true);
+    setParticipantParticipationError('');
     setParticipantBadges([]);
     setParticipantCertificates([]);
   }, [participantUserId]);
@@ -293,9 +298,11 @@ export function App() {
   }, [isParticipantRoute, isPublicRoute, participantUserId]);
 
   useEffect(() => {
-    if (participantUserId === undefined || !isParticipantRoute) return;
+    if (participantUserId === undefined || !isParticipantRoute || isParticipantAttendanceScanRoute) return;
     let active = true;
     const refreshParticipation = async () => {
+      setParticipantParticipationLoading(true);
+      setParticipantParticipationError('');
       try {
         const eventList = await participantApi.getEvents();
         const activityList = await participantApi.getMyActivities(eventList);
@@ -303,14 +310,21 @@ export function App() {
         setParticipantEvents(eventList);
         setParticipantActivities(activityList);
       } catch (error) {
-        if (active) console.warn('Không thể tải dữ liệu tham gia của độc giả', error);
+        if (active) {
+          console.warn('Không thể tải dữ liệu tham gia của độc giả', error);
+          setParticipantParticipationError(error instanceof Error
+            ? error.message
+            : 'Không thể tải dữ liệu tham gia.');
+        }
+      } finally {
+        if (active) setParticipantParticipationLoading(false);
       }
     };
     void refreshParticipation();
     return () => {
       active = false;
     };
-  }, [isParticipantRoute, participantUserId]);
+  }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participantUserId]);
 
   useEffect(() => {
     if (!isPartnerRoute || !isPartnerAuthenticated) return;
@@ -569,22 +583,33 @@ export function App() {
             <MyEventsPage
               language={language}
               events={participantEvents}
-              onLeaveEvent={(eventId) => { void handleLeaveParticipantEvent(eventId); }}
-              onJoinEvent={(eventId) => { void handleJoinParticipantEvent(eventId); }}
+              isLoading={participantParticipationLoading}
+              loadError={participantParticipationError}
+              onRetry={() => setParticipantParticipationRevision(value => value + 1)}
+              onLeaveEvent={handleLeaveParticipantEvent}
+              onJoinEvent={handleJoinParticipantEvent}
             />
           } />
           <Route path="/participant/events/:eventId" element={<EventDetailPage language={language} events={participantEvents} activities={participantActivities}
-            onRegisterActivity={handleRegisterActivity} onLeaveEvent={handleLeaveParticipantEvent} />} />
+            isLoading={participantParticipationLoading} loadError={participantParticipationError}
+            onRetry={() => setParticipantParticipationRevision(value => value + 1)}
+            onRegisterActivity={handleRegisterActivity} onCancelActivity={handleCancelActivity}
+            onLeaveEvent={handleLeaveParticipantEvent} />} />
           <Route path="/participant/activities" element={
             <MyActivitiesPage
               language={language}
               activities={participantActivities}
-              onCancelActivity={(activityId) => { void handleCancelActivity(activityId); }}
+              isLoading={participantParticipationLoading}
+              loadError={participantParticipationError}
+              onRetry={() => setParticipantParticipationRevision(value => value + 1)}
+              onCancelActivity={handleCancelActivity}
             />
           } />
           <Route path="/participant/activities/detail/:activityId" element={
-            <ActivityDetailPage language={language} activities={participantActivities} onRegisterActivity={handleRegisterActivity}
-              onCancelActivity={(activityId) => { void handleCancelActivity(activityId); }} />
+            <ActivityDetailPage language={language} activities={participantActivities}
+              isLoading={participantParticipationLoading} loadError={participantParticipationError}
+              onRetry={() => setParticipantParticipationRevision(value => value + 1)}
+              onCancelActivity={handleCancelActivity} />
           } />
           <Route path="/participant/activities/qr/:activityId" element={<Navigate to="/participant/activities" replace />} />
           <Route path="/participant/rewards" element={

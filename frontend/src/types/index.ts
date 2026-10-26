@@ -244,7 +244,13 @@ export interface ParticipantActivity {
   imageUrl: string;
   capacity: number;
   registeredCount: number;
-  status: 'available' | 'full' | 'registered' | 'attended' | 'cancelled';
+  status: 'available' | 'full' | 'registered' | 'attended' | 'cancelled' | 'no_show';
+  registrationStatus?: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+  outcome?: string;
+  attendanceStatus?: string | null;
+  activityStatus?: string;
+  startAt?: string;
+  endAt?: string;
   description?: string;
   speaker?: {
     name: string;

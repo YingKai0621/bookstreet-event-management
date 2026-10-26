@@ -8,17 +8,20 @@ import {
   Building2,
   CalendarDays,
   Clock3,
+  Download,
   Eye,
   FilePenLine,
   Filter,
   Layers3,
   MapPin,
   Plus,
+  QrCode,
   RefreshCw,
   Search,
   Users,
   X,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { organizerApi } from '../../services/organizerApi';
 import type {
   ActivityProposalStatus,
@@ -611,6 +614,13 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
 
       {selectedRecord && (
         <RecordDetailModal
+          key={isActivity(selectedRecord)
+            ? `activity-${selectedRecord.activityId}`
+            : isProposal(selectedRecord)
+              ? `proposal-${selectedRecord.activityProposalId}`
+              : isChangeRequest(selectedRecord)
+                ? `change-${selectedRecord.activityChangeRequestId}`
+                : `cancellation-${selectedRecord.activityCancellationRequestId}`}
           record={selectedRecord}
           event={currentEvent}
           relatedActivity={!isActivity(selectedRecord)
@@ -988,6 +998,81 @@ function CreateActivityModal({
 
 type ReviewAction = 'approve' | 'reject' | 'requestChanges' | 'publish' | 'cancel';
 
+function AttendanceQrPanel({ activity, expanded, onToggle }: {
+  activity: OrganizerActivityResponse;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const qrRef = useRef<SVGSVGElement | null>(null);
+  const token = activity.attendanceQrToken;
+  const scanUrl = token
+    ? `${window.location.origin}/participant/attendance/scan?token=${encodeURIComponent(token)}`
+    : '';
+
+  const downloadQr = () => {
+    const svg = qrRef.current;
+    if (!svg) return;
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = `activity-${activity.activityId}-attendance-qr.svg`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(downloadUrl);
+  };
+
+  return (
+    <section className="oaw-attendance-qr" aria-labelledby={`attendance-qr-${activity.activityId}`}>
+      <div>
+        <span className="oaw-attendance-qr-icon" aria-hidden="true"><QrCode size={20} /></span>
+        <div>
+          <strong id={`attendance-qr-${activity.activityId}`}>QR điểm danh của hoạt động</strong>
+          <p>Một mã dùng chung tại địa điểm. Độc giả đăng nhập và tự quét bằng tài khoản đã đăng ký.</p>
+        </div>
+      </div>
+      {!token ? (
+        <p className="oaw-attendance-qr-unavailable">
+          {activity.status === 'DRAFT'
+            ? 'QR được tạo khi hoạt động yêu cầu đăng ký được công bố.'
+            : 'QR chưa khả dụng. Hãy đóng và mở lại chi tiết để tải dữ liệu mới nhất.'}
+        </p>
+      ) : (
+        <>
+          <button type="button" className="oaw-btn-secondary" onClick={onToggle} aria-expanded={expanded}>
+            <QrCode size={16} />{expanded ? 'Ẩn mã QR' : 'Hiển thị mã QR'}
+          </button>
+          {expanded && (
+            <div className="oaw-attendance-qr-content">
+              <div className="oaw-attendance-qr-code">
+                <QRCodeSVG
+                  ref={qrRef}
+                  value={scanUrl}
+                  size={232}
+                  level="M"
+                  marginSize={2}
+                  title={`QR điểm danh hoạt động ${activity.title}`}
+                />
+              </div>
+              <div className="oaw-attendance-qr-instructions">
+                <strong>Hướng dẫn tại địa điểm</strong>
+                <ol>
+                  <li>Hiển thị mã này trên màn hình hoặc bản in của Ban tổ chức.</li>
+                  <li>Độc giả quét bằng camera điện thoại và đăng nhập tài khoản của chính mình.</li>
+                  <li>Hệ thống xác nhận thời gian và đăng ký; không nhập mã người dùng thủ công.</li>
+                </ol>
+                <button type="button" className="oaw-btn-secondary" onClick={downloadQr}><Download size={16} />Tải QR dạng SVG</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function RecordDetailModal({
   record: initialRecord,
   event: currentEvent,
@@ -1016,6 +1101,7 @@ function RecordDetailModal({
   const [reviewNote, setReviewNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [qrExpanded, setQrExpanded] = useState(false);
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', closeOnEscape);
@@ -1184,6 +1270,9 @@ function RecordDetailModal({
                 <div><dt>Hạn đăng ký</dt><dd>{record.registrationRequired ? formatDateTime(record.registrationDeadlineAt) : 'Không áp dụng'}</dd></div>
                 <div><dt>Chứng nhận</dt><dd>{record.certificateEnabled ? 'Có cấp chứng nhận' : 'Không cấp chứng nhận'}</dd></div>
               </dl>
+              {record.registrationRequired && (
+                <AttendanceQrPanel activity={record} expanded={qrExpanded} onToggle={() => setQrExpanded(value => !value)} />
+              )}
               {record.sourceProposalId && onOpenProposal && (
                 <SourceProposalNotice proposalId={record.sourceProposalId} proposal={sourceProposal} onOpen={onOpenProposal} />
               )}

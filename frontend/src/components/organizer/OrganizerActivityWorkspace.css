@@ -96,6 +96,18 @@
 .oaw-cancellation-summary strong, .oaw-cancellation-summary small { display: block; }
 .oaw-cancellation-summary p { margin: 5px 0; font-size: 12px; }
 .oaw-cancellation-summary small { color: #a76565; font-size: 10px; }
+.oaw-attendance-qr { margin-top: 14px; padding: 15px; border: 1px solid #c9dcd3; background: #f5faf7; color: #244c3f; }
+.oaw-attendance-qr > div:first-child { display: flex; align-items: flex-start; gap: 10px; }
+.oaw-attendance-qr-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; background: #173f34; color: #fff; }
+.oaw-attendance-qr strong { display: block; color: #173f34; font-size: 14px; }
+.oaw-attendance-qr p { margin: 4px 0 0; color: #637a71; font-size: 12px; line-height: 1.5; }
+.oaw-attendance-qr > .oaw-btn-secondary { margin: 12px 0 0 48px; display: inline-flex; align-items: center; gap: 7px; }
+.oaw-attendance-qr-unavailable { margin: 12px 0 0 48px !important; padding: 9px 11px; border-left: 3px solid #c49639; background: #fff9ec; color: #75571d !important; }
+.oaw-attendance-qr-content { margin-top: 15px; padding-top: 15px; border-top: 1px solid #d5e2dc; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; }
+.oaw-attendance-qr-code { padding: 12px; background: #fff; border: 1px solid #d7e1dd; line-height: 0; }
+.oaw-attendance-qr-instructions { min-width: 0; }
+.oaw-attendance-qr-instructions ol { margin: 8px 0 13px; padding-left: 19px; color: #586f66; font-size: 12px; line-height: 1.55; }
+.oaw-attendance-qr-instructions .oaw-btn-secondary { display: inline-flex; align-items: center; gap: 7px; }
 .oaw-card-actions { width: 180px; flex: 0 0 180px; border-left: 1px solid #e4ebe7; padding: 18px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; }
 .oaw-card-actions > button { min-height: 39px; border: 1px solid var(--oaw-green); background: var(--oaw-green); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 750; cursor: pointer; }
 .oaw-card-actions > button:hover { background: #0c2e26; }
@@ -254,4 +266,9 @@
   .oaw-form-grid, .oaw-registration-box > div { grid-template-columns: 1fr; }
   .oaw-datetime-field > div { grid-template-columns: 1fr; }
   .oaw-field--wide { grid-column: auto; }
+  .oaw-attendance-qr > .oaw-btn-secondary,
+  .oaw-attendance-qr-unavailable { margin-left: 0 !important; }
+  .oaw-attendance-qr-content { grid-template-columns: 1fr; }
+  .oaw-attendance-qr-code { width: min(100%, 258px); box-sizing: border-box; justify-self: center; overflow: hidden; }
+  .oaw-attendance-qr-code svg { width: 100%; height: auto; }
 }

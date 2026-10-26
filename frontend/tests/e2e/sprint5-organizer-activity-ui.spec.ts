@@ -222,7 +222,11 @@ async function mockOrganizerSprint5(page: Page, locationCount = 1) {
       newSnapshot: { imageUrl: 'https://cdn.example.com/activity.jpg' },
       changedAt: '2026-10-18T04:00:00Z',
     }]));
-    if (path.endsWith('/organizer/activities/71') && method === 'GET') return json(route, activity);
+    if (path.endsWith('/organizer/activities/71') && method === 'GET') return json(route, {
+      ...activity,
+      attendanceQrAvailable: true,
+      attendanceQrToken: 'organizer-owned-attendance-token',
+    });
     if (path.endsWith('/organizer/activities/71') && method === 'PATCH') {
       updatedActivityPayload = request.postDataJSON();
       return json(route, { ...activity, ...updatedActivityPayload, updatedAt: '2026-10-18T05:00:00Z' });
@@ -359,6 +363,26 @@ test('Organizer opens authoritative detail, edits Activity and reads revision hi
   });
 });
 
+test('Organizer displays and downloads the locally rendered attendance QR from protected detail', async ({ page }) => {
+  await mockOrganizerSprint5(page);
+  await page.goto('/portal');
+  await page.getByRole('button', { name: 'Hoạt động', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+
+  const detail = page.getByRole('dialog', { name: activity.title });
+  await expect(detail.getByText('QR điểm danh của hoạt động')).toBeVisible();
+  await detail.getByRole('button', { name: 'Hiển thị mã QR' }).click();
+
+  const qr = detail.locator('.oaw-attendance-qr-code svg');
+  await expect(qr).toBeVisible();
+  await expect(detail).not.toContainText('organizer-owned-attendance-token');
+
+  const downloadPromise = page.waitForEvent('download');
+  await detail.getByRole('button', { name: 'Tải QR dạng SVG' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(`activity-${activity.activityId}-attendance-qr.svg`);
+});
+
 test('Organizer creates, publishes and cancels a direct Activity in separate guarded steps', async ({ page }) => {
   const state = await mockOrganizerSprint5(page);
   await page.goto('/portal');
@@ -458,7 +482,7 @@ test('Organizer loads and creates a shared activity location through Organizer A
 
   await page.getByRole('button', { name: 'Sửa Sân khấu trung tâm' }).click();
   const editDialog = page.getByRole('dialog', { name: 'Chỉnh sửa địa điểm' });
-  await editDialog.getByLabel(/Cho phép sử dụng địa điểm/).uncheck();
+  await editDialog.getByLabel(/Trạng thái/).selectOption('false');
   await editDialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
   expect(state.getUpdatedLocationPayload()).toMatchObject({ active: false });
   expect(state.getUpdatedLocationPayload()).not.toHaveProperty('mapX');
@@ -501,11 +525,12 @@ test('Organizer Event list and detail state survive refresh through canonical UR
 
   await page.getByRole('button', { name: 'Xem chi tiết' }).click();
   await expect(page).toHaveURL(/\/organizer\/events\/501$/);
-  await page.getByRole('button', { name: /Hồ sơ đối tác/ }).click();
+  const partnerTab = page.locator('.org-tab-btn').filter({ hasText: 'Hồ sơ đối tác' });
+  await partnerTab.click();
   await expect(page).toHaveURL(/\/organizer\/events\/501\?section=partners$/);
 
   await page.reload();
-  await expect(page.getByRole('button', { name: /Hồ sơ đối tác/ })).toHaveClass(/is-active/);
+  await expect(page.locator('.org-tab-btn').filter({ hasText: 'Hồ sơ đối tác' })).toHaveClass(/is-active/);
 });
 
 test('Organizer location list shows ten per page and resets filters with visible page controls', async ({ page }) => {

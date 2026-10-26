@@ -23,14 +23,37 @@ export interface PublicActivity {
   titleEn: string;
   kind: string;
   description: string;
-  speaker: string;
   startAt: string;
   endAt: string;
   capacity: number;
-  registeredCount: number;
+  registeredCount: number | null;
+  availableSeats: number | null;
+  registrationRequired: boolean;
+  registrationOpen: boolean;
+  certificateEnabled: boolean;
+  status: string;
   imageUrl: string | null;
   location: string;
-  venue: string | null;
+}
+
+interface PublicActivityResponse {
+  activityId: number;
+  eventId: number;
+  eventName: string;
+  location: { locationId: number; code: string; name: string; locationType: string };
+  title: string;
+  description: string | null;
+  activityType: string;
+  startAt: string;
+  endAt: string;
+  capacity: number;
+  imageUrl: string | null;
+  registrationRequired: boolean;
+  registrationOpen: boolean;
+  registeredCount: number | null;
+  availableSeats: number | null;
+  certificateEnabled: boolean;
+  status: string;
 }
 
 interface PublicEventResponse {
@@ -117,6 +140,29 @@ function toEventItem(event: PublicEventResponse): EventItem {
       isIllustrationOnly: !event.bannerUrl,
     },
     status: now < startAt ? 'upcoming' : now <= endAt ? 'happening' : 'approved',
+  };
+}
+
+function toPublicActivity(activity: PublicActivityResponse): PublicActivity {
+  return {
+    id: String(activity.activityId),
+    eventId: String(activity.eventId),
+    eventTitle: activity.eventName,
+    title: activity.title,
+    titleEn: activity.title,
+    kind: activity.activityType || 'Hoạt động',
+    description: activity.description || '',
+    startAt: activity.startAt,
+    endAt: activity.endAt,
+    capacity: activity.capacity,
+    registeredCount: activity.registeredCount,
+    availableSeats: activity.availableSeats,
+    registrationRequired: activity.registrationRequired,
+    registrationOpen: activity.registrationOpen,
+    certificateEnabled: activity.certificateEnabled,
+    status: activity.status,
+    imageUrl: activity.imageUrl,
+    location: activity.location?.name || activity.location?.code || '',
   };
 }
 
@@ -209,7 +255,22 @@ export const publicApi = {
     // a request that is guaranteed to return 401/404.
     return [];
   },
-  getActivities: () => apiClient.get<PublicActivity[]>('/public/activities'),
+  async getActivities(eventId?: string): Promise<PublicActivity[]> {
+    const endpoint = (page: number) => {
+      const params = new URLSearchParams({ page: String(page), size: '100', sort: 'startAt,asc' });
+      if (eventId) params.set('eventId', eventId);
+      return `/activities?${params.toString()}`;
+    };
+    const first = await apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(0));
+    const remaining = first.totalPages > 1
+      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+        apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(index + 1))))
+      : [];
+    return [first, ...remaining]
+      .sort((left, right) => left.page - right.page)
+      .flatMap(page => page.content)
+      .map(toPublicActivity);
+  },
   getHeritageBySlug: (slug: string) => apiClient.get(`/public/heritages/${slug}`),
   submitFeedback: (payload: {
     rating: number;

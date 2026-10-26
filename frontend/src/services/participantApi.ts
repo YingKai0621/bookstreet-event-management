@@ -118,7 +118,9 @@ function mapActivityRegistration(
     ? 'attended'
     : registration.status === 'ACTIVE'
       ? 'registered'
-      : 'cancelled';
+      : registration.status === 'NO_SHOW' || registration.outcome === 'NO_SHOW'
+        ? 'no_show'
+        : 'cancelled';
 
   return {
     id: String(registration.activity.activityId),
@@ -136,6 +138,12 @@ function mapActivityRegistration(
     capacity: 0,
     registeredCount: 0,
     status,
+    registrationStatus: registration.status,
+    outcome: registration.outcome,
+    attendanceStatus: registration.attendance?.status || null,
+    activityStatus: registration.activity.status,
+    startAt: registration.activity.startAt,
+    endAt: registration.activity.endAt,
     registeredAt: registration.registeredAt,
   };
 }
