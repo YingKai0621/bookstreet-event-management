@@ -64,6 +64,9 @@ springdoc:
       enabled: true
 
 bookstreet:
+  chatbot:
+    api-key: ${CHATBOT_API_KEY:}
+    model: ${CHATBOT_MODEL:gpt-4.1-mini}
   browser-security:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     session-cookie-secure: ${SESSION_COOKIE_SECURE:false}
