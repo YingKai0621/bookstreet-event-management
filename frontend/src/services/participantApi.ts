@@ -49,7 +49,7 @@ interface EventRegistrationResponse {
   seatActiveActivityCount: number;
 }
 
-interface ActivityRegistrationResponse {
+export interface ActivityRegistrationResponse {
   activityRegistrationId: number;
   activity: {
     activityId: number;
@@ -148,6 +148,14 @@ function mapActivityRegistration(
   };
 }
 
+function mapActivityRegistrationWithEvents(
+  registration: ActivityRegistrationResponse,
+  events: ParticipantEvent[],
+): ParticipantActivity {
+  const eventNames = new Map(events.map(event => [event.id, event.title]));
+  return mapActivityRegistration(registration, eventNames);
+}
+
 async function getAllPages<T>(endpoint: string): Promise<T[]> {
   const separator = endpoint.includes('?') ? '&' : '?';
   const first = await apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=0&size=100`);
@@ -214,8 +222,7 @@ export const participantApi = {
       getAllPages<ActivityRegistrationResponse>('/participant/activity-registrations?sort=activityStartAt,desc'),
       knownEvents ? Promise.resolve(knownEvents) : participantApi.getEvents(),
     ]);
-    const eventNames = new Map(events.map(event => [event.id, event.title]));
-    return registrations.map(registration => mapActivityRegistration(registration, eventNames));
+    return registrations.map(registration => mapActivityRegistrationWithEvents(registration, events));
   },
   async getEvents(): Promise<ParticipantEvent[]> {
     const registrations = await getAllPages<EventRegistrationResponse>(
@@ -247,9 +254,14 @@ export const participantApi = {
   },
   getRegistrations: () => apiClient.get('/participant/registrations'),
   registerActivity: (activityId: string) =>
-    apiClient.post(`/participant/activities/${encodeURIComponent(activityId)}/register`),
+    apiClient.post<ActivityRegistrationResponse>(
+      `/participant/activities/${encodeURIComponent(activityId)}/register`,
+    ),
   cancelActivity: (activityId: string) =>
-    apiClient.post(`/participant/activities/${encodeURIComponent(activityId)}/cancel-registration`),
+    apiClient.post<ActivityRegistrationResponse>(
+      `/participant/activities/${encodeURIComponent(activityId)}/cancel-registration`,
+    ),
+  mapActivityRegistration: mapActivityRegistrationWithEvents,
   scanAttendance: (token: string) =>
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
   getPoints: () => apiClient.get('/participant/points'),
