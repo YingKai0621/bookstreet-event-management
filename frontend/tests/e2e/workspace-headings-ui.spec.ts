@@ -18,6 +18,8 @@ async function mockWorkspace(page: Page, role: Role) {
     else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
     else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
     else if (path === '/api/v1/organizer/reports') body = { eventId: 501, eventName: 'Sự kiện kiểm thử', totalParticipants: 0, attended: 0, pending: 0, cancelled: 0, totalBooths: 0, totalActivities: 0, attendanceRate: 0, averageRating: 0, ratingCount: 0, activityStats: [], ratingDistribution: [] };
+    else if (path === '/api/v1/participant/notifications') body = emptyPage;
+    else if (path === '/api/v1/participant/notifications/unread-count') body = { unreadCount: 0 };
     else if (path.endsWith('/dashboard') || path.endsWith('/dashboard/summary')) body = {};
     else if (path.includes('/organizer/') && /booths|locations|activities|requests|proposals|applications/.test(path)) body = emptyPage;
     else if (path.includes('/partner/') && /applications|booth-requests|activities|proposals/.test(path)) body = emptyPage;
@@ -26,11 +28,38 @@ async function mockWorkspace(page: Page, role: Role) {
 }
 
 const workspaces: Array<{ role: Role; routes: string[] }> = [
-  { role: 'ORGANIZER', routes: ['/organizer', '/organizer/events', '/organizer/booths', '/organizer/venues', '/organizer/activities', '/organizer/assets', '/organizer/booth-requests', '/organizer/participants', '/organizer/reports', '/organizer/feedback', '/organizer/public-content', '/organizer/notifications', '/organizer/profile'] },
+  { role: 'ORGANIZER', routes: ['/organizer', '/organizer/events', '/organizer/booths', '/organizer/venues', '/organizer/activities', '/organizer/booth-requests', '/organizer/participants', '/organizer/reports', '/organizer/feedback', '/organizer/public-content', '/organizer/notifications', '/organizer/profile'] },
   { role: 'ADMIN', routes: ['/admin', '/admin/users', '/admin/badges', '/admin/assets', '/admin/booths', '/admin/venues', '/admin/roles', '/admin/settings', '/admin/audit', '/admin/notifications', '/admin/profile'] },
   { role: 'PARTNER', routes: ['/partner', '/partner/events', '/partner/events/apply', '/partner/profile', '/partner/booths', '/partner/booth-requests', '/partner/activities', '/partner/reports', '/partner/notifications'] },
   { role: 'PARTICIPANT', routes: ['/participant', '/participant/feedback', '/participant/certificates', '/participant/profile', '/participant/events', '/participant/rewards'] },
 ];
+const topBarSelectors: Record<Role, string> = {
+  ORGANIZER: '.organizer-topbar',
+  ADMIN: '.admin-topbar',
+  PARTNER: '.partner-top-bar',
+  PARTICIPANT: '.participant-top-bar',
+};
+
+for (const workspace of workspaces) {
+  test(`${workspace.role} top bar omits the global search`, async ({ page }) => {
+    await mockWorkspace(page, workspace.role);
+    await page.goto(workspace.routes[0]);
+
+    await expect(page.locator(topBarSelectors[workspace.role])).toBeVisible();
+    await expect(page.locator(
+      '.organizer-top-search, .admin-top-search, .partner-top-search, .participant-top-search'
+    )).toHaveCount(0);
+  });
+}
+
+test('ORGANIZER omits the unused Assets tab and redirects its legacy URL', async ({ page }) => {
+  await mockWorkspace(page, 'ORGANIZER');
+  await page.goto('/organizer/assets');
+
+  await expect(page).toHaveURL(/\/organizer$/);
+  await expect(page.getByRole('complementary', { name: 'Điều hướng ban quản lý' }).getByText('Thiết bị', { exact: true })).toHaveCount(0);
+});
+
 for (const workspace of workspaces) for (const width of [1440, 390]) {
   test(`${workspace.role} page headings match Dashboard typography at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

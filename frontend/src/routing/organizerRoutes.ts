@@ -8,7 +8,6 @@ const TAB_PATHS: Record<Exclude<OrganizerTab, 'event_detail'>, string> = {
   booth_requests: `${ORGANIZER_ROOT}/booth-requests`,
   booths: `${ORGANIZER_ROOT}/booths`,
   venues: `${ORGANIZER_ROOT}/venues`,
-  assets: `${ORGANIZER_ROOT}/assets`,
   activities: `${ORGANIZER_ROOT}/activities`,
   participants: `${ORGANIZER_ROOT}/participants`,
   reports: `${ORGANIZER_ROOT}/reports`,

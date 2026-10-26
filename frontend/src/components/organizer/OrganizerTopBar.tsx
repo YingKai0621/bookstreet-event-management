@@ -7,7 +7,6 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  Search,
   Settings,
   Store,
   User,
@@ -26,7 +25,6 @@ interface OrganizerTopBarProps {
   onOpenProfile: () => void;
   onLogout?: () => void;
   onOpenMobileMenu: () => void;
-  onSearch?: (query: string) => void;
   onNavigateTab?: (tab: OrganizerTab) => void;
   onMarkNotificationRead?: (id: string) => void;
   onMarkAllNotificationsRead?: () => void;
@@ -41,14 +39,12 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
   onOpenProfile,
   onLogout,
   onOpenMobileMenu,
-  onSearch,
   onNavigateTab,
   onMarkNotificationRead,
   onMarkAllNotificationsRead
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifPopupOpen, setNotifPopupOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -78,12 +74,6 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
 
   const recentList = notifications.slice(0, 5);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = searchQuery.trim();
-    if (query) onSearch?.(query);
-  };
-
   return (
     <header className="organizer-topbar">
       {/* 1. Left: Brand Logo & Mobile Toggle (Spacious & matching partner portal) */}
@@ -109,19 +99,8 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
         </div>
       </div>
 
-      {/* 2. Right: Quick Search, Bell, User Capsule with comfortable spacing */}
+      {/* 2. Right: Bell and user capsule */}
       <div className="organizer-topbar-right">
-        {/* Global Quick Search Bar */}
-        <form className="organizer-top-search" onSubmit={handleSearchSubmit}>
-          <Search size={16} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder={language === 'vi' ? 'Tìm kiếm sự kiện, gian hàng, hoạt động...' : 'Search events, booths, activities...'} 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </form>
-
         {/* Notifications Bell & Dropdown Popup */}
         <div style={{ position: 'relative' }} ref={notifRef}>
           <button
