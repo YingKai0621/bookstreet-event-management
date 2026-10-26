@@ -148,6 +148,7 @@ public class SecurityConfiguration {
                         "/api/v1/auth/login",
                         "/api/v1/auth/csrf",
                         "/api/v1/auth/email-verification/confirm",
+                        "/error",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
                         "/swagger-ui/**"
@@ -155,6 +156,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/activities", "/api/v1/activities/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/chat/messages").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
                 .requestMatchers("/api/v1/participant/**").hasRole("PARTICIPANT")
                 .requestMatchers("/api/v1/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
