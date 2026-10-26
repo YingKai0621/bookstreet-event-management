@@ -172,7 +172,7 @@ public class ChatService {
                         + friendlyStatus(registration.status()) + ". Kết quả tham gia: "
                         + friendlyStatus(registration.outcome()) + ". Chứng nhận: "
                         + (registration.certificate() == null ? "chưa có"
-                                : friendlyStatus(registration.certificate().status().name())) + ".",
+                                : friendlyStatus(registration.certificate().status())) + ".",
                         new ChatSource(registration.activity().title(), "/participant/events")));
             }
         }
