@@ -273,10 +273,17 @@ export interface ParticipantBadge {
 export interface ParticipantCertificate {
   id: string;
   title: string;
-  activityTitle: string;
-  eventTitle: string;
+  recipientName: string;
+  status: 'ISSUED' | 'REVOKED';
+  downloadAvailable: boolean;
+  activityId?: string;
+  activityTitle?: string;
+  activityStartAt?: string;
+  activityEndAt?: string;
+  eventId?: string;
+  eventTitle?: string;
   issueDate: string;
-  previewUrl?: string;
+  revokedDate?: string;
   certificateCode: string;
 }
 
