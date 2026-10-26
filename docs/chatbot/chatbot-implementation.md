@@ -9,6 +9,7 @@ Ngày 26/10/2026. Tính năng này được thực hiện theo yêu cầu riêng
 - Thông tin công khai lấy từ `EventService.listPublic` và `PublicActivityService.list`. Thông tin “của tôi” lấy từ các service Participant hiện có, vốn xác định User từ Session.
 - Không đưa raw QR token, mật khẩu, session ID hoặc thông tin của User khác vào ngữ cảnh AI.
 - Không lưu lịch sử chat vào PostgreSQL hoặc Redis. Giao diện chỉ giữ lịch sử trong bộ nhớ của tab đang mở.
+- Câu trả lời hướng tới người dùng phổ thông: 1–3 câu ngắn, dùng giờ Việt Nam và từ ngữ quen thuộc; chỉ nêu chi tiết được hỏi. Mã trạng thái và thuật ngữ kỹ thuật không được đưa vào ngữ cảnh hiển thị.
 - Câu hỏi và các facts liên quan được gửi tới Gemini Generate Content API. Vì vậy không nhập thông tin bí mật vào ô chat. API key chỉ nằm ở backend.
 
 ## API
