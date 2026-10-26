@@ -91,6 +91,7 @@ export function App() {
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
+  const isParticipantCertificatesRoute = location.pathname === '/participant/certificates';
   const isVnPayReturn = location.pathname === '/payment/vnpay/return';
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -251,6 +252,9 @@ export function App() {
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
+  const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
+  const [participantCertificatesError, setParticipantCertificatesError] = useState('');
+  const [participantCertificatesRevision, setParticipantCertificatesRevision] = useState(0);
 
   // Never display a profile belonging to a previous session/account.
   const participantProfile: ParticipantProfile = isParticipantAuthenticated && authenticatedUser
@@ -274,6 +278,8 @@ export function App() {
     setParticipantParticipationError('');
     setParticipantBadges([]);
     setParticipantCertificates([]);
+    setParticipantCertificatesLoading(false);
+    setParticipantCertificatesError('');
   }, [participantUserId]);
 
   useEffect(() => {
@@ -326,6 +332,30 @@ export function App() {
       active = false;
     };
   }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participantUserId]);
+
+  useEffect(() => {
+    if (participantUserId === undefined || !isParticipantCertificatesRoute) return;
+    let active = true;
+    // This effect synchronizes the route-scoped Certificate list from the Participant API.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setParticipantCertificatesLoading(true);
+    setParticipantCertificatesError('');
+    participantApi.getCertificates()
+      .then(certificates => {
+        if (active) setParticipantCertificates(certificates);
+      })
+      .catch(error => {
+        if (!active) return;
+        setParticipantCertificates([]);
+        setParticipantCertificatesError(error instanceof Error
+          ? error.message
+          : 'Không thể tải danh sách chứng nhận.');
+      })
+      .finally(() => {
+        if (active) setParticipantCertificatesLoading(false);
+      });
+    return () => { active = false; };
+  }, [isParticipantCertificatesRoute, participantCertificatesRevision, participantUserId]);
 
   useEffect(() => {
     if (!isPartnerRoute || !isPartnerAuthenticated) return;
@@ -602,7 +632,7 @@ export function App() {
               profile={participantProfile}
               events={participantEvents}
               activities={participantActivities}
-              totalCertificatesCount={participantCertificates.length}
+              totalCertificatesCount={participantProfile.certificatesCount ?? participantCertificates.length}
               onJoinEvent={handleJoinParticipantEvent}
               onRegisterActivity={handleRegisterActivity}
             />
@@ -652,6 +682,11 @@ export function App() {
               language={language}
               certificates={participantCertificates}
               participantName={participantProfile.name}
+              isLoading={participantCertificatesLoading}
+              loadError={participantCertificatesError}
+              onRetry={() => setParticipantCertificatesRevision(value => value + 1)}
+              onLoadDetail={participantApi.getCertificateDetail}
+              onDownload={participantApi.downloadCertificate}
             />
           } />
           <Route path="/participant/profile" element={

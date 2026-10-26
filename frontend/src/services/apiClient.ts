@@ -5,6 +5,11 @@ import { clearCsrfToken, getCsrfToken } from './csrfToken';
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
+export interface BinaryDownload {
+  blob: Blob;
+  filename?: string;
+}
+
 function isMutationMethod(method: string): boolean {
   return MUTATION_METHODS.has(method);
 }
@@ -57,6 +62,51 @@ function notifyAuthenticationRequired(): void {
 function notifyDataChanged(): void {
   window.dispatchEvent(new Event('duongsach:data-changed'));
   window.dispatchEvent(new Event('participant:data-changed'));
+}
+
+function downloadFilename(response: Response): string | undefined {
+  const disposition = response.headers.get('Content-Disposition');
+  if (!disposition) return undefined;
+
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  }
+
+  return disposition.match(/filename="?([^";]+)"?/i)?.[1];
+}
+
+async function downloadBinary(endpoint: string): Promise<BinaryDownload> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers: { Accept: 'application/pdf' },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      'NETWORK_ERROR',
+      'Không thể kết nối đến máy chủ dữ liệu.',
+      [],
+      undefined,
+      endpoint,
+    );
+  }
+
+  if (response.status === 401) notifyAuthenticationRequired();
+  if (!response.ok) throw await createApiError(response);
+
+  return {
+    blob: await response.blob(),
+    filename: downloadFilename(response),
+  };
 }
 
 async function sendRequest<T>(
@@ -164,6 +214,7 @@ export const apiClient = {
     }),
   delete: <T>(endpoint: string, headers?: HeadersInit) =>
     request<T>(endpoint, { method: 'DELETE', headers }),
+  download: downloadBinary,
   request,
   refreshCsrfToken: () => getCsrfToken(true),
   clearCsrfToken,

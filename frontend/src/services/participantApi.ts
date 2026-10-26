@@ -36,6 +36,30 @@ interface ParticipantPageResponse<T> {
   totalPages: number;
 }
 
+interface CertificateSummaryResponse {
+  certificateId: number;
+  certificateCode: string;
+  recipientName: string;
+  status: 'ISSUED' | 'REVOKED';
+  issuedAt: string;
+  revokedAt: string | null;
+  downloadAvailable: boolean;
+}
+
+interface CertificateDetailResponse {
+  certificate: CertificateSummaryResponse;
+  activity: {
+    activityId: number;
+    title: string;
+    startAt: string;
+    endAt: string;
+  };
+  event: {
+    eventId: number;
+    name: string;
+  };
+}
+
 interface EventRegistrationResponse {
   eventRegistrationId: number;
   event: {
@@ -156,6 +180,31 @@ function mapActivityRegistrationWithEvents(
   return mapActivityRegistration(registration, eventNames);
 }
 
+function mapCertificateSummary(certificate: CertificateSummaryResponse): ParticipantCertificate {
+  return {
+    id: String(certificate.certificateId),
+    title: 'Chứng nhận tham gia',
+    recipientName: certificate.recipientName,
+    status: certificate.status,
+    downloadAvailable: certificate.downloadAvailable,
+    issueDate: formatDate(certificate.issuedAt),
+    revokedDate: certificate.revokedAt ? formatDate(certificate.revokedAt) : undefined,
+    certificateCode: certificate.certificateCode,
+  };
+}
+
+function mapCertificateDetail(detail: CertificateDetailResponse): ParticipantCertificate {
+  return {
+    ...mapCertificateSummary(detail.certificate),
+    activityId: String(detail.activity.activityId),
+    activityTitle: detail.activity.title,
+    activityStartAt: detail.activity.startAt,
+    activityEndAt: detail.activity.endAt,
+    eventId: String(detail.event.eventId),
+    eventTitle: detail.event.name,
+  };
+}
+
 async function getAllPages<T>(endpoint: string): Promise<T[]> {
   const separator = endpoint.includes('?') ? '&' : '?';
   const first = await apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=0&size=100`);
@@ -243,15 +292,19 @@ export const participantApi = {
     }));
   },
   async getCertificates(): Promise<ParticipantCertificate[]> {
-    const certificates = await apiClient.get<Array<Record<string, unknown>>>('/participant/certificates');
-    return certificates.map(certificate => ({
-      id: String(certificate.id), title: String(certificate.title),
-      activityTitle: String(certificate.activityTitle || ''), eventTitle: String(certificate.eventTitle || ''),
-      issueDate: certificate.issueDate ? new Date(String(certificate.issueDate)).toLocaleDateString('vi-VN') : '',
-      certificateCode: String(certificate.certificateCode),
-      previewUrl: certificate.previewUrl ? String(certificate.previewUrl) : undefined,
-    }));
+    const certificates = await getAllPages<CertificateSummaryResponse>(
+      '/participant/certificates?sort=issuedAt,desc',
+    );
+    return certificates.map(mapCertificateSummary);
   },
+  async getCertificateDetail(certificateId: string): Promise<ParticipantCertificate> {
+    const detail = await apiClient.get<CertificateDetailResponse>(
+      `/participant/certificates/${encodeURIComponent(certificateId)}`,
+    );
+    return mapCertificateDetail(detail);
+  },
+  downloadCertificate: (certificateId: string) =>
+    apiClient.download(`/participant/certificates/${encodeURIComponent(certificateId)}/download`),
   getRegistrations: () => apiClient.get('/participant/registrations'),
   registerActivity: (activityId: string) =>
     apiClient.post<ActivityRegistrationResponse>(
