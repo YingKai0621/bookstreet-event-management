@@ -225,8 +225,8 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
               </h4>
               <p className="cert-step-desc">
                 {language === 'vi' 
-                  ? 'Xuất trình mã QR cá nhân trên điện thoại tại bàn tiếp tân khi đến tham dự sự kiện.' 
-                  : 'Present your personal QR code at the reception desk upon arriving at the venue.'}
+                  ? 'Quét mã QR hoạt động do Ban tổ chức hiển thị tại khu vực diễn ra để ghi nhận tham dự.'
+                  : 'Scan the Activity QR displayed by the Organizer at the venue to record your attendance.'}
               </p>
             </div>
 

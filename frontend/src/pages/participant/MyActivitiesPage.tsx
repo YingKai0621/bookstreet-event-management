@@ -1,5 +1,5 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
-import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, QrCode, XCircle } from 'lucide-react';
+import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, XCircle } from 'lucide-react';
 import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Language, ParticipantActivity } from '../../types';
@@ -55,12 +55,12 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
       {/* 1. Header */}
       <div className="participant-page-header">
         <h1 className="participant-page-title workspace-page-title">
-          {language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}
+          {language === 'vi' ? 'Hoạt động của tôi' : 'My Activities'}
         </h1>
         <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi' 
-            ? 'Theo dõi các hoạt động bạn đã đăng ký trong những sự kiện mình tham gia, nhận chứng nhận và xuất trình mã QR check-in.'
-            : 'Track activities registered in your events, access check-in QR codes and view earned certificates.'}
+            ? 'Theo dõi các hoạt động đã đăng ký, lịch tham gia và chứng nhận của bạn.'
+            : 'Track your registered activities, attendance schedule, and earned certificates.'}
         </p>
       </div>
 
@@ -123,14 +123,6 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
                 <div className="activity-badge-group">
                   <span className="activity-tag">{act.eventName}</span>
                   <span className="activity-tag">{act.category}</span>
-                  {act.registrationCode && (
-                    <span 
-                      className="activity-tag" 
-                      style={{ background: '#FDF7EB', color: '#9C7226', border: '1px solid #F3DFC0', fontWeight: 800 }}
-                    >
-                      Mã: {act.registrationCode}
-                    </span>
-                  )}
                 </div>
 
                 <h3 className="activity-row-title">
@@ -169,31 +161,20 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
                 </Link>
 
                 {activeTab === 'upcoming' && (
-                  <>
-                    <Link
-                      to={`/participant/activities/qr/${act.id}`}
-                      className="btn-part-primary"
-                      style={{ height: '36px', padding: '0 1rem', fontSize: '0.82rem' }}
-                    >
-                      <QrCode size={15} />
-                      <span>{language === 'vi' ? 'Xem QR' : 'View QR'}</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      className="btn-part-danger-outline"
-                      style={{ height: '36px', padding: '0 0.85rem' }}
-                      title={language === 'vi' ? 'Hủy đăng ký hoạt động này' : 'Cancel registration'}
-                      onClick={() => {
-                        if (window.confirm(language === 'vi' ? 'Bạn có muốn hủy đăng ký hoạt động này?' : 'Cancel registration?')) {
-                          onCancelActivity(act.id);
-                        }
-                      }}
-                    >
-                      <XCircle size={15} />
-                      <span>{language === 'vi' ? 'Hủy' : 'Cancel'}</span>
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    className="btn-part-danger-outline"
+                    style={{ height: '36px', padding: '0 0.85rem' }}
+                    title={language === 'vi' ? 'Hủy đăng ký hoạt động này' : 'Cancel registration'}
+                    onClick={() => {
+                      if (window.confirm(language === 'vi' ? 'Bạn có muốn hủy đăng ký hoạt động này?' : 'Cancel registration?')) {
+                        onCancelActivity(act.id);
+                      }
+                    }}
+                  >
+                    <XCircle size={15} />
+                    <span>{language === 'vi' ? 'Hủy' : 'Cancel'}</span>
+                  </button>
                 )}
 
                 {activeTab === 'attended' && (

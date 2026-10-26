@@ -73,6 +73,7 @@ export interface EventItem {
   dateStr: string;
   dayOfWeek?: string;
   timeStr: string;
+  scheduleStr?: string;
   location: string;
   locationEn: string;
   priorityLevel: EventPriority;
@@ -251,8 +252,6 @@ export interface ParticipantActivity {
     avatar?: string;
   };
   extraNotes?: string[];
-  registrationCode?: string;
-  qrCodeValue?: string;
   registeredAt?: string;
 }
 

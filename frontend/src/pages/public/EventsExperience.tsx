@@ -183,7 +183,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <div>
                   <span>{vi ? 'Sự kiện tâm điểm' : 'Spotlight Event'}</span>
                   <h2>{vi ? featuredEvent.title : featuredEvent.titleEn}</h2>
-                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.dateStr} ({featuredEvent.timeStr})</span>
+                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.scheduleStr || `${featuredEvent.dateStr} (${featuredEvent.timeStr})`}</span>
                 </div>
                 <ArrowRight className="heritage-featured-arrow" size={24} />
               </div>
@@ -319,7 +319,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 {vi ? activeModalEvent.title : activeModalEvent.titleEn}
               </h3>
               <div className="modal-meta-box">
-                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.timeStr} ({activeModalEvent.dayOfWeek}, {activeModalEvent.dateStr})</p>
+                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${activeModalEvent.dateStr} (${activeModalEvent.timeStr})`}</p>
                 <p>📍 <strong>{vi ? 'Địa điểm:' : 'Location:'}</strong> {vi ? activeModalEvent.location : activeModalEvent.locationEn}</p>
                 {activeModalEvent.speaker && (
                   <p>🎙️ <strong>{vi ? 'Diễn giả / Chủ trì:' : 'Speaker:'}</strong> {activeModalEvent.speaker}</p>
@@ -372,8 +372,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   </div>
                   <p className="modal-body-desc" style={{ maxWidth: '440px', margin: '0 auto 1.5rem', lineHeight: '1.6' }}>
                     {vi
-                      ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Để có mã QR điểm danh, hãy đăng ký một hoạt động cụ thể thuộc sự kiện.'
-                      : 'Your account has joined this event. Register for a specific activity to receive a check-in QR code.'}
+                      ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp; khi đến nơi, quét mã QR hoạt động do Ban tổ chức hiển thị để điểm danh.'
+                      : 'Your account has joined this event. Register for an activity, then scan the Activity QR displayed by the Organizer at the venue to check in.'}
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem', alignItems: 'center' }}>
                     {isParticipantAuthenticated && (
@@ -429,7 +429,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                       <div className="reg-event-meta-list">
                         <span className="reg-meta-item">
                           <Clock size={14} />
-                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.dateStr} • {registeredEvent.timeStr}
+                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${registeredEvent.dateStr} • ${registeredEvent.timeStr}`}
                         </span>
                         <span className="reg-meta-item">
                           <MapPin size={14} />

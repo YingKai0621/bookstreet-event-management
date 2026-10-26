@@ -6,6 +6,7 @@ import {
   ParticipantProfile,
 } from '../types';
 import { apiClient } from './apiClient';
+import type { AttendanceScanResponse } from '../types/attendance';
 
 interface ParticipantNotificationResponse {
   notificationId: number;
@@ -25,6 +26,130 @@ interface ParticipantNotificationPageResponse {
   size: number;
   totalElements: number;
   totalPages: number;
+}
+
+interface ParticipantPageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+interface EventRegistrationResponse {
+  eventRegistrationId: number;
+  event: {
+    eventId: number;
+    name: string;
+    startAt: string;
+    endAt: string;
+    status: string;
+  };
+  status: 'ACTIVE' | 'LEFT';
+  seatActiveActivityCount: number;
+}
+
+interface ActivityRegistrationResponse {
+  activityRegistrationId: number;
+  activity: {
+    activityId: number;
+    eventId: number;
+    title: string;
+    locationCode: string;
+    locationName: string;
+    startAt: string;
+    endAt: string;
+    status: string;
+  };
+  status: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+  outcome: string;
+  registeredAt: string;
+  attendance: { status: string } | null;
+}
+
+const EVENT_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: EVENT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
+}
+
+function formatTime(value: string): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: EVENT_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(value));
+}
+
+function formatDateRange(startAt: string, endAt: string): string {
+  return `${formatDate(startAt)} ${formatTime(startAt)} – ${formatDate(endAt)} ${formatTime(endAt)}`;
+}
+
+function mapEventRegistration(registration: EventRegistrationResponse): ParticipantEvent {
+  const joined = registration.status === 'ACTIVE';
+  const ended = ['COMPLETED', 'CANCELLED'].includes(registration.event.status);
+  return {
+    id: String(registration.event.eventId),
+    title: registration.event.name,
+    dateRange: formatDateRange(registration.event.startAt, registration.event.endAt),
+    location: 'Đường Sách TP.HCM',
+    imageUrl: '/duong_sach_logo.png',
+    status: joined ? (ended ? 'ended' : 'ongoing') : 'left',
+    shortDesc: '',
+    activitiesCount: registration.seatActiveActivityCount,
+    isJoined: joined,
+    canLeave: joined && registration.seatActiveActivityCount === 0 && !ended,
+  };
+}
+
+function mapActivityRegistration(
+  registration: ActivityRegistrationResponse,
+  eventNames: Map<string, string>,
+): ParticipantActivity {
+  const attended = registration.attendance?.status === 'VALID'
+    || registration.outcome === 'ATTENDED';
+  const status: ParticipantActivity['status'] = attended
+    ? 'attended'
+    : registration.status === 'ACTIVE'
+      ? 'registered'
+      : 'cancelled';
+
+  return {
+    id: String(registration.activity.activityId),
+    activityId: String(registration.activity.activityId),
+    registrationId: String(registration.activityRegistrationId),
+    eventId: String(registration.activity.eventId),
+    eventName: eventNames.get(String(registration.activity.eventId))
+      || `Sự kiện #${registration.activity.eventId}`,
+    title: registration.activity.title,
+    category: 'Hoạt động',
+    venue: registration.activity.locationName || registration.activity.locationCode,
+    date: formatDate(registration.activity.startAt),
+    time: `${formatTime(registration.activity.startAt)} - ${formatTime(registration.activity.endAt)}`,
+    imageUrl: '',
+    capacity: 0,
+    registeredCount: 0,
+    status,
+    registeredAt: registration.registeredAt,
+  };
+}
+
+async function getAllPages<T>(endpoint: string): Promise<T[]> {
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const first = await apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=0&size=100`);
+  const remaining = first.totalPages > 1
+    ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+      apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=${index + 1}&size=100`)))
+    : [];
+  return [first, ...remaining]
+    .sort((left, right) => left.page - right.page)
+    .flatMap(page => page.content);
 }
 
 export interface ParticipantNotificationItem {
@@ -76,10 +201,24 @@ export const participantApi = {
       badgesCount: Number(user.badgesCount || 0),
     };
   },
-  getMyActivities: () => apiClient.get<ParticipantActivity[]>('/participant/activities'),
-  getEvents: () => apiClient.get<ParticipantEvent[]>('/participant/events'),
-  joinEvent: (eventId: string) => apiClient.post(`/participant/events/${encodeURIComponent(eventId)}/join`, {}),
-  leaveEvent: (eventId: string) => apiClient.delete(`/participant/events/${encodeURIComponent(eventId)}/leave`),
+  async getMyActivities(knownEvents?: ParticipantEvent[]): Promise<ParticipantActivity[]> {
+    const [registrations, events] = await Promise.all([
+      getAllPages<ActivityRegistrationResponse>('/participant/activity-registrations?sort=activityStartAt,desc'),
+      knownEvents ? Promise.resolve(knownEvents) : participantApi.getEvents(),
+    ]);
+    const eventNames = new Map(events.map(event => [event.id, event.title]));
+    return registrations.map(registration => mapActivityRegistration(registration, eventNames));
+  },
+  async getEvents(): Promise<ParticipantEvent[]> {
+    const registrations = await getAllPages<EventRegistrationResponse>(
+      '/participant/event-registrations?sort=activatedAt,desc',
+    );
+    return registrations.map(mapEventRegistration);
+  },
+  joinEvent: (eventId: string) =>
+    apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/join`),
+  leaveEvent: (eventId: string) =>
+    apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/leave`),
   async getBadges(): Promise<ParticipantBadge[]> {
     const badges = await apiClient.get<Array<Record<string, unknown>>>('/participant/badges');
     return badges.map(badge => ({
@@ -99,8 +238,12 @@ export const participantApi = {
     }));
   },
   getRegistrations: () => apiClient.get('/participant/registrations'),
-  registerActivity: (activityId: string) => apiClient.post(`/participant/activities/${activityId}/register`),
-  cancelActivity: (registrationId: string) => apiClient.delete(`/participant/registrations/${registrationId}`),
+  registerActivity: (activityId: string) =>
+    apiClient.post(`/participant/activities/${encodeURIComponent(activityId)}/register`),
+  cancelActivity: (activityId: string) =>
+    apiClient.post(`/participant/activities/${encodeURIComponent(activityId)}/cancel-registration`),
+  scanAttendance: (token: string) =>
+    apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
   getPoints: () => apiClient.get('/participant/points'),
   async getNotifications(): Promise<ParticipantNotificationItem[]> {
     const response = await apiClient.get<ParticipantNotificationPageResponse>(

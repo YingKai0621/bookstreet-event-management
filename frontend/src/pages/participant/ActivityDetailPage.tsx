@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock,
   MapPin,
-  QrCode,
   UserCheck,
   XCircle
 } from 'lucide-react';
@@ -231,15 +230,6 @@ export const ActivityDetailPage: React.FC<ActivityDetailPageProps> = ({
           <div className="activity-detail-cta-bar">
             {isRegistered ? (
               <>
-                <Link
-                  to={`/participant/activities/qr/${activity.id}`}
-                  className="btn-part-primary"
-                  style={{ height: '42px', padding: '0 1.35rem', fontSize: '0.9rem' }}
-                >
-                  <QrCode size={18} />
-                  <span>{language === 'vi' ? 'Xem mã QR check-in' : 'View Check-in QR'}</span>
-                </Link>
-
                 <button
                   type="button"
                   className="btn-part-danger-outline"

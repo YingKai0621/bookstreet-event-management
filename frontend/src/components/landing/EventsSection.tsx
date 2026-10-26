@@ -216,7 +216,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               {language === 'vi' ? activeEventDetail.title : activeEventDetail.titleEn}
             </h3>
             <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.dateStr} ({activeEventDetail.timeStr})</p>
+              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${activeEventDetail.dateStr} (${activeEventDetail.timeStr})`}</p>
               <p><strong>{language === 'vi' ? 'Địa điểm:' : 'Location:'}</strong> {language === 'vi' ? activeEventDetail.location : activeEventDetail.locationEn}</p>
               <p><strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {activeEventDetail.speaker}</p>
             </div>
@@ -320,7 +320,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                     <div className="reg-event-meta-list">
                       <span className="reg-meta-item">
                         <Clock size={14} />
-                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.dateStr} • {showRegisterModal.timeStr}
+                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${showRegisterModal.dateStr} • ${showRegisterModal.timeStr}`}
                       </span>
                       <span className="reg-meta-item">
                         <MapPin size={14} />
@@ -339,8 +339,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   <AlertTriangle size={18} />
                   <span>
                     {language === 'vi' 
-                      ? 'Mỗi tài khoản ghi danh cho chính mình. Đăng ký hoạt động riêng để nhận mã QR điểm danh.'
-                      : 'Each account joins for itself. Register for an activity separately to receive a check-in QR code.'}
+                      ? 'Mỗi tài khoản ghi danh cho chính mình. Sau khi đăng ký hoạt động, bạn sẽ quét mã QR do Ban tổ chức hiển thị tại nơi diễn ra để điểm danh.'
+                      : 'Each account joins for itself. After registering for an activity, scan the QR displayed by the Organizer at the venue to check in.'}
                   </span>
                 </div>
 
@@ -400,7 +400,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             ) : (
               <div className="success-box-center">
                 <CheckCircle2 size={52} color="#15803D" style={{ margin: '0 auto 0.75rem' }} />
-                <h3 className="modal-heading-title" style={{ color: '#1B2B25' }}>
+                <h3 id="registration-modal-title" className="modal-heading-title" style={{ color: '#1B2B25' }}>
                   {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
                 </h3>
                 <p className="success-event-badge">
@@ -408,8 +408,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                 </p>
                 <p className="success-desc">
                   {language === 'vi' 
-                    ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động cụ thể để nhận mã QR điểm danh.'
-                    : 'Your account has joined this event. Register for a specific activity to receive a check-in QR code.'}
+                    ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp và quét mã QR hoạt động tại nơi diễn ra để điểm danh.'
+                    : 'Your account has joined this event. Register for an activity and scan its QR at the venue to check in.'}
                 </p>
                 <div className="success-actions-row" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                   {isParticipantAuthenticated && (

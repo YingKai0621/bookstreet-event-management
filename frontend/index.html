@@ -2,6 +2,29 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+    <meta name="referrer" content="no-referrer" />
+    <script>
+      (() => {
+        if (window.location.pathname !== '/participant/attendance/scan') return;
+
+        const tokenValues = new URLSearchParams(window.location.search).getAll('token');
+        let consumed = false;
+        Object.defineProperty(window, '__takeAttendanceScanTokenBootstrap', {
+          configurable: true,
+          value: () => {
+            if (consumed) return null;
+            consumed = true;
+            const capturedValues = tokenValues.slice();
+            tokenValues.fill('');
+            return capturedValues;
+          },
+        });
+
+        if (window.location.search || window.location.hash) {
+          window.history.replaceState(window.history.state, '', '/participant/attendance/scan');
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/duong_sach_logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Đường Sách TP.HCM - Điểm hẹn văn hóa đọc đặc trưng giữa lòng Sài Gòn. Khám phá các gian hàng sách, lịch sự kiện văn hóa, bản đồ tương tác và câu chuyện di sản." />
