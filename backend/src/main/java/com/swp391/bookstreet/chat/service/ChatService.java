@@ -32,13 +32,13 @@ public class ChatService {
     private final PublicActivityService activities;
     private final ParticipantEventRegistrationService myEvents;
     private final ParticipantActivityRegistrationService myActivities;
-    private final OpenAiChatClient ai;
+    private final GeminiChatClient ai;
     private final Clock clock;
 
     public ChatService(EventService events, PublicActivityService activities,
             ParticipantEventRegistrationService myEvents,
             ParticipantActivityRegistrationService myActivities,
-            OpenAiChatClient ai, Clock clock) {
+            GeminiChatClient ai, Clock clock) {
         this.events = events;
         this.activities = activities;
         this.myEvents = myEvents;

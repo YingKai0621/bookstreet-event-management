@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import tools.jackson.databind.ObjectMapper;
 import com.swp391.bookstreet.activity.service.PublicActivityService;
 import com.swp391.bookstreet.chat.service.ChatService;
-import com.swp391.bookstreet.chat.service.OpenAiChatClient;
+import com.swp391.bookstreet.chat.service.GeminiChatClient;
 import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.event.dto.EventPageResponse;
 import com.swp391.bookstreet.registration.service.ParticipantActivityRegistrationService;
@@ -28,7 +28,7 @@ class ChatServiceTests {
             mock(ParticipantEventRegistrationService.class);
     private final ParticipantActivityRegistrationService myActivities =
             mock(ParticipantActivityRegistrationService.class);
-    private final OpenAiChatClient ai = mock(OpenAiChatClient.class);
+    private final GeminiChatClient ai = mock(GeminiChatClient.class);
     private final ChatService service = new ChatService(events, activities, myEvents,
             myActivities, ai, Clock.systemUTC());
 
@@ -53,7 +53,7 @@ class ChatServiceTests {
 
     @Test
     void unconfiguredModelDoesNotPretendToAnswer() {
-        var client = new OpenAiChatClient(new ObjectMapper(), "", "gpt-4.1-mini");
+        var client = new GeminiChatClient(new ObjectMapper(), "", "gemini-3.5-flash-lite");
         assertThatThrownBy(() -> client.answer("Câu hỏi", "Nguồn"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("503");

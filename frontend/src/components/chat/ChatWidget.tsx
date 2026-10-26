@@ -34,8 +34,10 @@ export function ChatWidget() {
         role: 'assistant', text: result.answer, sources: result.sources,
       }]);
     } catch (error) {
-      const text = error instanceof ChatRequestError && error.status === 503
-        ? 'Chatbot chưa được cấu hình API key trên backend.'
+      const text = error instanceof ChatRequestError && error.status === 402
+        ? 'Tài khoản Gemini API đã hết hạn mức hoặc cần bật thanh toán. Vui lòng thử lại sau khi kiểm tra Google AI Studio.'
+        : error instanceof ChatRequestError && error.status === 503
+          ? 'Gemini API key hoặc model chưa được cấu hình hoặc chưa có quyền truy cập.'
         : error instanceof ChatRequestError && error.status === 429
           ? 'Bạn đã gửi quá nhiều câu hỏi. Vui lòng thử lại sau một phút.'
           : error instanceof ChatRequestError && error.status === 502
