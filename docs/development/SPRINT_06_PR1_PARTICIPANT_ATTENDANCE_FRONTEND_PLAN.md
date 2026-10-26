@@ -1,6 +1,18 @@
 # Sprint 6 PR1 — Participant self-scan attendance frontend
 
-Status: **Proposed — awaiting owner approval before implementation**
+Status: **Implemented locally on 2026-10-26 — awaiting push/PR**
+
+Implementation evidence:
+
+- Secure pre-React token capture, authentication return flow, typed scan API, result UI, legacy QR removal,
+  responsive coverage, and focused regression tests are complete.
+- `npm run build`: passed.
+- `npm run lint`: passed with existing repository warnings and no lint errors.
+- Focused Playwright suite: 14/14 passed.
+- Full Playwright suite: 125/144 passed. The 19 failures are outside this PR1 feature area (existing Admin
+  typography/booth expectations, legacy navigation selectors, modal overflow expectation, Participant profile
+  mobile-height expectation, Partner calendar/route expectations, and Organizer location/detail selectors).
+  They were recorded but not altered merely to make unrelated tests pass.
 
 ## 1. Objective
 
