@@ -167,8 +167,8 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           </h2>
           <p className="figma-section-subtitle">
             {language === 'vi'
-              ? `${booths.length} gian hàng đang được công bố từ dữ liệu hệ thống.`
-              : `${booths.length} booths are currently published by the system.`}
+              ? `${booths.length} gian hàng đang mở tại Đường Sách.`
+              : `${booths.length} booths are open at Book Street.`}
           </p>
         </div>
 

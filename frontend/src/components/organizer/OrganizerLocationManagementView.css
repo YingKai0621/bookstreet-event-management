@@ -64,49 +64,49 @@
   min-width: 860px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 13px;
+  font-size: 15px;
 }
 .organizer-location-page .venue-table th {
-  padding: 12px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid #e5ece8;
   background: #f3f7f5;
   color: #61756e;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 650;
   white-space: nowrap;
 }
-.organizer-location-page .venue-table td { padding: 16px 14px; border-bottom: 1px solid #e7edea; vertical-align: middle; }
+.organizer-location-page .venue-table td { padding: 12px 16px; border-bottom: 1px solid #e7edea; vertical-align: middle; }
 .organizer-location-page .venue-table tr:last-child td { border-bottom: 0; }
 .organizer-location-page .venue-table tbody tr:hover { background: #f7faf8; box-shadow: inset 3px 0 0 #c79531; }
-.organizer-location-page .venue-table th:first-child { width: 34%; }
-.organizer-location-page .venue-name { display: flex; align-items: flex-start; gap: 12px; }
+.organizer-location-page .venue-table th:first-child { width: 28%; }
+.organizer-location-page .venue-name { display: flex; align-items: center; gap: 10px; }
 .organizer-location-page .venue-row-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 42px;
-  height: 46px;
+  width: 38px;
+  height: 40px;
   border: 1px solid #e3d8bd;
   border-radius: 5px;
   background: #fbf6e9;
   color: #936a1c;
 }
 .organizer-location-page .venue-name > span:last-child { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
-.organizer-location-page .venue-name strong { color: #142a23; font-size: 14px; font-weight: 700; line-height: 1.4; }
-.organizer-location-page .venue-name small { color: #61756e; font-size: 11px; }
-.organizer-location-page .venue-description { display: -webkit-box; margin: 3px 0 0; overflow: hidden; color: #687a74; font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.organizer-location-page .organizer-location-type { color: #4d655b; font-size: 12px; white-space: nowrap; }
+.organizer-location-page .venue-name strong { color: #142a23; font-size: 17px; font-weight: 700; line-height: 1.4; }
+.organizer-location-page .venue-name small { color: #61756e; font-size: 14px; }
+.organizer-location-page .venue-description { display: -webkit-box; margin: 3px 0 0; overflow: hidden; color: #687a74; font-size: 15px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.organizer-location-page .organizer-location-type { color: #4d655b; font-size: 15px; white-space: nowrap; }
 .organizer-location-page .venue-capacity,
-.organizer-location-page .venue-coordinate { display: inline-flex; align-items: center; gap: 5px; color: #61756e; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.organizer-location-page .venue-coordinate { display: inline-flex; align-items: center; gap: 5px; color: #61756e; font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .organizer-location-page .venue-capacity strong { color: #203b32; font-weight: 650; }
-.organizer-location-page .venue-muted { color: #7b8984; font-size: 12px; }
-.organizer-location-page .organizer-location-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #cce5d8; border-radius: 4px; background: #edf7f1; color: #216147; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.organizer-location-page .venue-muted { color: #7b8984; font-size: 15px; }
+.organizer-location-page .organizer-location-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #cce5d8; border-radius: 4px; background: #edf7f1; color: #216147; font-size: 14px; font-weight: 600; white-space: nowrap; }
 .organizer-location-page .organizer-location-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .organizer-location-page .organizer-location-status.is-inactive { border-color: #dfe5e2; background: #f3f5f4; color: #667970; }
 .organizer-location-page .venue-actions { text-align: right; }
 .organizer-location-page .venue-row-actions { display: flex; justify-content: flex-end; }
-.organizer-location-page .venue-row-actions button { gap: 5px; font-size: 12px; white-space: nowrap; }
-.organizer-location-page .venue-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-top: 1px solid #e5ece8; color: #61756e; font-size: 12px; }
+.organizer-location-page .venue-row-actions button { gap: 5px; font-size: 15px; white-space: nowrap; }
+.organizer-location-page .venue-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid #e5ece8; color: #61756e; font-size: 15px; }
 .organizer-location-page .venue-table-footer > nav { display: flex; align-items: center; gap: 10px; }
 .organizer-location-page .venue-table-footer button { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 9px; display: inline-flex; gap: 4px; border: 1px solid #cbd9d2; border-radius: 5px; background: white; color: #203b32; cursor: pointer; }
 .organizer-location-page .venue-empty { display: grid; justify-items: center; gap: 12px; padding: 52px 20px; text-align: center; color: #61756e; }
@@ -120,6 +120,10 @@
 .organizer-location-page .venue-dialog-heading p { margin: 6px 0 0; color: #687a74; font-size: 12px; }
 .organizer-location-page .venue-close { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border: 1px solid #cbd9d2; border-radius: 5px; background: white; color: #536a62; cursor: pointer; }
 .organizer-location-page .venue-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px; }
+.organizer-location-page .organizer-location-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 600px) {
+  .organizer-location-page .organizer-location-details { grid-template-columns: 1fr; }
+}
 .organizer-location-page .venue-fields label { display: block; min-width: 0; color: #334b43; font-size: 13px; font-weight: 600; }
 .organizer-location-page .venue-fields label > span { color: #b8322c; }
 .organizer-location-page .venue-fields input,

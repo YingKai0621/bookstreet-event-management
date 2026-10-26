@@ -232,10 +232,12 @@ export function OrganizerLocationManagementView() {
           <div className="venue-fields organizer-location-fields">
             <label>Mã địa điểm <span>*</span><input autoFocus required maxLength={30} value={form.code} onChange={event => setField('code', event.target.value.toUpperCase())} placeholder="Ví dụ: STAGE-A" /><small>Chỉ dùng A–Z, 0–9, dấu “-” hoặc “_”.</small></label>
             <label>Tên địa điểm <span>*</span><input required maxLength={100} value={form.name} onChange={event => setField('name', event.target.value)} placeholder="Ví dụ: Sân khấu trung tâm" /></label>
+            <div className="organizer-location-details organizer-location-wide">
             <label>Loại địa điểm <span>*</span><select required disabled={editing !== 'new'} value={form.locationType} onChange={event => setField('locationType', event.target.value as SharedLocationType)}><option value="STAGE">Sân khấu</option><option value="WORKSHOP">Phòng workshop</option><option value="AREA">Khu vực</option></select><small>Không thể đổi loại sau khi đã tạo.</small></label>
+            <label>Trạng thái <span>*</span><select value={String(form.active)} onChange={event => setField('active', event.target.value === 'true')}><option value="true">Đang hoạt động</option><option value="false">Tạm ngưng</option></select></label>
             <label>Sức chứa tối đa <span>*</span><input type="number" required min="1" step="1" value={form.maxCapacity} onChange={event => setField('maxCapacity', event.target.value)} placeholder="Ví dụ: 120" /></label>
+            </div>
             <label className="organizer-location-wide">Mô tả<textarea maxLength={5000} rows={4} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length}/5000</small></label>
-            {editing !== 'new' && <label className="organizer-location-active organizer-location-wide"><input type="checkbox" checked={form.active} onChange={event => setField('active', event.target.checked)} /><span><strong>Cho phép sử dụng địa điểm</strong><small>Không thể tạm ngưng nếu địa điểm đang được một hoạt động hiện tại hoặc tương lai sử dụng.</small></span></label>}
           </div>
           {formError && <p className="venue-error" role="alert">{formError}</p>}
           <div className="venue-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>

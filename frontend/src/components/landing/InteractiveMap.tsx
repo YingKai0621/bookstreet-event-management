@@ -245,8 +245,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </h2>
           <p className="figma-section-subtitle">
             {language === 'vi'
-              ? 'Khám phá vị trí các gian hàng, khu vực sự kiện và tiện ích tại Đường Sách TP.HCM. Chọn một điểm trên bản đồ để xem thông tin chi tiết.'
-              : 'Explore stalls, event spaces, and amenities at Ho Chi Minh City Book Street. Select a point to view details.'}
+              ? 'Xem gian hàng, khu sự kiện và tiện ích trên bản đồ.'
+              : 'See stalls, event areas, and amenities on the map.'}
           </p>
         </div>
 

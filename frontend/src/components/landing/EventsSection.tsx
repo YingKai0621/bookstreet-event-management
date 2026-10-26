@@ -125,8 +125,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
           </h2>
           <p className="figma-section-subtitle">
             {language === 'vi'
-              ? 'Tham gia các buổi tọa đàm tác giả, triển lãm văn học và workshop trải nghiệm sáng tạo.'
-              : 'Join inspiring author talks, cultural book exhibitions, and hands-on creative workshops.'}
+              ? 'Tọa đàm, triển lãm và workshop tại Đường Sách.'
+              : 'Author talks, exhibitions, and workshops at Book Street.'}
           </p>
         </div>
 

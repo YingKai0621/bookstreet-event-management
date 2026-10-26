@@ -4,8 +4,7 @@ import {
   Eye,
   EyeOff,
   Lock,
-  Mail,
-  ShieldCheck
+  Mail
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -153,10 +152,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
               <div className="auth-brand-icon" style={{ padding: '2px', background: '#FFFFFF', borderRadius: '50%', overflow: 'hidden' }}>
                 <img src="/duong_sach_logo.png" alt="Logo Đường Sách TP.HCM" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
               </div>
-              <div className="auth-brand-pill">
-                <ShieldCheck size={14} color="#E9BC63" />
-                <span>{language === 'vi' ? 'ĐỘC GIẢ ĐƯỜNG SÁCH' : 'READER COMMUNITY'}</span>
-              </div>
             </Link>
 
             <h1 className="auth-title">
@@ -272,23 +267,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
             </Link>
           </div>
 
-          {/* Link to BQL portal & Partner portal & Admin portal */}
-          <div className="auth-portal-hint">
-            <div>{language === 'vi' ? 'Cổng Chức năng & Quản trị:' : 'Portals & Administration:'}</div>
-            <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-              <Link to="/partner" className="auth-portal-link">
-                {language === 'vi' ? 'Cổng Đối tác' : 'Partner Portal'} →
-              </Link>
-              <span style={{ color: '#D5DFDC' }}>•</span>
-              <Link to="/portal" className="auth-portal-link">
-                {language === 'vi' ? 'Cổng Ban Quản Lý' : 'Organizer Portal'} →
-              </Link>
-              <span style={{ color: '#D5DFDC' }}>•</span>
-              <Link to="/admin" className="auth-portal-link">
-                {language === 'vi' ? 'Cổng Quản Trị Hệ Thống' : 'Admin Portal'} →
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
 

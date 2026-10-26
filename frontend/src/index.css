@@ -256,8 +256,14 @@ button {
 }
 
 .figma-section-subtitle {
-  font-size: 1.05rem;
+  font-size: clamp(1.1rem, 1.35vw, 1.3rem);
+  line-height: 1.4;
   color: var(--figma-text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .figma-section-subtitle { white-space: normal; }
 }
 
 /* Figma Buttons */

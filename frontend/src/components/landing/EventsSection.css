@@ -30,11 +30,11 @@
 }
 
 .figma-events-section .figma-section-subtitle {
-  font-size: 0.95rem;
+  font-size: clamp(1.1rem, 1.35vw, 1.3rem);
   color: #556B61;
   max-width: 680px;
   margin: 0 auto;
-  line-height: 1.6;
+  line-height: 1.4;
 }
 
 .figma-tabs-container {
