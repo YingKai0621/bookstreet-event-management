@@ -9,12 +9,21 @@ import {
 import { apiClient } from './apiClient';
 import type { AttendanceScanResponse } from '../types/attendance';
 
+export type ParticipantNotificationType =
+  | 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'
+  | 'ACTIVITY_CANCELLED'
+  | 'EVENT_CANCELLED'
+  | 'CERTIFICATE_ISSUED'
+  | 'CERTIFICATE_REVOKED';
+
+export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+
 interface ParticipantNotificationResponse {
   notificationId: number;
-  type: string;
+  type: ParticipantNotificationType;
   title: string;
   message: string;
-  referenceType: 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+  referenceType: ParticipantNotificationReferenceType;
   referenceId: number;
   createdAt: string;
   readAt: string | null;
@@ -246,12 +255,30 @@ async function getAllPages<T>(endpoint: string): Promise<T[]> {
 
 export interface ParticipantNotificationItem {
   id: string;
-  type: string;
+  type: ParticipantNotificationType;
   title: string;
   message: string;
   isRead: boolean;
   link: string;
   createdAt: string;
+  readAt?: string;
+  referenceType: ParticipantNotificationReferenceType;
+  referenceId: string;
+}
+
+export interface ParticipantNotificationPage {
+  items: ParticipantNotificationItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface ParticipantNotificationQuery {
+  page?: number;
+  size?: number;
+  read?: boolean;
+  type?: ParticipantNotificationType;
 }
 
 function notificationLink(notification: ParticipantNotificationResponse): string {
@@ -273,6 +300,9 @@ function mapNotification(notification: ParticipantNotificationResponse): Partici
     isRead: notification.read,
     link: notificationLink(notification),
     createdAt: notification.createdAt,
+    readAt: notification.readAt || undefined,
+    referenceType: notification.referenceType,
+    referenceId: String(notification.referenceId),
   };
 }
 
@@ -361,14 +391,31 @@ export const participantApi = {
     return mapActivityRating(rating);
   },
   getPoints: () => apiClient.get('/participant/points'),
-  async getNotifications(): Promise<ParticipantNotificationItem[]> {
+  async getNotificationPage(query: ParticipantNotificationQuery = {}): Promise<ParticipantNotificationPage> {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 0),
+      size: String(query.size ?? 20),
+      sort: 'createdAt,desc',
+    });
+    if (query.read !== undefined) params.set('read', String(query.read));
+    if (query.type) params.set('type', query.type);
     const response = await apiClient.get<ParticipantNotificationPageResponse>(
-      '/participant/notifications?page=0&size=20&sort=createdAt,desc',
+      `/participant/notifications?${params.toString()}`,
     );
     if (!Array.isArray(response.content)) {
       throw new Error('Phản hồi danh sách thông báo không đúng định dạng.');
     }
-    return response.content.map(mapNotification);
+    return {
+      items: response.content.map(mapNotification),
+      page: response.page,
+      size: response.size,
+      totalElements: response.totalElements,
+      totalPages: response.totalPages,
+    };
+  },
+  async getNotifications(): Promise<ParticipantNotificationItem[]> {
+    const page = await participantApi.getNotificationPage({ page: 0, size: 5 });
+    return page.items;
   },
   async getNotificationUnreadCount(): Promise<number> {
     const response = await apiClient.get<{ unreadCount: number }>('/participant/notifications/unread-count');
@@ -379,6 +426,12 @@ export const participantApi = {
       `/participant/notifications/${encodeURIComponent(id)}/read`,
     );
     return mapNotification(notification);
+  },
+  async markAllNotificationsRead(): Promise<number> {
+    const response = await apiClient.post<{ updatedCount: number }>(
+      '/participant/notifications/read-all',
+    );
+    return Number.isFinite(response.updatedCount) ? response.updatedCount : 0;
   },
   updateProfile: (data: { fullName: string; phone?: string; avatarUrl?: string }) =>
     apiClient.put<Record<string, unknown>>('/auth/profile', data),
