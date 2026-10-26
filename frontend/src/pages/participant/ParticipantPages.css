@@ -446,6 +446,422 @@
     min-width: 0;
   }
 
+/* ACTIVITY RATINGS WORKSPACE */
+.activity-ratings-page {
+  width: 100%;
+}
+
+.participant-rating-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: -0.5rem 0 1.25rem;
+  padding: 0.8rem 1rem;
+  color: #0f6c4d;
+  background: #edf9f3;
+  border: 1px solid #b9e5d1;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.participant-rating-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.participant-rating-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem 1.35rem;
+  background: #fff;
+  border: 1px solid #dce7e2;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(23, 56, 46, 0.04);
+}
+
+.participant-rating-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.participant-rating-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.participant-rating-event {
+  color: #976512;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  text-decoration: none;
+}
+
+.participant-rating-card h2 {
+  margin: 0.3rem 0 0;
+  color: #17382e;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.participant-rating-card h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.participant-rating-event:hover,
+.participant-rating-card h2 a:hover {
+  text-decoration: underline;
+}
+
+.participant-rating-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.participant-rating-status.is-pending {
+  color: #80570e;
+  background: #fff7df;
+  border: 1px solid #f1d994;
+}
+
+.participant-rating-status.is-rated {
+  color: #0f6c4d;
+  background: #edf9f3;
+  border: 1px solid #b9e5d1;
+}
+
+.participant-rating-status.is-unavailable {
+  color: #5f716b;
+  background: #f2f5f4;
+  border: 1px solid #d9e1de;
+}
+
+.participant-rating-status.is-invalidated {
+  color: #9d3730;
+  background: #fff2f0;
+  border: 1px solid #edc4bf;
+}
+
+.participant-rating-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 0.75rem;
+  color: #637771;
+  font-size: 0.84rem;
+}
+
+.participant-rating-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.participant-rating-summary {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: #f6faf8;
+  border-left: 3px solid #d7a63f;
+  border-radius: 0 8px 8px 0;
+}
+
+.participant-rating-summary.is-invalidated {
+  opacity: 0.72;
+  border-left-color: #b84b43;
+}
+
+.participant-rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #d49b27;
+}
+
+.participant-rating-stars strong {
+  margin-left: 0.35rem;
+  color: #17382e;
+  font-size: 0.86rem;
+}
+
+.participant-rating-summary p {
+  margin: 0.5rem 0 0.3rem;
+  color: #344f47;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.participant-rating-summary small {
+  color: #73867f;
+  font-size: 0.75rem;
+}
+
+.participant-rating-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 132px;
+  gap: 0.55rem;
+}
+
+.participant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 32, 26, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.participant-rating-modal {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #fff;
+  border-top: 4px solid #d7a63f;
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(6, 30, 23, 0.28);
+}
+
+.participant-rating-modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem 1.5rem 1.15rem;
+  border-bottom: 1px solid #e2ebe7;
+}
+
+.participant-rating-modal > header span {
+  color: #976512;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.participant-rating-modal h2 {
+  margin: 0.35rem 0 0;
+  color: #17382e;
+  font-size: 1.35rem;
+}
+
+.participant-rating-modal header p {
+  margin: 0.3rem 0 0;
+  color: #637771;
+  font-size: 0.86rem;
+}
+
+.participant-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: #486259;
+  background: #fff;
+  border: 1px solid #d8e3de;
+  border-radius: 8px;
+}
+
+.participant-modal-close:hover:not(:disabled) {
+  background: #f1f6f4;
+}
+
+.participant-rating-modal form > :not(footer) {
+  margin-right: 1.5rem;
+  margin-left: 1.5rem;
+}
+
+.participant-rating-fieldset {
+  position: relative;
+  margin-top: 1.35rem;
+  margin-bottom: 1.35rem;
+  padding: 0;
+  border: 0;
+}
+
+.participant-rating-fieldset legend,
+.participant-rating-fieldset > label {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: #27483e;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.participant-rating-fieldset legend span {
+  color: #b53b31;
+}
+
+.participant-rating-fieldset label {
+  margin-top: 1.25rem;
+}
+
+.participant-rating-fieldset label small {
+  color: #73867f;
+  font-weight: 500;
+}
+
+.participant-rating-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.participant-rating-picker button {
+  display: inline-flex;
+  padding: 0.15rem;
+  color: #b6c2be;
+  background: transparent;
+  border: 0;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.participant-rating-picker button:hover,
+.participant-rating-picker button.is-selected {
+  color: #d49b27;
+  transform: translateY(-1px);
+}
+
+.participant-rating-picker strong {
+  margin-left: 0.45rem;
+  color: #17382e;
+  font-size: 0.92rem;
+}
+
+.participant-rating-fieldset textarea {
+  width: 100%;
+  min-height: 130px;
+  padding: 0.85rem 0.95rem;
+  resize: vertical;
+  color: #17382e;
+  background: #fff;
+  border: 1px solid #cad8d2;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.participant-rating-fieldset textarea:focus {
+  outline: 2px solid rgba(20, 79, 61, 0.18);
+  border-color: #366e5c;
+}
+
+.participant-rating-character-count {
+  display: block;
+  margin-top: 0.35rem;
+  color: #73867f;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.participant-rating-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+  padding: 0.8rem 0.9rem;
+  color: #a23730;
+  background: #fff3f1;
+  border: 1px solid #edc4bf;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.participant-rating-form-error svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.participant-rating-form-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 180px;
+  color: #637771;
+  font-size: 0.9rem;
+}
+
+.participant-rating-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 1rem 1.5rem;
+  background: #f8fbfa;
+  border-top: 1px solid #e2ebe7;
+}
+
+@media (max-width: 768px) {
+  .participant-rating-card,
+  .participant-rating-card-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .participant-rating-status {
+    align-self: flex-start;
+  }
+
+  .participant-rating-card-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .participant-rating-card-actions > * {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .participant-rating-card {
+    padding: 1rem;
+  }
+
+  .participant-rating-card-actions,
+  .participant-rating-modal footer {
+    flex-direction: column-reverse;
+  }
+
+  .participant-rating-picker {
+    gap: 0.15rem;
+  }
+
+  .participant-rating-picker button svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .participant-rating-modal > header,
+  .participant-rating-modal footer {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .participant-rating-modal form > :not(footer) {
+    margin-right: 1rem;
+    margin-left: 1rem;
+  }
+}
+
   .btn-part-primary:hover:not(:disabled) {
     background-color: #0E241E;
     border-color: #0E241E;

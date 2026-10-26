@@ -259,6 +259,18 @@ export interface ParticipantActivity {
   };
   extraNotes?: string[];
   registeredAt?: string;
+  rating?: ParticipantActivityRating | null;
+}
+
+export interface ParticipantActivityRating {
+  id: string;
+  activityId: string;
+  score: number;
+  comment: string;
+  status: 'ACTIVE' | 'INVALIDATED';
+  createdAt: string;
+  updatedAt: string;
+  invalidatedAt?: string;
 }
 
 export interface ParticipantBadge {

@@ -29,7 +29,7 @@ import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
 import { MyEventsPage } from './pages/participant/MyEventsPage';
 import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
 import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
-import { ParticipantFeedbackPage } from './pages/participant/ParticipantFeedbackPage';
+import { ActivityRatingsPage } from './pages/participant/ActivityRatingsPage';
 import { ParticipantLayout } from './pages/participant/ParticipantLayout';
 import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
@@ -462,6 +462,17 @@ export function App() {
       applyParticipantActivityRegistration(registration, events);
     });
 
+  const handleRateParticipantActivity = async (
+    activityId: string,
+    data: { score: number; comment: string },
+  ) => {
+    const rating = await participantApi.rateActivity(activityId, data);
+    setParticipantActivities(current => current.map(activity => activity.id === activityId
+      ? { ...activity, rating }
+      : activity));
+    return rating;
+  };
+
   const handleJoinParticipantEvent = async (eventId: string) => {
     await participantApi.joinEvent(eventId);
     setParticipantEvents(await participantApi.getEvents());
@@ -697,10 +708,14 @@ export function App() {
             />
           } />
           <Route path="/participant/feedback" element={
-            <ParticipantFeedbackPage
+            <ActivityRatingsPage
               language={language}
-              userName={participantProfile.name}
-              userEmail={participantProfile.email}
+              activities={participantActivities}
+              isLoading={participantParticipationLoading}
+              loadError={participantParticipationError}
+              onRetry={() => setParticipantParticipationRevision(value => value + 1)}
+              onLoadRating={participantApi.getActivityRating}
+              onRateActivity={handleRateParticipantActivity}
             />
           } />
           <Route path="/participant/*" element={<Navigate to="/participant" replace />} />
