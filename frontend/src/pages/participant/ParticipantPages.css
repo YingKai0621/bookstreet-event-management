@@ -744,73 +744,6 @@
     border-top: 1px solid #EEF3F0;
   }
 
-  /* SCREEN 6: ACTIVITY QR */
-  .qr-screen-card {
-    max-width: 460px;
-    margin: 1.5rem auto 0 auto;
-    background: #FFFFFF;
-    border: 1.5px solid #E2EAE5;
-    border-radius: 20px;
-    padding: 2.5rem 2rem;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(24, 41, 36, 0.08);
-  }
-
-  .qr-eyebrow {
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #B3862A;
-    text-transform: uppercase;
-    margin-bottom: 0.45rem;
-  }
-
-  .qr-activity-name {
-    font-family: var(--font-serif);
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: #172421;
-    margin-bottom: 0.35rem;
-  }
-
-  .qr-event-name {
-    font-size: 0.85rem;
-    color: #637771;
-    margin-bottom: 1.75rem;
-  }
-
-  .qr-canvas-wrapper {
-    background: #FFFFFF;
-    padding: 1.5rem;
-    display: inline-block;
-    border: 2px solid #17382E;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(24, 41, 36, 0.08);
-    margin-bottom: 1.25rem;
-  }
-
-  .qr-code-text {
-    font-family: monospace;
-    font-size: 1.2rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    color: #17382E;
-    margin-bottom: 0.75rem;
-  }
-
-  .qr-instruction-note {
-    font-size: 0.8rem;
-    color: #7B8F89;
-    line-height: 1.45;
-    margin-bottom: 1.75rem;
-  }
-
-  .qr-actions-row {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
   /* SCREEN 7: REWARDS & BADGES (COMPACT NO-SCROLL) */
   .rewards-page .participant-page-header {
     margin-bottom: 0.85rem;
@@ -2089,19 +2022,6 @@
     .rewards-earn-card {
       padding: 1.25rem 1rem;
       border-radius: 12px;
-    }
-
-    .ticket-qr-modal-overlay {
-      align-items: flex-end;
-      padding: 0;
-    }
-
-    .ticket-qr-modal-content {
-      width: 100%;
-      max-width: 100%;
-      border-radius: 22px 22px 0 0;
-      padding: 1.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
-      animation: mobileSheetSlideUp 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .profile-card-container {

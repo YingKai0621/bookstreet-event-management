@@ -251,8 +251,6 @@ export interface ParticipantActivity {
     avatar?: string;
   };
   extraNotes?: string[];
-  registrationCode?: string;
-  qrCodeValue?: string;
   registeredAt?: string;
 }
 

@@ -339,8 +339,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   <AlertTriangle size={18} />
                   <span>
                     {language === 'vi' 
-                      ? 'Mỗi tài khoản ghi danh cho chính mình. Đăng ký hoạt động riêng để nhận mã QR điểm danh.'
-                      : 'Each account joins for itself. Register for an activity separately to receive a check-in QR code.'}
+                      ? 'Mỗi tài khoản ghi danh cho chính mình. Sau khi đăng ký hoạt động, bạn sẽ quét mã QR do Ban tổ chức hiển thị tại nơi diễn ra để điểm danh.'
+                      : 'Each account joins for itself. After registering for an activity, scan the QR displayed by the Organizer at the venue to check in.'}
                   </span>
                 </div>
 
@@ -408,8 +408,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                 </p>
                 <p className="success-desc">
                   {language === 'vi' 
-                    ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động cụ thể để nhận mã QR điểm danh.'
-                    : 'Your account has joined this event. Register for a specific activity to receive a check-in QR code.'}
+                    ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp và quét mã QR hoạt động tại nơi diễn ra để điểm danh.'
+                    : 'Your account has joined this event. Register for an activity and scan its QR at the venue to check in.'}
                 </p>
                 <div className="success-actions-row" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                   {isParticipantAuthenticated && (

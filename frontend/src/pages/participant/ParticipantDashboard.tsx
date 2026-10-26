@@ -15,7 +15,6 @@ import {
   Tag,
   X
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NotificationCallout } from '../../components/ui/NotificationCallout';
@@ -45,7 +44,6 @@ interface CalendarEventItem {
   isRegistered?: boolean;
   shortDesc?: string;
   dateStr?: string;
-  qrToken?: string;
 }
 
 export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
@@ -123,7 +121,6 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       isRegistered: activity.status === 'registered' || activity.status === 'attended',
       shortDesc: activity.description,
       dateStr: date,
-      qrToken: activity.qrCodeValue || activity.registrationCode,
     }));
 
   const getEventsForDay = (day: number): CalendarEventItem[] => {
@@ -841,39 +838,6 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
               {confirmingEvent.isRegistered ? (
                 <div>
-                  {/* Mã QR Check-in chỉ được cấp cho đăng ký hoạt động */}
-                  {confirmingEvent.type === 'activity' && confirmingEvent.qrToken && (
-                  <div style={{
-                    background: '#F8FAFC',
-                    border: '1.5px dashed #A7F3D0',
-                    borderRadius: '14px',
-                    padding: '1.25rem',
-                    textAlign: 'center',
-                    marginBottom: '1.25rem'
-                  }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.65rem' }}>
-                      {language === 'vi' ? 'Mã QR Check-in Tham Gia' : 'Check-in QR Code'}
-                    </span>
-                    <div style={{
-                      display: 'inline-block',
-                      background: '#FFFFFF',
-                      padding: '10px',
-                      borderRadius: '12px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                      border: '1px solid #E2E8F0',
-                      marginBottom: '0.65rem'
-                    }}>
-                      <QRCodeSVG value={confirmingEvent.qrToken} size={150} level="M" />
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                      <span>{language === 'vi' ? 'Mã số:' : 'Code:'} </span>
-                      <strong style={{ fontFamily: 'monospace', color: '#17382E', fontSize: '0.9rem' }}>
-                        {confirmingEvent.qrToken}
-                      </strong>
-                    </div>
-                  </div>
-                  )}
-
                   <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -889,9 +853,13 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                   }}>
                     <CheckCircle2 size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#059669' }} />
                     <span>
-                      {language === 'vi' 
-                        ? 'Bạn đã đăng ký sự kiện này thành công. Hãy đưa mã QR này cho ban tổ chức khi tham gia để tích điểm nhé!' 
-                        : 'You have registered for this event. Present this QR code when attending to check in!'}
+                      {confirmingEvent.type === 'activity'
+                        ? (language === 'vi'
+                          ? 'Hoạt động đã có trong lịch của bạn. Khi đến nơi, hãy quét mã QR hoạt động do Ban tổ chức hiển thị để điểm danh.'
+                          : 'This activity is in your schedule. At the venue, scan the Activity QR displayed by the Organizer to check in.')
+                        : (language === 'vi'
+                          ? 'Sự kiện đã có trong danh sách của bạn. Bạn có thể tiếp tục chọn và đăng ký các hoạt động phù hợp.'
+                          : 'This event is in your list. You can continue by choosing and registering for activities.')}
                     </span>
                   </div>
                 </div>
@@ -910,9 +878,9 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                 }}>
                   <AlertCircle size={17} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <span>
-                    {language === 'vi' 
-                        ? 'Sau khi đăng ký, mục này sẽ được lưu vào danh sách của bạn. Mã QR chỉ được cấp cho hoạt động đã đăng ký.'
-                        : 'After registration, this item is saved to your list. QR codes are issued only for registered activities.'}
+                    {language === 'vi'
+                      ? 'Sau khi đăng ký, mục này sẽ được lưu vào danh sách của bạn để theo dõi và tham gia đúng lịch.'
+                      : 'After registration, this item will be saved to your list so you can follow its schedule.'}
                   </span>
                 </div>
               )}

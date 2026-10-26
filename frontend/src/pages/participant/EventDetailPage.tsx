@@ -243,15 +243,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                         {language === 'vi' ? 'Chi tiết' : 'Details'}
                       </Link>
 
-                      {isRegistered ? (
-                        <Link 
-                          to={`/participant/activities/qr/${act.id}`} 
-                          className="btn-part-primary"
-                          style={{ height: '34px', padding: '0 0.95rem', fontSize: '0.78rem' }}
-                        >
-                          {language === 'vi' ? 'Xem QR' : 'View QR'}
-                        </Link>
-                      ) : isFull ? (
+                      {!isRegistered && (isFull ? (
                         <button
                           type="button"
                           className="btn-part-primary"
@@ -269,7 +261,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
                         >
                           {language === 'vi' ? 'Đăng ký' : 'Register'}
                         </button>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -319,7 +311,7 @@ export const EventDetailPage: React.FC<EventDetailPageProps> = ({
           </h2>
           <ul style={{ paddingLeft: '1.25rem', color: '#495D57', lineHeight: '1.8' }}>
             <li>Giữ gìn vệ sinh chung trên toàn trục phố sách.</li>
-            <li>Xuất trình mã QR đăng ký trước mỗi hoạt động 10–15 phút.</li>
+            <li>Quét mã QR hoạt động do Ban tổ chức hiển thị tại khu vực diễn ra để điểm danh.</li>
             <li>Các hoạt động hoàn toàn miễn phí tham dự cho độc giả.</li>
           </ul>
         </div>

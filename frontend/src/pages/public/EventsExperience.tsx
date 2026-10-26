@@ -372,8 +372,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   </div>
                   <p className="modal-body-desc" style={{ maxWidth: '440px', margin: '0 auto 1.5rem', lineHeight: '1.6' }}>
                     {vi
-                      ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Để có mã QR điểm danh, hãy đăng ký một hoạt động cụ thể thuộc sự kiện.'
-                      : 'Your account has joined this event. Register for a specific activity to receive a check-in QR code.'}
+                      ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp; khi đến nơi, quét mã QR hoạt động do Ban tổ chức hiển thị để điểm danh.'
+                      : 'Your account has joined this event. Register for an activity, then scan the Activity QR displayed by the Organizer at the venue to check in.'}
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem', alignItems: 'center' }}>
                     {isParticipantAuthenticated && (

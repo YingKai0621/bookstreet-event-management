@@ -1,6 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { ArrowRight, Calendar, CheckCircle2, Download, MapPin, QrCode, Tag, User, X } from 'lucide-react';
+import { ArrowRight, Calendar, CheckCircle2, MapPin, Tag, User, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { Language, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
@@ -20,9 +20,7 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'ended' | 'left'>('ongoing');
   const [selectedDetailEvent, setSelectedDetailEvent] = useState<ParticipantEvent | null>(null);
-  const [selectedQrEvent, setSelectedQrEvent] = useState<ParticipantEvent | null>(null);
   useModalDismiss(Boolean(selectedDetailEvent), () => setSelectedDetailEvent(null));
-  useModalDismiss(Boolean(selectedQrEvent), () => setSelectedQrEvent(null));
 
   const ongoingCount = events.filter(e => e.status === 'ongoing' && e.isJoined).length;
   const endedCount = events.filter(e => e.status === 'ended' && e.isJoined).length;
@@ -114,18 +112,6 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
                     <span>{language === 'vi' ? 'Xem chi tiết' : 'Details'}</span>
                     <ArrowRight size={14} />
                   </button>
-
-                  {evt.isJoined && (
-                    <button
-                      type="button"
-                      className="btn-part-secondary"
-                      onClick={() => setSelectedQrEvent(evt)}
-                      title={language === 'vi' ? 'Mã QR Check-in sự kiện' : 'Event Check-in QR Code'}
-                    >
-                      <QrCode size={15} />
-                      <span>{language === 'vi' ? 'Mã QR' : 'QR Code'}</span>
-                    </button>
-                  )}
 
                   {evt.isJoined && evt.canLeave && (
                     <button
@@ -304,8 +290,8 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
                 <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#059669' }} />
                 <span>
                   {language === 'vi'
-                    ? 'Bạn đã đăng ký tham gia sự kiện này. Vui lòng có mặt đúng giờ và xuất trình mã QR check-in tại các gian hàng/khu vực diễn ra để nhận điểm tích lũy!'
-                    : 'You are registered for this event. Please arrive on time and present your QR code for points!'}
+                    ? 'Bạn đã tham gia sự kiện này. Hãy đăng ký hoạt động phù hợp và quét mã QR hoạt động do Ban tổ chức hiển thị tại khu vực diễn ra để điểm danh.'
+                    : 'You have joined this event. Register for an activity and scan the Activity QR displayed by the Organizer at the venue to check in.'}
                 </span>
               </div>
 
@@ -333,143 +319,6 @@ export const MyEventsPage: React.FC<MyEventsPageProps> = ({
         </div>
       )}
 
-      {/* POPUP SHOW MÃ QR CHECK-IN SỰ KIỆN */}
-      {selectedQrEvent && (
-        <div
-          className="participant-calendar-modal-backdrop"
-          style={{ zIndex: 10000 }}
-          onClick={() => setSelectedQrEvent(null)}
-        >
-          <div
-            className="participant-calendar-modal"
-            style={{ maxWidth: '420px', textAlign: 'center', borderRadius: '20px', padding: '0', overflow: 'hidden' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* QR Header */}
-            <div style={{
-              background: 'linear-gradient(135deg, #17382E 0%, #104A3C 100%)',
-              color: '#FFFFFF',
-              padding: '1.5rem',
-              position: 'relative'
-            }}>
-              <button
-                type="button"
-                className="calendar-modal-close-btn"
-                style={{ position: 'absolute', top: '12px', right: '12px', color: '#FFFFFF', background: 'rgba(255,255,255,0.15)', border: 'none' }}
-                onClick={() => setSelectedQrEvent(null)}
-              >
-                <X size={18} />
-              </button>
-              <h3 style={{ margin: '0.4rem 0 0.2rem', fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {selectedQrEvent.title}
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#A7F3D0' }}>
-                {selectedQrEvent.location} • {selectedQrEvent.dateRange}
-              </p>
-            </div>
-
-            {/* QR Code Container */}
-            <div style={{ padding: '1.75rem 1.5rem', background: '#FFFFFF' }}>
-              <div style={{
-                background: '#F8FAFC',
-                border: '2px dashed #CBD5E1',
-                borderRadius: '16px',
-                padding: '1.25rem',
-                display: 'inline-block',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-                marginBottom: '1rem'
-              }}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=DUONGSACH-EVENT-${selectedQrEvent.id}-USER`}
-                  alt="Mã QR Check-in sự kiện"
-                  style={{ width: '180px', height: '180px', display: 'block', borderRadius: '8px' }}
-                />
-              </div>
-
-              {/* Code ID */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '2px' }}>
-                  {language === 'vi' ? 'Mã số tham dự' : 'Registration Code'}
-                </span>
-                <span style={{
-                  fontFamily: 'monospace',
-                  fontSize: '1.15rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.12em',
-                  color: '#17382E',
-                  background: '#F1F5F9',
-                  padding: '4px 12px',
-                  borderRadius: '6px'
-                }}>
-                  {`EVT-${selectedQrEvent.id.toUpperCase().slice(-6)}`}
-                </span>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.45rem',
-                fontSize: '0.78rem',
-                color: '#059669',
-                background: '#ECFDF5',
-                padding: '0.6rem 1rem',
-                borderRadius: '8px',
-                marginBottom: '1.25rem'
-              }}>
-                <CheckCircle2 size={15} />
-                <span>{language === 'vi' ? 'Đưa mã này cho BTC/Gian hàng để quét tích điểm' : 'Present this QR code to staff to check in'}</span>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #CBD5E1',
-                    background: '#FFFFFF',
-                    color: '#475569',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => setSelectedQrEvent(null)}
-                >
-                  {language === 'vi' ? 'Đóng' : 'Close'}
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem 1rem',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: '#17382E',
-                    color: '#FFFFFF',
-                    fontWeight: 750,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    boxShadow: '0 4px 12px rgba(23, 56, 46, 0.2)'
-                  }}
-                  onClick={() => {
-                    alert(language === 'vi' ? 'Mã QR đã được tải về máy của bạn!' : 'QR Code downloaded to your device!');
-                  }}
-                >
-                  <Download size={15} />
-                  <span>{language === 'vi' ? 'Tải mã về' : 'Download'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
