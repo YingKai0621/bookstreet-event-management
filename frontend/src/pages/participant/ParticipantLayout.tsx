@@ -1,4 +1,3 @@
-import { PaginatedList } from '../../components/ui/PaginatedList';
 import {
   Award,
   Bell,
@@ -69,9 +68,11 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     void loadNotifications();
     const clockInterval = window.setInterval(() => setNotificationClock(Date.now()), 60_000);
     window.addEventListener('participant:data-changed', loadNotifications);
+    window.addEventListener('participant:notifications-changed', loadNotifications);
     return () => {
       window.clearInterval(clockInterval);
       window.removeEventListener('participant:data-changed', loadNotifications);
+      window.removeEventListener('participant:notifications-changed', loadNotifications);
     };
   }, []);
 
@@ -127,6 +128,14 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
       labelVi: 'Đánh giá hoạt động',
       labelEn: 'Activity Ratings',
       icon: <MessageSquare size={18} />,
+    },
+    {
+      id: 'notifications',
+      path: '/participant/notifications',
+      labelVi: 'Thông báo',
+      labelEn: 'Notifications',
+      icon: <Bell size={18} />,
+      badge: unreadCount,
     },
     {
       id: 'profile',
@@ -230,7 +239,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                       <p>{language === 'vi' ? 'Không có thông báo nào' : 'No notifications'}</p>
                     </div>
                   ) : (
-                    <PaginatedList items={notifications}>{pageItems => pageItems.map((notif) => (
+                    notifications.map(notif => (
                       <div 
                         key={notif.id}
                         className={`notif-dropdown-item ${!notif.isRead ? 'unread' : ''}`}
@@ -255,17 +264,17 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                           </span>
                         </div>
                       </div>
-                    ))}</PaginatedList>
+                    ))
                   )}
                 </div>
 
                 <div className="notif-dropdown-footer">
                   <Link 
-                    to="/participant/events"
+                    to="/participant/notifications"
                     className="notif-view-all-link"
                     onClick={() => setNotifDropdownOpen(false)}
                   >
-                    {language === 'vi' ? 'Xem các sự kiện của tôi →' : 'View my events →'}
+                    {language === 'vi' ? 'Xem tất cả thông báo →' : 'View all notifications →'}
                   </Link>
                 </div>
               </div>
@@ -339,7 +348,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
           ariaLabel="Điều hướng độc giả"
           roleLabel={language === 'vi' ? 'Độc giả' : 'Participant'}
           editionLabel={language === 'vi' ? 'Cổng Độc giả 2026' : 'Participant Portal 2026'}
-          items={navItems.map(item => ({ id: item.id, icon: item.icon, label: language === 'vi' ? item.labelVi : item.labelEn }))}
+          items={navItems.map(item => ({ id: item.id, icon: item.icon, label: language === 'vi' ? item.labelVi : item.labelEn, badge: item.badge }))}
           activeId={navItems.find(item => isNavActive(item.path, item.exact))?.id || 'dashboard'}
           isOpenMobile={sidebarOpen}
           onCloseMobile={() => setSidebarOpen(false)}

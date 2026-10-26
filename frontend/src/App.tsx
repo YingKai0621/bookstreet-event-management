@@ -30,6 +30,7 @@ import { MyEventsPage } from './pages/participant/MyEventsPage';
 import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
 import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
 import { ActivityRatingsPage } from './pages/participant/ActivityRatingsPage';
+import { ParticipantNotificationsPage } from './pages/participant/ParticipantNotificationsPage';
 import { ParticipantLayout } from './pages/participant/ParticipantLayout';
 import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
 import { RewardsPage } from './pages/participant/RewardsPage';
@@ -717,6 +718,9 @@ export function App() {
               onLoadRating={participantApi.getActivityRating}
               onRateActivity={handleRateParticipantActivity}
             />
+          } />
+          <Route path="/participant/notifications" element={
+            <ParticipantNotificationsPage language={language} />
           } />
           <Route path="/participant/*" element={<Navigate to="/participant" replace />} />
         </Routes>
