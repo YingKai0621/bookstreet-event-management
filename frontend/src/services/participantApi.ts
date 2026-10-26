@@ -1,5 +1,6 @@
 import {
   ParticipantActivity,
+  ParticipantActivityRating,
   ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
@@ -89,6 +90,18 @@ export interface ActivityRegistrationResponse {
   outcome: string;
   registeredAt: string;
   attendance: { status: string } | null;
+  rating: ActivityRatingResponse | null;
+}
+
+export interface ActivityRatingResponse {
+  activityRatingId: number;
+  activityId: number;
+  score: number;
+  comment: string | null;
+  status: 'ACTIVE' | 'INVALIDATED';
+  createdAt: string;
+  updatedAt: string;
+  invalidatedAt: string | null;
 }
 
 const EVENT_TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -169,6 +182,20 @@ function mapActivityRegistration(
     startAt: registration.activity.startAt,
     endAt: registration.activity.endAt,
     registeredAt: registration.registeredAt,
+    rating: registration.rating ? mapActivityRating(registration.rating) : null,
+  };
+}
+
+function mapActivityRating(rating: ActivityRatingResponse): ParticipantActivityRating {
+  return {
+    id: String(rating.activityRatingId),
+    activityId: String(rating.activityId),
+    score: rating.score,
+    comment: rating.comment || '',
+    status: rating.status,
+    createdAt: rating.createdAt,
+    updatedAt: rating.updatedAt,
+    invalidatedAt: rating.invalidatedAt || undefined,
   };
 }
 
@@ -317,6 +344,22 @@ export const participantApi = {
   mapActivityRegistration: mapActivityRegistrationWithEvents,
   scanAttendance: (token: string) =>
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
+  async getActivityRating(activityId: string): Promise<ParticipantActivityRating> {
+    const rating = await apiClient.get<ActivityRatingResponse>(
+      `/participant/activities/${encodeURIComponent(activityId)}/rating`,
+    );
+    return mapActivityRating(rating);
+  },
+  async rateActivity(
+    activityId: string,
+    data: { score: number; comment: string },
+  ): Promise<ParticipantActivityRating> {
+    const rating = await apiClient.put<ActivityRatingResponse>(
+      `/participant/activities/${encodeURIComponent(activityId)}/rating`,
+      data,
+    );
+    return mapActivityRating(rating);
+  },
   getPoints: () => apiClient.get('/participant/points'),
   async getNotifications(): Promise<ParticipantNotificationItem[]> {
     const response = await apiClient.get<ParticipantNotificationPageResponse>(
@@ -339,6 +382,7 @@ export const participantApi = {
   },
   updateProfile: (data: { fullName: string; phone?: string; avatarUrl?: string }) =>
     apiClient.put<Record<string, unknown>>('/auth/profile', data),
+  // Removed with the legacy feedback workspace once the activity-rating UI is connected.
   submitFeedback: (data: { rating: number; comments: string; targetScope?: string; targetName?: string; heritageId?: string; boothId?: string }) =>
     apiClient.post<{ id: string }>('/participant/feedbacks', data),
   getMyFeedbacks: () => apiClient.get('/participant/feedbacks'),
