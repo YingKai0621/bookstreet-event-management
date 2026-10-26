@@ -23,7 +23,7 @@ import { VerifyEmailPage } from './pages/public/VerifyEmailPage';
 import { PortalLoginPage } from './pages/organizer/PortalLoginPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
-import { ActivityQrPage } from './pages/participant/ActivityQrPage';
+import { AttendanceScanPage } from './pages/participant/AttendanceScanPage';
 import { EventDetailPage } from './pages/participant/EventDetailPage';
 import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
 import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
@@ -47,6 +47,10 @@ import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPa
 import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
 import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
 import { migrateLegacyOrganizerUrl } from './routing/organizerRoutes';
+import {
+  clearAttendanceScanToken,
+  PARTICIPANT_ATTENDANCE_SCAN_PATH,
+} from './security/attendanceScanToken';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
@@ -85,6 +89,7 @@ export function App() {
   const isLoginRoute = location.pathname === '/login';
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
+  const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
   const isVnPayReturn = location.pathname === '/payment/vnpay/return';
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -98,6 +103,11 @@ export function App() {
   const currentParticipantId = useRef<number | undefined>(undefined);
   const participantUserId = isParticipantAuthenticated ? authenticatedUser?.userId : undefined;
   useEffect(() => { currentParticipantId.current = participantUserId; }, [participantUserId]);
+
+  useEffect(() => {
+    if (isParticipantAttendanceScanRoute || isLoginRoute) return;
+    clearAttendanceScanToken();
+  }, [isLoginRoute, isParticipantAttendanceScanRoute]);
 
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
@@ -501,6 +511,18 @@ export function App() {
       return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
     }
 
+    if (isParticipantAttendanceScanRoute) {
+      return (
+        <ParticipantLayout
+          language={language}
+          profile={participantProfile}
+          onLogout={handleParticipantLogout}
+        >
+          <AttendanceScanPage language={language} />
+        </ParticipantLayout>
+      );
+    }
+
     if (participantProfileError) return <p role="alert">Không tải được hồ sơ: {participantProfileError}</p>;
     if (storedParticipantProfile.id !== String(authenticatedUser?.userId)) {
       return <p className="app-loading-state">Đang tải hồ sơ...</p>;
@@ -544,9 +566,7 @@ export function App() {
                 if (registrationId) void handleCancelActivity(registrationId);
               }} />
           } />
-          <Route path="/participant/activities/qr/:activityId" element={
-            <ActivityQrPage language={language} activities={participantActivities} />
-          } />
+          <Route path="/participant/activities/qr/:activityId" element={<Navigate to="/participant/events" replace />} />
           <Route path="/participant/rewards" element={
             <RewardsPage
               language={language}

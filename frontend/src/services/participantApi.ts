@@ -6,6 +6,7 @@ import {
   ParticipantProfile,
 } from '../types';
 import { apiClient } from './apiClient';
+import type { AttendanceScanResponse } from '../types/attendance';
 
 interface ParticipantNotificationResponse {
   notificationId: number;
@@ -101,6 +102,8 @@ export const participantApi = {
   getRegistrations: () => apiClient.get('/participant/registrations'),
   registerActivity: (activityId: string) => apiClient.post(`/participant/activities/${activityId}/register`),
   cancelActivity: (registrationId: string) => apiClient.delete(`/participant/registrations/${registrationId}`),
+  scanAttendance: (token: string) =>
+    apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
   getPoints: () => apiClient.get('/participant/points'),
   async getNotifications(): Promise<ParticipantNotificationItem[]> {
     const response = await apiClient.get<ParticipantNotificationPageResponse>(
