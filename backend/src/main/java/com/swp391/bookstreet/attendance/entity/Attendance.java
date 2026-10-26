@@ -44,6 +44,29 @@ public class Attendance {
     protected Attendance() {
     }
 
+    public static Attendance record(Long registrationId, AttendanceRecordedSource source,
+            Instant attendedAt, Instant now) {
+        Attendance attendance = new Attendance();
+        attendance.activityRegistrationId = java.util.Objects.requireNonNull(registrationId);
+        attendance.recordedSource = java.util.Objects.requireNonNull(source);
+        attendance.attendedAt = java.util.Objects.requireNonNull(attendedAt);
+        attendance.status = AttendanceStatus.VALID;
+        attendance.createdAt = java.util.Objects.requireNonNull(now);
+        attendance.updatedAt = now;
+        return attendance;
+    }
+
+    public void correct(AttendanceStatus target, Instant effectiveAttendedAt, Instant now) {
+        status = java.util.Objects.requireNonNull(target);
+        if (target == AttendanceStatus.VALID) {
+            attendedAt = java.util.Objects.requireNonNull(effectiveAttendedAt);
+            voidedAt = null;
+        } else {
+            voidedAt = now;
+        }
+        updatedAt = now;
+    }
+
     public Long getAttendanceId() { return attendanceId; }
     public Long getActivityRegistrationId() { return activityRegistrationId; }
     public AttendanceStatus getStatus() { return status; }

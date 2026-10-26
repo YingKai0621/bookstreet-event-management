@@ -95,6 +95,10 @@ class OrganizerActivityRequestIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_user_id = ?", partnerUserId);
+        jdbc.update("delete from attendances where activity_registration_id in (select activity_registration_id from activity_registrations where event_registration_id in (select event_registration_id from event_registrations where user_id=?))", partnerUserId);
+        jdbc.update("delete from activity_registrations where event_registration_id in (select event_registration_id from event_registrations where user_id=?)", partnerUserId);
+        jdbc.update("delete from event_registrations where user_id=?", partnerUserId);
         jdbc.update("delete from activity_revisions where activity_id in "
                 + "(select activity_id from activities where event_id in "
                 + "(select event_id from events where organizer_user_id in (?, ?)))",
@@ -448,6 +452,63 @@ class OrganizerActivityRequestIntegrationTests {
                 event.messageType()
                         == ActivityPartnerMessageType.CANCELLATION_REQUEST_REJECTED
                         && event.referenceId().equals(cancellationRejectedId)));
+    }
+
+    @Test
+    void partnerChangeApprovalFreezesScheduleAfterValidAttendance() throws Exception {
+        Instant start = future(4);
+        long eventId = insertEvent(organizerId, start, start.plus(Duration.ofDays(1)), "PUBLISHED");
+        long activityId = insertPartnerActivity(insertApplication(eventId), eventId,
+                insertLocation("S6FREEZE", "Attendance Stage"), "Attended activity", start, "PUBLISHED");
+        enableParticipation(eventId, activityId, start, true);
+        long requestId = insertChangeRequest(activityId, "Reschedule request", "PENDING");
+        jdbc.update("update activity_requests set requested_start_at=?, requested_end_at=? where activity_request_id=?",
+                Timestamp.from(start.plusSeconds(3600)), Timestamp.from(start.plusSeconds(7200)), requestId);
+        mvc.perform(post(CHANGES + "/" + requestId + "/approve").with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ACTIVITY_ATTENDANCE_FREEZES_SCHEDULE_OR_LOCATION"));
+        assertThat(jdbc.queryForObject("select status from activity_requests where activity_request_id=?", String.class, requestId)).isEqualTo("PENDING");
+    }
+
+    @Test
+    void partnerScheduleApprovalRetainsRegistrationAndNotifiesParticipant() throws Exception {
+        Instant start = future(4);
+        long eventId = insertEvent(organizerId, start, start.plus(Duration.ofDays(1)), "PUBLISHED");
+        long activityId = insertPartnerActivity(insertApplication(eventId), eventId,
+                insertLocation("S6MOVE", "Schedule Stage"), "Registered activity", start, "PUBLISHED");
+        long registrationId = enableParticipation(eventId, activityId, start, false);
+        long requestId = insertChangeRequest(activityId, "Reschedule request", "PENDING");
+        jdbc.update("update activity_requests set requested_start_at=?, requested_end_at=? where activity_request_id=?",
+                Timestamp.from(start.plusSeconds(3600)), Timestamp.from(start.plusSeconds(7200)), requestId);
+        mvc.perform(post(CHANGES + "/" + requestId + "/approve").with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select status from activity_registrations where activity_registration_id=?", String.class, registrationId)).isEqualTo("ACTIVE");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where recipient_user_id=? and notification_type='ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'", Integer.class, partnerUserId)).isEqualTo(1);
+    }
+
+    @Test
+    void partnerCancellationApprovalUsesSameRegistrationCascade() throws Exception {
+        Instant start = future(4);
+        long eventId = insertEvent(organizerId, start, start.plus(Duration.ofDays(1)), "PUBLISHED");
+        long activityId = insertPartnerActivity(insertApplication(eventId), eventId,
+                insertLocation("S6CANCEL", "Cancellation Stage"), "Registered activity", start, "PUBLISHED");
+        long registrationId = enableParticipation(eventId, activityId, start, true);
+        long requestId = insertCancellationRequest(activityId, "Partner unable to continue the activity", false, "PENDING");
+        mvc.perform(post(CANCELLATIONS + "/" + requestId + "/approve").with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select cancellation_source from activity_registrations where activity_registration_id=?", String.class, registrationId)).isEqualTo("ACTIVITY");
+        assertThat(jdbc.queryForObject("select status from attendances where activity_registration_id=?", String.class, registrationId)).isEqualTo("VALID");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where recipient_user_id=? and notification_type='ACTIVITY_CANCELLED'", Integer.class, partnerUserId)).isEqualTo(1);
+    }
+
+    private long enableParticipation(long eventId, long activityId, Instant start, boolean attended) {
+        jdbc.update("update activities set registration_required=true, registration_deadline_at=?, attendance_qr_token=? where activity_id=?",
+                Timestamp.from(start.minusSeconds(1800)), UUID.randomUUID(), activityId);
+        long eventRegistrationId = jdbc.queryForObject("insert into event_registrations(user_id,event_id,status,registered_at,activated_at,updated_at) values (?,?,'ACTIVE',current_timestamp,current_timestamp,current_timestamp) returning event_registration_id",
+                Long.class, partnerUserId, eventId);
+        long registrationId = jdbc.queryForObject("insert into activity_registrations(event_registration_id,activity_id,status,registered_at,activated_at,updated_at) values (?,?,'ACTIVE',current_timestamp,current_timestamp,current_timestamp) returning activity_registration_id",
+                Long.class, eventRegistrationId, activityId);
+        if (attended) jdbc.update("insert into attendances(activity_registration_id,status,recorded_source,attended_at,created_at,updated_at) values (?,'VALID','ORGANIZER_CORRECTION',?,current_timestamp,current_timestamp)", registrationId, Timestamp.from(start));
+        return registrationId;
     }
 
     private long insertEvent(long ownerId, Instant start, Instant end, String status) {

@@ -96,6 +96,16 @@ public class ActivityValidationService {
         }
     }
 
+    public void validateRegistrationUpdate(boolean registrationRequired,
+            Instant registrationDeadlineAt, boolean certificateEnabled, Instant startAt,
+            boolean published) {
+        validateRegistration(registrationRequired, registrationDeadlineAt, certificateEnabled, startAt, false);
+        if (published && registrationRequired && registrationDeadlineAt == null) {
+            throw validation("A published registration Activity must keep a registration deadline.",
+                    "registrationDeadlineAt");
+        }
+    }
+
     private static String requiredText(String value, String field, int maximum) {
         if (value == null) throw validation(field + " is required.", field);
         String normalized = value.trim();

@@ -15,6 +15,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
+    @Query("select a.activityId from Activity a where a.attendanceQrToken = :token")
+    Optional<Long> findIdByAttendanceQrToken(@Param("token") java.util.UUID token);
     interface ActivityRoute {
         Long getEventId();
         Long getLocationId();

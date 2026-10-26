@@ -1,5 +1,7 @@
 # Sprint 06 API Contract
 
+**QR window amendment (2026-10-26):** `POST /organizer/activities` and `PATCH /organizer/activities/{activityId}` accept `attendanceEarlyScanMinutes` (integer 0–1440). Omitted or null on creation means 15; the Activity response includes the effective value. PATCH omission retains the current value; explicit null resets it to 15. A value outside the range returns `422 ACTIVITY_ATTENDANCE_WINDOW_INVALID`. A change after the first `VALID` Attendance returns `409 ACTIVITY_ATTENDANCE_WINDOW_FROZEN`. The scan and correction window is `[startAt - attendanceEarlyScanMinutes minutes, endAt)`. Flyway V11 stores the value, default 15.
+
 > Status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19.
 > Implementation is authorized only within this contract and the ownership/merge gates referenced
 > by `docs/sprints/CURRENT_SPRINT.md`.
@@ -673,7 +675,7 @@ Scan eligibility:
 - Event is not cancelled.
 - Activity is `PUBLISHED` or `ONGOING`; `PUBLISHED` is valid during the early window.
 - Registration is `ACTIVE`, not `CANCELLED` or `NO_SHOW`.
-- Window is `[startAt - 15 minutes, endAt)` using backend time.
+- Window is `[startAt - attendanceEarlyScanMinutes minutes, endAt)` using backend time.
 - At exact opening time scan may succeed; at exact `endAt` it is closed.
 - First valid scan creates one `VALID/SELF_SCAN` Attendance.
 - No Certificate or Rating is created merely because an early scan succeeds.
@@ -919,7 +921,7 @@ Validation:
 - Normalized `reason` is required and 10–500 characters inclusive.
 - Target is exactly `VALID` or `VOIDED`.
 - Target `VALID` requires `effectiveAttendedAt` inside
-  `[activity.startAt - 15 minutes, activity.endAt)`.
+  `[activity.startAt - attendanceEarlyScanMinutes minutes, activity.endAt)`.
 - Target `VOIDED` requires existing `VALID` Attendance and null `effectiveAttendedAt`.
 - A cancelled Activity/Event cannot gain brand-new historical Attendance. An existing `VOIDED`
   Attendance may be restored under the same audit rules.
@@ -1159,7 +1161,7 @@ The following boundaries are normative:
 - Join Event: accept when `now <= participantRegistrationDeadlineAt`; reject after it.
 - Register Activity: accept only when `now` is at/before both Event and Activity deadlines.
 - Cancel Activity registration: accept only when `now < startAt` and no `VALID` Attendance.
-- Self-scan: accept when `startAt - 15 minutes <= now < endAt`.
+- Self-scan: accept when `startAt - attendanceEarlyScanMinutes minutes <= now < endAt`.
 - Organizer effective Attendance: same half-open window as self-scan.
 - Rating: Activity must already be `COMPLETED` and owned Attendance must be `VALID`.
 - Correction reason: normalized length 10–500 inclusive.

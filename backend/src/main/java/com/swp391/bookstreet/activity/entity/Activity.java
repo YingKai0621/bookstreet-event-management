@@ -59,6 +59,9 @@ public class Activity {
     @Column(name = "attendance_qr_token", unique = true)
     private UUID attendanceQrToken;
 
+    @Column(name = "attendance_early_scan_minutes", nullable = false)
+    private int attendanceEarlyScanMinutes = 15;
+
     @Column(name = "is_certificate_enabled", nullable = false)
     private boolean certificateEnabled;
 
@@ -189,6 +192,8 @@ public class Activity {
     public Integer getCapacity() { return capacity; }
     public String getImageUrl() { return imageUrl; }
     public UUID getAttendanceQrToken() { return attendanceQrToken; }
+    public int getAttendanceEarlyScanMinutes() { return attendanceEarlyScanMinutes; }
+    public void setAttendanceEarlyScanMinutes(int minutes) { this.attendanceEarlyScanMinutes = minutes; }
     public boolean isCertificateEnabled() { return certificateEnabled; }
     public ActivityStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }

@@ -1,5 +1,6 @@
 package com.swp391.bookstreet.activity.service;
 
+import com.swp391.bookstreet.attendance.service.ActivityParticipationLifecycleService;
 import com.swp391.bookstreet.activity.entity.Activity;
 import com.swp391.bookstreet.activity.entity.ActivityCancellationSource;
 import com.swp391.bookstreet.activity.entity.ActivityProposalStatus;
@@ -26,18 +27,20 @@ public class EventActivityCascadeService {
     private final ActivityProposalRepository proposalRepository;
     private final ActivityRepository activityRepository;
     private final ActivityRequestRepository requestRepository;
+    private final ActivityParticipationLifecycleService participation;
     private final ActivityPartnerNotificationService notificationService;
 
     public EventActivityCascadeService(LocationRepository locationRepository,
             ActivityProposalRepository proposalRepository,
             ActivityRepository activityRepository,
             ActivityRequestRepository requestRepository,
-            ActivityPartnerNotificationService notificationService) {
+            ActivityPartnerNotificationService notificationService, ActivityParticipationLifecycleService participation) {
         this.locationRepository = locationRepository;
         this.proposalRepository = proposalRepository;
         this.activityRepository = activityRepository;
         this.requestRepository = requestRepository;
         this.notificationService = notificationService;
+        this.participation = participation;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -71,6 +74,7 @@ public class EventActivityCascadeService {
                         ActivityCancellationSource.SYSTEM, now);
             }
             closePendingRequests(activity.getActivityId(), now, true);
+            participation.finalizeCompleted(activity, now);
         }
     }
 

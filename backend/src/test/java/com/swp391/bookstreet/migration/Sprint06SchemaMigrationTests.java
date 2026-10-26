@@ -45,7 +45,7 @@ class Sprint06SchemaMigrationTests {
 
         flyway.migrate();
 
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
         try (Connection connection = connectToSchema()) {
             assertThat(List.of(
                     "event_registrations",
@@ -80,7 +80,7 @@ class Sprint06SchemaMigrationTests {
         Flyway upgraded = flyway(null);
         upgraded.migrate();
 
-        assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("11");
         try (Connection connection = connectToSchema(); PreparedStatement statement =
                 connection.prepareStatement("SELECT title FROM activities WHERE activity_id = ?")) {
             statement.setLong(1, activityId);

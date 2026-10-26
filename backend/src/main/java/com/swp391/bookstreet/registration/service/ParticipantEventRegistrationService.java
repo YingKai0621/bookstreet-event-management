@@ -28,23 +28,26 @@ public class ParticipantEventRegistrationService {
     private final ActivityRegistrationRepository activityRegistrationRepository;
     private final RegistrationCurrentUser currentUser;
     private final EventRootLockService eventRootLockService;
+    private final com.swp391.bookstreet.activity.service.ActivityLifecycleService lifecycleService;
     private final Clock clock;
 
     public ParticipantEventRegistrationService(
             EventRegistrationRepository eventRegistrationRepository,
             ActivityRegistrationRepository activityRegistrationRepository,
             RegistrationCurrentUser currentUser, EventRootLockService eventRootLockService,
-            Clock clock) {
+            com.swp391.bookstreet.activity.service.ActivityLifecycleService lifecycleService, Clock clock) {
         this.eventRegistrationRepository = eventRegistrationRepository;
         this.activityRegistrationRepository = activityRegistrationRepository;
         this.currentUser = currentUser;
         this.eventRootLockService = eventRootLockService;
         this.clock = clock;
+        this.lifecycleService = lifecycleService;
     }
 
     public RegistrationPageResponse<EventRegistrationResponse> list(int page, int size,
             String sort, String status, String eventStatus, String search) {
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         var result = eventRegistrationRepository.findOwned(userId,
                 parseRegistrationStatus(status), parseEventStatus(eventStatus),
                 normalizeSearch(search), RegistrationPagination.events(page, size, sort));
@@ -59,6 +62,7 @@ public class ParticipantEventRegistrationService {
     public EventRegistrationResponse detail(Long eventRegistrationId) {
         requirePositiveId(eventRegistrationId);
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         EventRegistration registration = eventRegistrationRepository
                 .findOwnedById(eventRegistrationId, userId)
                 .orElseThrow(ParticipantEventRegistrationService::registrationNotFound);
@@ -70,6 +74,7 @@ public class ParticipantEventRegistrationService {
     public EventRegistrationResponse join(Long eventId) {
         requirePositiveId(eventId);
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         Event event = eventRootLockService.lock(eventId)
                 .orElseThrow(ParticipantEventRegistrationService::eventNotFound);
         EventRegistration registration = eventRegistrationRepository
@@ -94,6 +99,7 @@ public class ParticipantEventRegistrationService {
     public EventRegistrationResponse leave(Long eventId) {
         requirePositiveId(eventId);
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         Event event = eventRootLockService.lock(eventId)
                 .orElseThrow(ParticipantEventRegistrationService::eventNotFound);
         EventRegistration registration = eventRegistrationRepository

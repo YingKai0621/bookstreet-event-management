@@ -18,6 +18,7 @@ import com.swp391.bookstreet.registration.entity.ActivityRegistration;
 import com.swp391.bookstreet.registration.entity.EventRegistration;
 import com.swp391.bookstreet.registration.repository.ActivityRegistrationRepository;
 import com.swp391.bookstreet.registration.repository.EventRegistrationRepository;
+import com.swp391.bookstreet.activity.service.ActivityLifecycleCoordinator;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -36,6 +37,7 @@ public class ParticipantActivityRatingService {
     private final ActivityRegistrationRepository activityRegistrationRepository;
     private final AttendanceRepository attendanceRepository;
     private final RatingCurrentUser currentUser;
+    private final ActivityLifecycleCoordinator lifecycleCoordinator;
     private final Clock clock;
 
     public ParticipantActivityRatingService(
@@ -46,7 +48,7 @@ public class ParticipantActivityRatingService {
             ActivityRegistrationRepository activityRegistrationRepository,
             AttendanceRepository attendanceRepository,
             RatingCurrentUser currentUser,
-            Clock clock) {
+            ActivityLifecycleCoordinator lifecycleCoordinator, Clock clock) {
         this.activityRatingRepository = activityRatingRepository;
         this.eventRootLockService = eventRootLockService;
         this.activityRepository = activityRepository;
@@ -55,6 +57,7 @@ public class ParticipantActivityRatingService {
         this.attendanceRepository = attendanceRepository;
         this.currentUser = currentUser;
         this.clock = clock;
+        this.lifecycleCoordinator = lifecycleCoordinator;
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +113,7 @@ public class ParticipantActivityRatingService {
                         "Activity not found."));
 
         Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-        activity.advanceTimedLifecycle(now);
+        lifecycleCoordinator.advanceLocked(activity, now);
 
         // AC-P04-01: Activity must be COMPLETED
         if (activity.getStatus() != ActivityStatus.COMPLETED) {

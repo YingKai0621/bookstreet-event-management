@@ -37,12 +37,13 @@ class ParticipantEventRegistrationServiceTests {
     @Mock ActivityRegistrationRepository activityRegistrations;
     @Mock RegistrationCurrentUser currentUser;
     @Mock EventRootLockService eventRootLockService;
+    @Mock com.swp391.bookstreet.activity.service.ActivityLifecycleService lifecycleService;
     ParticipantEventRegistrationService service;
 
     @BeforeEach
     void setup() {
         service = new ParticipantEventRegistrationService(eventRegistrations,
-                activityRegistrations, currentUser, eventRootLockService,
+                activityRegistrations, currentUser, eventRootLockService, lifecycleService,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         when(currentUser.requireParticipantId()).thenReturn(USER_ID);
     }

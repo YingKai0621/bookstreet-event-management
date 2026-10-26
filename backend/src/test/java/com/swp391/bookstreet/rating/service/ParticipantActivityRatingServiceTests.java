@@ -75,6 +75,9 @@ class ParticipantActivityRatingServiceTests {
     @Mock
     private RatingCurrentUser currentUser;
 
+    @Mock
+    private com.swp391.bookstreet.activity.service.ActivityLifecycleCoordinator lifecycle;
+
     private Clock clock;
     private ParticipantActivityRatingService service;
 
@@ -89,7 +92,11 @@ class ParticipantActivityRatingServiceTests {
                 activityRegistrationRepository,
                 attendanceRepository,
                 currentUser,
+                lifecycle,
                 clock);
+
+        when(lifecycle.advanceLocked(any(), any())).thenAnswer(invocation ->
+                ((Activity) invocation.getArgument(0)).advanceTimedLifecycle(invocation.getArgument(1)));
 
         when(currentUser.requireParticipantId()).thenReturn(PARTICIPANT_ID);
     }

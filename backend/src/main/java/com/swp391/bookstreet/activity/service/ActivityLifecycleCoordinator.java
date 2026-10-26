@@ -1,5 +1,6 @@
 package com.swp391.bookstreet.activity.service;
 
+import com.swp391.bookstreet.attendance.service.ActivityParticipationLifecycleService;
 import com.swp391.bookstreet.activity.entity.Activity;
 import com.swp391.bookstreet.activity.entity.ActivityRequestType;
 import com.swp391.bookstreet.activity.entity.ActivityStatus;
@@ -9,18 +10,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class ActivityLifecycleCoordinator {
     private final ActivityLockService lockService;
+    private final ActivityParticipationLifecycleService participation;
     private final ActivityPartnerNotificationService notificationService;
 
     public ActivityLifecycleCoordinator(ActivityLockService lockService,
-            ActivityPartnerNotificationService notificationService) {
+            ActivityPartnerNotificationService notificationService, ActivityParticipationLifecycleService participation) {
         this.lockService = lockService;
         this.notificationService = notificationService;
+        this.participation = participation;
     }
 
     public boolean advanceLocked(Activity activity, Instant now) {
-        if (!activity.advanceTimedLifecycle(now)) return false;
+        boolean advanced = activity.advanceTimedLifecycle(now);
         ActivityStatus status = activity.getStatus();
-        lockService.lockPendingRequestsAfterActivity(activity.getActivityId()).forEach(request -> {
+        if (advanced) lockService.lockPendingRequestsAfterActivity(activity.getActivityId()).forEach(request -> {
             if (status == ActivityStatus.COMPLETED
                     || request.getRequestType() == ActivityRequestType.CHANGE) {
                 if (request.cancelIfPending(now)) {
@@ -32,6 +35,7 @@ public class ActivityLifecycleCoordinator {
                 }
             }
         });
-        return true;
+        if (status == ActivityStatus.COMPLETED) participation.finalizeCompleted(activity, now);
+        return advanced;
     }
 }
