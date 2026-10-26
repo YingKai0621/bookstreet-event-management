@@ -389,30 +389,41 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
   await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click();
   await page.locator('.org-tabs-bar').getByRole('button', { name: 'Gian hàng', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Cấu hình gian hàng & giá sự kiện' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Danh sách gian hàng cho thuê|Cấu hình gian hàng & giá sự kiện/ })).toBeVisible();
   const configuredBooth = page.locator('.s2-config-row').filter({ hasText: 'A05' });
   const unconfiguredBooth = page.locator('.s2-config-row').filter({ hasText: 'B01' });
-  const rentalPrice = configuredBooth.locator('input[type="number"]');
+  await expect(configuredBooth.getByText('5.000.000 đ')).toBeVisible();
+  await expect(configuredBooth.getByText('Đang cho thuê')).toBeVisible();
+  await expect(unconfiguredBooth.getByText('Chưa mở cho thuê')).toBeVisible();
+  await expect(unconfiguredBooth.getByText('Chưa có giá')).toBeVisible();
+
+  // Open Drawer to configure booth A05
+  await configuredBooth.getByRole('button', { name: 'Cấu hình' }).click();
+  await expect(page.getByRole('heading', { name: 'Chi tiết gian hàng' })).toBeVisible();
+  const rentalPrice = page.locator('#drawer-rental-price');
   await expect(rentalPrice).toHaveValue('5000000');
-  await expect(configuredBooth.getByText('Còn trống')).toBeVisible();
-  await expect(unconfiguredBooth.locator('.s2-config-status').getByText('Không mở bán', { exact: true })).toBeVisible();
-  await expect(unconfiguredBooth.locator('input[type="number"]')).toHaveValue('');
+
+
+
   await rentalPrice.fill('5500000');
-  await rentalPrice.press('Tab');
-  await expect(page.getByRole('status')).toContainText('Đã cập nhật giá thuê cho A05');
-  const enabledToggle = configuredBooth.getByRole('checkbox');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
+  const enabledToggle = page.locator('#drawer-enabled-switch');
   await expect(enabledToggle).toBeEnabled();
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã ngừng mở bán gian A05');
+  await page.locator('.org-booth-switch-control label').click();
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   await expect(rentalPrice).toHaveValue('5500000');
-  await configuredBooth.locator('.s2-switch-wrapper').click();
-  await expect(page.getByRole('status')).toContainText('Đã mở bán gian A05');
+  await page.locator('.org-booth-switch-control label').click();
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   await expect(enabledToggle).toBeChecked();
   expect(getConfigurationRequests()).toEqual([
     { rentalPrice: 5_500_000, enabled: true },
     { rentalPrice: 5_500_000, enabled: false },
     { rentalPrice: 5_500_000, enabled: true },
   ]);
+  await page.getByRole('button', { name: 'Đóng', exact: true }).click();
 
   await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Yêu cầu gian hàng theo sự kiện' })).toBeVisible();
@@ -458,7 +469,7 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await mockPartner(page);
   await page.goto('/partner/booth-requests');
   await expect(page.getByRole('heading', { name: 'Chọn và thuê gian hàng' })).toBeVisible();
-  await expect(page.getByText('Đối tác / Chọn và thuê gian hàng')).toBeVisible();
+  // Eyebrow removed in workspace title consolidation
   const eventPicker = page.getByLabel('Sự kiện tham gia');
   await expect(eventPicker).toHaveValue('101');
   await page.screenshot({ path: test.info().outputPath('partner-booth-event-context.png'), fullPage: true });
@@ -740,7 +751,7 @@ test('Public visitor switches published Events and sees only Booths with valid c
   await expect(page.getByRole('dialog')).toContainText(physicalBooth.name);
   await page.reload();
   await expect(page.getByRole('dialog')).toContainText(physicalBooth.name);
-  await page.getByRole('button', { name: 'Đóng' }).click();
+  await page.getByRole('button', { name: 'Đóng', exact: true }).click();
   await expect(page).toHaveURL(/\/gian-hang\?eventId=101$/);
 
   await page.goto('/su-kien/101');
