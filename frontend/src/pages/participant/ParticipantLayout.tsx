@@ -124,8 +124,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     {
       id: 'feedback',
       path: '/participant/feedback',
-      labelVi: 'Đánh giá & Góp ý',
-      labelEn: 'Feedback',
+      labelVi: 'Đánh giá hoạt động',
+      labelEn: 'Activity Ratings',
       icon: <MessageSquare size={18} />,
     },
     {

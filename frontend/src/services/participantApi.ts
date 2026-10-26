@@ -382,8 +382,4 @@ export const participantApi = {
   },
   updateProfile: (data: { fullName: string; phone?: string; avatarUrl?: string }) =>
     apiClient.put<Record<string, unknown>>('/auth/profile', data),
-  // Removed with the legacy feedback workspace once the activity-rating UI is connected.
-  submitFeedback: (data: { rating: number; comments: string; targetScope?: string; targetName?: string; heritageId?: string; boothId?: string }) =>
-    apiClient.post<{ id: string }>('/participant/feedbacks', data),
-  getMyFeedbacks: () => apiClient.get('/participant/feedbacks'),
 };
