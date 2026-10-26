@@ -228,7 +228,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
             </span>
             <h2 className="figma-section-title">{vi ? 'Khám phá di sản qua từng trang ảnh' : 'Discover heritage through every card'}</h2>
             <p className="figma-section-subtitle">
-              {vi ? 'Dùng nút điều hướng để xem lần lượt 10 di tích; mỗi thời điểm chỉ có bảy thẻ trên hành trình.' : 'Use the controls to browse all ten landmarks, with seven cards shown at a time.'}
+              {vi ? 'Khám phá các điểm di sản quanh Đường Sách.' : 'Discover heritage landmarks around Book Street.'}
             </p>
           </div>
 
@@ -282,7 +282,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           </span>
           <h2 className="figma-section-title">{vi ? 'Khám phá di sản qua từng trang ảnh' : 'Discover heritage through every card'}</h2>
           <p className="figma-section-subtitle">
-            {vi ? 'Dùng nút điều hướng để xem lần lượt 10 di tích; mỗi thời điểm chỉ có bảy thẻ trên hành trình.' : 'Use the controls to browse all ten landmarks, with seven cards shown at a time.'}
+            {vi ? 'Khám phá các điểm di sản quanh Đường Sách.' : 'Discover heritage landmarks around Book Street.'}
           </p>
         </div>
 

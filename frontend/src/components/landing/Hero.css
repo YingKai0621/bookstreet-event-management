@@ -105,10 +105,11 @@
 }
 
 .figma-hero-desc {
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-size: clamp(1.18rem, 2vw, 1.4rem);
   color: rgba(255, 255, 255, 0.95);
-  line-height: 1.7;
-  max-width: 720px;
+  line-height: 1.45;
+  max-width: none;
+  white-space: nowrap;
   margin-bottom: 1.75rem;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
@@ -498,6 +499,7 @@
     line-height: 1.55;
     margin-bottom: 1.15rem;
     padding-inline: 0.25rem;
+    white-space: normal;
   }
 
   .hero-eyebrow-tag {

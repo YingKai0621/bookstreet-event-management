@@ -144,8 +144,8 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Subtitle from Figma */}
         <p className="figma-hero-desc hero-motion-reveal hero-delay-3">
           {language === 'vi'
-            ? 'Nơi tri thức gặp gỡ đời sống — khám phá gian hàng, sự kiện và di sản văn hóa ngay trên màn hình của bạn. Trải nghiệm không gian phố sách chân thực mọi lúc, mọi nơi.'
-            : 'Where knowledge meets urban life — discover publisher pavilions, cultural talkshows, and heritage landmarks right from your screen. Experience the book street anytime, anywhere.'}
+            ? 'Khám phá gian hàng, sự kiện và di sản của Đường Sách TP.HCM.'
+            : 'Explore the stalls, events, and heritage of HCMC Book Street.'}
         </p>
 
         {/* Ô Tìm Kiếm Gian Hàng, Sách, Sự Kiện Nổi Bật Tại Hero */}

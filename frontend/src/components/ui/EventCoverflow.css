@@ -9,13 +9,14 @@
 .event-coverflow-arrow { width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border: 1px solid #a8bdb2; border-radius: 50%; background: rgba(255,255,255,.8); color: #193a2f; cursor: pointer; z-index: 20; }
 .event-coverflow-arrow:hover { background: #193a2f; color: #fff; }
 .event-coverflow-arrow:disabled { opacity: .35; cursor: default; }
-.event-coverflow-details { max-width: 920px; margin: 1rem auto 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; color: #19342b; }
-.event-coverflow-details-main { min-width: 0; }
+.event-coverflow-details { max-width: 920px; height: 174px; margin: 1rem auto 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; color: #19342b; }
+.event-coverflow-details-main { min-width: 0; overflow: hidden; }
 .event-coverflow-kicker { color: #825d22; font-size: .76rem; font-weight: 800; }
-.event-coverflow-details h3 { margin: .35rem 0 .45rem; font-family: var(--font-serif); font-size: clamp(1.35rem, 2.2vw, 1.9rem); line-height: 1.25; }
-.event-coverflow-details p { margin: 0 0 .85rem; color: #52665c; line-height: 1.55; }
-.event-coverflow-meta { display: flex; flex-wrap: wrap; gap: .45rem 1.15rem; color: #52665c; font-size: .85rem; }
-.event-coverflow-meta span { display: inline-flex; align-items: center; gap: .35rem; }
+.event-coverflow-details h3 { margin: .35rem 0 .45rem; font-family: var(--font-serif); font-size: clamp(1.35rem, 2.2vw, 1.9rem); line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.event-coverflow-details p { margin: 0 0 .85rem; color: #52665c; line-height: 1.55; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.event-coverflow-meta { display: flex; flex-wrap: nowrap; gap: .45rem 1.15rem; overflow: hidden; color: #52665c; font-size: .85rem; }
+.event-coverflow-meta span { min-width: 0; overflow: hidden; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; text-overflow: ellipsis; }
+.event-coverflow-meta span:last-child { flex: 1 1 auto; }
 .event-coverflow-actions { display: flex; flex-shrink: 0; gap: .55rem; }
 .event-coverflow-actions button { min-height: 42px; padding: .55rem .85rem; border-radius: 5px; font-weight: 750; cursor: pointer; }
 .event-coverflow-detail-btn { border: 1px solid #9aafa4; background: transparent; color: #193a2f; }
@@ -24,5 +25,5 @@
 .event-coverflow-pagination button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #9eaea4; cursor: pointer; }
 .event-coverflow-pagination button.is-selected { width: 24px; border-radius: 10px; background: #193a2f; }
 .event-coverflow-empty { text-align: center; padding: 3rem 1rem; color: #52665c; }
-@media (max-width: 700px) { .event-coverflow-stage-wrap { grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 0; } .event-coverflow-stage { height: 330px; perspective: 700px; } .event-coverflow-slide { width: min(62vw, 260px); } .event-coverflow-week-badge { top: .55rem; left: .55rem; min-width: 3.75rem; min-height: 1.9rem; font-size: .62rem; } .event-coverflow-arrow { width: 32px; height: 40px; border-radius: 6px; } .event-coverflow-details { align-items: stretch; flex-direction: column; padding-inline: .35rem; } .event-coverflow-actions { flex-wrap: wrap; } }
+@media (max-width: 700px) { .event-coverflow-stage-wrap { grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 0; } .event-coverflow-stage { height: 330px; perspective: 700px; } .event-coverflow-slide { width: min(62vw, 260px); } .event-coverflow-week-badge { top: .55rem; left: .55rem; min-width: 3.75rem; min-height: 1.9rem; font-size: .62rem; } .event-coverflow-arrow { width: 32px; height: 40px; border-radius: 6px; } .event-coverflow-details { height: 268px; align-items: stretch; flex-direction: column; padding-inline: .35rem; } .event-coverflow-meta { flex-wrap: wrap; } .event-coverflow-actions { flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .event-coverflow-slide { transition: none; } }
