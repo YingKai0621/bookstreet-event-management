@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Language } from '../../types';
 import { AdminAuditLogsView } from './AdminAuditLogsView';
@@ -74,50 +74,56 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
   const [loadError, setLoadError] = useState('');
 
-  const refreshAdminData = async () => {
-    try {
-      const [
-        loadedRoles,
-        loadedPermissions,
-        loadedProfile,
-        loadedUsers,
-        loadedStats,
-        loadedAuditLogs,
-        loadedBadges,
-        loadedNotifications
-      ] = await Promise.all([
-        adminApi.getRoles().catch(() => ({} as Record<AdminRoleType, AdminRolePermissionConfig>)),
-        adminApi.getPermissions().catch(() => []),
-        adminApi.getProfile().catch(() => ({ id: '', name: 'Quản trị viên', role: 'ADMIN', department: '', email: '', phone: '', avatarInitials: 'AD', lastLogin: '' })),
-        adminApi.getUsers().catch(() => []),
-        adminApi.getDashboard().catch(() => ({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] })),
-        adminApi.getAuditLogs().catch(() => []),
-        adminApi.getBadgeRules().catch(() => []),
-        adminApi.getNotifications().catch(() => [])
-      ]);
+  const refreshAdminChrome = useCallback(async () => {
+    const [loadedProfile, loadedNotifications] = await Promise.all([
+      adminApi.getProfile().catch(() => ({ id: '', name: 'Quản trị viên', role: 'ADMIN', department: '', email: '', phone: '', avatarInitials: 'AD', lastLogin: '' })),
+      adminApi.getNotifications().catch(() => []),
+    ]);
+    setProfile(loadedProfile);
+    setNotifications(loadedNotifications);
+  }, []);
 
-      setRoleConfigs(loadedRoles);
-      setPermissions(loadedPermissions);
-      setProfile(loadedProfile);
-      setUsers(loadedUsers);
-      setDashboardStats(loadedStats);
-      setAuditLogs(loadedAuditLogs);
-      setBadgeRules(loadedBadges);
-      setNotifications(loadedNotifications);
+  const refreshAdminData = useCallback(async () => {
+    try {
+      if (activeTab === 'dashboard') {
+        const [loadedStats, loadedAuditLogs, loadedUsers] = await Promise.all([
+          adminApi.getDashboard(),
+          adminApi.getAuditLogs(),
+          adminApi.getUsers(),
+        ]);
+        setDashboardStats(loadedStats);
+        setAuditLogs(loadedAuditLogs);
+        setUsers(loadedUsers);
+      } else if (activeTab === 'users') {
+        setUsers(await adminApi.getUsers());
+      } else if (activeTab === 'roles') {
+        const [loadedRoles, loadedPermissions] = await Promise.all([
+          adminApi.getRoles(),
+          adminApi.getPermissions(),
+        ]);
+        setRoleConfigs(loadedRoles);
+        setPermissions(loadedPermissions);
+      } else if (activeTab === 'badges') {
+        setBadgeRules(await adminApi.getBadgeRules());
+      } else if (activeTab === 'settings') {
+        setSystemSettings(await adminApi.getSettings());
+      } else if (activeTab === 'audit') {
+        setAuditLogs(await adminApi.getAuditLogs());
+      }
       setLoadError('');
     } catch (error) {
       console.warn(error);
       setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu quản trị');
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    void refreshAdminChrome();
+  }, [refreshAdminChrome]);
 
   useEffect(() => {
     void refreshAdminData();
-    const refresh = () => void refreshAdminData().catch(console.warn);
-    const intervalId = window.setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    return () => { window.clearInterval(intervalId); window.removeEventListener('focus', refresh); };
-  }, []);
+  }, [refreshAdminData]);
 
   // --- Handlers: User Management ---
   const handleAddUser = async (newUserData: any) => {

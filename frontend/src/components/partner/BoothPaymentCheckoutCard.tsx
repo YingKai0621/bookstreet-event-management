@@ -109,6 +109,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
     let timer: number | undefined;
     if (!isSelected) return;
     function load() {
+      let shouldPoll = false;
       paymentApi
       .listAllPayments(request.boothRequestId)
       .then(payments => {
@@ -116,6 +117,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
         setLatestPayment(payments[0] ?? null);
         setHistoryBlocked(payments.some(payment => payment.reconciliationRequired || payment.status === 'SUCCESS'));
         setHistoryError(false);
+        shouldPoll = payments.some(payment => payment.status === 'PENDING' || payment.reconciliationRequired);
       })
       .catch(() => {
         if (active) setHistoryError(true);
@@ -123,7 +125,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
       .finally(() => {
         if (active) {
           setIsLoadingPayments(false);
-          timer = window.setTimeout(load, 5000);
+          if (shouldPoll) timer = window.setTimeout(load, 5000);
         }
       });
     }

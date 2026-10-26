@@ -44,10 +44,8 @@ export function useBoothData(organizationId?: string, enabled = true) {
       } finally { running = false; if (!disposed) setLoading(false); }
     }
     void load();
-    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 5000);
-    window.addEventListener('focus', load);
     window.addEventListener('booths-changed', load);
-    return () => { disposed = true; controller.abort(); clearInterval(interval); window.removeEventListener('focus', load); window.removeEventListener('booths-changed', load); };
+    return () => { disposed = true; controller.abort(); window.removeEventListener('booths-changed', load); };
   }, [organizationId, enabled, revision]);
   return { booths, bookings, loading, error, refresh };
 }
