@@ -109,6 +109,7 @@ export function App() {
   const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
   const isAdminAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ADMIN'));
   const currentParticipantId = useRef<number | undefined>(undefined);
+  const participantActivityMutations = useRef(new Map<string, Promise<void>>());
   const participantUserId = isParticipantAuthenticated ? authenticatedUser?.userId : undefined;
   useEffect(() => { currentParticipantId.current = participantUserId; }, [participantUserId]);
 
@@ -406,17 +407,30 @@ export function App() {
     }
   };
 
-  const handleRegisterActivity = async (activityId: string) => {
-    const registration = await participantApi.registerActivity(activityId);
-    const events = await refreshParticipantEventsAfterActivityMutation();
-    applyParticipantActivityRegistration(registration, events);
+  const runParticipantActivityMutation = (activityId: string, mutation: () => Promise<void>) => {
+    const inFlight = participantActivityMutations.current.get(activityId);
+    if (inFlight) return inFlight;
+
+    const request = Promise.resolve()
+      .then(mutation)
+      .finally(() => participantActivityMutations.current.delete(activityId));
+    participantActivityMutations.current.set(activityId, request);
+    return request;
   };
 
-  const handleCancelActivity = async (activityId: string) => {
-    const registration = await participantApi.cancelActivity(activityId);
-    const events = await refreshParticipantEventsAfterActivityMutation();
-    applyParticipantActivityRegistration(registration, events);
-  };
+  const handleRegisterActivity = (activityId: string) =>
+    runParticipantActivityMutation(activityId, async () => {
+      const registration = await participantApi.registerActivity(activityId);
+      const events = await refreshParticipantEventsAfterActivityMutation();
+      applyParticipantActivityRegistration(registration, events);
+    });
+
+  const handleCancelActivity = (activityId: string) =>
+    runParticipantActivityMutation(activityId, async () => {
+      const registration = await participantApi.cancelActivity(activityId);
+      const events = await refreshParticipantEventsAfterActivityMutation();
+      applyParticipantActivityRegistration(registration, events);
+    });
 
   const handleJoinParticipantEvent = async (eventId: string) => {
     await participantApi.joinEvent(eventId);
