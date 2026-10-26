@@ -3,6 +3,7 @@ package com.swp391.bookstreet.activity.service;
 import com.swp391.bookstreet.activity.dto.ActivityCancellationRequestResponse;
 import com.swp391.bookstreet.activity.dto.ActivityChangeRequestResponse;
 import com.swp391.bookstreet.activity.dto.ReviewActivityRequest;
+import com.swp391.bookstreet.attendance.service.ActivityParticipationLifecycleService;
 import com.swp391.bookstreet.activity.entity.Activity;
 import com.swp391.bookstreet.activity.entity.ActivityCancellationSource;
 import com.swp391.bookstreet.activity.entity.ActivityRequest;
@@ -42,6 +43,7 @@ public class OrganizerActivityRequestReviewTransactionService {
     private final ActivityValidationService validation;
     private final ActivityScheduleGuard scheduleGuard;
     private final ActivityConstraintTranslator constraintTranslator;
+    private final ActivityParticipationLifecycleService participation;
     private final ActivityPartnerNotificationService notificationService;
     private final Clock clock;
 
@@ -56,7 +58,7 @@ public class OrganizerActivityRequestReviewTransactionService {
             ActivityScheduleGuard scheduleGuard,
             ActivityConstraintTranslator constraintTranslator,
             ActivityPartnerNotificationService notificationService,
-            Clock clock) {
+            ActivityParticipationLifecycleService participation, Clock clock) {
         this.requestRepository = requestRepository;
         this.activityRepository = activityRepository;
         this.revisionRepository = revisionRepository;
@@ -67,6 +69,7 @@ public class OrganizerActivityRequestReviewTransactionService {
         this.scheduleGuard = scheduleGuard;
         this.constraintTranslator = constraintTranslator;
         this.notificationService = notificationService;
+        this.participation = participation;
         this.clock = clock;
     }
 
@@ -104,7 +107,7 @@ public class OrganizerActivityRequestReviewTransactionService {
                 request.isRequestedImageUrlPresent()
                         ? request.getRequestedImageUrl() : activity.getImageUrl(),
                 true);
-        validation.validateRegistration(activity.isRegistrationRequired(),
+        validation.validateRegistrationUpdate(activity.isRegistrationRequired(),
                 activity.getRegistrationDeadlineAt(), activity.isCertificateEnabled(),
                 fields.startAt(), activity.getStatus() == ActivityStatus.PUBLISHED);
         Long partnerOrganizationId = partnerOrganizationId(activity.getActivityId());
@@ -120,13 +123,16 @@ public class OrganizerActivityRequestReviewTransactionService {
                     "The requested values no longer change the Activity.");
         }
 
+        boolean scheduleChanged = participation.validateChange(activity, locationId,
+                fields.startAt(), fields.endAt(), fields.capacity());
         activity.moveToLocation(locationId);
         activity.apply(fields, activity.isRegistrationRequired(),
                 activity.getRegistrationDeadlineAt(), activity.isCertificateEnabled(), now);
         if (!request.approveIfPending(now)) throw notReviewable();
-        revisionRepository.save(ActivityRevision.create(activity.getActivityId(),
+        ActivityRevision revision = revisionRepository.save(ActivityRevision.create(activity.getActivityId(),
                 organizerUserId, requestId, ActivityRevisionSource.PARTNER_REQUEST,
                 request.getReason(), oldSnapshot, newSnapshot, now));
+        if (scheduleChanged) participation.scheduleChanged(activity, revision.getActivityRevisionId(), now);
         try {
             activityRepository.flush();
             requestRepository.flush();
@@ -175,6 +181,7 @@ public class OrganizerActivityRequestReviewTransactionService {
                 now) || !request.approveIfPending(now)) {
             throw notReviewable();
         }
+        participation.cancel(activity, now);
         activityRepository.flush();
         requestRepository.flush();
         notificationService.activityChanged(activity.getActivityId(), requestId,

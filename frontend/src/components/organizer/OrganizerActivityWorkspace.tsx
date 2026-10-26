@@ -666,6 +666,7 @@ interface CreateActivityForm {
   registrationRequired: boolean;
   registrationDeadlineAt: string;
   certificateEnabled: boolean;
+  attendanceEarlyScanMinutes: string;
 }
 
 const EMPTY_ACTIVITY_FORM: CreateActivityForm = {
@@ -680,6 +681,7 @@ const EMPTY_ACTIVITY_FORM: CreateActivityForm = {
   registrationRequired: false,
   registrationDeadlineAt: '',
   certificateEnabled: false,
+  attendanceEarlyScanMinutes: '',
 };
 
 function vietnamLocalToIso(value: string): string {
@@ -898,6 +900,7 @@ function CreateActivityModal({
     }
     if (form.imageUrl.trim().length > 2048) return 'URL hình ảnh không được vượt quá 2.048 ký tự.';
     if (form.registrationRequired) {
+      if (form.attendanceEarlyScanMinutes !== '' && (!Number.isInteger(Number(form.attendanceEarlyScanMinutes)) || Number(form.attendanceEarlyScanMinutes) < 0 || Number(form.attendanceEarlyScanMinutes) > 1440)) return 'Thời gian mở QR phải là số phút từ 0 đến 1440.';
       if (!form.registrationDeadlineAt) return 'Hoạt động yêu cầu đăng ký phải có hạn đăng ký.';
       const deadline = new Date(vietnamLocalToIso(form.registrationDeadlineAt));
       if (deadline < new Date() || deadline > startAt) return 'Hạn đăng ký phải từ thời điểm hiện tại đến trước hoặc đúng lúc hoạt động bắt đầu.';
@@ -928,6 +931,8 @@ function CreateActivityModal({
         registrationRequired: form.registrationRequired,
         registrationDeadlineAt: form.registrationRequired ? vietnamLocalToIso(form.registrationDeadlineAt) : null,
         certificateEnabled: form.registrationRequired && form.certificateEnabled,
+        attendanceEarlyScanMinutes: form.registrationRequired && form.attendanceEarlyScanMinutes !== ''
+          ? Number(form.attendanceEarlyScanMinutes) : undefined,
       });
       onCreated(activity);
     } catch (cause) {
@@ -961,6 +966,7 @@ function CreateActivityModal({
               <label><input type="checkbox" checked={form.registrationRequired} onChange={e => setField('registrationRequired', e.target.checked)} /><span><strong>Yêu cầu người tham gia đăng ký</strong><small>Bật cấu hình hạn đăng ký và QR điểm danh.</small></span></label>
               {form.registrationRequired && <div>
                 <DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} max={form.startAt || undefined} onChange={value => setField('registrationDeadlineAt', value)} />
+                <label className="oaw-field"><span>Mở quét QR trước giờ bắt đầu (phút)</span><input type="number" min="0" max="1440" step="1" value={form.attendanceEarlyScanMinutes} onChange={e => setField('attendanceEarlyScanMinutes', e.target.value)} placeholder="Để trống: 15 phút" /></label>
                 <label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label>
               </div>}
             </div>
@@ -1346,6 +1352,7 @@ function editFormFromActivity(activity: OrganizerActivityResponse): CreateActivi
       ? isoToVietnamLocal(activity.registrationDeadlineAt)
       : '',
     certificateEnabled: activity.certificateEnabled,
+    attendanceEarlyScanMinutes: String(activity.attendanceEarlyScanMinutes ?? 15),
   };
 }
 
@@ -1426,10 +1433,13 @@ function EditActivityModal({
     if (deadlineChanged) payload.registrationDeadlineAt = deadline;
     const certificateEnabled = form.registrationRequired && form.certificateEnabled;
     if (certificateEnabled !== activity.certificateEnabled) payload.certificateEnabled = certificateEnabled;
+    const earlyScanMinutes = form.attendanceEarlyScanMinutes === '' ? 15 : Number(form.attendanceEarlyScanMinutes);
+    if (earlyScanMinutes !== activity.attendanceEarlyScanMinutes) payload.attendanceEarlyScanMinutes = earlyScanMinutes;
     return payload;
   };
 
   const validate = (payload: UpdateOrganizerActivityRequest): string => {
+    if (form.attendanceEarlyScanMinutes !== '' && (!Number.isInteger(Number(form.attendanceEarlyScanMinutes)) || Number(form.attendanceEarlyScanMinutes) < 0 || Number(form.attendanceEarlyScanMinutes) > 1440)) return 'Thời gian mở QR phải là số phút từ 0 đến 1440.';
     const capacity = Number(form.capacity);
     if (coreEditable && (!form.title.trim() || form.title.trim().length > 200)) return 'Tên hoạt động phải có từ 1 đến 200 ký tự.';
     if (coreEditable && (!form.activityType.trim() || form.activityType.trim().length > 50)) return 'Loại hoạt động phải có từ 1 đến 50 ký tự.';
@@ -1491,7 +1501,7 @@ function EditActivityModal({
             </div>
             <div className="oaw-registration-box">
               <label><input type="checkbox" checked={form.registrationRequired} onChange={e => setField('registrationRequired', e.target.checked)} /><span><strong>Yêu cầu người tham gia đăng ký</strong><small>Cấu hình trước khi công bố hoạt động.</small></span></label>
-              {form.registrationRequired && <div><DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} max={form.startAt} onChange={value => setField('registrationDeadlineAt', value)} /><label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label></div>}
+              {form.registrationRequired && <div><DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} max={form.startAt} onChange={value => setField('registrationDeadlineAt', value)} /><label className="oaw-field"><span>Mở quét QR trước giờ bắt đầu (phút)</span><input type="number" min="0" max="1440" step="1" value={form.attendanceEarlyScanMinutes} onChange={e => setField('attendanceEarlyScanMinutes', e.target.value)} placeholder="Để trống: 15 phút" /></label><label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label></div>}
             </div>
             {activity.status === 'PUBLISHED' && <label className="oaw-field oaw-change-reason"><span>Lý do thay đổi <b>*</b></span><textarea rows={3} minLength={10} maxLength={500} value={changeReason} onChange={e => { setChangeReason(e.target.value); setError(''); }} placeholder="Giải thích rõ lý do cập nhật hoạt động đã công bố..." /><small>{changeReason.length}/500</small></label>}
             {error && <p className="oaw-action-error" role="alert">{error}</p>}

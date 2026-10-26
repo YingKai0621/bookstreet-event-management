@@ -47,8 +47,9 @@ public class OrganizerActivityController {
     }
 
     @GetMapping("/{activityId}")
-    public ActivityResponse detail(@PathVariable Long activityId) {
-        return service.detail(activityId);
+    public ResponseEntity<ActivityResponse> detail(@PathVariable Long activityId) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(service.detail(activityId));
     }
 
     @PatchMapping("/{activityId}")

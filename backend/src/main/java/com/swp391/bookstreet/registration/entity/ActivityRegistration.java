@@ -121,6 +121,17 @@ public class ActivityRegistration {
         return true;
     }
 
+    public void restoreAttendanceOutcome(Instant now) {
+        if (status == ActivityRegistrationStatus.CANCELLED) return;
+        status = ActivityRegistrationStatus.ACTIVE;
+        noShowAt = null;
+        updatedAt = now;
+    }
+
+    public void attendanceChanged(Instant now) {
+        updatedAt = now;
+    }
+
     private void requireNotBefore(Instant candidate, Instant boundary, String message) {
         if (boundary != null && candidate.isBefore(boundary)) {
             throw new IllegalArgumentException(message);

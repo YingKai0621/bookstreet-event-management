@@ -1,5 +1,7 @@
 # Sprint 06 Participant Activity Registration and Attendance
 
+**QR window amendment (2026-10-26):** The Organizer Activity create/update API accepts optional `attendanceEarlyScanMinutes` (integer 0–1440), defaulting to 15 when omitted or null. The Attendance scan and correction window uses the stored value. Changes after the first `VALID` Attendance are rejected. Flyway V11 adds the Activity column. References to an early 15-minute window in default-case examples remain examples of the default.
+
 > Status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19. API paths,
 > request/response schemas, all 65 Acceptance Criteria and developer ownership are frozen in the
 > linked Sprint 6 Use Case Specification, API Contract and Backend Work Assignment.
@@ -234,14 +236,14 @@ create/reactivate ──┴──> ACTIVE                    │ eligible re-reg
 The initial Sprint 6 policy is one global, backend-owned window:
 
 ```text
-[activity.startAt - 15 minutes, activity.endAt)
+[activity.startAt - attendanceEarlyScanMinutes minutes, activity.endAt)
 ```
 
 - Equality at the opening boundary is accepted; the closing boundary is exclusive.
 - Before the lower boundary returns `ATTENDANCE_WINDOW_NOT_OPEN`.
 - At or after `endAt` returns `ATTENDANCE_WINDOW_CLOSED`.
 - The backend clock is authoritative.
-- The Activity may still be `PUBLISHED` during the 15-minute early window or `ONGOING` after its
+- The Activity may still be `PUBLISHED` during the configured early window or `ONGOING` after its
   start. `DRAFT`, `COMPLETED` and `CANCELLED` reject a new self-scan.
 - The Event and ActivityRegistration must still be effective and the token must match exactly.
 
@@ -305,7 +307,7 @@ Rules:
 - `NO_SHOW` cannot be assigned manually or automatically before the Activity reaches `COMPLETED`.
 - Correcting an eligible `ACTIVE` or `NO_SHOW` registration to Attended creates or restores
   `VALID` Attendance and changes the registration to `ACTIVE`. The effective `attendedAt` must be
-  within `[activity.startAt - 15 minutes, activity.endAt)`. The valid Attendance, not the word
+  within `[activity.startAt - attendanceEarlyScanMinutes minutes, activity.endAt)`. The valid Attendance, not the word
   Active, is what the UI presents as attended.
 - Voiding an Attendance does not always imply No-show. Before Activity completion, the registration
   returns to `ACTIVE`; after completion, it becomes `NO_SHOW`; after Activity/Event cancellation,
@@ -338,7 +340,7 @@ Use Case or role.
 - Participant may cancel against the new `startAt`.
 - Attendance scan uses the new schedule and the existing Activity QR token.
 - Schedule or Location change is rejected after the first valid Attendance exists, even when the
-  Activity is technically still `PUBLISHED` inside the 15-minute early-scan window. Change approval
+  Activity is technically still `PUBLISHED` inside the configured early-scan window. Change approval
   and scan serialize on the same Event/Activity lock, so whichever commits first determines whether
   the scan uses the new schedule or the change is rejected.
 - A change moving start earlier must still satisfy Activity registration configuration, including
@@ -687,7 +689,7 @@ gaps that are now explicit in this document:
 
 The following intentional refinements were approved in the source-of-truth documents before code:
 
-- the exact Attendance window `[startAt - 15 minutes, endAt)`;
+- the exact Attendance window `[startAt - attendanceEarlyScanMinutes minutes, endAt)`;
 - Activity Rating only after `COMPLETED`, not immediately after an early Attendance scan;
 - durable in-app notification types and deduplication identity;
 - ActivityRegistration cancellation sources/effective-outcome precedence;

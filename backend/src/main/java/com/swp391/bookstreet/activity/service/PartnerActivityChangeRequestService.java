@@ -106,7 +106,7 @@ public class PartnerActivityChangeRequestService {
 
         ValidatedActivityFields fields = validation.validateCore(locks.event(), location,
                 title, description, activityType, startAt, endAt, capacity, imageUrl, true);
-        validation.validateRegistration(activity.isRegistrationRequired(),
+        validation.validateRegistrationUpdate(activity.isRegistrationRequired(),
                 activity.getRegistrationDeadlineAt(), activity.isCertificateEnabled(),
                 fields.startAt(), activity.getStatus() == ActivityStatus.PUBLISHED);
         requireEligibleLocation(activity.getEventId(), location,

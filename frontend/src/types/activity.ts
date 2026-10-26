@@ -81,6 +81,7 @@ export interface CreateOrganizerActivityRequest {
   registrationRequired: boolean;
   registrationDeadlineAt: string | null;
   certificateEnabled: boolean;
+  attendanceEarlyScanMinutes?: number;
 }
 
 export interface UpdateOrganizerActivityRequest {
@@ -95,6 +96,7 @@ export interface UpdateOrganizerActivityRequest {
   registrationRequired?: boolean;
   registrationDeadlineAt?: string | null;
   certificateEnabled?: boolean;
+  attendanceEarlyScanMinutes?: number;
   changeReason?: string;
 }
 
@@ -114,6 +116,7 @@ export interface OrganizerActivityResponse {
   registrationRequired: boolean;
   registrationDeadlineAt: string | null;
   certificateEnabled: boolean;
+  attendanceEarlyScanMinutes: number;
   attendanceQrAvailable: boolean;
   attendanceQrToken: string | null;
   status: ActivityStatus;

@@ -1,5 +1,7 @@
 # Sprint 06 Use Case Specifications
 
+**QR window amendment (2026-10-26):** Organizer may configure `attendanceEarlyScanMinutes` on an Activity (integer 0–1440, default 15). Every Attendance boundary below uses that stored value. Cases that say 15 minutes describe the default. Once an Activity has `VALID` Attendance, the value cannot change.
+
 > Baseline status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19. This
 > document specifies the Sprint 6 Participant Activity slice approved in `sprint-06.md`. It defines
 > observable business behavior and 65 Acceptance Criteria; endpoint paths, DTO shapes and final
@@ -53,7 +55,7 @@ Certificate issuance and Notification persistence are system behavior supporting
 - Equality at an inclusive deadline is accepted. A rule expressed as `now > deadline` rejects only
   after that instant.
 - The Attendance self-scan window is exactly
-  `[activity.startAt - 15 minutes, activity.endAt)`.
+  `[activity.startAt - attendanceEarlyScanMinutes minutes, activity.endAt)`.
 - The opening boundary is inclusive and the closing boundary is exclusive.
 - Activity completion, No-show classification, Certificate eligibility and their required
   Notification changes are one idempotent finalization command.
@@ -609,9 +611,9 @@ And the request does not accept a client-supplied userId as identity
 
 ```gherkin
 Given a seat-active registration and matching token
-When backend time is before startAt minus 15 minutes
+When backend time is before startAt minus attendanceEarlyScanMinutes minutes
 Then scan is rejected as not open
-When backend time equals startAt minus 15 minutes
+When backend time equals startAt minus attendanceEarlyScanMinutes minutes
 Then scan may succeed
 When backend time is before endAt
 Then scan may succeed
@@ -622,7 +624,7 @@ Then scan is rejected as closed
 **AC-P03-04 Early scan accepts Published Activity**
 
 ```gherkin
-Given backend time is inside the 15-minute early window
+Given backend time is inside the configured early window
 And the Activity remains PUBLISHED and all other facts are valid
 When the Participant scans
 Then one VALID Attendance is recorded
@@ -978,7 +980,7 @@ Given an Activity has at least one VALID Attendance
 When Organizer changes schedule or Location
 Then the command is rejected
 And Activity and registrations remain unchanged
-Even when the scan occurred in the 15-minute early window before startAt
+Even when the scan occurred in the configured early window before startAt
 ```
 
 **AC-O06-S6-03 Scan and change race is serialized**
@@ -1155,7 +1157,7 @@ And one append-only adjustment records actor previous outcome new outcome and re
 **AC-O07-05 Out-of-window effective Attendance is rejected**
 
 ```gherkin
-Given Organizer supplies attendedAt before startAt minus 15 minutes or at or after endAt
+Given Organizer supplies attendedAt before startAt minus attendanceEarlyScanMinutes minutes or at or after endAt
 When correcting a registration to Attended
 Then the correction is rejected
 And no Attendance adjustment Certificate or Notification is changed

@@ -330,6 +330,7 @@ CHECK giữ `withdrawn_at`/`cancelled_at` nhất quán với status; `APPROVED`/
 | capacity | INTEGER NOT NULL | > 0, service <= Location capacity |
 | image_url | TEXT NULL | HTTP(S), max 2.048 ở service |
 | attendance_qr_token | UUID NULL UNIQUE | chỉ tạo một lần khi publish + registration required |
+| attendance_early_scan_minutes | INTEGER NOT NULL DEFAULT 15 | V11; CHECK 0–1440; mở quét trước giờ bắt đầu Activity |
 | is_certificate_enabled | BOOLEAN NOT NULL DEFAULT FALSE | chỉ true khi registration required |
 | status | VARCHAR(20) NOT NULL | DRAFT/PUBLISHED/ONGOING/COMPLETED/CANCELLED |
 | created_at/updated_at | TIMESTAMPTZ NOT NULL | audit |
@@ -363,7 +364,7 @@ WHERE (status <> 'CANCELLED')
 Constraint áp dụng cả Draft và across Event. Vi phạm phải được backend map thành
 `409 ACTIVITY_LOCATION_TIME_CONFLICT`.
 
-Sprint 6 không thêm cột mới vào `activities`. Các cột `registration_required`,
+Baseline Sprint 6 V10 không thêm cột mới vào `activities`. Yêu cầu cấu hình cửa sổ QR bổ sung V11 `attendance_early_scan_minutes`. Các cột `registration_required`,
 `registration_deadline_at`, `capacity`, `attendance_qr_token` và `is_certificate_enabled` của V9
 được sử dụng lại. Freeze schedule/Location sau Attendance `VALID`, capacity floor theo seat-active
 count và cửa sổ scan là cross-table rule do service kiểm tra dưới Event/Activity lock; không thể

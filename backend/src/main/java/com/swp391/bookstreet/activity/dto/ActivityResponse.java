@@ -23,6 +23,7 @@ public record ActivityResponse(
         boolean registrationRequired,
         Instant registrationDeadlineAt,
         boolean certificateEnabled,
+        int attendanceEarlyScanMinutes,
         boolean attendanceQrAvailable,
         UUID attendanceQrToken,
         ActivityStatus status,
@@ -34,6 +35,11 @@ public record ActivityResponse(
         String cancellationReason,
         ActivityCancellationSource cancellationSource
 ) {
+    @Override
+    public String toString() {
+        return "ActivityResponse[activityId=" + activityId + ", status=" + status + "]";
+    }
+
     public static ActivityResponse organizer(Activity activity, Location location,
             Long partnerOrganizationId) {
         return new ActivityResponse(activity.getActivityId(), activity.getEventId(),
@@ -42,7 +48,8 @@ public record ActivityResponse(
                 activity.getDescription(), activity.getActivityType(), activity.getStartAt(),
                 activity.getEndAt(), activity.getCapacity(), activity.getImageUrl(),
                 activity.isRegistrationRequired(), activity.getRegistrationDeadlineAt(),
-                activity.isCertificateEnabled(), activity.getAttendanceQrToken() != null,
+                activity.isCertificateEnabled(), activity.getAttendanceEarlyScanMinutes(),
+                activity.getAttendanceQrToken() != null,
                 activity.getAttendanceQrToken(), activity.getStatus(), activity.getCreatedAt(),
                 activity.getUpdatedAt(), activity.getPublishedAt(), activity.getCompletedAt(),
                 activity.getCancelledAt(), activity.getCancellationReason(),
@@ -57,7 +64,8 @@ public record ActivityResponse(
                 activity.getDescription(), activity.getActivityType(), activity.getStartAt(),
                 activity.getEndAt(), activity.getCapacity(), activity.getImageUrl(),
                 activity.isRegistrationRequired(), activity.getRegistrationDeadlineAt(),
-                activity.isCertificateEnabled(), activity.getAttendanceQrToken() != null,
+                activity.isCertificateEnabled(), activity.getAttendanceEarlyScanMinutes(),
+                activity.getAttendanceQrToken() != null,
                 null, activity.getStatus(), activity.getCreatedAt(), activity.getUpdatedAt(),
                 activity.getPublishedAt(), activity.getCompletedAt(),
                 activity.getCancelledAt(), activity.getCancellationReason(),

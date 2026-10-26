@@ -22,6 +22,7 @@ public class UpdateActivityRequest {
     private Boolean registrationRequired;
     private Instant registrationDeadlineAt;
     private Boolean certificateEnabled;
+    private Integer attendanceEarlyScanMinutes;
     private String changeReason;
 
     public boolean contains(String field) { return suppliedFields.contains(field); }
@@ -58,6 +59,8 @@ public class UpdateActivityRequest {
     @JsonSetter("registrationDeadlineAt") public void setRegistrationDeadlineAt(Instant value) { suppliedFields.add("registrationDeadlineAt"); registrationDeadlineAt = value; }
     public Boolean getCertificateEnabled() { return certificateEnabled; }
     @JsonSetter("certificateEnabled") public void setCertificateEnabled(Boolean value) { suppliedFields.add("certificateEnabled"); certificateEnabled = value; }
+    public Integer getAttendanceEarlyScanMinutes() { return attendanceEarlyScanMinutes; }
+    @JsonSetter("attendanceEarlyScanMinutes") public void setAttendanceEarlyScanMinutes(Integer value) { suppliedFields.add("attendanceEarlyScanMinutes"); attendanceEarlyScanMinutes = value; }
     public String getChangeReason() { return changeReason; }
     @JsonSetter("changeReason") public void setChangeReason(String value) { suppliedFields.add("changeReason"); changeReason = value; }
 }

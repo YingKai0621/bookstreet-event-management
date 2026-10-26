@@ -78,6 +78,7 @@ const activity: PartnerActivityResponse = {
   registrationRequired: false,
   registrationDeadlineAt: null,
   certificateEnabled: false,
+  attendanceEarlyScanMinutes: 15,
   attendanceQrAvailable: false,
   attendanceQrToken: null,
   status: 'PUBLISHED',

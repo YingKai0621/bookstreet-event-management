@@ -32,6 +32,7 @@ import com.swp391.bookstreet.registration.exception.RegistrationApiException;
 import com.swp391.bookstreet.registration.repository.ActivityRegistrationRepository;
 import com.swp391.bookstreet.registration.repository.EventRegistrationRepository;
 import com.swp391.bookstreet.registration.security.RegistrationCurrentUser;
+import com.swp391.bookstreet.activity.service.ActivityLifecycleCoordinator;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -57,6 +58,8 @@ public class ParticipantActivityRegistrationService {
     private final ActivityRatingRepository activityRatingRepository;
     private final RegistrationCurrentUser currentUser;
     private final EventRootLockService eventRootLockService;
+    private final ActivityLifecycleCoordinator lifecycleCoordinator;
+    private final com.swp391.bookstreet.activity.service.ActivityLifecycleService lifecycleService;
     private final Clock clock;
 
     public ParticipantActivityRegistrationService(
@@ -67,7 +70,8 @@ public class ParticipantActivityRegistrationService {
             CertificateRepository certificateRepository,
             ActivityRatingRepository activityRatingRepository,
             RegistrationCurrentUser currentUser, EventRootLockService eventRootLockService,
-            Clock clock) {
+            ActivityLifecycleCoordinator lifecycleCoordinator,
+            com.swp391.bookstreet.activity.service.ActivityLifecycleService lifecycleService, Clock clock) {
         this.activityRegistrationRepository = activityRegistrationRepository;
         this.eventRegistrationRepository = eventRegistrationRepository;
         this.activityRepository = activityRepository;
@@ -78,6 +82,8 @@ public class ParticipantActivityRegistrationService {
         this.currentUser = currentUser;
         this.eventRootLockService = eventRootLockService;
         this.clock = clock;
+        this.lifecycleCoordinator = lifecycleCoordinator;
+        this.lifecycleService = lifecycleService;
     }
 
     public RegistrationPageResponse<ActivityRegistrationResponse> list(int page, int size,
@@ -85,6 +91,7 @@ public class ParticipantActivityRegistrationService {
             String activityStatus, String search) {
         if (eventId != null) requirePositiveId(eventId);
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         var result = activityRegistrationRepository.findOwned(userId, eventId,
                 parseRegistrationStatus(registrationStatus), parseOutcome(outcome),
                 parseActivityStatus(activityStatus), normalizeSearch(search),
@@ -99,6 +106,7 @@ public class ParticipantActivityRegistrationService {
     public ActivityRegistrationResponse detail(Long activityRegistrationId) {
         requirePositiveId(activityRegistrationId);
         Long userId = currentUser.requireParticipantId();
+        lifecycleService.advanceDueActivities();
         ActivityRegistration registration = activityRegistrationRepository
                 .findOwnedById(activityRegistrationId, userId)
                 .orElseThrow(ParticipantActivityRegistrationService::registrationNotFound);
@@ -118,7 +126,7 @@ public class ParticipantActivityRegistrationService {
                 .orElseThrow(ParticipantActivityRegistrationService::activityNotFound);
 
         Instant now = now();
-        activity.advanceTimedLifecycle(now);
+        lifecycleCoordinator.advanceLocked(activity, now);
         requirePublished(activity);
         requireEventOpen(event);
 
@@ -253,16 +261,7 @@ public class ParticipantActivityRegistrationService {
 
     private static ParticipationOutcome outcome(ActivityRegistration registration,
             Attendance attendance) {
-        if (registration.getStatus() == ActivityRegistrationStatus.CANCELLED) {
-            return ParticipationOutcome.CANCELLED;
-        }
-        if (attendance != null && attendance.getStatus() == AttendanceStatus.VALID) {
-            return ParticipationOutcome.ATTENDED;
-        }
-        if (registration.getStatus() == ActivityRegistrationStatus.NO_SHOW) {
-            return ParticipationOutcome.NO_SHOW;
-        }
-        return ParticipationOutcome.ACTIVE;
+        return ParticipationOutcome.of(registration, attendance);
     }
 
     private static List<RegistrationWarningResponse> warnings(

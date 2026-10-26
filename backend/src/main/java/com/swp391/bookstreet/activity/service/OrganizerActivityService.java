@@ -6,6 +6,7 @@ import com.swp391.bookstreet.activity.dto.ActivityRevisionResponse;
 import com.swp391.bookstreet.activity.dto.CancelActivityRequest;
 import com.swp391.bookstreet.activity.dto.CreateActivityRequest;
 import com.swp391.bookstreet.activity.dto.UpdateActivityRequest;
+import com.swp391.bookstreet.attendance.service.ActivityParticipationLifecycleService;
 import com.swp391.bookstreet.activity.entity.Activity;
 import com.swp391.bookstreet.activity.entity.ActivityCancellationSource;
 import com.swp391.bookstreet.activity.entity.ActivityRevision;
@@ -50,6 +51,7 @@ public class OrganizerActivityService {
     private final ActivityLifecycleService lifecycleService;
     private final ActivityLifecycleTransactionService lifecycleTransactions;
     private final ActivityLifecycleCoordinator lifecycleCoordinator;
+    private final ActivityParticipationLifecycleService participation;
     private final ActivityPartnerNotificationService notificationService;
     private final Clock clock;
 
@@ -62,7 +64,7 @@ public class OrganizerActivityService {
             ActivityLifecycleService lifecycleService,
             ActivityLifecycleTransactionService lifecycleTransactions,
             ActivityLifecycleCoordinator lifecycleCoordinator,
-            ActivityPartnerNotificationService notificationService, Clock clock) {
+            ActivityPartnerNotificationService notificationService, ActivityParticipationLifecycleService participation, Clock clock) {
         this.activityRepository = activityRepository;
         this.revisionRepository = revisionRepository;
         this.locationRepository = locationRepository;
@@ -75,6 +77,7 @@ public class OrganizerActivityService {
         this.lifecycleTransactions = lifecycleTransactions;
         this.lifecycleCoordinator = lifecycleCoordinator;
         this.notificationService = notificationService;
+        this.participation = participation;
         this.clock = clock;
     }
 
@@ -99,13 +102,14 @@ public class OrganizerActivityService {
         Activity activity = Activity.createDirect(eventId, locationId, fields,
                 request.registrationRequired(), request.registrationDeadlineAt(),
                 request.certificateEnabled(), now);
+        activity.setAttendanceEarlyScanMinutes(earlyScanMinutes(request.attendanceEarlyScanMinutes()));
         try {
             activityRepository.saveAndFlush(activity);
         } catch (DataIntegrityViolationException error) {
             constraintTranslator.rethrow(error);
             throw error;
         }
-        return ActivityResponse.organizer(activity, location, null);
+        return ActivityResponse.partner(activity, location, null);
     }
 
     public ActivityPageResponse<ActivityResponse> list(int page, int size, String sort,
@@ -127,7 +131,9 @@ public class OrganizerActivityService {
         lifecycleTransactions.advance(activityId);
         Activity activity = activityRepository.findOwnedById(activityId, organizerId)
                 .orElseThrow(OrganizerActivityService::notFound);
-        return response(activity);
+        Location location = locationRepository.findById(activity.getLocationId())
+                .orElseThrow(OrganizerActivityService::locationNotFound);
+        return ActivityResponse.organizer(activity, location, partnerOrganizationId(activityId));
     }
 
     @Transactional
@@ -167,35 +173,49 @@ public class OrganizerActivityService {
         boolean certificateEnabled = request.contains("certificateEnabled")
                 ? requiredBoolean(request.getCertificateEnabled(), "certificateEnabled")
                 : activity.isCertificateEnabled();
+        int earlyScanMinutes = request.contains("attendanceEarlyScanMinutes")
+                ? earlyScanMinutes(request.getAttendanceEarlyScanMinutes())
+                : activity.getAttendanceEarlyScanMinutes();
+
+        if (activity.getStatus() == ActivityStatus.PUBLISHED
+                && registrationRequired != activity.isRegistrationRequired()) {
+            throw new ActivityApiException(HttpStatus.CONFLICT, "ACTIVITY_NOT_CHANGEABLE",
+                    "Registration requirement is fixed after first publication.");
+        }
 
         if (activity.getSourceProposalId() == null) requireSharedLocation(location);
         boolean coreSupplied = coreFieldSupplied(request);
         ValidatedActivityFields fields = validation.validateCore(event, location, title,
                 description, activityType, startAt, endAt, capacity, imageUrl,
                 activity.getStatus() == ActivityStatus.PUBLISHED && coreSupplied);
-        validation.validateRegistration(registrationRequired, registrationDeadlineAt,
-                certificateEnabled, fields.startAt(),
-                activity.getStatus() == ActivityStatus.PUBLISHED);
+        validation.validateRegistrationUpdate(registrationRequired, registrationDeadlineAt,
+                certificateEnabled, fields.startAt(), activity.getStatus() == ActivityStatus.PUBLISHED);
 
         Map<String, Object> oldSnapshot = snapshot(activity);
         Map<String, Object> candidateSnapshot = snapshot(locationId, fields,
-                registrationRequired, registrationDeadlineAt, certificateEnabled);
+                registrationRequired, registrationDeadlineAt, certificateEnabled, earlyScanMinutes);
         if (oldSnapshot.equals(candidateSnapshot)) return response(activity);
         boolean coreChanged = coreChanged(oldSnapshot, candidateSnapshot);
         if (activity.getSourceProposalId() != null && coreChanged) {
             throw new ActivityApiException(HttpStatus.CONFLICT, "ACTIVITY_NOT_CHANGEABLE",
                     "Approved Partner Activity core fields require a Partner change request.");
         }
-        String changeReason = normalizeChangeReason(request, activity, coreChanged);
+        String changeReason = normalizeChangeReason(request, activity,
+                coreChanged || earlyScanMinutes != activity.getAttendanceEarlyScanMinutes());
         scheduleGuard.requireAvailable(locationId, fields.startAt(), fields.endAt(), activityId);
 
+        boolean scheduleChanged = participation.validateChange(activity, locationId,
+                fields.startAt(), fields.endAt(), fields.capacity());
+        participation.validateAttendanceWindowChange(activity, earlyScanMinutes);
         Instant now = databaseInstant();
         activity.moveToLocation(locationId);
         activity.apply(fields, registrationRequired, registrationDeadlineAt,
                 certificateEnabled, now);
-        revisionRepository.save(ActivityRevision.create(activityId, organizerId, null,
+        activity.setAttendanceEarlyScanMinutes(earlyScanMinutes);
+        ActivityRevision revision = revisionRepository.save(ActivityRevision.create(activityId, organizerId, null,
                 ActivityRevisionSource.ORGANIZER_DIRECT, changeReason, oldSnapshot,
                 candidateSnapshot, now));
+        if (scheduleChanged) participation.scheduleChanged(activity, revision.getActivityRevisionId(), now);
         try {
             activityRepository.flush();
             revisionRepository.flush();
@@ -203,7 +223,7 @@ public class OrganizerActivityService {
             constraintTranslator.rethrow(error);
             throw error;
         }
-        return ActivityResponse.organizer(activity, location,
+        return ActivityResponse.partner(activity, location,
                 partnerOrganizationId(activityId));
     }
 
@@ -271,6 +291,7 @@ public class OrganizerActivityService {
         activity.cancel(reason, ActivityCancellationSource.ORGANIZER, now);
         lockService.lockPendingRequestsAfterActivity(activityId)
                 .forEach(pending -> pending.cancelIfPending(now));
+        participation.cancel(activity, now);
         activityRepository.flush();
         notificationService.activityChanged(activityId, activityId,
                 ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER,
@@ -301,7 +322,7 @@ public class OrganizerActivityService {
         for (Activity activity : activities) {
             Location location = locations.get(activity.getLocationId());
             if (location == null) throw locationNotFound();
-            result.add(ActivityResponse.organizer(activity, location,
+            result.add(ActivityResponse.partner(activity, location,
                     partners.get(activity.getActivityId())));
         }
         return List.copyOf(result);
@@ -318,7 +339,7 @@ public class OrganizerActivityService {
     }
 
     private ActivityResponse response(Activity activity, Location location) {
-        return ActivityResponse.organizer(activity, location,
+        return ActivityResponse.partner(activity, location,
                 partnerOrganizationId(activity.getActivityId()));
     }
 
@@ -350,12 +371,12 @@ public class OrganizerActivityService {
                 activity.getStartAt(), activity.getEndAt(), activity.getCapacity(),
                 activity.getImageUrl() == null ? null : java.net.URI.create(activity.getImageUrl())),
                 activity.isRegistrationRequired(), activity.getRegistrationDeadlineAt(),
-                activity.isCertificateEnabled());
+                activity.isCertificateEnabled(), activity.getAttendanceEarlyScanMinutes());
     }
 
     private static Map<String, Object> snapshot(Long locationId, ValidatedActivityFields fields,
             boolean registrationRequired, Instant registrationDeadlineAt,
-            boolean certificateEnabled) {
+            boolean certificateEnabled, int earlyScanMinutes) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("locationId", locationId);
         snapshot.put("title", fields.title());
@@ -369,7 +390,19 @@ public class OrganizerActivityService {
         snapshot.put("registrationDeadlineAt", registrationDeadlineAt == null
                 ? null : registrationDeadlineAt.toString());
         snapshot.put("certificateEnabled", certificateEnabled);
+        snapshot.put("attendanceEarlyScanMinutes", earlyScanMinutes);
         return snapshot;
+    }
+
+    private static int earlyScanMinutes(Integer value) {
+        if (value == null) return 15;
+        if (value < 0 || value > 1440) {
+            throw new ActivityApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "ACTIVITY_ATTENDANCE_WINDOW_INVALID",
+                    "Attendance early scan minutes must be between 0 and 1440.",
+                    "attendanceEarlyScanMinutes");
+        }
+        return value;
     }
 
     private static boolean coreChanged(Map<String, Object> oldSnapshot,
