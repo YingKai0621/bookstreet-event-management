@@ -32,7 +32,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -337,11 +337,11 @@ class EventActivityCascadeIntegrationTests {
         assertThat(dbStatus("activity_requests", "activity_request_id", requestId))
                 .isEqualTo("CANCELLED");
         assertThat(lifecycleService.advanceDueEvents()).isZero();
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(proposalId)
                         && event.messageType()
                         == ActivityPartnerMessageType.PROPOSAL_CLOSED_BY_SYSTEM));
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(requestId)
                         && event.messageType()
                         == ActivityPartnerMessageType.REQUEST_CLOSED_BY_SYSTEM));

@@ -9,7 +9,6 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  Search,
   User,
   X
 } from 'lucide-react';
@@ -17,7 +16,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
-import { participantApi } from '../../services/participantApi';
+import { participantApi, type ParticipantNotificationItem } from '../../services/participantApi';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
 
@@ -41,32 +40,29 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   useModalDismiss(userDropdownOpen, () => setUserDropdownOpen(false), { lockScroll: false });
   useModalDismiss(notifDropdownOpen, () => setNotifDropdownOpen(false), { lockScroll: false });
-  const [searchQuery, setSearchQuery] = useState('');
   const [notificationClock, setNotificationClock] = useState(0);
 
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState<Array<{
-    id: string; title: string; message: string; isRead: boolean; link?: string; createdAt: string;
-  }>>([]);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleMarkAllAsRead = async () => {
-    await participantApi.markAllNotificationsRead();
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-  };
+  const [notifications, setNotifications] = useState<ParticipantNotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleMarkAsRead = async (id: string) => {
-    await participantApi.markNotificationRead(id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    const wasUnread = notifications.some(notification => notification.id === id && !notification.isRead);
+    const updated = await participantApi.markNotificationRead(id);
+    setNotifications(prev => prev.map(notification => notification.id === id ? updated : notification));
+    if (wasUnread) setUnreadCount(current => Math.max(0, current - 1));
   };
 
   useEffect(() => {
-    const loadNotifications = () => participantApi.getNotifications()
-      .then(items => {
+    const loadNotifications = () => Promise.all([
+      participantApi.getNotifications(),
+      participantApi.getNotificationUnreadCount(),
+    ])
+      .then(([items, count]) => {
         setNotifications(items);
+        setUnreadCount(count);
         setNotificationClock(Date.now());
       })
       .catch(error => console.warn('Không thể tải thông báo', error));
@@ -148,13 +144,6 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     return location.pathname.startsWith(itemPath);
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/participant/events?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
   return (
     <div className="participant-app-shell">
       {/* 1. TOP HEADER (Dark Forest Teal bar matching sketch) */}
@@ -202,17 +191,6 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
         </div>
 
         <div className="top-bar-right">
-          {/* Global Quick Search Bar */}
-          <form className="participant-top-search" onSubmit={handleSearchSubmit}>
-            <Search size={16} className="search-icon" />
-            <input
-              type="text"
-              placeholder={language === 'vi' ? 'Tìm kiếm sự kiện, hoạt động...' : 'Search events, activities...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
-
           {/* Notifications Bell Dropdown */}
           <div className="participant-notif-menu" ref={notifDropdownRef}>
             <button 
@@ -242,19 +220,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                       </span>
                     )}
                   </div>
-                  <div className="notif-header-right">
-                    {unreadCount > 0 ? (
-                      <button 
-                        type="button"
-                        className="notif-mark-read-btn"
-                        onClick={handleMarkAllAsRead}
-                      >
-                        {language === 'vi' ? 'Đã đọc tất cả' : 'Mark all read'}
-                      </button>
-                    ) : (
-                      <span style={{ width: '60px' }}></span>
-                    )}
-                  </div>
+                  <div className="notif-header-right" aria-hidden="true" />
                 </div>
 
                 <div className="notif-dropdown-list">

@@ -1,6 +1,5 @@
 export type OrganizerTab = 
   | 'venues'
-  | 'assets'
   | 'overview'
   | 'events'
   | 'event_detail'

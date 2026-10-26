@@ -7,7 +7,6 @@ import {
   Layers,
   LayoutDashboard,
   MessageSquare,
-  Package,
   Store,
   User,
   Users
@@ -43,7 +42,6 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
     { id: 'booth_requests' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Yêu cầu gian hàng', labelEn: 'Booth Requests' },
     { id: 'booths' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Gian hàng', labelEn: 'Booths' },
     { id: 'venues' as OrganizerTab, icon: <Building2 size={18} />, labelVi: 'Địa điểm tổ chức', labelEn: 'Venues' },
-    { id: 'assets' as OrganizerTab, icon: <Package size={18} />, labelVi: 'Thiết bị', labelEn: 'Assets' },
     { id: 'activities' as OrganizerTab, icon: <Layers size={18} />, labelVi: 'Hoạt động', labelEn: 'Activities' },
     { id: 'participants' as OrganizerTab, icon: <Users size={18} />, labelVi: 'Người tham gia', labelEn: 'Participants' },
     { id: 'reports' as OrganizerTab, icon: <BarChart3 size={18} />, labelVi: 'Báo cáo & Thống kê', labelEn: 'Reports' },

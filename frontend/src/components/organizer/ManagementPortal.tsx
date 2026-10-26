@@ -5,7 +5,6 @@ import {
   ExtendedHeritageProfile,
   Language
 } from '../../types';
-import { FacilityManagementView } from '../admin/FacilityManagementView';
 import { EventDetailView } from './EventDetailView';
 import { EventManagementView } from './EventManagementView';
 import { OrganizerDashboard } from './OrganizerDashboard';
@@ -98,9 +97,13 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const selectEventForCurrentScreen = useCallback((eventId: string | null) => {
     const params = new URLSearchParams(location.search);
     params.delete('activityView');
-    if (eventId && eventId !== 'all') params.set('eventId', eventId);
+    const nextEventId = eventId && eventId !== 'all' ? eventId : null;
+    if (nextEventId) params.set('eventId', nextEventId);
     else params.delete('eventId');
-    navigate(organizerTabUrl(activeTab === 'event_detail' ? 'events' : activeTab, { search: params }));
+    navigate(organizerTabUrl(activeTab === 'event_detail' ? 'events' : activeTab, {
+      eventId: nextEventId,
+      search: params,
+    }));
   }, [activeTab, location.search, navigate]);
 
 
@@ -495,11 +498,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onOpenProfile={() => navigateToTab('profile')}
         onLogout={onLogout}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-        onSearch={(query) => {
-          const params = new URLSearchParams();
-          params.set('search', query);
-          navigate(organizerTabUrl('events', { search: params }));
-        }}
         onNavigateTab={(tab) => navigateToTab(tab)}
         onMarkNotificationRead={(id) => { void organizerApi.markNotificationRead(id).then(() => organizerApi.getNotifications()).then(setNotificationsList); }}
         onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
@@ -527,7 +525,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
         {/* Dynamic Views Rendering based on activeTab */}
         {activeTab === 'venues' && <OrganizerLocationManagementView />}
-        {activeTab === 'assets' && <FacilityManagementView key="assets" kind="assets" />}
         {activeTab === 'overview' && (
           <OrganizerDashboard 
             language={language}

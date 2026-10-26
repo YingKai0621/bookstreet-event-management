@@ -59,7 +59,7 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockOrganizer(page: Page): Promise<{
+async function mockOrganizer(page: Page, options: { multipleEvents?: boolean } = {}): Promise<{
   getSavedBoothPosition: () => { mapX: number; mapY: number } | null;
   getConfigurationRequests: () => Array<{ rentalPrice: number; enabled: boolean }>;
 }> {
@@ -91,7 +91,10 @@ async function mockOrganizer(page: Page): Promise<{
     const method = route.request().method();
     if (path.endsWith('/auth/me')) return json(route, { userId: 1, username: 'organizer', fullName: 'Organizer Demo', email: 'organizer@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'ORGANIZER'] });
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-token' });
-    if (path.endsWith('/organizer/events') && method === 'GET') return json(route, { content: [event], page: 0, size: 100, totalElements: 1, totalPages: 1 });
+    if (path.endsWith('/organizer/events') && method === 'GET') {
+      const events = options.multipleEvents ? [event, secondEvent] : [event];
+      return json(route, { content: events, page: 0, size: 100, totalElements: events.length, totalPages: 1 });
+    }
     if (path.endsWith('/organizer/booths') && method === 'GET') return json(route, { content: physicalBooths, page: 0, size: 200, totalElements: physicalBooths.length, totalPages: 1 });
     if (path.endsWith('/organizer/booths') && method === 'POST') {
       const body = route.request().postDataJSON();
@@ -120,6 +123,14 @@ async function mockOrganizer(page: Page): Promise<{
       return json(route, currentEventBooth);
     }
     if (path.endsWith('/organizer/events/101/booth-requests') && method === 'GET') return json(route, { content: organizerRequests, page: 0, size: 200, totalElements: organizerRequests.length, totalPages: 1 });
+    if (path.endsWith('/organizer/events/102/booth-configs') && method === 'GET') return json(route, []);
+    if (path.endsWith('/organizer/events/102/booth-requests') && method === 'GET') return json(route, {
+      content: [{ ...organizerRequests[0], boothRequestId: 78, eventId: 102, partnerOrganizationName: 'NXB Mùa xuân' }],
+      page: 0,
+      size: 200,
+      totalElements: 1,
+      totalPages: 1,
+    });
     if (path.endsWith('/organizer/events/101/booth-requests/77/select') && method === 'POST') {
       const selected = { ...organizerRequests[0], status: 'SELECTED', selectedAt: '2026-10-08T02:00:00Z', hold: { boothHoldId: 501, status: 'ACTIVE', lockedRentalPrice: currentEventBooth.rentalPrice, createdAt: '2026-10-08T02:00:00Z', expiresAt: '2026-10-09T02:00:00Z', releasedAt: null } };
       organizerRequests = [selected];
@@ -423,6 +434,23 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
     'style',
     new RegExp(`left: ${savedBoothPosition!.mapX}%; top: ${savedBoothPosition!.mapY}%`),
   );
+});
+
+test('Organizer event selector keeps the selected event in the URL and after reload', async ({ page }) => {
+  await mockOrganizer(page, { multipleEvents: true });
+  await page.goto('/organizer/booth-requests?eventId=101');
+
+  const eventSelector = page.getByLabel('Sự kiện đang duyệt');
+  await expect(eventSelector).toHaveValue('101');
+  await eventSelector.selectOption('102');
+
+  await expect(page).toHaveURL(/\/organizer\/booth-requests\?eventId=102$/);
+  await expect(eventSelector).toHaveValue('102');
+  await expect(page.getByText('NXB Mùa xuân')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('102');
+  await expect(page.getByText('NXB Mùa xuân')).toBeVisible();
 });
 
 test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request', async ({ page }) => {

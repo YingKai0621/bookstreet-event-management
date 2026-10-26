@@ -7,6 +7,58 @@ import {
 } from '../types';
 import { apiClient } from './apiClient';
 
+interface ParticipantNotificationResponse {
+  notificationId: number;
+  type: string;
+  title: string;
+  message: string;
+  referenceType: 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+  referenceId: number;
+  createdAt: string;
+  readAt: string | null;
+  read: boolean;
+}
+
+interface ParticipantNotificationPageResponse {
+  content: ParticipantNotificationResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface ParticipantNotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  link: string;
+  createdAt: string;
+}
+
+function notificationLink(notification: ParticipantNotificationResponse): string {
+  if (notification.referenceType === 'EVENT') {
+    return `/participant/events/${encodeURIComponent(notification.referenceId)}`;
+  }
+  if (notification.referenceType === 'ACTIVITY') {
+    return `/participant/activities/detail/${encodeURIComponent(notification.referenceId)}`;
+  }
+  return '/participant/certificates';
+}
+
+function mapNotification(notification: ParticipantNotificationResponse): ParticipantNotificationItem {
+  return {
+    id: String(notification.notificationId),
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    isRead: notification.read,
+    link: notificationLink(notification),
+    createdAt: notification.createdAt,
+  };
+}
+
 export const participantApi = {
   async getProfile(): Promise<ParticipantProfile> {
     const user = await apiClient.get<Record<string, unknown>>('/auth/profile');
@@ -50,9 +102,25 @@ export const participantApi = {
   registerActivity: (activityId: string) => apiClient.post(`/participant/activities/${activityId}/register`),
   cancelActivity: (registrationId: string) => apiClient.delete(`/participant/registrations/${registrationId}`),
   getPoints: () => apiClient.get('/participant/points'),
-  getNotifications: () => apiClient.get<Array<{ id: string; title: string; message: string; kind: string; isRead: boolean; link?: string; createdAt: string }>>('/participant/notifications'),
-  markNotificationRead: (id: string) => apiClient.patch(`/participant/notifications/${id}/read`),
-  markAllNotificationsRead: () => apiClient.patch('/participant/notifications/read-all'),
+  async getNotifications(): Promise<ParticipantNotificationItem[]> {
+    const response = await apiClient.get<ParticipantNotificationPageResponse>(
+      '/participant/notifications?page=0&size=20&sort=createdAt,desc',
+    );
+    if (!Array.isArray(response.content)) {
+      throw new Error('Phản hồi danh sách thông báo không đúng định dạng.');
+    }
+    return response.content.map(mapNotification);
+  },
+  async getNotificationUnreadCount(): Promise<number> {
+    const response = await apiClient.get<{ unreadCount: number }>('/participant/notifications/unread-count');
+    return Number.isFinite(response.unreadCount) ? response.unreadCount : 0;
+  },
+  async markNotificationRead(id: string): Promise<ParticipantNotificationItem> {
+    const notification = await apiClient.post<ParticipantNotificationResponse>(
+      `/participant/notifications/${encodeURIComponent(id)}/read`,
+    );
+    return mapNotification(notification);
+  },
   updateProfile: (data: { fullName: string; phone?: string; avatarUrl?: string }) =>
     apiClient.put<Record<string, unknown>>('/auth/profile', data),
   submitFeedback: (data: { rating: number; comments: string; targetScope?: string; targetName?: string; heritageId?: string; boothId?: string }) =>
