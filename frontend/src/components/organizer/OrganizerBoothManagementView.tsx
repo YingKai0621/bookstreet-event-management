@@ -15,8 +15,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
-  Sparkles,
-  Store,
+    Store,
   X,
 } from 'lucide-react';
 import { ApiError } from '../../services/apiClient';
@@ -87,7 +86,9 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   // Filter & Search States
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'map'>('table');
+  // View Modes: activeMode ('list' | 'map') and listLayout ('table' | 'grid')
+  const [activeMode, setActiveMode] = useState<'list' | 'map'>('list');
+  const [listLayout, setListLayout] = useState<'table' | 'grid'>('table');
 
   // Physical map state. Event availability and pricing deliberately do not live here.
   const [draftCoords, setDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
@@ -176,6 +177,25 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
     }];
   }), [draftCoords, filteredBooths]);
+
+  const handleSwitchToListView = () => {
+    if (activeMode === 'list') return;
+    const hasUnsavedChanges = Object.keys(draftCoords).length > 0;
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm(
+        language === 'vi'
+          ? 'Bạn có thay đổi tọa độ sơ đồ chưa được lưu. Bạn có chắc chắn muốn quay về danh sách? (Dữ liệu chưa lưu vẫn được giữ tạm thời)'
+          : 'You have unsaved coordinate changes on the map. Switch to List view anyway?'
+      );
+      if (!confirmLeave) return;
+    }
+    setActiveMode('list');
+  };
+
+  const handleSwitchToMapView = () => {
+    if (activeMode === 'map') return;
+    setActiveMode('map');
+  };
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
@@ -368,51 +388,40 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       {/* 1. HEADER SECTION */}
       <div className="booth-crud-header">
         <div className="booth-crud-title-group">
-
           <h1 className="workspace-page-title">{language === 'vi' ? 'Quản lý Gian hàng' : 'Booth Management Catalog'}</h1>
           <p className="workspace-page-subtitle">
             {language === 'vi'
-              ? 'Quản lý toàn bộ danh mục gian hàng vật lý hiện có tại Đường Sách và phân loại danh mục.'
-              : 'Manage physical booth inventory, categories, and active statuses across the Book Street.'}
+              ? 'Quản lý danh mục và vị trí gian hàng tại Đường Sách.'
+              : 'Manage booth catalog and physical locations across the Book Street.'}
           </p>
+
+          {/* Mode Switcher: Danh sách gian hàng | Sơ đồ gian hàng */}
+          <div className="booth-mode-switcher" aria-label={language === 'vi' ? 'Chế độ xem gian hàng' : 'Booth view modes'}>
+            <button
+              type="button"
+              className={`booth-mode-btn ${activeMode === 'list' ? 'is-active' : ''}`}
+              onClick={handleSwitchToListView}
+              aria-pressed={activeMode === 'list'}
+            >
+              <Store size={16} />
+              <span>{language === 'vi' ? 'Danh sách gian hàng' : 'Booth List'}</span>
+            </button>
+            <button
+              type="button"
+              className={`booth-mode-btn ${activeMode === 'map' ? 'is-active' : ''}`}
+              onClick={handleSwitchToMapView}
+              aria-pressed={activeMode === 'map'}
+            >
+              <MapPin size={16} />
+              <span>{language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth Map'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="booth-crud-header-actions">
           <button
             type="button"
-            className="btn-org-secondary"
-            onClick={() => void loadBoothData()}
-            disabled={loading}
-            title={language === 'vi' ? 'Làm mới danh sách' : 'Refresh'}
-          >
-            <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
-            <span>{language === 'vi' ? 'Làm mới' : 'Refresh'}</span>
-          </button>
-
-          <button
-            type="button"
-            className={`btn-org-secondary booth-map-action ${viewMode === 'map' ? 'is-active' : ''}`}
-            onClick={() => setViewMode('map')}
-            aria-pressed={viewMode === 'map'}
-          >
-            <MapPin size={18} />
-            <span>{language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth Map'}</span>
-          </button>
-
-          {onOpenRequests && (
-            <button
-              type="button"
-              className="btn-org-secondary"
-              onClick={onOpenRequests}
-            >
-              <Store size={15} />
-              <span>{language === 'vi' ? 'Yêu cầu đối tác' : 'Partner Requests'}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="btn-org-primary"
+            className="btn-org-primary booth-primary-cta"
             onClick={handleOpenCreateModal}
             disabled={loading || Boolean(loadError)}
           >
@@ -422,36 +431,21 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. SUMMARY STAT CARDS */}
+      {/* 2. SUMMARY KPI STATS (Clean, Anti-AI-Slop, No decorative icons) */}
       <div className="booth-kpi-grid">
         <div className="booth-kpi-card">
-          <div className="booth-kpi-icon-box total">
-            <Store size={24} />
-          </div>
-          <div className="booth-kpi-info">
-            <span>{language === 'vi' ? 'Tổng số gian hàng' : 'Total Booths'}</span>
-            <strong>{loading || loadError ? '—' : totalBoothsCount}</strong>
-          </div>
+          <span className="booth-kpi-number">{loading || loadError ? '—' : totalBoothsCount}</span>
+          <span className="booth-kpi-label">{language === 'vi' ? 'Tổng số gian hàng' : 'Total Booths'}</span>
         </div>
 
         <div className="booth-kpi-card">
-          <div className="booth-kpi-icon-box active">
-            <Sparkles size={24} />
-          </div>
-          <div className="booth-kpi-info">
-            <span>{language === 'vi' ? 'Đang hoạt động' : 'Active'}</span>
-            <strong style={{ color: '#166534' }}>{loading || loadError ? '—' : activeBoothsCount}</strong>
-          </div>
+          <span className="booth-kpi-number is-active">{loading || loadError ? '—' : activeBoothsCount}</span>
+          <span className="booth-kpi-label">{language === 'vi' ? 'Đang hoạt động' : 'Active'}</span>
         </div>
 
         <div className="booth-kpi-card">
-          <div className="booth-kpi-icon-box inactive">
-            <AlertCircle size={24} />
-          </div>
-          <div className="booth-kpi-info">
-            <span>{language === 'vi' ? 'Tạm ngưng' : 'Inactive'}</span>
-            <strong style={{ color: '#991B1B' }}>{loading || loadError ? '—' : inactiveBoothsCount}</strong>
-          </div>
+          <span className="booth-kpi-number is-inactive">{loading || loadError ? '—' : inactiveBoothsCount}</span>
+          <span className="booth-kpi-label">{language === 'vi' ? 'Tạm ngưng' : 'Inactive'}</span>
         </div>
       </div>
 
@@ -484,81 +478,130 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 3. TOOLBAR & FILTERS */}
-      {!loading && !loadError && <div className="booth-catalog-caption"><div><h2>{language === 'vi' ? 'Danh mục gian hàng' : 'Booth catalog'}</h2><p>{language === 'vi' ? 'Tìm kiếm, xem thông tin và quản lý trạng thái từng gian hàng.' : 'Search, inspect and manage physical booths.'}</p></div><span>{filteredBooths.length} / {booths.length} {language === 'vi' ? 'gian hàng' : 'booths'}</span></div>}
-      {!loadError && (
-      <div className="booth-crud-toolbar">
-        <div className="booth-toolbar-left">
-          {/* Search Box */}
-          <div className="booth-search-box">
-            <Search size={16} className="search-icon" />
-            <input
-              type="text"
-              placeholder={language === 'vi' ? 'Tìm theo mã gian (A01), tên, ghi chú...' : 'Search by code, name, note...'}
-              value={searchKeyword}
-              onChange={e => { setSearchKeyword(e.target.value); pagination.reset(); }}
-            />
+      {activeMode === 'map' ? (
+        <div className="booth-physical-map-panel">
+          <div className="booth-physical-map-heading">
+            <div>
+              <h2>Sơ đồ gian hàng vật lý</h2>
+              <p>Kéo để cập nhật tọa độ. Trạng thái thuê và giá được cấu hình riêng trong từng sự kiện.</p>
+            </div>
+            <span>{mapMarkers.length}/{filteredBooths.length} gian đã có tọa độ</span>
           </div>
+          <BoothMapCanvas
+            markers={mapMarkers}
+            activePopoverData={activePopover}
+            onOpenPopover={handleOpenMapPopover}
+            onClosePopover={() => setActivePopover(null)}
+            onSavePopover={handleSaveMapPopover}
+            onPositionChange={handleMapPositionChange}
+            onSaveAllMap={handleSaveAllMap}
+            onUploadMapImage={handleUploadMapImage}
+            isSavingAll={isSavingMap}
+            hasUnsavedChanges={Object.keys(draftCoords).length > 0}
+            editable
+            customMapUrl={customMapUrl}
+            statusScope="physical"
+            ariaLabel="Sơ đồ danh mục gian hàng vật lý"
+            emptyMessage="Chưa có gian hàng nào với tọa độ hợp lệ để hiển thị trên sơ đồ."
+          />
+        </div>
+      ) : (
+        <>
+          {/* 3. TOOLBAR & FILTERS */}
+          {!loading && !loadError && (
+            <div className="booth-catalog-caption">
+              <div>
+                <h2>{language === 'vi' ? 'Danh mục gian hàng' : 'Booth catalog'}</h2>
+                <p>{language === 'vi' ? 'Tìm kiếm, xem thông tin và quản lý trạng thái từng gian hàng.' : 'Search, inspect and manage physical booths.'}</p>
+              </div>
+              <span>{filteredBooths.length} / {booths.length} {language === 'vi' ? 'gian hàng' : 'booths'}</span>
+            </div>
+          )}
 
-          {/* Status Filter */}
-          <select
-            className="booth-filter-select"
-            value={filterStatus}
-            onChange={e => { setFilterStatus(e.target.value as 'all' | 'active' | 'inactive'); pagination.reset(); }}
-          >
-            <option value="all">{language === 'vi' ? 'Tất cả trạng thái' : 'All Statuses'}</option>
-            <option value="active">{language === 'vi' ? 'Đang hoạt động' : 'Active Only'}</option>
-            <option value="inactive">{language === 'vi' ? 'Tạm ngưng' : 'Inactive Only'}</option>
-          </select>
-        </div>
+          {!loadError && (
+            <div className="booth-crud-toolbar">
+              <div className="booth-toolbar-left">
+                {/* Search Box */}
+                <div className="booth-search-box">
+                  <Search size={16} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder={language === 'vi' ? 'Tìm theo mã gian (A01), tên, ghi chú...' : 'Search by code, name, note...'}
+                    value={searchKeyword}
+                    onChange={e => { setSearchKeyword(e.target.value); pagination.reset(); }}
+                  />
+                </div>
 
-        <div className="booth-toolbar-right">
-          <div className="booth-view-toggle">
-            <button
-              type="button"
-              className={`booth-view-btn ${viewMode === 'table' ? 'is-active' : ''}`}
-              onClick={() => { setViewMode('table'); pagination.reset(); }}
-              title={language === 'vi' ? 'Dạng bảng' : 'Table View'}
-            >
-              <List size={16} />
-            </button>
-            <button
-              type="button"
-              className={`booth-view-btn ${viewMode === 'grid' ? 'is-active' : ''}`}
-              onClick={() => { setViewMode('grid'); pagination.reset(); }}
-              title={language === 'vi' ? 'Dạng thẻ lưới' : 'Grid Cards View'}
-            >
-              <Grid size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-      )}
+                {/* Status Filter */}
+                <select
+                  className="booth-filter-select"
+                  value={filterStatus}
+                  onChange={e => { setFilterStatus(e.target.value as 'all' | 'active' | 'inactive'); pagination.reset(); }}
+                >
+                  <option value="all">{language === 'vi' ? 'Tất cả trạng thái' : 'All Statuses'}</option>
+                  <option value="active">{language === 'vi' ? 'Đang hoạt động' : 'Active Only'}</option>
+                  <option value="inactive">{language === 'vi' ? 'Tạm ngưng' : 'Inactive Only'}</option>
+                </select>
+              </div>
 
-      {/* 4. MAIN CONTENT LIST / TABLE */}
-      {loading ? (
-        <div className="s2-loading">
-          <Loader2 size={32} className="s2-spin" />
-          <p>{language === 'vi' ? 'Đang tải danh sách gian hàng...' : 'Loading booths...'}</p>
-        </div>
-      ) : loadError ? (
-        <section className="booth-catalog-state is-error" role="alert">
-          <span className="booth-state-icon">{accessDenied ? <ShieldAlert size={30} /> : <AlertCircle size={30} />}</span>
-          <h2>{accessDenied ? (language === 'vi' ? 'Chưa có quyền truy cập danh mục' : 'Catalog access is not permitted') : (language === 'vi' ? 'Không thể tải danh mục gian hàng' : 'Could not load booth catalog')}</h2>
-          <p>{accessDenied ? (language === 'vi' ? 'Phiên đăng nhập hiện tại không được cấp quyền quản lý gian hàng. Nếu quyền tài khoản vừa thay đổi, hãy đăng xuất và đăng nhập lại.' : 'Your current session does not have booth management permission. Sign in again if your permissions recently changed.') : (language === 'vi' ? 'Dữ liệu chưa được tải. Vui lòng kiểm tra kết nối và thử lại.' : 'Data has not loaded. Check your connection and try again.')}</p>
-          <button type="button" className="btn-org-secondary" onClick={() => void loadBoothData()}><RefreshCw size={16} />{language === 'vi' ? 'Thử tải lại' : 'Retry'}</button>
-        </section>
-      ) : filteredBooths.length === 0 ? (
-        <div className="booth-catalog-state">
-          <span className="booth-state-icon">{booths.length ? <Search size={30} /> : <Store size={30} />}</span>
-          <h2>{booths.length ? (language === 'vi' ? 'Không có kết quả phù hợp' : 'No matching results') : (language === 'vi' ? 'Danh mục chưa có gian hàng' : 'No booths in the catalog yet')}</h2>
-          <p>
-            {booths.length ? (language === 'vi' ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ gian hàng.' : 'Try another keyword or clear your filters.') : (language === 'vi' ? 'Tạo gian hàng đầu tiên với mã, tên và vị trí để bắt đầu quản lý danh mục.' : 'Create your first booth with its code, name and location.')}
-          </p>
-          {booths.length ? <button type="button" className="btn-org-secondary" onClick={() => { setSearchKeyword(''); setFilterStatus('all'); pagination.reset(); }}><X size={16} />{language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}</button> : <button type="button" className="btn-org-primary" onClick={handleOpenCreateModal}><Plus size={16} /><span>{language === 'vi' ? 'Tạo gian hàng đầu tiên' : 'Create First Booth'}</span></button>}
-        </div>
-      ) : viewMode === 'table' ? (
-        /* TABLE VIEW */
+              <div className="booth-toolbar-right">
+                <button
+                  type="button"
+                  className="btn-toolbar-refresh"
+                  onClick={() => void loadBoothData()}
+                  disabled={loading}
+                  title={language === 'vi' ? 'Làm mới danh sách' : 'Refresh'}
+                >
+                  <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
+                  <span>{language === 'vi' ? 'Làm mới' : 'Refresh'}</span>
+                </button>
+
+                <div className="booth-view-toggle">
+                  <button
+                    type="button"
+                    className={`booth-view-btn ${listLayout === 'table' ? 'is-active' : ''}`}
+                    onClick={() => setListLayout('table')}
+                    title={language === 'vi' ? 'Dạng bảng' : 'Table View'}
+                  >
+                    <List size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`booth-view-btn ${listLayout === 'grid' ? 'is-active' : ''}`}
+                    onClick={() => setListLayout('grid')}
+                    title={language === 'vi' ? 'Dạng thẻ lưới' : 'Grid Cards View'}
+                  >
+                    <Grid size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. MAIN CONTENT LIST / TABLE */}
+          {loading ? (
+            <div className="s2-loading">
+              <Loader2 size={32} className="s2-spin" />
+              <p>{language === 'vi' ? 'Đang tải danh sách gian hàng...' : 'Loading booths...'}</p>
+            </div>
+          ) : loadError ? (
+            <section className="booth-catalog-state is-error" role="alert">
+              <span className="booth-state-icon">{accessDenied ? <ShieldAlert size={30} /> : <AlertCircle size={30} />}</span>
+              <h2>{accessDenied ? (language === 'vi' ? 'Chưa có quyền truy cập danh mục' : 'Catalog access is not permitted') : (language === 'vi' ? 'Không thể tải danh mục gian hàng' : 'Could not load booth catalog')}</h2>
+              <p>{accessDenied ? (language === 'vi' ? 'Phiên đăng nhập hiện tại không được cấp quyền quản lý gian hàng. Nếu quyền tài khoản vừa thay đổi, hãy đăng xuất và đăng nhập lại.' : 'Your current session does not have booth management permission. Sign in again if your permissions recently changed.') : (language === 'vi' ? 'Dữ liệu chưa được tải. Vui lòng kiểm tra kết nối và thử lại.' : 'Data has not loaded. Check your connection and try again.')}</p>
+              <button type="button" className="btn-org-secondary" onClick={() => void loadBoothData()}><RefreshCw size={16} />{language === 'vi' ? 'Thử tải lại' : 'Retry'}</button>
+            </section>
+          ) : filteredBooths.length === 0 ? (
+            <div className="booth-catalog-state">
+              <span className="booth-state-icon">{booths.length ? <Search size={30} /> : <Store size={30} />}</span>
+              <h2>{booths.length ? (language === 'vi' ? 'Không có kết quả phù hợp' : 'No matching results') : (language === 'vi' ? 'Danh mục chưa có gian hàng' : 'No booths in the catalog yet')}</h2>
+              <p>
+                {booths.length ? (language === 'vi' ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ gian hàng.' : 'Try another keyword or clear your filters.') : (language === 'vi' ? 'Tạo gian hàng đầu tiên với mã, tên và vị trí để bắt đầu quản lý danh mục.' : 'Create your first booth with its code, name and location.')}
+              </p>
+              {booths.length ? <button type="button" className="btn-org-secondary" onClick={() => { setSearchKeyword(''); setFilterStatus('all'); pagination.reset(); }}><X size={16} />{language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}</button> : <button type="button" className="btn-org-primary" onClick={handleOpenCreateModal}><Plus size={16} /><span>{language === 'vi' ? 'Tạo gian hàng đầu tiên' : 'Create First Booth'}</span></button>}
+            </div>
+          ) : listLayout === 'table' ? (
+            /* TABLE VIEW */
         <div className="booth-table-container">
           <table className="booth-table">
             <thead>
@@ -649,8 +692,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             </tbody>
           </table>
         </div>
-      ) : viewMode === 'grid' ? (
-        /* GRID CARDS VIEW */
+          ) : (
+            /* GRID CARDS VIEW */
         <div className="booth-grid-cards">
           {pagination.items.map(booth => {
             const isBusy = busyBoothId === booth.boothId;
@@ -720,37 +763,16 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             );
           })}
         </div>
-      ) : (
-        <div className="booth-physical-map-panel">
-          <div className="booth-physical-map-heading">
-            <div>
-              <h2>Sơ đồ gian hàng vật lý</h2>
-              <p>Kéo để cập nhật tọa độ. Trạng thái thuê và giá được cấu hình riêng trong từng sự kiện.</p>
-            </div>
-            <span>{mapMarkers.length}/{filteredBooths.length} gian đã có tọa độ</span>
-          </div>
-          <BoothMapCanvas
-            markers={mapMarkers}
-            activePopoverData={activePopover}
-            onOpenPopover={handleOpenMapPopover}
-            onClosePopover={() => setActivePopover(null)}
-            onSavePopover={handleSaveMapPopover}
-            onPositionChange={handleMapPositionChange}
-            onSaveAllMap={handleSaveAllMap}
-            onUploadMapImage={handleUploadMapImage}
-            isSavingAll={isSavingMap}
-            hasUnsavedChanges={Object.keys(draftCoords).length > 0}
-            editable
-            customMapUrl={customMapUrl}
-            statusScope="physical"
-            ariaLabel="Sơ đồ danh mục gian hàng vật lý"
-            emptyMessage="Chưa có gian hàng nào với tọa độ hợp lệ để hiển thị trên sơ đồ."
-          />
-        </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && !loadError && filteredBooths.length > 0 && (
+            <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />
+          )}
+        </>
       )}
 
       {/* 5. CREATE / EDIT BOOTH MODAL */}
-      {!loading && !loadError && filteredBooths.length > 0 && <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />}
       {isFormModalOpen && (
         <div className="booth-modal-backdrop" onClick={() => !formSubmitting && setIsFormModalOpen(false)}>
           <div className="booth-modal-box" onClick={e => e.stopPropagation()}>
