@@ -172,7 +172,7 @@ export const partnerApi = {
   async getPublishedEvents(): Promise<PartnerAvailableEvent[]> {
     return loadPublishedEvents();
   },
-  async getApplications(): Promise<PartnerEventApplication[]> {
+  async getApplications(options: { organization?: Promise<PartnerOrganization | null> } = {}): Promise<PartnerEventApplication[]> {
     const query = new URLSearchParams({ page: '0', size: '100', sort: 'submittedAt,desc' });
     const first = await apiClient.get<PageResponse<PartnerApplicationResponse>>(`/partner/applications?${query.toString()}`);
     const remaining = first.totalPages > 1
@@ -186,7 +186,7 @@ export const partnerApi = {
     const [metadataResults, eventDetailResults] = await Promise.all([
       Promise.allSettled([
         loadPublishedEvents(),
-        partnerApi.getProfile(),
+        options.organization ?? partnerApi.getProfile(),
       ]),
       Promise.allSettled(eventIds.map(eventId =>
         apiClient.get<PublicEventResponse>(`/events/${encodeURIComponent(eventId)}`),

@@ -32,10 +32,8 @@ export function FacilityManagementView({ kind }: { kind: FacilityKind }) {
   useEffect(() => {
     if (kind !== 'booths') return;
     const refresh = () => setRevision(value => value + 1);
-    const interval = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 5000);
-    window.addEventListener('focus', refresh);
     window.addEventListener('booths-changed', refresh);
-    return () => { clearInterval(interval); window.removeEventListener('focus', refresh); window.removeEventListener('booths-changed', refresh); };
+    return () => { window.removeEventListener('booths-changed', refresh); };
   }, [kind]);
 
   useEffect(() => {

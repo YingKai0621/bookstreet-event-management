@@ -96,6 +96,13 @@ export function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isSlidePageOpen = isHeritage || isBooths || isEvents;
   const isPortalRoute = /^\/(?:portal|organizer)(?:\/|$)/.test(location.pathname);
+  const isPublicRoute = !isPortalRoute
+    && !isParticipantRoute
+    && !isPartnerRoute
+    && !isAdminRoute
+    && !isLoginRoute
+    && !isRegisterRoute
+    && location.pathname !== '/verify-email';
   const isAuthenticated = authenticationStatus === 'authenticated';
   const isPortalAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ORGANIZER'));
   const isParticipantAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
@@ -122,22 +129,9 @@ export function App() {
   const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
 
   const [language, setLanguage] = useState<Language>('vi');
-  const [dataRevision, setDataRevision] = useState(0);
   const [highlightedBoothId, setHighlightedBoothId] = useState<string | null>(null);
   const [focusedBoothId, setFocusedBoothId] = useState<string | null>(null);
   const [boothSearchQuery, setBoothSearchQuery] = useState<string>('');
-
-  useEffect(() => {
-    const refresh = () => setDataRevision(value => value + 1);
-    const intervalId = window.setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    window.addEventListener('duongsach:data-changed', refresh);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refresh);
-      window.removeEventListener('duongsach:data-changed', refresh);
-    };
-  }, []);
 
   useEffect(() => {
     if (!('scrollRestoration' in window.history)) return;
@@ -193,6 +187,7 @@ export function App() {
 
   // Load real data from Backend REST API
   useEffect(() => {
+    if (!isPublicRoute) return;
     let isMounted = true;
     const refreshPublicData = async () => {
       setIsPublicDataLoading(true);
@@ -221,20 +216,15 @@ export function App() {
       }
       setIsPublicDataLoading(false);
     };
-    const handleRefresh = () => { void refreshPublicData(); };
-    handleRefresh();
-    window.addEventListener('focus', handleRefresh);
-    window.addEventListener('duongsach:data-changed', handleRefresh);
+    void refreshPublicData();
     return () => {
       isMounted = false;
-      window.removeEventListener('focus', handleRefresh);
-      window.removeEventListener('duongsach:data-changed', handleRefresh);
     };
-  }, []);
+  }, [isPublicRoute]);
 
   useEffect(() => {
     let active = true;
-    if (!publicEventId) {
+    if (!isPublicRoute || !publicEventId) {
       setBooths([]);
       return () => { active = false; };
     }
@@ -249,7 +239,7 @@ export function App() {
       })
       .finally(() => { if (active) setIsPublicBoothsLoading(false); });
     return () => { active = false; };
-  }, [publicEventId, dataRevision]);
+  }, [isPublicRoute, publicEventId]);
 
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantProfileError, setParticipantProfileError] = useState('');
@@ -272,15 +262,18 @@ export function App() {
     : EMPTY_PARTICIPANT_PROFILE;
 
   useEffect(() => {
-    let active = true;
     setParticipantProfile(EMPTY_PARTICIPANT_PROFILE);
     setParticipantProfileError('');
     setParticipantEvents([]);
     setParticipantActivities([]);
     setParticipantBadges([]);
     setParticipantCertificates([]);
+  }, [participantUserId]);
+
+  useEffect(() => {
+    if (participantUserId === undefined || (!isParticipantRoute && !isPublicRoute)) return;
+    let active = true;
     const refreshProfile = () => {
-      if (participantUserId === undefined) return;
       const userId = String(participantUserId);
       participantApi.getProfile().then(profile => {
         if (!active) return;
@@ -291,8 +284,18 @@ export function App() {
         if (active) setParticipantProfileError(error instanceof Error ? error.message : 'Không tải được hồ sơ.');
       });
     };
+    refreshProfile();
+    window.addEventListener('email:verified', refreshProfile);
+    return () => {
+      active = false;
+      window.removeEventListener('email:verified', refreshProfile);
+    };
+  }, [isParticipantRoute, isPublicRoute, participantUserId]);
+
+  useEffect(() => {
+    if (participantUserId === undefined || !isParticipantRoute) return;
+    let active = true;
     const refreshParticipation = async () => {
-      if (participantUserId === undefined) return;
       try {
         const eventList = await participantApi.getEvents();
         const activityList = await participantApi.getMyActivities(eventList);
@@ -303,61 +306,66 @@ export function App() {
         if (active) console.warn('Không thể tải dữ liệu tham gia của độc giả', error);
       }
     };
-    refreshProfile();
     void refreshParticipation();
-    const refreshParticipantWorkspace = () => {
-      refreshProfile();
-      void refreshParticipation();
-    };
-    window.addEventListener('focus', refreshParticipantWorkspace);
-    window.addEventListener('email:verified', refreshProfile);
     return () => {
       active = false;
-      window.removeEventListener('focus', refreshParticipantWorkspace);
-      window.removeEventListener('email:verified', refreshProfile);
     };
-  }, [participantUserId]);
+  }, [isParticipantRoute, participantUserId]);
 
   useEffect(() => {
-    if (!isPartnerAuthenticated) return;
+    if (!isPartnerRoute || !isPartnerAuthenticated) return;
+    let active = true;
     // This effect synchronizes authenticated Partner data from external APIs.
     // oxlint-disable-next-line react/set-state-in-effect
+    setPartnerOverviewLoading(true);
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
     setPartnerNotifications([]);
     _setPartnerReports(null);
-    void Promise.allSettled([
-      partnerApi.getProfile(),
-      partnerApi.getApplications(),
-      boothApi.listAllPartnerRequests(),
-    ]).then(([profileResult, applicationsResult, boothResult]) => {
-      const partnerErrors: string[] = [];
-      if (profileResult.status === 'fulfilled') {
-        setPartnerOrg(profileResult.value ? { ...profileResult.value, representativeName: authenticatedUser?.fullName || '' } : null);
-      } else {
-        console.warn('Could not fetch partner profile', profileResult.reason);
-        setPartnerOrg(null);
-        partnerErrors.push(profileResult.reason instanceof Error ? profileResult.reason.message : 'Không thể tải hồ sơ tổ chức.');
-      }
+    const refreshPartnerData = () => {
+      const profileRequest = partnerApi.getProfile();
+      void Promise.allSettled([
+        profileRequest,
+        partnerApi.getApplications({ organization: profileRequest }),
+        boothApi.listAllPartnerRequests(),
+      ]).then(([profileResult, applicationsResult, boothResult]) => {
+        if (!active) return;
+        const partnerErrors: string[] = [];
+        if (profileResult.status === 'fulfilled') {
+          setPartnerOrg(profileResult.value ? { ...profileResult.value, representativeName: authenticatedUser?.fullName || '' } : null);
+        } else {
+          console.warn('Could not fetch partner profile', profileResult.reason);
+          setPartnerOrg(null);
+          partnerErrors.push(profileResult.reason instanceof Error ? profileResult.reason.message : 'Không thể tải hồ sơ tổ chức.');
+        }
 
-      if (applicationsResult.status === 'fulfilled') {
-        setPartnerApplications(applicationsResult.value);
-      } else {
-        console.warn('Could not fetch partner applications', applicationsResult.reason);
-        setPartnerApplications([]);
-        partnerErrors.push(applicationsResult.reason instanceof Error ? applicationsResult.reason.message : 'Không thể tải hồ sơ sự kiện.');
-      }
-      setPartnerOverviewError(partnerErrors.join(' '));
+        if (applicationsResult.status === 'fulfilled') {
+          setPartnerApplications(applicationsResult.value);
+        } else {
+          console.warn('Could not fetch partner applications', applicationsResult.reason);
+          setPartnerApplications([]);
+          partnerErrors.push(applicationsResult.reason instanceof Error ? applicationsResult.reason.message : 'Không thể tải hồ sơ sự kiện.');
+        }
+        setPartnerOverviewError(partnerErrors.join(' '));
 
-      if (boothResult.status === 'fulfilled') {
-        setPartnerBoothRequests(boothResult.value);
-      } else {
-        console.warn('Could not fetch partner booth requests', boothResult.reason);
-        setPartnerBoothRequests(null);
-        setPartnerBoothRequestsError(boothResult.reason instanceof Error ? boothResult.reason.message : 'Không thể tải dữ liệu gian hàng.');
-      }
-    }).finally(() => setPartnerOverviewLoading(false));
-  }, [authenticatedUser?.fullName, isPartnerAuthenticated, dataRevision]);
+        if (boothResult.status === 'fulfilled') {
+          setPartnerBoothRequests(boothResult.value);
+        } else {
+          console.warn('Could not fetch partner booth requests', boothResult.reason);
+          setPartnerBoothRequests(null);
+          setPartnerBoothRequestsError(boothResult.reason instanceof Error ? boothResult.reason.message : 'Không thể tải dữ liệu gian hàng.');
+        }
+      }).finally(() => {
+        if (active) setPartnerOverviewLoading(false);
+      });
+    };
+    refreshPartnerData();
+    window.addEventListener('duongsach:data-changed', refreshPartnerData);
+    return () => {
+      active = false;
+      window.removeEventListener('duongsach:data-changed', refreshPartnerData);
+    };
+  }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute]);
 
   // Participant Action Handlers
   const handleRegisterActivity = async (activityId: string) => {
@@ -372,7 +380,6 @@ export function App() {
     setParticipantCertificates(certs);
     setParticipantBadges(badges);
     setParticipantEvents(eventList);
-    window.dispatchEvent(new Event('participant:data-changed'));
   };
 
   const handleCancelActivity = async (activityId: string) => {
@@ -381,19 +388,16 @@ export function App() {
     const activities = await participantApi.getMyActivities(events);
     setParticipantActivities(activities);
     setParticipantEvents(events);
-    window.dispatchEvent(new Event('participant:data-changed'));
   };
 
   const handleJoinParticipantEvent = async (eventId: string) => {
     await participantApi.joinEvent(eventId);
     setParticipantEvents(await participantApi.getEvents());
-    window.dispatchEvent(new Event('participant:data-changed'));
   };
 
   const handleLeaveParticipantEvent = async (eventId: string) => {
     await participantApi.leaveEvent(eventId);
     setParticipantEvents(await participantApi.getEvents());
-    window.dispatchEvent(new Event('participant:data-changed'));
     navigate('/participant');
   };
 
@@ -417,7 +421,6 @@ export function App() {
     setParticipantProfile({ ...newProfile, id: String(saved.id), name: String(saved.fullName),
       emailVerified: Boolean(saved.emailVerified),
       phone: saved.phone ? String(saved.phone) : '', avatar: saved.avatarUrl ? String(saved.avatarUrl) : undefined });
-    window.dispatchEvent(new Event('participant:data-changed'));
   };
 
   const handleLogout = async () => {

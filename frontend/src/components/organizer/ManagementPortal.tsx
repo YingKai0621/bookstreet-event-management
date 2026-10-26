@@ -138,12 +138,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const firstEventId = eventsList[0]?.id;
   const [dashboardSummary, setDashboardSummary] = useState<OrganizerDashboardSummary | null>(null);
   const [isLoadingDashboardSummary, setIsLoadingDashboardSummary] = useState(false);
   const [dashboardSummaryError, setDashboardSummaryError] = useState('');
-
-  const activeEventScopeId = selectedEventId || firstEventId || null;
 
   const refreshOrganizerData = useCallback(async (preferredEventId?: string | null) => {
     try {
@@ -161,61 +158,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   useEffect(() => {
     void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); setIsLoadingEvents(false); });
-    const refresh = () => void refreshOrganizerData().catch(error => console.warn('Could not refresh organizer data', error));
-    const intervalId = window.setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    window.addEventListener('duongsach:data-changed', refresh);
-    return () => { window.clearInterval(intervalId); window.removeEventListener('focus', refresh); window.removeEventListener('duongsach:data-changed', refresh); };
   }, [refreshOrganizerData]);
-
-  useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'event_detail') return;
-    let active = true;
-    if (!activeEventScopeId) {
-      setBoothsList([]);
-      setBoothRequests([]);
-      setPartnerApplications([]);
-      return;
-    }
-
-    organizerApi.getBooths(activeEventScopeId).then(rows => {
-      if (active) setBoothsList(rows);
-    }).catch(error => {
-      if (!active) return;
-      setBoothsList([]);
-      setActionError(error instanceof Error ? error.message : 'Không tải được gian hàng sự kiện.');
-    });
-
-    const refreshTasks = () => {
-      Promise.all([
-        organizerApi.getPartnerApplications(activeEventScopeId),
-        boothApi.listAllOrganizerRequests(activeEventScopeId),
-      ]).then(([apps, reqs]) => {
-        if (!active) return;
-        setPartnerApplications(apps);
-        setBoothRequests(reqs);
-      }).catch(error => {
-        if (!active) return;
-        const msg = error instanceof Error ? error.message : 'Không tải được việc cần xử lý.';
-        setActionError(msg);
-      });
-    };
-
-    refreshTasks();
-
-    const intervalId = window.setInterval(refreshTasks, 15000);
-    const handleFocusOrData = () => refreshTasks();
-
-    window.addEventListener('focus', handleFocusOrData);
-    window.addEventListener('duongsach:data-changed', handleFocusOrData);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', handleFocusOrData);
-      window.removeEventListener('duongsach:data-changed', handleFocusOrData);
-    };
-  }, [activeEventScopeId, activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'event_detail' || !selectedEventId) return;
@@ -257,16 +200,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     };
 
     void refreshEventOperations(true);
-    const intervalId = window.setInterval(() => void refreshEventOperations(false), 15000);
-    const handleRefresh = () => void refreshEventOperations(false);
-    window.addEventListener('focus', handleRefresh);
-    window.addEventListener('duongsach:data-changed', handleRefresh);
 
     return () => {
       active = false;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', handleRefresh);
-      window.removeEventListener('duongsach:data-changed', handleRefresh);
     };
   }, [activeTab, eventOperationsReloadKey, selectedEventId]);
 
@@ -290,16 +226,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     };
 
     void refreshSummary(true);
-    const intervalId = window.setInterval(() => void refreshSummary(false), 15000);
-    const handleRefresh = () => void refreshSummary(false);
-    window.addEventListener('focus', handleRefresh);
-    window.addEventListener('duongsach:data-changed', handleRefresh);
 
     return () => {
       active = false;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', handleRefresh);
-      window.removeEventListener('duongsach:data-changed', handleRefresh);
     };
   }, [activeTab]);
 
@@ -358,7 +287,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const handleUpdateProfile = async (updates: Partial<OrganizerProfile>) => {
     await organizerApi.updateProfile(updates);
     setProfile(await organizerApi.getProfile());
-    window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
   const heritagePayload = (item: ExtendedHeritageProfile) => ({
@@ -396,19 +324,16 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const handleCreateHeritage = async (item: ExtendedHeritageProfile) => {
     await organizerApi.createHeritage(heritagePayload(item));
     await refreshHeritages();
-    window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
   const handleUpdateHeritage = async (item: ExtendedHeritageProfile) => {
     await organizerApi.updateHeritage(item.id, heritagePayload(item));
     await refreshHeritages();
-    window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
   const handleDeleteHeritage = async (heritageId: string) => {
     await organizerApi.deleteHeritage(heritageId);
     await refreshHeritages();
-    window.dispatchEvent(new Event('duongsach:data-changed'));
   };
 
   const handleSaveEvent = async (request: OrganizerEventRequest, eventId?: string) => {

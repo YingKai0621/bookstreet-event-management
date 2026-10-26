@@ -357,11 +357,6 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   }, [loadData]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => void loadData(), 30_000);
-    return () => window.clearInterval(interval);
-  }, [loadData]);
-
-  useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, []);

@@ -39,9 +39,8 @@ export function PartnerEventCalendar({ language, events: suppliedEvents, onSelec
     };
     void load();
     const refresh = () => { void load(); };
-    window.addEventListener('focus', refresh);
     window.addEventListener('duongsach:data-changed', refresh);
-    return () => { active = false; window.removeEventListener('focus', refresh); window.removeEventListener('duongsach:data-changed', refresh); };
+    return () => { active = false; window.removeEventListener('duongsach:data-changed', refresh); };
   }, [suppliedEvents, revision]);
 
   const [year, monthNumber] = month.split('-').map(Number);

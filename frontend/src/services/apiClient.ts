@@ -3,6 +3,7 @@ import { ApiError, createApiError } from './apiError';
 import { clearCsrfToken, getCsrfToken } from './csrfToken';
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
 function isMutationMethod(method: string): boolean {
   return MUTATION_METHODS.has(method);
@@ -116,7 +117,28 @@ async function sendRequest<T>(
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  return sendRequest<T>(endpoint, options, true);
+  const method = String(options.method || 'GET').toUpperCase();
+  if (method !== 'GET' || options.signal) {
+    return sendRequest<T>(endpoint, options, true);
+  }
+
+  const headerKey = [...new Headers(options.headers).entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, value]) => `${name}:${value}`)
+    .join('|');
+  const requestKey = `${endpoint}|${headerKey}`;
+  const existing = inFlightGetRequests.get(requestKey);
+  if (existing) return existing as Promise<T>;
+
+  const pending = sendRequest<T>(endpoint, options, true);
+  inFlightGetRequests.set(requestKey, pending);
+  try {
+    return await pending;
+  } finally {
+    if (inFlightGetRequests.get(requestKey) === pending) {
+      inFlightGetRequests.delete(requestKey);
+    }
+  }
 }
 
 export const apiClient = {
