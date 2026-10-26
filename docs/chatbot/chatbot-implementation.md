@@ -9,7 +9,8 @@ Ngày 26/10/2026. Tính năng này được thực hiện theo yêu cầu riêng
 - Thông tin công khai lấy từ `EventService.listPublic` và `PublicActivityService.list`. Thông tin “của tôi” lấy từ các service Participant hiện có, vốn xác định User từ Session.
 - Không đưa raw QR token, mật khẩu, session ID hoặc thông tin của User khác vào ngữ cảnh AI.
 - Không lưu lịch sử chat vào PostgreSQL hoặc Redis. Giao diện chỉ giữ lịch sử trong bộ nhớ của tab đang mở.
-- Câu hỏi và các facts liên quan được gửi tới OpenAI Responses API. Vì vậy không nhập thông tin bí mật vào ô chat. API key chỉ nằm ở backend.
+- Câu trả lời hướng tới người dùng phổ thông: 1–3 câu ngắn, dùng giờ Việt Nam và từ ngữ quen thuộc; chỉ nêu chi tiết được hỏi. Mã trạng thái và thuật ngữ kỹ thuật không được đưa vào ngữ cảnh hiển thị.
+- Câu hỏi và các facts liên quan được gửi tới Gemini Generate Content API. Vì vậy không nhập thông tin bí mật vào ô chat. API key chỉ nằm ở backend.
 
 ## API
 
@@ -32,11 +33,11 @@ Request:
 }
 ```
 
-Chatbot tự trả lời khi không tìm được facts hoặc khi Guest hỏi dữ liệu cá nhân. Khi chưa có `CHATBOT_API_KEY`, API trả `503`. Lỗi từ nhà cung cấp trả `502`; quá 8 yêu cầu/phút trên cùng IP trả `429`. Không hiển thị phản hồi lỗi thô hoặc key của nhà cung cấp.
+Chatbot tự trả lời khi không tìm được facts hoặc khi Guest hỏi dữ liệu cá nhân. Khi chưa có `GEMINI_API_KEY`/`CHATBOT_API_KEY` hoặc key/model không truy cập được, API trả `503`. Gemini trả `402` khi tài khoản cần thanh toán hoặc hết hạn mức; lỗi tạm thời khác trả `502`; quá 8 yêu cầu/phút trên cùng IP trả `429`. Không hiển thị phản hồi lỗi thô hoặc key của nhà cung cấp.
 
 ## Cấu hình
 
-Đặt `CHATBOT_API_KEY` và tùy chọn `CHATBOT_MODEL` trong `.env` cục bộ hoặc secret của môi trường triển khai. File `.env` không được commit. Mặc định model là `gpt-4.1-mini`; model phải được tài khoản API của bạn hỗ trợ. Server cần outbound HTTPS tới `api.openai.com`. Không cần GPU, pgvector hoặc migration.
+Đặt `GEMINI_API_KEY` và tùy chọn `CHATBOT_MODEL` trong `.env` cục bộ hoặc secret của môi trường triển khai. `CHATBOT_API_KEY` cũ vẫn được đọc nếu chưa đổi tên biến. File `.env` không được commit. Mặc định model là `gemini-3.5-flash-lite`; model phải được tài khoản Gemini API của bạn hỗ trợ. Server cần outbound HTTPS tới `generativelanguage.googleapis.com`. Không cần GPU, pgvector hoặc migration.
 
 ## Phép thử nghiệm thu
 
@@ -52,4 +53,4 @@ Chatbot tự trả lời khi không tìm được facts hoặc khi Guest hỏi d
 - Tìm kiếm dữ liệu công khai đọc tối đa 30 Event và 30 Activity theo thứ tự bắt đầu. Cần thêm tìm kiếm/paging theo query trước khi dùng cho catalog lớn.
 - Nguồn dẫn tới trang danh sách hiện có; frontend chưa có link public riêng cho từng Activity.
 - Bộ câu hỏi 82 ý định là tập kiểm thử ban đầu, không phải toàn bộ FAQ đã được biên tập và duyệt.
-- Chưa có kiểm thử tích hợp với tài khoản OpenAI thật vì repository không chứa API key.
+- Đã xác nhận key hiện tại liệt kê được model Gemini, nhưng yêu cầu generateContent tới `gemini-3.5-flash-lite` trả `402 RESOURCE_EXHAUSTED` tại thời điểm chuyển đổi. Cần kiểm tra quyền/hạn mức/thanh toán trong Google AI Studio trước khi kiểm thử câu trả lời thật.

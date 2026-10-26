@@ -13,6 +13,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,20 +26,23 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatService {
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final String UNKNOWN = "Mình chưa tìm được thông tin đủ tin cậy để trả lời. "
-            + "Bạn có thể xem trang sự kiện hoặc hoạt động để kiểm tra trực tiếp.";
+    private static final DateTimeFormatter FRIENDLY_TIME = DateTimeFormatter
+            .ofPattern("HH:mm 'ngày' dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
+            .withZone(VIETNAM);
+    private static final String UNKNOWN = "Mình chưa tìm được thông tin phù hợp. "
+            + "Bạn thử hỏi cụ thể tên sự kiện hoặc hoạt động nhé.";
 
     private final EventService events;
     private final PublicActivityService activities;
     private final ParticipantEventRegistrationService myEvents;
     private final ParticipantActivityRegistrationService myActivities;
-    private final OpenAiChatClient ai;
+    private final GeminiChatClient ai;
     private final Clock clock;
 
     public ChatService(EventService events, PublicActivityService activities,
             ParticipantEventRegistrationService myEvents,
             ParticipantActivityRegistrationService myActivities,
-            OpenAiChatClient ai, Clock clock) {
+            GeminiChatClient ai, Clock clock) {
         this.events = events;
         this.activities = activities;
         this.myEvents = myEvents;
@@ -66,21 +70,24 @@ public class ChatService {
         }
         if (contains(normalized, "mat khau", "password", "session", "token", "qr diem danh")
                 && contains(normalized, "nguoi khac", "cua ban", "cho toi", "lay", "gui")) {
-            return new ChatResponse("Mình không thể cung cấp mật khẩu, session, QR điểm danh "
-                    + "hoặc dữ liệu riêng tư của người khác.", List.of());
+            return new ChatResponse("Mình không thể chia sẻ mật khẩu, mã điểm danh "
+                    + "hoặc thông tin riêng của người khác.", List.of());
         }
         boolean personal = contains(retrievalQuery, "cua toi", "toi da", "toi co", "my event",
                 "my activit", "my certificate", "thong bao cua toi", "dang ky cua toi");
         if (personal && !isParticipant()) {
-            return new ChatResponse("Để xem thông tin tham gia của chính bạn, vui lòng đăng nhập "
-                    + "bằng tài khoản Participant.", List.of(new ChatSource("Đăng nhập", "/login")));
+            return new ChatResponse("Bạn đăng nhập để mình xem thông tin tham gia của bạn nhé.",
+                    List.of(new ChatSource("Đăng nhập", "/login")));
         }
         List<Fact> facts = new ArrayList<>();
-        addGuidance(retrievalQuery, facts);
+        boolean discovery = contains(normalized, "nao", "hom nay", "ngay mai", "cuoi tuan",
+                "tuan nay", "con cho", "cho trong", "o dau", "khi nao");
+        boolean howTo = contains(normalized, "lam sao", "huong dan", "cach", "the nao");
+        if (!discovery || howTo) addGuidance(retrievalQuery, facts);
         if (personal) addPersonal(retrievalQuery, facts);
         else {
             int guidanceCount = facts.size();
-            addPublic(retrievalQuery, facts);
+            if (!howTo) addPublic(retrievalQuery, facts);
             if (facts.size() == guidanceCount && contains(retrievalQuery,
                     "hom nay", "ngay mai", "cuoi tuan", "tuan nay", "thu bay",
                     "chu nhat", "con cho", "cho trong")) {
@@ -88,7 +95,7 @@ public class ChatService {
             }
         }
         if (facts.isEmpty()) return new ChatResponse(UNKNOWN, List.of());
-        List<Fact> selected = facts.stream().limit(12).toList();
+        List<Fact> selected = facts.stream().limit(5).toList();
         StringBuilder context = new StringBuilder("Hôm nay tại Việt Nam: ")
                 .append(LocalDate.now(clock.withZone(VIETNAM))).append('\n');
         for (Fact fact : selected) {
@@ -112,9 +119,9 @@ public class ChatService {
             for (var event : page.content()) {
                 if (matches(q, event.name(), event.description())
                         && matchesDate(q, event.startAt(), event.endAt())) {
-                    facts.add(new Fact("Sự kiện: " + event.name() + "; trạng thái "
-                            + event.status() + "; bắt đầu " + event.startAt()
-                            + "; kết thúc " + event.endAt() + "; mô tả "
+                    facts.add(new Fact("Sự kiện " + event.name() + " diễn ra từ "
+                            + friendlyTime(event.startAt()) + " đến " + friendlyTime(event.endAt())
+                            + ". Hiện " + friendlyStatus(event.status().name()) + ". "
                             + clip(event.description()), new ChatSource(event.name(),
                             "/su-kien")));
                 }
@@ -126,14 +133,19 @@ public class ChatService {
             for (var activity : page.content()) {
                 if (matches(q, activity.title(), activity.eventName(), activity.description())
                         && matchesDate(q, activity.startAt(), activity.endAt())) {
-                    facts.add(new Fact("Hoạt động: " + activity.title() + "; sự kiện "
-                            + activity.eventName() + "; trạng thái " + activity.status()
-                            + "; bắt đầu " + activity.startAt() + "; kết thúc " + activity.endAt()
-                            + "; địa điểm " + activity.location().name()
-                            + "; cần đăng ký " + activity.registrationRequired()
-                            + "; đăng ký còn mở " + activity.registrationOpen()
-                            + "; chỗ còn " + activity.availableSeats()
-                            + "; mô tả " + clip(activity.description()),
+                    String seats = activity.availableSeats() == null ? ""
+                            : " Còn " + activity.availableSeats() + " chỗ.";
+                    String registration = activity.registrationRequired()
+                            ? activity.registrationOpen() ? " Có thể đăng ký ngay."
+                                    : " Hiện chưa thể đăng ký."
+                            : " Không cần đăng ký trước.";
+                    facts.add(new Fact("Hoạt động " + activity.title() + " thuộc sự kiện "
+                            + activity.eventName() + ", diễn ra từ "
+                            + friendlyTime(activity.startAt()) + " đến "
+                            + friendlyTime(activity.endAt()) + " tại "
+                            + activity.location().name() + ". Hiện "
+                            + friendlyStatus(activity.status().name()) + "."
+                            + registration + seats + " " + clip(activity.description()),
                             new ChatSource(activity.title(), "/su-kien")));
                 }
             }
@@ -144,8 +156,9 @@ public class ChatService {
         if (contains(q, "su kien", "event", "tham gia")) {
             var page = myEvents.list(0, 20, "activatedAt,desc", null, null, null);
             for (var registration : page.content()) {
-                facts.add(new Fact("Đăng ký sự kiện của chủ session: "
-                        + registration.event().name() + "; trạng thái " + registration.status(),
+                facts.add(new Fact("Bạn đã tham gia sự kiện "
+                        + registration.event().name() + "; hiện "
+                        + friendlyStatus(registration.status().name()) + ".",
                         new ChatSource(registration.event().name(), "/participant/events")));
             }
         }
@@ -154,44 +167,49 @@ public class ChatService {
             var page = myActivities.list(0, 20, "activatedAt,desc", null, null,
                     null, null, null);
             for (var registration : page.content()) {
-                facts.add(new Fact("Đăng ký hoạt động của chủ session: "
-                        + registration.activity().title() + "; trạng thái "
-                        + registration.status() + "; kết quả " + registration.outcome()
-                        + "; chứng nhận " + (registration.certificate() == null
-                                ? "chưa có" : registration.certificate().status()),
+                facts.add(new Fact("Bạn đã đăng ký hoạt động "
+                        + registration.activity().title() + "; hiện "
+                        + friendlyStatus(registration.status()) + ". Kết quả tham gia: "
+                        + friendlyStatus(registration.outcome()) + ". Chứng nhận: "
+                        + (registration.certificate() == null ? "chưa có"
+                                : friendlyStatus(registration.certificate().status())) + ".",
                         new ChatSource(registration.activity().title(), "/participant/events")));
             }
         }
     }
 
     private static void addGuidance(String q, List<Fact> facts) {
-        if (contains(q, "tai khoan", "dang ky", "dang nhap", "mat khau")) {
-            facts.add(new Fact("Tài khoản tự đăng ký nhận vai trò PARTICIPANT. Email tùy chọn. "
-                    + "Username dài 3–20 ký tự, bắt đầu bằng chữ ASCII, chỉ gồm chữ ASCII/số. "
-                    + "Mật khẩu đăng ký dài 8–64 ký tự, tối đa 72 byte UTF-8. Không yêu cầu "
-                    + "người dùng cung cấp mật khẩu trong chat.", new ChatSource("Đăng ký", "/register")));
+        if (contains(q, "tai khoan", "dang nhap", "mat khau", "ten dang nhap")
+                || contains(q, "dang ky")
+                && !contains(q, "hoat dong", "workshop", "su kien", "event")) {
+            facts.add(new Fact("Để tạo tài khoản, bạn mở trang Đăng ký và nhập tên đăng nhập, "
+                    + "họ tên, mật khẩu và xác nhận mật khẩu. Email không bắt buộc. Tên đăng nhập "
+                    + "dài 3–20 ký tự, bắt đầu bằng chữ cái và chỉ gồm chữ cái không dấu hoặc số. "
+                    + "Mật khẩu cần 8–64 ký tự. Đừng gửi mật khẩu qua chat.",
+                    new ChatSource("Đăng ký", "/register")));
         }
         if (contains(q, "tham gia su kien", "join event", "roi su kien", "my event")) {
-            facts.add(new Fact("Participant có thể Join Event public trước hoặc đúng deadline. "
-                    + "Join Event không giữ chỗ Activity. Leave chỉ được phép khi không còn "
-                    + "ActivityRegistration seat-active.", new ChatSource("Sự kiện", "/su-kien")));
+            facts.add(new Fact("Bạn có thể tham gia sự kiện đang mở trước khi hết hạn đăng ký. "
+                    + "Tham gia sự kiện chưa tự giữ chỗ cho hoạt động; nếu muốn dự hoạt động cần "
+                    + "đăng ký riêng. Bạn chỉ có thể rời sự kiện khi không còn chỗ đang giữ "
+                    + "ở hoạt động nào.", new ChatSource("Sự kiện", "/su-kien")));
         }
         if (contains(q, "hoat dong", "workshop", "cho trong", "dang ky lai")) {
-            facts.add(new Fact("Activity cần đăng ký chỉ nhận đăng ký khi còn mở theo cả deadline "
-                    + "Event và Activity, còn chỗ và đủ điều kiện. Lịch trùng được cảnh báo "
-                    + "nhưng không tự chặn. Chatbot không thực hiện đăng ký hoặc hủy thay người dùng.",
+            facts.add(new Fact("Với hoạt động cần đăng ký, bạn có thể giữ chỗ khi hoạt động "
+                    + "còn mở, chưa hết hạn đăng ký và còn chỗ. Nếu hai hoạt động trùng giờ, "
+                    + "hệ thống sẽ nhắc bạn kiểm tra lịch.",
                     new ChatSource("Hoạt động", "/su-kien")));
         }
         if (contains(q, "qr", "diem danh", "attendance")) {
-            facts.add(new Fact("Participant đã đăng nhập tự quét QR chung của Activity tại địa "
-                    + "điểm. Cửa sổ điểm danh là từ 15 phút trước giờ bắt đầu đến trước giờ "
-                    + "kết thúc, theo thời gian backend. Không có Event QR hoặc QR riêng Participant.",
+            facts.add(new Fact("Khi đến địa điểm, bạn đăng nhập và tự quét mã QR của hoạt động "
+                    + "để điểm danh. Bạn có thể quét từ 15 phút trước giờ bắt đầu đến trước "
+                    + "giờ kết thúc.",
                     new ChatSource("Hoạt động của tôi", "/participant/events")));
         }
         if (contains(q, "chung nhan", "certificate", "danh gia", "rating")) {
-            facts.add(new Fact("Chứng nhận đủ điều kiện được cấp sau khi Activity hoàn tất "
-                    + "và có Attendance hợp lệ. Đánh giá Activity yêu cầu Attendance VALID "
-                    + "và Activity COMPLETED.", new ChatSource("Hoạt động của tôi",
+            facts.add(new Fact("Bạn có thể nhận chứng nhận sau khi hoạt động kết thúc và "
+                    + "bạn đã điểm danh hợp lệ. Bạn cũng có thể đánh giá hoạt động khi "
+                    + "đáp ứng hai điều kiện đó.", new ChatSource("Hoạt động của tôi",
                     "/participant/events")));
         }
         if (contains(q, "xac minh email", "xac thuc email", "email xac minh")) {
@@ -201,30 +219,28 @@ public class ChatService {
                     new ChatSource("Tài khoản", "/participant/profile")));
         }
         if (contains(q, "quen mat khau", "dat lai mat khau", "reset password")) {
-            facts.add(new Fact("Luồng quên/đặt lại mật khẩu chưa được xác nhận triển khai "
-                    + "trong baseline hiện tại. Chatbot không nhận mật khẩu hoặc mã xác minh.",
+            facts.add(new Fact("Hiện mình chưa thấy chức năng đặt lại mật khẩu trên website. "
+                    + "Bạn đừng gửi mật khẩu hoặc mã xác minh qua chat.",
                     new ChatSource("Đăng nhập", "/login")));
         }
         if (contains(q, "gian hang", "booth", "so do", "ban do")) {
-            facts.add(new Fact("Guest có thể xem Booth và bản đồ công khai. Việc nộp yêu cầu "
-                    + "thuê Booth là quy trình của Partner, không phải thao tác của Participant.",
+            facts.add(new Fact("Bạn có thể xem các gian hàng và bản đồ mà không cần đăng nhập. "
+                    + "Nếu muốn thuê gian hàng, bạn cần làm theo quy trình dành cho đối tác.",
                     new ChatSource("Gian hàng", "/gian-hang")));
         }
         if (contains(q, "thong bao", "notification")) {
-            facts.add(new Fact("Participant có thể xem thông báo in-app thuộc tài khoản "
-                    + "của mình về tác động tham gia và chứng nhận. Thông báo của người khác "
-                    + "không được công khai; Sprint 6 không có SMS/push hoặc mark-all-read.",
+            facts.add(new Fact("Bạn có thể xem thông báo trong tài khoản của mình khi sự kiện "
+                    + "hoặc hoạt động thay đổi, hoặc khi có cập nhật về chứng nhận.",
                     new ChatSource("Trang Participant", "/participant")));
         }
         if (contains(q, "ve hoat dong", "mua ve", "waitlist", "danh sach cho")) {
-            facts.add(new Fact("Activity ticket trả phí và waitlist không thuộc phạm vi "
-                    + "hiện tại. Không có thao tác mua vé Activity qua chatbot.",
+            facts.add(new Fact("Hiện website chưa hỗ trợ mua vé hoạt động hoặc đăng ký "
+                    + "vào danh sách chờ qua chatbot.",
                     new ChatSource("Sự kiện", "/su-kien")));
         }
         if (contains(q, "huy su kien", "huy hoat dong", "doi lich", "thay doi lich")) {
-            facts.add(new Fact("Event hoặc Activity có thể thay đổi trạng thái/lịch theo "
-                    + "quy tắc nghiệp vụ. Thông tin của đối tượng cụ thể phải đọc từ dữ liệu "
-                    + "hiện tại; chatbot không tự suy đoán lý do.",
+            facts.add(new Fact("Lịch hoặc trạng thái của sự kiện và hoạt động có thể thay đổi. "
+                    + "Hãy xem thông tin mới nhất trên trang sự kiện để biết chi tiết.",
                     new ChatSource("Sự kiện", "/su-kien")));
         }
     }
@@ -274,6 +290,26 @@ public class ChatService {
     private static String clip(String value) {
         if (value == null) return "";
         return value.length() <= 180 ? value : value.substring(0, 180);
+    }
+
+    private static String friendlyTime(Instant instant) {
+        return FRIENDLY_TIME.format(instant);
+    }
+
+    private static String friendlyStatus(String status) {
+        return switch (status) {
+            case "PUBLISHED" -> "sắp diễn ra";
+            case "ONGOING" -> "đang diễn ra";
+            case "COMPLETED" -> "đã kết thúc";
+            case "ATTENDED" -> "đã tham gia";
+            case "CANCELLED" -> "đã hủy";
+            case "ACTIVE" -> "đang tham gia";
+            case "LEFT" -> "đã rời";
+            case "NO_SHOW" -> "chưa điểm danh";
+            case "ISSUED" -> "đã cấp";
+            case "REVOKED" -> "đã thu hồi";
+            default -> "đang được cập nhật";
+        };
     }
 
     private static boolean contains(String q, String... needles) {
