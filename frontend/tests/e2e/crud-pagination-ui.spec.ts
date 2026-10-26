@@ -17,7 +17,7 @@ async function mockWorkspace(page: Page, role: 'ADMIN' | 'PARTICIPANT') {
       status: 'active', statusLabelVi: 'Đang áp dụng', description: 'Hoàn thành hoạt động để tích lũy điểm.', perks: [],
     }));
     else if (path.endsWith('/participant/notifications')) {
-      const content = Array.from({ length: 11 }, (_, index) => ({
+      const allItems = Array.from({ length: 11 }, (_, index) => ({
         notificationId: index + 1,
         type: 'ACTIVITY_UPDATED',
         title: `Thông báo ${String(index + 1).padStart(2, '0')}`,
@@ -28,7 +28,9 @@ async function mockWorkspace(page: Page, role: 'ADMIN' | 'PARTICIPANT') {
         readAt: null,
         createdAt: '2026-10-25T01:00:00Z',
       }));
-      body = { content, page: 0, size: 20, totalElements: content.length, totalPages: 1 };
+      const size = Number(new URL(request.url()).searchParams.get('size') || 20);
+      const content = allItems.slice(0, size);
+      body = { content, page: 0, size, totalElements: allItems.length, totalPages: Math.ceil(allItems.length / size) };
     }
     else if (path.endsWith('/participant/notifications/unread-count')) body = { unreadCount: 11 };
     else if (path.endsWith('/participant/event-registrations') || path.endsWith('/participant/activity-registrations')) {
@@ -55,16 +57,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768
   });
 }
 
-test('Participant notification list keeps the eleventh notification reachable', async ({ page }) => {
+test('Participant notification dropdown stays a compact preview and links to the workspace', async ({ page }) => {
   await mockWorkspace(page, 'PARTICIPANT');
   await page.goto('/participant/feedback');
   await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
   const dropdown = page.getByRole('dialog', { name: 'Thông báo gần đây' });
-  const items = dropdown.locator('.notif-dropdown-item');
-  const pagination = dropdown.getByRole('navigation', { name: 'pagination', exact: true });
-  await expect(items).toHaveCount(10);
-  await pagination.getByRole('link', { name: 'Trang 2', exact: true }).click();
-  await expect(items).toHaveCount(1);
-  await expect(items.first()).toContainText('Thông báo 11');
-  await expect(pagination.getByRole('link', { name: 'Trang sau' })).toBeDisabled();
+  await expect(dropdown.locator('.notif-dropdown-item')).toHaveCount(5);
+  await dropdown.getByRole('link', { name: 'Xem tất cả thông báo →' }).click();
+  await expect(page).toHaveURL(/\/participant\/notifications$/);
 });
