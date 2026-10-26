@@ -142,7 +142,10 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
 
 async function mockParticipantWorkflow(
   page: Page,
-  options: { failEventRefreshAfterActivityMutation?: boolean } = {},
+  options: {
+    failEventRefreshAfterActivityMutation?: boolean;
+    rejectActivityRegistration?: boolean;
+  } = {},
 ) {
   let registrations = [...activityRegistrations];
   let activityMutationCompleted = false;
@@ -170,6 +173,14 @@ async function mockParticipantWorkflow(
     }
     if (path === '/api/v1/participant/activity-registrations') return json(route, pageOf(registrations));
     if (path === '/api/v1/participant/activities/93/register' && method === 'POST') {
+      if (options.rejectActivityRegistration) {
+        return json(route, {
+          code: 'ACTIVITY_CAPACITY_FULL',
+          message: 'Hoạt động đã hết chỗ.',
+          fieldErrors: [],
+          path,
+        }, 409);
+      }
       registrations = [...registrations, {
         activityRegistrationId: 404,
         activity: {
@@ -189,6 +200,19 @@ async function mockParticipantWorkflow(
       }];
       activityMutationCompleted = true;
       return json(route, registrations.at(-1), 201);
+    }
+    if (path === '/api/v1/participant/activities/91/register' && method === 'POST') {
+      registrations = registrations.map(registration => registration.activity.activityId === 91
+        ? {
+            ...registration,
+            status: 'ACTIVE',
+            outcome: 'PENDING',
+            cancellationSource: null,
+            cancelledAt: null,
+          }
+        : registration);
+      activityMutationCompleted = true;
+      return json(route, registrations.find(registration => registration.activity.activityId === 91));
     }
     if (path === '/api/v1/participant/activities/91/cancel-registration' && method === 'POST') {
       registrations = registrations.map(registration => registration.activity.activityId === 91
@@ -222,8 +246,8 @@ test('event detail survives a direct refresh and shows only registrations from t
   await page.getByRole('button', { name: 'Hoạt động sự kiện (2)' }).click();
   await expect(page.getByRole('heading', { name: 'Đọc sách cùng cộng đồng' })).toBeVisible();
   await page.getByRole('button', { name: 'Đăng ký hoạt động' }).evaluate(button => {
-    button.click();
-    button.click();
+    (button as HTMLElement).click();
+    (button as HTMLElement).click();
   });
   await expect(page.getByRole('link', { name: 'Xem đăng ký' }).last()).toBeVisible();
 
@@ -255,6 +279,19 @@ test('successful registration remains successful when the follow-up event refres
   expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/93/register')).toHaveLength(1);
 });
 
+test('a rejected activity registration keeps the catalog unregistered and shows the backend reason', async ({ page }) => {
+  const requestedPaths = await mockParticipantWorkflow(page, {
+    rejectActivityRegistration: true,
+  });
+
+  await page.goto('/participant/events/746?section=discover');
+  await page.getByRole('button', { name: 'Đăng ký hoạt động' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('Hoạt động đã hết chỗ.');
+  await expect(page.getByRole('button', { name: 'Đăng ký hoạt động' })).toBeVisible();
+  expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/93/register')).toHaveLength(1);
+});
+
 test('activity cancellation uses the mutation response without unrelated participant APIs', async ({ page }) => {
   const requestedPaths = await mockParticipantWorkflow(page);
   page.on('dialog', dialog => dialog.accept());
@@ -266,6 +303,28 @@ test('activity cancellation uses the mutation response without unrelated partici
   expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/91/cancel-registration')).toHaveLength(1);
   expect(requestedPaths.filter(path => path.includes('/participant/certificates'))).toHaveLength(0);
   expect(requestedPaths.filter(path => path.includes('/participant/badges'))).toHaveLength(0);
+});
+
+test('participant can cancel and re-register the same activity registration', async ({ page }) => {
+  const requestedPaths = await mockParticipantWorkflow(page);
+  page.on('dialog', dialog => dialog.accept());
+
+  await page.goto('/participant/events/746?section=activities');
+  const registeredActivity = page.locator('article').filter({
+    has: page.getByRole('heading', { name: 'Giao lưu tác giả trẻ' }),
+  });
+  await registeredActivity.getByRole('button', { name: 'Hủy đăng ký' }).click();
+  await expect(registeredActivity.getByText('Đã hủy đăng ký', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Hoạt động sự kiện (2)' }).click();
+  const catalogActivity = page.locator('article').filter({
+    has: page.getByRole('heading', { name: 'Giao lưu tác giả trẻ' }),
+  });
+  await catalogActivity.getByRole('button', { name: 'Đăng ký hoạt động' }).click();
+  await expect(catalogActivity.getByRole('link', { name: 'Xem đăng ký' })).toBeVisible();
+
+  expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/91/cancel-registration')).toHaveLength(1);
+  expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/91/register')).toHaveLength(1);
 });
 
 test('activity detail requires an exact registration and reports attendance honestly', async ({ page }) => {
