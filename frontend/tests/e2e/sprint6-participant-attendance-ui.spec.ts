@@ -208,7 +208,7 @@ test('legacy personal QR route redirects to the participant activity list', asyn
 
   await page.goto('/participant/activities/qr/91');
 
-  await expect(page).toHaveURL(/\/participant\/events$/);
+  await expect(page).toHaveURL(/\/participant\/activities$/);
   await expect(page.getByText('Mã QR Check-in Tham Gia')).toHaveCount(0);
 });
 

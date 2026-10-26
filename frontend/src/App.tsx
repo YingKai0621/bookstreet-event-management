@@ -26,6 +26,7 @@ import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
 import { AttendanceScanPage } from './pages/participant/AttendanceScanPage';
 import { EventDetailPage } from './pages/participant/EventDetailPage';
 import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
+import { MyEventsPage } from './pages/participant/MyEventsPage';
 import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
 import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
 import { ParticipantFeedbackPage } from './pages/participant/ParticipantFeedbackPage';
@@ -290,12 +291,29 @@ export function App() {
         if (active) setParticipantProfileError(error instanceof Error ? error.message : 'Không tải được hồ sơ.');
       });
     };
+    const refreshParticipation = async () => {
+      if (participantUserId === undefined) return;
+      try {
+        const eventList = await participantApi.getEvents();
+        const activityList = await participantApi.getMyActivities(eventList);
+        if (!active) return;
+        setParticipantEvents(eventList);
+        setParticipantActivities(activityList);
+      } catch (error) {
+        if (active) console.warn('Không thể tải dữ liệu tham gia của độc giả', error);
+      }
+    };
     refreshProfile();
-    window.addEventListener('focus', refreshProfile);
+    void refreshParticipation();
+    const refreshParticipantWorkspace = () => {
+      refreshProfile();
+      void refreshParticipation();
+    };
+    window.addEventListener('focus', refreshParticipantWorkspace);
     window.addEventListener('email:verified', refreshProfile);
     return () => {
       active = false;
-      window.removeEventListener('focus', refreshProfile);
+      window.removeEventListener('focus', refreshParticipantWorkspace);
       window.removeEventListener('email:verified', refreshProfile);
     };
   }, [participantUserId]);
@@ -344,10 +362,11 @@ export function App() {
   // Participant Action Handlers
   const handleRegisterActivity = async (activityId: string) => {
     await participantApi.registerActivity(activityId);
-    const [profile, acts, certs, badges, eventList] = await Promise.all([
-      participantApi.getProfile(), participantApi.getMyActivities(),
-      participantApi.getCertificates(), participantApi.getBadges(), participantApi.getEvents(),
+    const [profile, certs, badges, eventList] = await Promise.all([
+      participantApi.getProfile(), participantApi.getCertificates(),
+      participantApi.getBadges(), participantApi.getEvents(),
     ]);
+    const acts = await participantApi.getMyActivities(eventList);
     if (profile) setParticipantProfile(profile);
     setParticipantActivities(acts);
     setParticipantCertificates(certs);
@@ -356,16 +375,13 @@ export function App() {
     window.dispatchEvent(new Event('participant:data-changed'));
   };
 
-  const handleCancelActivity = async (registrationId: string) => {
-    await participantApi.cancelActivity(registrationId);
-    const [activities, events] = await Promise.all([participantApi.getMyActivities(), participantApi.getEvents()]);
+  const handleCancelActivity = async (activityId: string) => {
+    await participantApi.cancelActivity(activityId);
+    const events = await participantApi.getEvents();
+    const activities = await participantApi.getMyActivities(events);
     setParticipantActivities(activities);
     setParticipantEvents(events);
     window.dispatchEvent(new Event('participant:data-changed'));
-  };
-
-  const handleOpenEventActivities = (eventId: string) => {
-    navigate(`/participant/events/${eventId}?section=activities`);
   };
 
   const handleJoinParticipantEvent = async (eventId: string) => {
@@ -547,26 +563,27 @@ export function App() {
             />
           } />
           <Route path="/participant/events" element={
-            <MyActivitiesPage
+            <MyEventsPage
               language={language}
-              activities={participantActivities}
-              onCancelActivity={(activityId) => {
-                const registrationId = participantActivities.find(activity => activity.id === activityId)?.registrationId;
-                if (registrationId) void handleCancelActivity(registrationId);
-              }}
+              events={participantEvents}
+              onLeaveEvent={(eventId) => { void handleLeaveParticipantEvent(eventId); }}
+              onJoinEvent={(eventId) => { void handleJoinParticipantEvent(eventId); }}
             />
           } />
           <Route path="/participant/events/:eventId" element={<EventDetailPage language={language} events={participantEvents} activities={participantActivities}
             onRegisterActivity={handleRegisterActivity} onLeaveEvent={handleLeaveParticipantEvent} />} />
-          <Route path="/participant/activities" element={<Navigate to="/participant/events" replace />} />
+          <Route path="/participant/activities" element={
+            <MyActivitiesPage
+              language={language}
+              activities={participantActivities}
+              onCancelActivity={(activityId) => { void handleCancelActivity(activityId); }}
+            />
+          } />
           <Route path="/participant/activities/detail/:activityId" element={
             <ActivityDetailPage language={language} activities={participantActivities} onRegisterActivity={handleRegisterActivity}
-              onCancelActivity={(activityId) => {
-                const registrationId = participantActivities.find(activity => activity.id === activityId)?.registrationId;
-                if (registrationId) void handleCancelActivity(registrationId);
-              }} />
+              onCancelActivity={(activityId) => { void handleCancelActivity(activityId); }} />
           } />
-          <Route path="/participant/activities/qr/:activityId" element={<Navigate to="/participant/events" replace />} />
+          <Route path="/participant/activities/qr/:activityId" element={<Navigate to="/participant/activities" replace />} />
           <Route path="/participant/rewards" element={
             <RewardsPage
               language={language}
@@ -826,7 +843,7 @@ export function App() {
             isParticipantAuthenticated={isParticipantAuthenticated}
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
-            onJoinEvent={handleOpenEventActivities}
+            onJoinEvent={handleJoinParticipantEvent}
           />
 
           {/* 6.5 Heritage Trail Section - Di sản văn hóa */}
@@ -879,7 +896,7 @@ export function App() {
         isLoading={isPublicDataLoading}
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
-        onJoinEvent={handleOpenEventActivities}
+        onJoinEvent={handleJoinParticipantEvent}
       />
 
     </div>

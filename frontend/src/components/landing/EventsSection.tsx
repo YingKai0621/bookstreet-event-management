@@ -216,7 +216,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               {language === 'vi' ? activeEventDetail.title : activeEventDetail.titleEn}
             </h3>
             <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.dateStr} ({activeEventDetail.timeStr})</p>
+              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${activeEventDetail.dateStr} (${activeEventDetail.timeStr})`}</p>
               <p><strong>{language === 'vi' ? 'Địa điểm:' : 'Location:'}</strong> {language === 'vi' ? activeEventDetail.location : activeEventDetail.locationEn}</p>
               <p><strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {activeEventDetail.speaker}</p>
             </div>
@@ -320,7 +320,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                     <div className="reg-event-meta-list">
                       <span className="reg-meta-item">
                         <Clock size={14} />
-                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.dateStr} • {showRegisterModal.timeStr}
+                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${showRegisterModal.dateStr} • ${showRegisterModal.timeStr}`}
                       </span>
                       <span className="reg-meta-item">
                         <MapPin size={14} />
@@ -400,7 +400,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             ) : (
               <div className="success-box-center">
                 <CheckCircle2 size={52} color="#15803D" style={{ margin: '0 auto 0.75rem' }} />
-                <h3 className="modal-heading-title" style={{ color: '#1B2B25' }}>
+                <h3 id="registration-modal-title" className="modal-heading-title" style={{ color: '#1B2B25' }}>
                   {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
                 </h3>
                 <p className="success-event-badge">

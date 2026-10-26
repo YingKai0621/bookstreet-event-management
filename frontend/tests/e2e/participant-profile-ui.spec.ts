@@ -68,7 +68,7 @@ test('failed database write shows an error without a success message', async ({ 
 
 test('participant registration tabs and search are restored from the URL', async ({ page }) => {
   await setup(page);
-  await page.goto('/participant/events?status=cancelled&search=workshop');
+  await page.goto('/participant/activities?status=cancelled&search=workshop');
 
   await expect(page.getByRole('button', { name: /Đã hủy/ })).toHaveClass(/is-active/);
   await expect(page).toHaveURL(/status=cancelled/);

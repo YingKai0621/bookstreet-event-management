@@ -55,7 +55,7 @@ export const MyActivitiesPage: React.FC<MyActivitiesPageProps> = ({
       {/* 1. Header */}
       <div className="participant-page-header">
         <h1 className="participant-page-title workspace-page-title">
-          {language === 'vi' ? 'Sự kiện của tôi' : 'My Events'}
+          {language === 'vi' ? 'Hoạt động của tôi' : 'My Activities'}
         </h1>
         <p className="participant-page-sub workspace-page-subtitle">
           {language === 'vi' 

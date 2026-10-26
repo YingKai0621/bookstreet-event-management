@@ -73,6 +73,7 @@ export interface EventItem {
   dateStr: string;
   dayOfWeek?: string;
   timeStr: string;
+  scheduleStr?: string;
   location: string;
   locationEn: string;
   priorityLevel: EventPriority;

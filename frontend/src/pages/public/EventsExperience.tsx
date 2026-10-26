@@ -183,7 +183,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <div>
                   <span>{vi ? 'Sự kiện tâm điểm' : 'Spotlight Event'}</span>
                   <h2>{vi ? featuredEvent.title : featuredEvent.titleEn}</h2>
-                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.dateStr} ({featuredEvent.timeStr})</span>
+                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.scheduleStr || `${featuredEvent.dateStr} (${featuredEvent.timeStr})`}</span>
                 </div>
                 <ArrowRight className="heritage-featured-arrow" size={24} />
               </div>
@@ -319,7 +319,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 {vi ? activeModalEvent.title : activeModalEvent.titleEn}
               </h3>
               <div className="modal-meta-box">
-                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.timeStr} ({activeModalEvent.dayOfWeek}, {activeModalEvent.dateStr})</p>
+                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${activeModalEvent.dateStr} (${activeModalEvent.timeStr})`}</p>
                 <p>📍 <strong>{vi ? 'Địa điểm:' : 'Location:'}</strong> {vi ? activeModalEvent.location : activeModalEvent.locationEn}</p>
                 {activeModalEvent.speaker && (
                   <p>🎙️ <strong>{vi ? 'Diễn giả / Chủ trì:' : 'Speaker:'}</strong> {activeModalEvent.speaker}</p>
@@ -429,7 +429,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                       <div className="reg-event-meta-list">
                         <span className="reg-meta-item">
                           <Clock size={14} />
-                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.dateStr} • {registeredEvent.timeStr}
+                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${registeredEvent.dateStr} • ${registeredEvent.timeStr}`}
                         </span>
                         <span className="reg-meta-item">
                           <MapPin size={14} />

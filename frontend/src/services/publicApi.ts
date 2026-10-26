@@ -74,6 +74,16 @@ function formatEventTime(value: string): string {
   }).format(new Date(value));
 }
 
+function formatEventSchedule(startAt: string, endAt: string): string {
+  const startDate = formatEventDate(startAt);
+  const endDate = formatEventDate(endAt);
+  const startTime = formatEventTime(startAt);
+  const endTime = formatEventTime(endAt);
+  return startDate === endDate
+    ? `${startDate}, ${startTime} – ${endTime}`
+    : `${startDate}, ${startTime} – ${endDate}, ${endTime}`;
+}
+
 function toEventItem(event: PublicEventResponse): EventItem {
   const now = Date.now();
   const startAt = new Date(event.startAt).getTime();
@@ -92,6 +102,7 @@ function toEventItem(event: PublicEventResponse): EventItem {
       weekday: 'long',
     }).format(new Date(event.startAt)),
     timeStr: `${formatEventTime(event.startAt)} - ${formatEventTime(event.endAt)}`,
+    scheduleStr: formatEventSchedule(event.startAt, event.endAt),
     location: '',
     locationEn: '',
     priorityLevel: 'regular',

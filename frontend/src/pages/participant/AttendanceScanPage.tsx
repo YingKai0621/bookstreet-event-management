@@ -183,7 +183,7 @@ export function AttendanceScanPage({ language }: AttendanceScanPageProps) {
         )}
 
         {state.kind !== 'submitting' && (
-          <Link className="attendance-scan-back" to="/participant/events">
+          <Link className="attendance-scan-back" to="/participant/activities">
             {vi ? 'Về hoạt động của tôi' : 'Back to my activities'}
           </Link>
         )}

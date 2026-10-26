@@ -171,8 +171,14 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
           <h3>{language === 'vi' ? current.title : current.titleEn}</h3>
           <p>{language === 'vi' ? current.summary : current.summaryEn}</p>
           <div className="event-coverflow-meta">
-            <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{current.dateStr}</span>
-            <span><Clock3 size={16} />{current.timeStr}</span>
+            {current.scheduleStr ? (
+              <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{current.scheduleStr}</span>
+            ) : (
+              <>
+                <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{current.dateStr}</span>
+                <span><Clock3 size={16} />{current.timeStr}</span>
+              </>
+            )}
             <span><MapPin size={16} />{language === 'vi' ? current.location : current.locationEn}</span>
           </div>
         </div>
