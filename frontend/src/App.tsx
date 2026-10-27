@@ -172,17 +172,40 @@ export function App() {
   const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
   const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const publicEventIdFromUrl = isBooths ? new URLSearchParams(location.search).get('eventId') : null;
+  const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
+  const defaultPublicEventId = events.find(event => event.status === 'happening')?.id
+    || events.find(event => event.status === 'upcoming')?.id
+    || events[0]?.id
+    || '';
   const publicEventId = events.some(event => event.id === publicEventIdFromUrl)
     ? publicEventIdFromUrl as string
     : events.some(event => event.id === selectedPublicEventId)
       ? selectedPublicEventId
-      : events[0]?.id || '';
+      : defaultPublicEventId;
 
   const selectPublicEvent = (eventId: string) => {
+    if (!events.some(event => event.id === eventId)) return;
     setSelectedPublicEventId(eventId);
-    if (isBooths) navigate(`/gian-hang?eventId=${encodeURIComponent(eventId)}`);
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', eventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+      hash: location.hash,
+    }, { replace: true });
   };
+
+  useEffect(() => {
+    if (!isPublicRoute || isPublicDataLoading || !publicEventIdFromUrl || !publicEventId) return;
+    if (publicEventIdFromUrl === publicEventId) return;
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', publicEventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+      hash: location.hash,
+    }, { replace: true });
+  }, [isPublicDataLoading, isPublicRoute, location.hash, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
 
   // Load real data from Backend REST API
   useEffect(() => {
@@ -896,6 +919,7 @@ export function App() {
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onParticipantLogout={handleParticipantLogout}
+        selectedPublicEventId={publicEventId}
       />
 
       <div className={`main-app-container ${isSlidePageOpen ? 'heritage-active-bg' : ''}`} inert={isSlidePageOpen} aria-hidden={isSlidePageOpen || undefined}>
@@ -922,7 +946,6 @@ export function App() {
             error={publicBoothsError}
             events={events}
             selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
             onSearchQueryChange={setBoothSearchQuery}
@@ -938,6 +961,8 @@ export function App() {
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
             onJoinEvent={handleJoinParticipantEvent}
+            selectedEventId={publicEventId}
+            onSelectEventId={selectPublicEvent}
           />
 
           {/* 6.5 Heritage Trail Section - Di sản văn hóa */}
@@ -952,7 +977,6 @@ export function App() {
             language={language}
             events={events}
             selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
@@ -979,7 +1003,6 @@ export function App() {
         events={events}
         isLoading={isPublicDataLoading || isPublicBoothsLoading}
         selectedEventId={publicEventId}
-        onSelectEventId={selectPublicEvent}
         error={publicBoothsError}
         onSelectBoothOnMap={handleSelectBoothOnMap} 
       />
@@ -991,6 +1014,7 @@ export function App() {
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onJoinEvent={handleJoinParticipantEvent}
+        selectedEventId={publicEventId}
       />
 
     </div>

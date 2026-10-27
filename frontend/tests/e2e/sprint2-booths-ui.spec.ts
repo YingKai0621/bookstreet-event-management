@@ -720,7 +720,7 @@ test('Partner sees a dedicated modal after reaching the Event Booth quota', asyn
   await expect(page.locator('.s2-partner-request-status')).toHaveText('Đã được chọn');
 });
 
-test('Public visitor switches published Events and sees only Booths with valid coordinates', async ({ page }) => {
+test('Public Event card synchronizes Booths and Map context with valid coordinates', async ({ page }) => {
   const emptySourceWarnings: string[] = [];
   page.on('console', message => {
     if (message.type() === 'error' && message.text().includes('empty string')) {
@@ -729,8 +729,8 @@ test('Public visitor switches published Events and sees only Booths with valid c
   });
   await mockPublicMap(page);
   await page.goto('/');
-  const eventPicker = page.getByLabel('Sự kiện công khai').first();
-  await expect(eventPicker).toHaveValue('101');
+  await expect(page.getByLabel(`Sự kiện đang xem: ${event.name}`).first()).toBeVisible();
+  await expect(page.getByLabel('Sự kiện công khai')).toHaveCount(0);
   const marker = page.getByRole('button', { name: /A05.*Còn trống/ });
   await expect(marker).toBeVisible();
   await expect(page.getByRole('button', { name: /C03/ })).toHaveCount(0);
@@ -739,10 +739,16 @@ test('Public visitor switches published Events and sees only Booths with valid c
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('5.000.000');
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('Còn trống');
   await expect(page.getByRole('button', { name: /Gửi yêu cầu gian hàng/ })).toHaveCount(0);
-  await eventPicker.selectOption('102');
+  await page.getByRole('button', { name: 'Sự kiện tiếp theo' }).click();
+  await expect(page).toHaveURL(/\?eventId=102$/);
+  await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
   await expect(page.getByText('Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.')).toBeVisible();
-  await eventPicker.selectOption('101');
+  await page.reload();
+  await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Sự kiện trước' }).click();
+  await expect(page).toHaveURL(/\?eventId=101$/);
   await expect(marker).toBeVisible();
   await expect(page.locator('img[src=""]')).toHaveCount(0);
   expect(emptySourceWarnings).toEqual([]);

@@ -42,6 +42,8 @@ interface EventsSectionProps {
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  selectedEventId?: string;
+  onSelectEventId?: (eventId: string) => void;
 }
 
 export const EventsSection: React.FC<EventsSectionProps> = ({ 
@@ -52,6 +54,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
   onJoinEvent,
+  selectedEventId,
+  onSelectEventId,
 }) => {
   const [activeEventDetail, setActiveEventDetail] = useState<EventItem | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState<EventItem | null>(null);
@@ -144,13 +148,15 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
           language={language}
           weekEventIds={weekEventIds}
           isLoading={isLoading}
+          selectedEventId={selectedEventId}
+          onSelectEvent={onSelectEventId}
           onDetails={setActiveEventDetail}
           onRegister={handleOpenRegister}
         />
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách sự kiện */}
         <div className="section-bottom-see-more-row">
           <Link
-            to="/su-kien"
+            to={selectedEventId ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}` : '/su-kien'}
             className="btn-section-see-more-borderless"
             aria-label="Xem thêm toàn bộ lịch hoạt động sự kiện"
           >

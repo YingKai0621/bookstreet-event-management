@@ -11,6 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
+import { PublicEventContext } from '../../components/landing/PublicEventContext';
 import './BoothsExperience.css';
 
 interface BoothsExperienceProps {
@@ -20,7 +21,6 @@ interface BoothsExperienceProps {
   events: EventItem[];
   selectedEventId: string;
   isLoading?: boolean;
-  onSelectEventId: (eventId: string) => void;
   error?: string;
   onSelectBoothOnMap?: (boothId: string) => void;
 }
@@ -41,7 +41,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   events,
   selectedEventId,
   isLoading = false,
-  onSelectEventId,
   error,
   onSelectBoothOnMap,
 }) => {
@@ -50,16 +49,20 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const selectedEvent = events.find(event => event.id === selectedEventId);
   const boothPathMatch = location.pathname.match(/^\/gian-hang\/([^/]+)\/?$/);
   const hasBoothDetailPath = boothPathMatch !== null;
   const routeBoothId = decodePathIdentifier(boothPathMatch?.[1]);
   const activeModalBooth = boothPathMatch
     ? booths.find(booth => booth.id === routeBoothId) || null
     : null;
-  useModalDismiss(open && !activeModalBooth, () => navigate('/'));
   const boothCatalogUrl = selectedEventId
     ? `/gian-hang?eventId=${encodeURIComponent(selectedEventId)}`
     : '/gian-hang';
+  const publicHomeUrl = selectedEventId
+    ? `/?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/';
+  useModalDismiss(open && !activeModalBooth, () => navigate(publicHomeUrl));
   useModalDismiss(Boolean(activeModalBooth), () => navigate(boothCatalogUrl));
 
   const categories = [
@@ -89,11 +92,13 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   }, [booths, searchQuery, selectedCategory]);
 
   const handleClose = () => {
-    navigate('/');
+    navigate(publicHomeUrl);
   };
 
   const handleLocateOnMap = (boothId: string) => {
-    navigate('/#ban-do');
+    navigate(selectedEventId
+      ? `/?eventId=${encodeURIComponent(selectedEventId)}#ban-do`
+      : '/#ban-do');
     if (onSelectBoothOnMap) {
       onSelectBoothOnMap(boothId);
     }
@@ -194,22 +199,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               <h2>{vi ? 'Danh mục các gian hàng' : 'All Bookstalls & Publishers'}</h2>
             </div>
             <div className="booths-experience-controls">
-              {events.length > 0 && (
-                <label className="booths-experience-event-picker">
-                  <span>{vi ? 'Sự kiện công khai' : 'Published event'}</span>
-                  <select
-                    value={selectedEventId}
-                    onChange={event => onSelectEventId(event.target.value)}
-                    aria-label={vi ? 'Sự kiện công khai' : 'Published event'}
-                  >
-                    {events.map(event => (
-                      <option key={event.id} value={event.id}>
-                        {vi ? event.title : event.titleEn}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              <PublicEventContext language={language} event={selectedEvent} />
               <div className="heritage-search">
                 <Search size={16} />
                 <input
