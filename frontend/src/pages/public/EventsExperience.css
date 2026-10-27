@@ -1,6 +1,28 @@
 /* Events Experience uses the same editorial styling rules as BoothsExperience */
 @import './BoothsExperience.css';
 
+.registration-deadline-notice {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: #713f12;
+}
+
+.registration-deadline-notice svg {
+  color: #b45309;
+  margin-bottom: 0.8rem;
+}
+
+.registration-deadline-notice h3 {
+  margin: 0 0 0.8rem;
+  color: #1a2823;
+}
+
+.registration-deadline-notice p {
+  max-width: 440px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.6;
+}
+
 /* 3 Cards per Row Grid Layout */
 .events-collection-grid {
   display: grid;

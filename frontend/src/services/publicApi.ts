@@ -63,6 +63,7 @@ interface PublicEventResponse {
   startAt: string;
   endAt: string;
   partnerApplicationDeadlineAt: string | null;
+  participantRegistrationDeadlineAt: string | null;
   bannerUrl: string | null;
   status: 'PUBLISHED';
 }
@@ -98,8 +99,8 @@ function formatEventTime(value: string): string {
 }
 
 function formatEventSchedule(startAt: string, endAt: string): string {
-  const startDate = formatEventDate(startAt);
-  const endDate = formatEventDate(endAt);
+  const startDate = formatEventDate(startAt).split('-').reverse().join('/');
+  const endDate = formatEventDate(endAt).split('-').reverse().join('/');
   const startTime = formatEventTime(startAt);
   const endTime = formatEventTime(endAt);
   return startDate === endDate
@@ -126,6 +127,7 @@ function toEventItem(event: PublicEventResponse): EventItem {
     }).format(new Date(event.startAt)),
     timeStr: `${formatEventTime(event.startAt)} - ${formatEventTime(event.endAt)}`,
     scheduleStr: formatEventSchedule(event.startAt, event.endAt),
+    registrationDeadlineAt: event.participantRegistrationDeadlineAt,
     location: '',
     locationEn: '',
     priorityLevel: 'regular',

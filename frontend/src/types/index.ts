@@ -74,6 +74,7 @@ export interface EventItem {
   dayOfWeek?: string;
   timeStr: string;
   scheduleStr?: string;
+  registrationDeadlineAt?: string | null;
   location: string;
   locationEn: string;
   priorityLevel: EventPriority;

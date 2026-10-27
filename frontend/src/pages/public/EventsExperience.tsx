@@ -13,6 +13,7 @@ import {
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ApiError } from '../../services/apiError';
 import { EventItem, Language, ParticipantProfile } from '../../types';
 import './EventsExperience.css';
 
@@ -34,6 +35,15 @@ function decodePathIdentifier(value: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+function formatVietnameseDateTime(value: string): string {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
 }
 
 export const EventsExperience: React.FC<EventsExperienceProps> = ({
@@ -59,6 +69,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registeredEvent, setRegisteredEvent] = useState<EventItem | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
   useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate('/'));
   useModalDismiss(Boolean(activeModalEvent), () => navigate('/su-kien'));
   useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
@@ -94,6 +105,11 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (registeredEvent?.registrationDeadlineAt &&
+        Date.now() > new Date(registeredEvent.registrationDeadlineAt).getTime()) {
+      setDeadlinePassed(true);
+      return;
+    }
     if (!isParticipantAuthenticated) {
       navigate('/login', { state: { from: registeredEvent ? `/su-kien/${registeredEvent.id}` : '/su-kien' } });
       return;
@@ -104,6 +120,10 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
       await onJoinEvent(registeredEvent.id);
       setRegisterSuccess(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'EVENT_REGISTRATION_DEADLINE_PASSED') {
+        setDeadlinePassed(true);
+        return;
+      }
       setRegistrationError(error instanceof Error ? error.message : 'Không thể đăng ký sự kiện');
     }
   };
@@ -320,6 +340,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               </h3>
               <div className="modal-meta-box">
                 <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${activeModalEvent.dateStr} (${activeModalEvent.timeStr})`}</p>
+                {activeModalEvent.registrationDeadlineAt && (
+                  <p><Clock size={15} style={{ verticalAlign: 'middle' }} /> <strong>{vi ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatVietnameseDateTime(activeModalEvent.registrationDeadlineAt)}</p>
+                )}
                 <p>📍 <strong>{vi ? 'Địa điểm:' : 'Location:'}</strong> {vi ? activeModalEvent.location : activeModalEvent.locationEn}</p>
                 {activeModalEvent.speaker && (
                   <p>🎙️ <strong>{vi ? 'Diễn giả / Chủ trì:' : 'Speaker:'}</strong> {activeModalEvent.speaker}</p>
@@ -340,6 +363,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   navigate('/su-kien');
                   setRegisteredEvent(ev);
                   setRegisterSuccess(false);
+                  setDeadlinePassed(false);
+                  setRegistrationError(null);
                 }}
               >
                 <CheckCircle size={16} />
@@ -358,7 +383,22 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <X size={20} />
               </button>
 
-              {registerSuccess ? (
+              {deadlinePassed ? (
+                <div className="registration-deadline-notice" role="alert">
+                  <Clock size={46} aria-hidden="true" />
+                  <h3 id="reg-modal-heading">{vi ? 'Sự kiện đã hết hạn đăng ký' : 'Event registration has closed'}</h3>
+                  <p>{vi
+                    ? `Bạn không thể đăng ký tham gia “${registeredEvent.title}” vì thời hạn đã kết thúc. Hãy chọn một sự kiện khác còn mở đăng ký.`
+                    : `Registration for “${registeredEvent.title}” has closed. Please choose another event that is still open.`}</p>
+                  {registeredEvent.registrationDeadlineAt && <p>
+                    {vi ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                    <strong>{formatVietnameseDateTime(registeredEvent.registrationDeadlineAt)}</strong>
+                  </p>}
+                  <button type="button" className="btn-figma-primary" onClick={() => setRegisteredEvent(null)}>
+                    {vi ? 'Xem các sự kiện khác' : 'Browse other events'}
+                  </button>
+                </div>
+              ) : registerSuccess ? (
                 <div className="success-box-center" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
                   <CheckCircle size={58} color="#15803D" style={{ margin: '0 auto 1rem' }} />
                   <span className="reg-badge-tag" style={{ background: '#DCFCE7', color: '#15803D', marginBottom: '0.65rem' }}>
@@ -431,6 +471,13 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                           <Clock size={14} />
                           {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${registeredEvent.dateStr} • ${registeredEvent.timeStr}`}
                         </span>
+                        {registeredEvent.registrationDeadlineAt && (
+                          <span className="reg-meta-item">
+                            <Clock size={14} />
+                            {vi ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                            {formatVietnameseDateTime(registeredEvent.registrationDeadlineAt)}
+                          </span>
+                        )}
                         <span className="reg-meta-item">
                           <MapPin size={14} />
                           {vi ? registeredEvent.location : registeredEvent.locationEn}
