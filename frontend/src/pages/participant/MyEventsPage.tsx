@@ -114,6 +114,14 @@ export const MyEventsPage = ({
                   <p className="event-card-activity-count">
                     {vi ? `${event.activitiesCount} hoạt động đang giữ đăng ký` : `${event.activitiesCount} active activity registrations`}
                   </p>
+                  {!event.isJoined && event.status === 'left' && (
+                    <p className="participant-event-rejoin-note">
+                      {vi ? 'Bạn đã rời sự kiện. ' : 'You have left this event. '}
+                      <Link to={`/su-kien/${encodeURIComponent(event.id)}`}>
+                        {vi ? 'Đăng ký lại ở đây' : 'Rejoin here'}
+                      </Link>
+                    </p>
+                  )}
                   <div className="event-card-actions">
                     <Link className="btn-part-primary" to={`/participant/events/${encodeURIComponent(event.id)}`}>
                       {vi ? 'Xem hoạt động' : 'View activities'}<ArrowRight size={14} />

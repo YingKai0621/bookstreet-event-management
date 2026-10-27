@@ -18,6 +18,15 @@ const parseEventDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const formatRegistrationDeadline = (value: string) => {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
+};
+
 const startOfWeek = (date: Date) => {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const offset = (start.getDay() + 6) % 7;
@@ -217,6 +226,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             </h3>
             <div className="modal-meta-box">
               <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${activeEventDetail.dateStr} (${activeEventDetail.timeStr})`}</p>
+              {activeEventDetail.registrationDeadlineAt && (
+                <p><strong>{language === 'vi' ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatRegistrationDeadline(activeEventDetail.registrationDeadlineAt)}</p>
+              )}
               <p><strong>{language === 'vi' ? 'Địa điểm:' : 'Location:'}</strong> {language === 'vi' ? activeEventDetail.location : activeEventDetail.locationEn}</p>
               <p><strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {activeEventDetail.speaker}</p>
             </div>
@@ -326,6 +338,13 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                         <MapPin size={14} />
                         {language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn}
                       </span>
+                      {showRegisterModal.registrationDeadlineAt && (
+                        <span className="reg-meta-item">
+                          <Clock size={14} />
+                          {language === 'vi' ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                          {formatRegistrationDeadline(showRegisterModal.registrationDeadlineAt)}
+                        </span>
+                      )}
                       {showRegisterModal.speaker && (
                         <span className="reg-meta-item reg-speaker-line">
                           <strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {showRegisterModal.speaker}
