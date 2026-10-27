@@ -16,7 +16,6 @@ import { OrganizerTopBar } from './OrganizerTopBar';
 import { OrganizerBoothManagementView } from './OrganizerBoothManagementView';
 import { OrganizerBoothRequestsView } from './OrganizerBoothRequestsView';
 import { OrganizerActivityWorkspace } from './OrganizerActivityWorkspace';
-import { OrganizerAttendanceModal } from './OrganizerAttendanceModal';
 import { OrganizerCreateEventModal } from './OrganizerCreateEventModal';
 import { OrganizerPublishEventModal } from './OrganizerPublishEventModal';
 import type { EventPublishFailure } from './OrganizerPublishEventModal';
@@ -50,7 +49,6 @@ import {
   OrganizerEvent,
   OrganizerEventRequest,
   OrganizerNotificationItem,
-  OrganizerParticipantItem,
   OrganizerProfile,
   OrganizerTab,
 } from '../../types/organizer';
@@ -97,6 +95,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const selectEventForCurrentScreen = useCallback((eventId: string | null) => {
     const params = new URLSearchParams(location.search);
     params.delete('activityView');
+    if (activeTab === 'participants') {
+      ['activityId', 'status', 'outcome', 'search', 'page'].forEach(key => params.delete(key));
+    }
     const nextEventId = eventId && eventId !== 'all' ? eventId : null;
     if (nextEventId) params.set('eventId', nextEventId);
     else params.delete('eventId');
@@ -109,7 +110,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
 
   // Modal State
-  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OrganizerEvent | null>(null);
   const [eventPendingPublish, setEventPendingPublish] = useState<OrganizerEvent | null>(null);
@@ -121,7 +121,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
   const [boothsList, setBoothsList] = useState<OrganizerBoothItem[]>([]);
   const activitiesList: OrganizerActivityItem[] = [];
-  const participantsList: OrganizerParticipantItem[] = [];
   const [notificationsList, setNotificationsList] = useState<OrganizerNotificationItem[]>([]);
   const [profile, setProfile] = useState<OrganizerProfile>(() => {
     const fullName = user?.fullName || '';
@@ -248,23 +247,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   // Unread notifications count
   const unreadCount = notificationsList.filter(n => !n.isRead).length;
-
-  // Handlers for Participant Manual Override
-  const handleManualOverrideStatus = (
-    participantId: string, 
-    newStatus: OrganizerParticipantItem['status'], 
-    reason: string
-  ) => {
-    void organizerApi.overrideAttendance(participantId, newStatus === 'not_attended' ? 'cancelled' : newStatus, reason)
-      .then(() => refreshOrganizerData(selectedEventId)).catch(console.warn);
-  };
-
-  // Handlers for Attendance Check-in Scanner
-  const handleRecordScan = async (ticketCode: string) => {
-    const result = await organizerApi.scanAttendance(ticketCode);
-    await refreshOrganizerData(selectedEventId);
-    return result;
-  };
 
   const handleApprovePartnerApplication = async (
     applicationId: string,
@@ -502,13 +484,13 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             isLoadingOperations={isLoadingEventOperations}
             operationsError={eventOperationsError}
             activities={activitiesList}
-            participants={participantsList}
             partnerApplications={partnerApplications}
             onApprovePartnerApplication={handleApprovePartnerApplication}
             onRejectPartnerApplication={handleRejectPartnerApplication}
             onBack={() => navigateToTab('events')}
             onRetryOperations={() => setEventOperationsReloadKey(current => current + 1)}
             onNavigateToBoothRequests={() => navigateToTab('booth_requests', currentSelectedEvent.id)}
+            onNavigateToParticipants={() => navigateToTab('participants', currentSelectedEvent.id)}
             onNavigateToBoothsMap={() => {
               navigateToTab('booths', currentSelectedEvent.id);
             }}
@@ -554,9 +536,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             events={eventsList}
             selectedEventId={currentSelectedEvent?.id || 'all'}
             onSelectEventId={selectEventForCurrentScreen}
-            participants={participantsList}
-            onOpenAttendanceModal={() => setIsAttendanceModalOpen(true)}
-            onManualOverrideStatus={handleManualOverrideStatus}
           />
         )}
 
@@ -600,14 +579,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
         </main>
       </div>
-
-      {/* Global Attendance Scanner Modal */}
-      <OrganizerAttendanceModal 
-        language={language}
-        isOpen={isAttendanceModalOpen}
-        onClose={() => setIsAttendanceModalOpen(false)}
-        onRecordScan={handleRecordScan}
-      />
 
       {publishSuccess && <div className="org-toast-banner" role="status"><CheckCircle2 size={18} />{publishSuccess}</div>}
 

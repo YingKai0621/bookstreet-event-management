@@ -8,7 +8,6 @@ import {
   OrganizerEventResponse,
   OrganizerEventStatus,
   OrganizerNotificationItem,
-  OrganizerParticipantItem,
   OrganizerProfile,
   OrganizerReport,
 } from '../types/organizer';
@@ -84,6 +83,133 @@ export interface OrganizerDashboardSummary {
   eventStatusCounts: Record<OrganizerEventStatus, number>;
   partnerApplicationStatusCounts: Record<'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN', number>;
   priorityTasks: OrganizerDashboardTask[];
+}
+
+export interface OrganizerRegistrationPage<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface OrganizerParticipationPerson {
+  userId: number;
+  displayName: string;
+}
+
+export interface OrganizerEventRegistrationResponse {
+  eventRegistrationId: number;
+  eventId: number;
+  participant: OrganizerParticipationPerson;
+  status: 'ACTIVE' | 'LEFT';
+  registeredAt: string;
+  activatedAt: string;
+  leftAt: string | null;
+  updatedAt: string;
+  seatActiveActivityCount: number;
+  activityRegistrationCount: number;
+  attendedActivityCount: number;
+  noShowActivityCount: number;
+}
+
+export interface OrganizerAttendanceSummary {
+  attendanceId: number;
+  status: 'VALID' | 'VOIDED';
+  recordedSource: 'SELF_SCAN' | 'ORGANIZER_CORRECTION';
+  attendedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  voidedAt: string | null;
+}
+
+export interface OrganizerCertificateSummary {
+  certificateId: number;
+  certificateCode: string;
+  recipientName: string;
+  status: 'ISSUED' | 'REVOKED';
+  issuedAt: string;
+  revokedAt: string | null;
+  downloadAvailable: boolean;
+}
+
+export type OrganizerParticipationOutcome = 'ACTIVE' | 'CANCELLED' | 'ATTENDED' | 'NO_SHOW';
+
+export interface OrganizerParticipationResponse {
+  activityRegistrationId: number;
+  eventRegistrationId: number;
+  eventId: number;
+  activityId: number;
+  participant: OrganizerParticipationPerson;
+  registrationStatus: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+  cancellationSource: 'PARTICIPANT' | 'ACTIVITY' | 'EVENT' | null;
+  outcome: OrganizerParticipationOutcome;
+  registeredAt: string;
+  activatedAt: string;
+  cancelledAt: string | null;
+  noShowAt: string | null;
+  attendance: OrganizerAttendanceSummary | null;
+  certificate: OrganizerCertificateSummary | null;
+  ratingStatus: 'ACTIVE' | 'INVALIDATED' | null;
+  latestAdjustmentAt: string | null;
+}
+
+export interface OrganizerAttendanceState {
+  registrationStatus: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+  cancellationSource: 'PARTICIPANT' | 'ACTIVITY' | 'EVENT' | null;
+  attendanceStatus: 'VALID' | 'VOIDED' | null;
+  attendedAt: string | null;
+  derivedDisplayOutcome: OrganizerParticipationOutcome;
+}
+
+export interface OrganizerAttendanceAdjustmentResponse {
+  attendanceAdjustmentId: number;
+  activityRegistrationId: number;
+  actor: OrganizerParticipationPerson;
+  idempotencyKey: string;
+  previousState: OrganizerAttendanceState;
+  newState: OrganizerAttendanceState;
+  effectiveAttendedAt: string | null;
+  reason: string;
+  adjustedAt: string;
+}
+
+export interface OrganizerAttendanceCorrectionRequest {
+  targetAttendanceStatus: 'VALID' | 'VOIDED';
+  effectiveAttendedAt: string | null;
+  reason: string;
+}
+
+export interface OrganizerAttendanceCorrectionResponse {
+  participation: {
+    activityRegistrationId: number;
+    registrationStatus: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+    cancellationSource: 'PARTICIPANT' | 'ACTIVITY' | 'EVENT' | null;
+    outcome: OrganizerParticipationOutcome;
+  };
+  attendance: OrganizerAttendanceSummary;
+  adjustment: OrganizerAttendanceAdjustmentResponse;
+  certificate: { certificateId: number; status: 'ISSUED' | 'REVOKED' } | null;
+  ratingStatus: 'ACTIVE' | 'INVALIDATED' | null;
+  idempotentReplay: boolean;
+}
+
+export interface OrganizerEventRegistrationQuery {
+  page?: number;
+  size?: number;
+  sort?: string;
+  status?: 'ACTIVE' | 'LEFT';
+  search?: string;
+}
+
+export interface OrganizerActivityRegistrationQuery {
+  page?: number;
+  size?: number;
+  sort?: string;
+  registrationStatus?: 'ACTIVE' | 'CANCELLED' | 'NO_SHOW';
+  outcome?: OrganizerParticipationOutcome;
+  attendanceStatus?: 'VALID' | 'VOIDED';
+  search?: string;
 }
 
 interface OrganizerPartnerApplicationResponse {
@@ -392,11 +518,6 @@ export const organizerApi = {
     apiClient.get<OrganizerActivityResponse>(
       `/organizer/activities/${encodeURIComponent(activityId)}`,
     ),
-  async getParticipants(eventId?: string): Promise<OrganizerParticipantItem[]> {
-    const rows = await apiClient.get<any[]>(`/organizer/participants${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-    if (!Array.isArray(rows)) throw new Error('Dữ liệu người tham gia không hợp lệ.');
-    return rows;
-  },
   publishActivity: (id: number | string) =>
     apiClient.post<OrganizerActivityResponse>(`/organizer/activities/${encodeURIComponent(id)}/publish`),
   createActivity: (data: CreateOrganizerActivityRequest) =>
@@ -419,6 +540,49 @@ export const organizerApi = {
       `/organizer/activities/${encodeURIComponent(id)}/cancel`,
       { reason },
     ),
+  listEventRegistrations: (eventId: number | string, query: OrganizerEventRegistrationQuery = {}) =>
+    apiClient.get<OrganizerRegistrationPage<OrganizerEventRegistrationResponse>>(
+      `/organizer/events/${encodeURIComponent(eventId)}/event-registrations${activityQuery({
+        page: query.page ?? 0,
+        size: query.size ?? 20,
+        sort: query.sort ?? 'activatedAt,desc',
+        status: query.status,
+        search: query.search,
+      })}`,
+    ),
+  listActivityRegistrations: (activityId: number | string, query: OrganizerActivityRegistrationQuery = {}) =>
+    apiClient.get<OrganizerRegistrationPage<OrganizerParticipationResponse>>(
+      `/organizer/activities/${encodeURIComponent(activityId)}/registrations${activityQuery({
+        page: query.page ?? 0,
+        size: query.size ?? 20,
+        sort: query.sort ?? 'registeredAt,asc',
+        registrationStatus: query.registrationStatus,
+        outcome: query.outcome,
+        attendanceStatus: query.attendanceStatus,
+        search: query.search,
+      })}`,
+    ),
+  getActivityRegistration: (registrationId: number | string) =>
+    apiClient.get<OrganizerParticipationResponse>(
+      `/organizer/activity-registrations/${encodeURIComponent(registrationId)}`,
+    ),
+  listAttendanceAdjustments: (registrationId: number | string, page = 0, size = 20) =>
+    apiClient.get<OrganizerRegistrationPage<OrganizerAttendanceAdjustmentResponse>>(
+      `/organizer/activity-registrations/${encodeURIComponent(registrationId)}/attendance-adjustments${activityQuery({
+        page,
+        size,
+        sort: 'adjustedAt,desc',
+      })}`,
+    ),
+  correctAttendance: (
+    registrationId: number | string,
+    request: OrganizerAttendanceCorrectionRequest,
+    idempotencyKey: string,
+  ) => apiClient.post<OrganizerAttendanceCorrectionResponse>(
+    `/organizer/activity-registrations/${encodeURIComponent(registrationId)}/attendance-adjustments`,
+    request,
+    { 'Idempotency-Key': idempotencyKey },
+  ),
   listActivityLocations: (query: {
     page?: number;
     size?: number;
@@ -522,12 +686,6 @@ export const organizerApi = {
       `/organizer/activity-cancellation-requests/${encodeURIComponent(requestId)}/reject`,
       { reviewNote },
     ),
-  // Quét QR điểm danh (BR-45, BR-47)
-  async scanAttendance(ticketCode: string, activityId?: string): Promise<any> {
-    return await apiClient.post('/organizer/checkin', { ticketCode, activityId });
-  },
-  overrideAttendance: (registrationId: string, status: string, reason: string, durationMinutes = 30) =>
-    apiClient.post(`/organizer/participants/${encodeURIComponent(registrationId)}/override-attendance`, { status, reason, durationMinutes }),
   async getReport(eventId: string): Promise<OrganizerReport> {
     return apiClient.get<OrganizerReport>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
   },
