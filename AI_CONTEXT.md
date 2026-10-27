@@ -1,18 +1,19 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-19`
+Last updated: `2026-10-27`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V9. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V11. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
-  Location/Activity schema and concurrency constraints.
+  Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
+  schema; V11 adds the configurable Activity Attendance early-scan window.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover clean V1-to-V9 migration, the existing V8-to-V9 upgrade path and
-  the earlier Sprint migration/backfill paths.
+- Flyway migration tests cover the immutable migration chain through V11 and the relevant prior
+  Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
 - Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
@@ -37,12 +38,11 @@ Last updated: `2026-10-19`
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
 - GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The backend test inventory contains 370 tests. The latest local Surefire report has zero failures
-  and zero errors; 171 database/environment-gated cases are skipped when PostgreSQL/Redis test
-  services are unavailable. GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis.
-  Coverage includes V8/V9 migrations, Event and Activity lifecycles, ownership, lock ordering,
-  Partner/Booth/Activity races, VNPay reconciliation and settlement/expiry boundaries. The
-  disposable VNPay spike suite retains 20 tests.
+- GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis. Automated coverage includes
+  migrations, Event and Activity lifecycles, ownership, lock ordering, Partner/Booth/Activity
+  races, VNPay reconciliation, participation, Attendance, Certificate, Rating and notification
+  behavior. Exact test totals are intentionally not frozen in this context file because the suite
+  changes during Sprint closure.
 - Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
 - The focused Sprint 5 Partner/Organizer Activity Playwright suite has 9 passing scenarios.
 - Sprint 2 backend Booth selection, price-locked BoothHold and Hold expiry are implemented through
@@ -59,10 +59,18 @@ Last updated: `2026-10-19`
   Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
   Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
   now the approved active Sprint 6 scope.
-- Sprint 6 Participant Activity Registration and Attendance is active as of 2026-10-19. Its
-  approved baseline contains 65 Acceptance Criteria, 29 canonical endpoint headings, a seven-table
-  Physical ERD overlay and sole ownership of target migration V10 by Developer A. No Sprint 6 code
-  or V10 migration is implemented yet.
+- Sprint 6 Participant Activity Registration and Attendance remains the active Sprint. Its approved
+  baseline contains 65 Acceptance Criteria and 29 canonical endpoint headings. The core backend,
+  V10/V11 migrations and Participant/Organizer frontend workflows are implemented on `main`
+  through PR #80 (merge commit `d26ff5a`). Delivered slices include Event and Activity
+  registration, shared Activity Attendance QR self-scan, Attendance lifecycle and cascade,
+  Certificate issuance/list/detail, Activity Rating, Participant notification inbox and Organizer
+  participation monitoring with audited Attendance correction.
+- Sprint 6 is not yet formally closed. The 2026-10-27 API/frontend audit identified contract drift
+  and integration debt that must be resolved before declaring completion: an unapproved
+  `/participant/notifications/read-all` route exists; several role workspaces still call phantom
+  frontend endpoints; Organizer Event cancel/delete APIs are not yet exposed by the frontend; and
+  the full 65-AC traceability/manual smoke evidence has not been recorded as complete.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -155,6 +163,21 @@ Last updated: `2026-10-19`
 - prepares registration/certificate/Attendance-QR configuration without implementing Participant
   registration or scan commands.
 
+`V10__create_sprint6_participation_schema.sql` creates:
+
+- `event_registrations`
+- `activity_registrations`
+- `attendances`
+- `attendance_adjustments`
+- `certificates`
+- `activity_ratings`
+- `notifications`
+
+`V11__activity_attendance_early_scan_minutes.sql`:
+
+- adds `activities.attendance_early_scan_minutes`;
+- defaults the early-scan window to 15 minutes and constrains it to `0..1440` minutes.
+
 ## Not yet implemented
 
 - Forgot/Reset Password
@@ -162,26 +185,33 @@ Last updated: `2026-10-19`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Active Sprint 6 Participant Activity registration, Attendance, Certificate, Rating and
-  notification implementation
+- Formal Sprint 6 closure evidence across all 65 Acceptance Criteria and required manual smoke flows
+- Approved frontend integration for the existing Organizer Event cancel/delete commands
+- Resolution of API-contract drift and removal or replacement of phantom frontend endpoints; do
+  not create backend APIs merely to satisfy placeholder UI modules
+- General feedback/reporting, points/badges, persisted heritage/map data and notifications for
+  Organizer/Partner/Admin remain absent from the approved Sprint 6 backend contract
 
 ## Active implementation task
 
-- Begin only `S6-1`: Developer A creates V10, verifies clean V1-to-V10 and V9-to-V10 upgrades and
-  adds the shared persistence/notification-writer foundation.
-- Follow `docs/sprints/CURRENT_SPRINT.md` and
-  `docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`; do not merge around an unmet gate.
-- Keep the approved Sprint 6 exclusions closed; no Event QR, Participant-specific QR, BoothVisit,
+- Stabilize and formally close Sprint 6 from the current `main` baseline after PR #80.
+- Reconcile backend controller mappings, frontend API clients and the canonical Sprint 6 API
+  contract. Remove unsupported compatibility calls instead of inventing endpoints.
+- Resolve the Participant notification bulk-read contract drift, then review the remaining phantom
+  Admin/Organizer/Partner/Public modules by approved Use Case and Sprint ownership.
+- Connect the already-approved Organizer Event cancel/delete commands only if their frontend flow is
+  part of the current acceptance baseline; keep unrelated placeholder modules out of scope.
+- Re-run backend verification, frontend lint/build and focused role smoke flows; record 65-AC
+  traceability before changing Sprint 6 to complete.
+- Keep the approved Sprint 6 exclusions closed: no Event QR, Participant-specific QR, BoothVisit,
   Points, Badge, generic notification composer or unapproved compatibility route.
-- Keep browser-level payment/assignment E2E, frontend lint warnings, bundle splitting and optional
-  Activity setup-buffer policy visible in the technical-debt/backlog review.
 - Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
   Event → Location(s) → Activity/request lock order and approved Sprint 6 Participant lock order.
 
 ## Active and latest completed Sprint
 
 Sprint 06 Participant Activity Registration and Attendance is the active implementation Sprint as
-of 2026-10-19. Sprint 05 Activity Planning and Partner Proposal Workflow remains the latest
+of 2026-10-27. Sprint 05 Activity Planning and Partner Proposal Workflow remains the latest
 completed Sprint.
 
 Sprint 6 includes these approved Use Case slices:
@@ -201,8 +231,8 @@ Sprint 6 includes these approved Use Case slices:
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus the approved Sprint 6 Participant interpretation in the active Use Cases
-- Physical implementation source: immutable Flyway V1–V9; approved Sprint 6 Physical overlay is
-  the target for unimplemented V10
+- Physical implementation source: immutable Flyway V1–V11. V10 implements the Sprint 6
+  participation overlay and V11 adds the Activity early-scan configuration.
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
