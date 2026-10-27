@@ -2,6 +2,10 @@
 
 **QR window amendment (2026-10-26):** Organizer may configure `attendanceEarlyScanMinutes` on an Activity (integer 0–1440, default 15). Every Attendance boundary below uses that stored value. Cases that say 15 minutes describe the default. Once an Activity has `VALID` Attendance, the value cannot change.
 
+**Notification inbox amendment (2026-10-27):** Participant may mark one owned Notification or all
+owned unread Notifications as read. Bulk mark-read is owner-only and idempotent; it preserves
+existing `readAt` values and returns the number of rows changed by that call.
+
 > Baseline status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19. This
 > document specifies the Sprint 6 Participant Activity slice approved in `sprint-06.md`. It defines
 > observable business behavior and 65 Acceptance Criteria; endpoint paths, DTO shapes and final
@@ -560,7 +564,7 @@ Authenticated Participant.
 #### C. Track Notifications and Certificate
 
 1. Participant lists their durable participation Notifications and unread count.
-2. Participant marks an owned Notification read.
+2. Participant marks one owned Notification or all owned unread Notifications read.
 3. After an eligible completed Activity, Participant views or downloads the issued Certificate.
 4. Revoked Certificate remains visible as revoked history rather than disappearing.
 
@@ -684,9 +688,10 @@ And neither record is deleted
 
 ```gherkin
 Given durable participation Notifications exist for two Users
-When one Participant lists or marks a Notification read
-Then only that Participant's Notification is returned or changed
+When one Participant lists, marks one Notification read or marks all unread Notifications read
+Then only that Participant's Notifications are returned or changed
 And another User's Notification is concealed
+And bulk retry changes zero rows without replacing an existing readAt
 ```
 
 **AC-P03-11 Notification retry is deduplicated**
@@ -1235,7 +1240,7 @@ Every required Notification:
 - has a stable entity/transition reference suitable for deduplication;
 - is stored atomically with the domain state change;
 - contains server-owned title/message snapshots without raw QR token or private secrets;
-- supports owner-only list, unread count and mark-read;
+- supports owner-only list, unread count, mark-one-read and mark-all-read;
 - does not depend on optional Participant email;
 - may trigger verified-email delivery only after commit.
 

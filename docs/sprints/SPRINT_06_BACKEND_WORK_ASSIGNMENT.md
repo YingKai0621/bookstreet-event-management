@@ -5,6 +5,9 @@
 > Implementation is authorized only within the scope, ownership and merge gates below and the
 > active Sprint declaration in `docs/sprints/CURRENT_SPRINT.md`.
 
+**Notification inbox amendment (2026-10-27):** Developer C also owns the approved owner-only,
+idempotent `POST /participant/notifications/read-all` query-state command and its frontend action.
+
 ## 1. Purpose and implementation boundary
 
 Sprint 6 completes the Participant journey around Event registration, Activity registration,
@@ -105,11 +108,12 @@ implementation is merged.
 
 ### 3.1 Sole migration ownership
 
-Create exactly one migration:
+Sprint 6 schema is delivered by exactly these two immutable migrations:
 
 - `backend/src/main/resources/db/migration/V10__create_sprint6_participation_schema.sql`
+- `backend/src/main/resources/db/migration/V11__activity_attendance_early_scan_minutes.sql`
 
-It must implement the approved physical ERD for:
+`V10` implements the approved physical ERD for:
 
 - `event_registrations`
 - `activity_registrations`
@@ -123,10 +127,13 @@ The migration must include all approved foreign keys, status checks, positive-va
 constraints, partial/functional indexes and notification target/payload constraints. Names and
 types must match the physical ERD report exactly.
 
+`V11` adds the Activity `attendance_early_scan_minutes` setting approved by the 2026-10-26 QR
+window amendment, with default 15 and range `0..1440`.
+
 Developer A must prove both upgrade paths:
 
-- clean database: `V1 -> V10`
-- existing Sprint 5 database: `V9 -> V10`
+- clean database: `V1 -> V11`
+- existing Sprint 5 database: `V9 -> V11`
 
 ### 3.2 Shared persistence foundation
 
@@ -321,6 +328,7 @@ Using Developer A's persistence/writer foundation, implement:
 - notification list with approved filters/pagination/sort
 - unread count
 - mark-one-read
+- mark-all-read for the authenticated Participant's unread rows
 - Participant ownership enforcement
 - idempotent read operations
 
@@ -444,8 +452,8 @@ the defect and adding regression coverage.
 
 ### 8.1 Migration and persistence
 
-- clean `V1 -> V10` migration
-- upgrade `V9 -> V10` migration
+- clean `V1 -> V11` migration
+- upgrade `V9 -> V11` migration
 - Hibernate schema validation
 - foreign-key, unique, check and notification-target constraint tests
 - repository tests for all status filters and ownership queries
@@ -541,9 +549,9 @@ Every Sprint 6 implementation PR must confirm:
 Sprint 6 is complete only when all of the following are true:
 
 - all 65 acceptance criteria are traceably covered with no duplicate or unowned criterion
-- all 29 approved endpoint headings are implemented or verified as existing-compatible behavior
+- all 30 approved endpoint headings are implemented or verified as existing-compatible behavior
 - all documented alternative and exception paths return the approved status/error code
-- `V10` passes clean and upgrade migration verification
+- the `V1 -> V11` clean and `V9 -> V11` upgrade migration paths pass verification
 - Flow A, Flow B and Flow C pass automated and manual end-to-end verification
 - Participant and Organizer screens converge after refresh on the same backend state, while
   existing Partner Activity views pass lifecycle-state regression verification

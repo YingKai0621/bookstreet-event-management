@@ -2,6 +2,11 @@
 
 **QR window amendment (2026-10-26):** The Organizer Activity create/update API accepts optional `attendanceEarlyScanMinutes` (integer 0–1440), defaulting to 15 when omitted or null. The Attendance scan and correction window uses the stored value. Changes after the first `VALID` Attendance are rejected. Flyway V11 adds the Activity column. References to an early 15-minute window in default-case examples remain examples of the default.
 
+**Notification inbox amendment (2026-10-27):** The Project Owner approved owner-only bulk
+mark-read through `POST /participant/notifications/read-all`. It supplements mark-one-read,
+updates only the authenticated Participant's unread rows with one backend timestamp and is
+idempotent on retry. It does not add notification composition, broadcast or cross-role inbox scope.
+
 > Status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19. API paths,
 > request/response schemas, all 65 Acceptance Criteria and developer ownership are frozen in the
 > linked Sprint 6 Use Case Specification, API Contract and Backend Work Assignment.
@@ -445,7 +450,8 @@ CERTIFICATE_REVOKED
 Rules:
 
 - The recipient is the authenticated User behind an affected EventRegistration or
-  ActivityRegistration; another User may never list or mark that notification as read.
+  ActivityRegistration; another User may never list or mark one/all of that User's notifications
+  as read.
 - Activity schedule/Location changes notify Participants with a seat-active registration for the
   Activity. Activity cancellation notifies Activity registrations affected by that transition;
   Event cancellation notifies every `ACTIVE` EventRegistration. Notification processing does not
@@ -460,7 +466,9 @@ Rules:
 - Title/message are server-owned snapshots. A safe entity reference/link may be stored for
   navigation, but no raw QR token or private data is embedded in the message.
 - Read/unread is Participant-owned presentation state and does not alter the underlying Activity,
-  registration, Attendance or Certificate state.
+  registration, Attendance or Certificate state. Bulk mark-read changes only the authenticated
+  Participant's unread rows, preserves existing `readAt` values and converges to zero updates on
+  retry.
 
 General Organizer announcements, notification preferences, SMS/push and cross-domain inbox work
 remain outside this Sprint.
@@ -551,8 +559,8 @@ lifecycle locks. Implementation must preserve that order.
   presents a stable success/already-recorded/error result.
 - Certificate view clearly distinguishes Issued and Revoked.
 - Rating control appears only for an eligible completed Activity.
-- The Participant notification popover uses real list/unread/mark-read APIs and links back to the
-  affected Activity/Event without exposing raw Attendance tokens.
+- The Participant notification popover uses real list/unread/mark-one/mark-all-read APIs and links
+  back to the affected Activity/Event without exposing raw Attendance tokens.
 
 ### 14.2 Organizer
 
