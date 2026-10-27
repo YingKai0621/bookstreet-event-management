@@ -19,6 +19,8 @@ import { OrganizerActivityWorkspace } from './OrganizerActivityWorkspace';
 import { OrganizerCreateEventModal } from './OrganizerCreateEventModal';
 import { OrganizerPublishEventModal } from './OrganizerPublishEventModal';
 import type { EventPublishFailure } from './OrganizerPublishEventModal';
+import { OrganizerEventLifecycleModal } from './OrganizerEventLifecycleModal';
+import type { EventLifecycleAction } from './OrganizerEventLifecycleModal';
 import { OrganizerFeedbackView } from './OrganizerFeedbackView';
 import { OrganizerNotificationsView } from './OrganizerNotificationsView';
 import { OrganizerLocationManagementView } from './OrganizerLocationManagementView';
@@ -116,6 +118,10 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [isPublishingEvent, setIsPublishingEvent] = useState(false);
   const [publishFailure, setPublishFailure] = useState<EventPublishFailure | null>(null);
   const [publishSuccess, setPublishSuccess] = useState('');
+  const [eventLifecycleTarget, setEventLifecycleTarget] = useState<OrganizerEvent | null>(null);
+  const [eventLifecycleAction, setEventLifecycleAction] = useState<EventLifecycleAction | null>(null);
+  const [isSubmittingEventLifecycle, setIsSubmittingEventLifecycle] = useState(false);
+  const [eventLifecycleError, setEventLifecycleError] = useState('');
 
   // Core Datasets State
   const [eventsList, setEventsList] = useState<OrganizerEvent[]>([]);
@@ -232,6 +238,23 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
+    if (activeTab !== 'profile') return;
+    let active = true;
+    organizerApi.getProfile()
+      .then(loadedProfile => {
+        if (active) setProfile(current => ({
+          ...current,
+          ...loadedProfile,
+          notificationPreferences: current.notificationPreferences,
+        }));
+      })
+      .catch(error => {
+        if (active) setActionError(error instanceof Error ? error.message : 'Không tải được hồ sơ Organizer.');
+      });
+    return () => { active = false; };
+  }, [activeTab]);
+
+  useEffect(() => {
     let active = true;
     if (selectedEventId) {
       organizerApi.getEvent(selectedEventId).then(event => {
@@ -267,8 +290,16 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   };
 
   const handleUpdateProfile = async (updates: Partial<OrganizerProfile>) => {
-    await organizerApi.updateProfile(updates);
-    setProfile(await organizerApi.getProfile());
+    const updatedProfile = await organizerApi.updateProfile({
+      fullName: updates.name?.trim() || profile.name,
+      phone: updates.phone === undefined ? profile.phone || null : updates.phone.trim() || null,
+      avatarUrl: updates.avatarUrl === undefined ? profile.avatarUrl || null : updates.avatarUrl.trim() || null,
+    });
+    setProfile(current => ({
+      ...current,
+      ...updatedProfile,
+      notificationPreferences: current.notificationPreferences,
+    }));
   };
 
   const heritagePayload = (item: ExtendedHeritageProfile) => ({
@@ -354,6 +385,43 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       });
     } finally {
       setIsPublishingEvent(false);
+    }
+  };
+
+  const requestEventLifecycleAction = (event: OrganizerEvent, action: EventLifecycleAction) => {
+    setEventLifecycleError('');
+    setEventLifecycleTarget(event);
+    setEventLifecycleAction(action);
+  };
+
+  const closeEventLifecycleModal = () => {
+    if (isSubmittingEventLifecycle) return;
+    setEventLifecycleTarget(null);
+    setEventLifecycleAction(null);
+    setEventLifecycleError('');
+  };
+
+  const handleEventLifecycleAction = async (reason: string) => {
+    if (!eventLifecycleTarget || !eventLifecycleAction || isSubmittingEventLifecycle) return;
+    setIsSubmittingEventLifecycle(true);
+    setEventLifecycleError('');
+    try {
+      if (eventLifecycleAction === 'delete') {
+        await organizerApi.deleteDraftEvent(eventLifecycleTarget.id);
+        setEventsList(current => current.filter(event => event.id !== eventLifecycleTarget.id));
+        if (selectedEventId === eventLifecycleTarget.id) navigateToTab('events');
+        setPublishSuccess(language === 'vi' ? 'Đã xóa bản nháp sự kiện.' : 'Event draft deleted.');
+      } else {
+        const cancelledEvent = await organizerApi.cancelEvent(eventLifecycleTarget.id, reason);
+        setEventsList(current => current.map(event => event.id === cancelledEvent.id ? cancelledEvent : event));
+        setPublishSuccess(language === 'vi' ? 'Đã hủy sự kiện và cập nhật các dữ liệu liên quan.' : 'Event cancelled and related data updated.');
+      }
+      setEventLifecycleTarget(null);
+      setEventLifecycleAction(null);
+    } catch (error) {
+      setEventLifecycleError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể xử lý sự kiện.' : 'Unable to update the event.'));
+    } finally {
+      setIsSubmittingEventLifecycle(false);
     }
   };
 
@@ -471,6 +539,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={requestPublishEvent}
+            onCancelEvent={(event) => requestEventLifecycleAction(event, 'cancel')}
+            onDeleteEvent={(event) => requestEventLifecycleAction(event, 'delete')}
           />
         )}
 
@@ -503,6 +573,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
             }}
             onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={requestPublishEvent}
+            onCancelEvent={(event) => requestEventLifecycleAction(event, 'cancel')}
+            onDeleteEvent={(event) => requestEventLifecycleAction(event, 'delete')}
           />
         )}
 
@@ -599,6 +671,17 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           setEditingEvent(event);
           setIsCreateEventOpen(true);
         }}
+      />
+
+      <OrganizerEventLifecycleModal
+        key={eventLifecycleTarget && eventLifecycleAction ? `${eventLifecycleTarget.id}-${eventLifecycleAction}` : 'closed'}
+        language={language}
+        event={eventLifecycleTarget}
+        action={eventLifecycleAction}
+        isSubmitting={isSubmittingEventLifecycle}
+        error={eventLifecycleError}
+        onClose={closeEventLifecycleModal}
+        onConfirm={handleEventLifecycleAction}
       />
 
       {/* Global Create Event Modal */}

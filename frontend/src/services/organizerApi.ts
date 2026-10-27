@@ -13,7 +13,6 @@ import {
 } from '../types/organizer';
 import { apiClient } from './apiClient';
 import { boothApi } from './boothApi';
-import { toHeritageProfile } from './publicApi';
 import type { EventBooth, PhysicalBooth } from '../types/booth';
 import type {
   ActivityCancellationRequestListQuery,
@@ -194,6 +193,21 @@ export interface OrganizerAttendanceCorrectionResponse {
   idempotentReplay: boolean;
 }
 
+interface ProfileResponse {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+}
+
+export interface OrganizerProfileUpdateRequest {
+  fullName: string;
+  phone: string | null;
+  avatarUrl: string | null;
+}
+
 export interface OrganizerEventRegistrationQuery {
   page?: number;
   size?: number;
@@ -322,6 +336,10 @@ function activityQuery<T extends object>(parameters: T): string {
   return serialized ? `?${serialized}` : '';
 }
 
+function unsupportedOrganizerFeature<T = never>(feature: string): Promise<T> {
+  return Promise.reject(new Error(`${feature} chưa có API backend trong phạm vi hiện tại.`));
+}
+
 function toOrganizerBoothItem(booth: PhysicalBooth, eventBooth?: EventBooth): OrganizerBoothItem {
   const availability = eventBooth?.availability
     ?? (booth.active ? 'AVAILABLE' : 'UNAVAILABLE');
@@ -404,16 +422,36 @@ export function toOrganizerEvent(event: OrganizerEventResponse): OrganizerEvent 
 export const organizerApi = {
   getDashboardSummary: () => apiClient.get<OrganizerDashboardSummary>('/organizer/dashboard'),
   async getProfile(): Promise<OrganizerProfile> {
-    const user = await apiClient.get<any>('/organizer/profile');
-    return { id: user.id, name: user.fullName, role: 'ORGANIZER', department: user.department || '', organization: user.organization || '', email: user.email, phone: user.phone || '', avatarInitials: user.fullName.split(' ').map((part: string) => part[0]).join('').slice(-2).toUpperCase(), avatarUrl: user.avatarUrl || undefined, notificationPreferences: user.notificationPreferences };
+    const user = await apiClient.get<ProfileResponse>('/auth/profile');
+    return {
+      id: String(user.id),
+      name: user.fullName,
+      role: 'ORGANIZER',
+      department: '',
+      organization: '',
+      email: user.email,
+      phone: user.phone || '',
+      avatarInitials: user.fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase(),
+      avatarUrl: user.avatarUrl || undefined,
+    };
   },
-  updateProfile: (data: unknown) => apiClient.patch('/organizer/profile', data),
-  async getNotifications(): Promise<OrganizerNotificationItem[]> {
-    const rows = await apiClient.get<any[]>('/organizer/notifications');
-    return rows.map(item => ({ id: item.id, title: item.title, content: item.message, category: ['booth', 'activity', 'feedback'].includes(item.kind) ? item.kind : 'system', timeAgo: new Date(item.createdAt).toLocaleString('vi-VN'), isRead: item.isRead, targetTab: item.link }));
+  async updateProfile(data: OrganizerProfileUpdateRequest): Promise<OrganizerProfile> {
+    const user = await apiClient.put<ProfileResponse>('/auth/profile', data);
+    return {
+      id: String(user.id),
+      name: user.fullName,
+      role: 'ORGANIZER',
+      department: '',
+      organization: '',
+      email: user.email,
+      phone: user.phone || '',
+      avatarInitials: user.fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase(),
+      avatarUrl: user.avatarUrl || undefined,
+    };
   },
-  markNotificationRead: (id: string) => apiClient.patch(`/organizer/notifications/${encodeURIComponent(id)}/read`, {}),
-  markAllNotificationsRead: () => apiClient.patch('/organizer/notifications/read-all', {}),
+  getNotifications: async (): Promise<OrganizerNotificationItem[]> => [],
+  markNotificationRead: async (_id: string): Promise<void> => undefined,
+  markAllNotificationsRead: async (): Promise<void> => undefined,
   async getEvents(page = 0, size = 100, sort = 'createdAt,desc'): Promise<OrganizerEvent[]> {
     const query = new URLSearchParams({
       page: String(page),
@@ -446,6 +484,15 @@ export const organizerApi = {
     const event = await apiClient.post<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}/publish`, {});
     return toOrganizerEvent(event);
   },
+  async cancelEvent(id: string, reason: string): Promise<OrganizerEvent> {
+    const event = await apiClient.post<OrganizerEventResponse>(
+      `/organizer/events/${encodeURIComponent(id)}/cancel`,
+      { reason },
+    );
+    return toOrganizerEvent(event);
+  },
+  deleteDraftEvent: (id: string) =>
+    apiClient.delete<void>(`/organizer/events/${encodeURIComponent(id)}`),
   async getBooths(eventId?: string): Promise<OrganizerBoothItem[]> {
     if (!eventId) {
       const physicalBooths = await boothApi.listAllPhysicalBooths();
@@ -455,23 +502,13 @@ export const organizerApi = {
     const eventBooths = await boothApi.listEventBoothConfigurations(eventId);
     return eventBooths.map(row => toOrganizerBoothItem(row.booth, row));
   },
-  createBooth: (data: unknown) => apiClient.post('/admin/booths', data),
-  updateBooth: (id: string, data: unknown) => apiClient.put(`/admin/booths/${encodeURIComponent(id)}`, data),
-  deleteBooth: (id: string) => apiClient.delete(`/admin/booths/${encodeURIComponent(id)}`),
-  createHeritage: (data: unknown) => apiClient.post('/admin/heritages', data),
-  updateHeritage: (id: string, data: unknown) => apiClient.put(`/admin/heritages/${encodeURIComponent(id)}`, data),
-  deleteHeritage: (id: string) => apiClient.delete(`/admin/heritages/${encodeURIComponent(id)}`),
-  async getHeritages(): Promise<ExtendedHeritageProfile[]> {
-    const rows = await apiClient.get<Record<string, unknown>[]>('/admin/heritages?limit=100');
-    return rows.map(row => ({
-      ...toHeritageProfile(row),
-      id: String(row.id || row.slug || ''),
-      status: (row.status || 'draft') as ExtendedHeritageProfile['status'],
-      qrStatus: (row.qrStatus || 'inactive') as ExtendedHeritageProfile['qrStatus'],
-      viewCount: Number(row.viewCount || 0),
-      qrScanCount: Number(row.qrScanCount || 0),
-    }));
-  },
+  createBooth: (_data: unknown) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
+  updateBooth: (_id: string, _data: unknown) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
+  deleteBooth: (_id: string) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
+  createHeritage: (_data: unknown) => unsupportedOrganizerFeature('Nội dung di sản'),
+  updateHeritage: (_id: string, _data: unknown) => unsupportedOrganizerFeature('Nội dung di sản'),
+  deleteHeritage: (_id: string) => unsupportedOrganizerFeature('Nội dung di sản'),
+  getHeritages: async (): Promise<ExtendedHeritageProfile[]> => [],
   async getActivities(eventId?: string): Promise<OrganizerActivityItem[]> {
     const response = await apiClient.get<ActivityPageResponse<OrganizerActivityResponse>>(
       `/organizer/activities${activityQuery({ eventId, page: 0, size: 100, sort: 'startAt,asc' })}`,
@@ -687,11 +724,11 @@ export const organizerApi = {
       { reviewNote },
     ),
   async getReport(eventId: string): Promise<OrganizerReport> {
-    return apiClient.get<OrganizerReport>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
+    return unsupportedOrganizerFeature(`Báo cáo sự kiện ${eventId}`);
   },
 
-  getFeedbacks: () => apiClient.get<OrganizerFeedback[]>('/organizer/feedbacks'),
-  updateFeedback: (id: string, data: { status: OrganizerFeedbackStatus; internalNote?: string }) =>
-    apiClient.patch<OrganizerFeedback>(`/organizer/feedbacks/${id}/status`, data),
+  getFeedbacks: async (): Promise<OrganizerFeedback[]> => [],
+  updateFeedback: (_id: string, _data: { status: OrganizerFeedbackStatus; internalNote?: string }): Promise<OrganizerFeedback> =>
+    unsupportedOrganizerFeature<OrganizerFeedback>('Quản lý góp ý'),
 };
 
