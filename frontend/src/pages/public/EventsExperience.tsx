@@ -26,6 +26,7 @@ interface EventsExperienceProps {
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  selectedEventId?: string;
 }
 
 function decodePathIdentifier(value: string | undefined): string | null {
@@ -54,6 +55,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   isParticipantAuthenticated = false,
   participantProfile: _participantProfile,
   onJoinEvent,
+  selectedEventId = '',
 }) => {
   const vi = language === 'vi';
   const navigate = useNavigate();
@@ -70,8 +72,19 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [deadlinePassed, setDeadlinePassed] = useState(false);
-  useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate('/'));
-  useModalDismiss(Boolean(activeModalEvent), () => navigate('/su-kien'));
+  const eventCatalogUrl = selectedEventId
+    ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/su-kien';
+  const publicHomeUrl = selectedEventId
+    ? `/?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/';
+  const eventDetailUrl = (eventId: string) =>
+    `/su-kien/${encodeURIComponent(eventId)}?eventId=${encodeURIComponent(eventId)}`;
+  const openEventDetail = (event: EventItem) => {
+    navigate(eventDetailUrl(event.id));
+  };
+  useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate(publicHomeUrl));
+  useModalDismiss(Boolean(activeModalEvent), () => navigate(eventCatalogUrl));
   useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
 
   const eventTypes = [
@@ -81,7 +94,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
     { id: 'workshop', labelVi: 'Workshop & Lễ hội', labelEn: 'Workshops & Festivals', count: events.filter(e => e.type === 'workshop').length },
   ];
 
-  const featuredEvent = events[0];
+  const featuredEvent = events.find(event => event.id === selectedEventId) || events[0];
 
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {
@@ -100,7 +113,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   }, [events, searchQuery, selectedType]);
 
   const handleClose = () => {
-    navigate('/');
+    navigate(publicHomeUrl);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -111,7 +124,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
       return;
     }
     if (!isParticipantAuthenticated) {
-      navigate('/login', { state: { from: registeredEvent ? `/su-kien/${registeredEvent.id}` : '/su-kien' } });
+      navigate('/login', { state: { from: registeredEvent ? eventDetailUrl(registeredEvent.id) : eventCatalogUrl } });
       return;
     }
     if (!registeredEvent || !onJoinEvent) return;
@@ -189,7 +202,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/su-kien/${encodeURIComponent(featuredEvent.id)}`)}
+                onClick={() => openEventDetail(featuredEvent)}
                 role="button"
                 tabIndex={0}
                 aria-label={`Khám phá ${featuredEvent.title}`}
@@ -279,7 +292,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <article 
                   key={evt.id} 
                   className="event-card-item"
-                  onClick={() => navigate(`/su-kien/${encodeURIComponent(evt.id)}`)}
+                  onClick={() => openEventDetail(evt)}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="event-card-image">
@@ -321,9 +334,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
         {/* Event Detail Modal — rendered via Portal */}
         {activeModalEvent && createPortal(
-          <div className="modal-overlay" onClick={() => navigate('/su-kien')} role="dialog" aria-modal="true">
+          <div className="modal-overlay" onClick={() => navigate(eventCatalogUrl)} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => navigate('/su-kien')} aria-label="Đóng">
+              <button className="modal-close" onClick={() => navigate(eventCatalogUrl)} aria-label="Đóng">
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
@@ -360,7 +373,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 style={{ width: '100%' }}
                 onClick={() => {
                   const ev = activeModalEvent;
-                  navigate('/su-kien');
+                  navigate(eventCatalogUrl);
                   setRegisteredEvent(ev);
                   setRegisterSuccess(false);
                   setDeadlinePassed(false);
@@ -508,7 +521,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                       <span>{vi ? 'Đăng nhập để tham gia sự kiện bằng tài khoản của bạn.' : 'Sign in to join the event with your account.'}</span>
                       <Link
                         to="/login"
-                        state={{ from: registeredEvent ? `/su-kien/${registeredEvent.id}` : '/su-kien' }}
+                        state={{ from: registeredEvent ? eventDetailUrl(registeredEvent.id) : eventCatalogUrl }}
                         style={{ fontWeight: 700, color: '#17382E', textDecoration: 'underline' }}
                       >
                         {vi ? 'Đăng nhập' : 'Sign in'}

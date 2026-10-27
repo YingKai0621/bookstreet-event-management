@@ -18,6 +18,17 @@ const TAB_PATHS: Record<Exclude<OrganizerTab, 'event_detail'>, string> = {
 };
 
 const PATH_TABS = new Map(Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab as OrganizerTab]));
+const SUPPORTED_TABS = new Set<OrganizerTab>([
+  'overview',
+  'events',
+  'event_detail',
+  'booth_requests',
+  'booths',
+  'venues',
+  'activities',
+  'participants',
+  'profile',
+]);
 const EVENT_SCOPED_TABS: OrganizerTab[] = ['booth_requests', 'booths', 'activities', 'participants', 'reports'];
 const EVENT_LIST_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const EVENT_LIST_SORTS = new Set(['updated_desc', 'start_asc', 'title_asc']);
@@ -48,7 +59,7 @@ export function resolveOrganizerRoute(pathname: string, search: string): Organiz
   }
 
   const tab = PATH_TABS.get(normalizedPath);
-  if (!tab) return null;
+  if (!tab || !SUPPORTED_TABS.has(tab)) return null;
 
   const params = new URLSearchParams(search);
   const eventId = EVENT_SCOPED_TABS.includes(tab) ? params.get('eventId')?.trim() || null : null;

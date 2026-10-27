@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -114,21 +113,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       labelVi: 'Quản lý hoạt động',
       labelEn: 'Activity Management',
       icon: <Layers size={18} />,
-    },
-    {
-      id: 'reports',
-      path: '/partner/reports',
-      labelVi: 'Báo cáo & Thống kê',
-      labelEn: 'Reports',
-      icon: <BarChart3 size={18} />,
-    },
-    {
-      id: 'notifications',
-      path: '/partner/notifications',
-      labelVi: 'Thông báo',
-      labelEn: 'Notifications',
-      icon: <Bell size={18} />,
-      badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined
     },
     {
       id: 'profile',
@@ -323,7 +307,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           ariaLabel="Điều hướng đối tác"
           roleLabel={language === 'vi' ? 'Đối tác' : 'Partner'}
           editionLabel={language === 'vi' ? 'Cổng Đối tác 2026' : 'Partner Portal 2026'}
-          items={navItems.map(item => ({ id: item.id, icon: item.icon, label: language === 'vi' ? item.labelVi : item.labelEn, badge: item.badge }))}
+          items={navItems.map(item => ({ id: item.id, icon: item.icon, label: language === 'vi' ? item.labelVi : item.labelEn }))}
           activeId={navItems.find(item => isNavActive(item.path, item.exact))?.id || 'dashboard'}
           isOpenMobile={sidebarOpen}
           onCloseMobile={() => setSidebarOpen(false)}

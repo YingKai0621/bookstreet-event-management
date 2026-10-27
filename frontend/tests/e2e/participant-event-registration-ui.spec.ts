@@ -105,7 +105,7 @@ test('public registration calls the join API and the joined event appears in My 
   await page.locator('#su-kien .event-coverflow-register-btn').click();
 
   const registrationDialog = page.getByRole('dialog', { name: 'Đăng ký tham dự sự kiện' });
-  await expect(registrationDialog).toContainText('2027-01-11, 19:31 – 2027-01-12, 17:31');
+  await expect(registrationDialog).toContainText('11/01/2027, 19:31 – 12/01/2027, 17:31');
   await registrationDialog.getByRole('button', { name: 'Xác nhận Đăng ký Tham dự' }).click();
 
   await expect(page.getByRole('heading', { name: 'Đăng ký tham dự thành công!' })).toBeVisible();

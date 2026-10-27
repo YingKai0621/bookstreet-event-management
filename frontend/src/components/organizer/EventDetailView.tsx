@@ -2,6 +2,7 @@ import { PaginatedList } from '../ui/PaginatedList';
 import {
   AlertCircle,
   ArrowLeft,
+  Ban,
   CalendarDays,
   Check,
   ChevronRight,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   Send,
   Store,
+  Trash2,
   Users
 } from 'lucide-react';
 import React from 'react';
@@ -42,6 +44,8 @@ interface EventDetailViewProps {
   onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (event: OrganizerEvent) => void;
+  onCancelEvent: (event: OrganizerEvent) => void;
+  onDeleteEvent: (event: OrganizerEvent) => void;
 }
 
 type DeadlineState = 'open' | 'elapsed' | 'missing';
@@ -104,7 +108,9 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onRetryOperations,
   onBoothConfigurationChanged,
   onEditEvent,
-  onPublishEvent
+  onPublishEvent,
+  onCancelEvent,
+  onDeleteEvent,
 }) => {
   type EventSection = 'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings';
   const [searchParams, setSearchParams] = useSearchParams();
@@ -229,6 +235,18 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               <button type="button" className="btn-org-primary org-event-detail-publish" onClick={() => onPublishEvent(event)}>
                 <Send size={16} />
                 {language === 'vi' ? 'Công bố' : 'Publish'}
+              </button>
+            )}
+            {event.apiStatus === 'DRAFT' && (
+              <button type="button" className="btn-org-danger" onClick={() => onDeleteEvent(event)}>
+                <Trash2 size={16} />
+                {language === 'vi' ? 'Xóa bản nháp' : 'Delete draft'}
+              </button>
+            )}
+            {event.apiStatus === 'PUBLISHED' && (
+              <button type="button" className="btn-org-danger" onClick={() => onCancelEvent(event)}>
+                <Ban size={16} />
+                {language === 'vi' ? 'Hủy sự kiện' : 'Cancel event'}
               </button>
             )}
           </div>

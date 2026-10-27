@@ -12,13 +12,13 @@ import { Booth, EventItem, Language } from '../../types';
 import type { EventBooth } from '../../types/booth';
 import { IconMapBookPin } from './CustomIcons';
 import { eventBoothToMarker } from '../booth-map/boothMapModel';
+import { PublicEventContext } from './PublicEventContext';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
   language: Language;
   events?: EventItem[];
   selectedEventId: string;
-  onSelectEventId: (eventId: string) => void;
   booths?: Booth[];
   isLoading?: boolean;
   highlightedBoothId: string | null;
@@ -31,13 +31,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   events = [],
   selectedEventId,
-  onSelectEventId,
   booths,
   isLoading = false,
   highlightedBoothId,
   onNavigateToBoothDetail,
 }) => {
   const allBooths = booths || EMPTY_BOOTHS;
+  const selectedEvent = events.find(event => event.id === selectedEventId);
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
   const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
@@ -250,7 +250,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </p>
         </div>
 
-
+        <PublicEventContext language={language} event={selectedEvent} />
 
         {/* Map Blueprint & Detail Column Layout */}
         <div className="blueprint-map-layout">

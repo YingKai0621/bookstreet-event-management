@@ -106,10 +106,25 @@ test('Organizer loads only its active workspace and stays idle without polling',
   await expect(page.getByRole('heading', { name: 'Quản lý hoạt động' })).toBeVisible();
   expect(requests.count('/api/v1/events')).toBe(0);
   expect(requests.count('/api/v1/auth/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/notifications')).toBe(0);
   expect(requests.count('/api/v1/participant/event-registrations')).toBe(0);
   expect(requests.count('/api/v1/participant/activity-registrations')).toBe(0);
   expect(requests.count('/api/v1/organizer/events')).toBe(1);
   expect(requests.count('/api/v1/organizer/activities')).toBe(1);
+  await expectIdleNetwork(page, requests.total);
+});
+
+test('Organizer profile uses the shared auth contract without loading unsupported APIs', async ({ page }) => {
+  const requests = await mockRoleApi(page, 'ORGANIZER');
+  await page.goto('/organizer/profile');
+
+  await expect(page.getByRole('heading', { name: 'Hồ sơ Ban Quản Lý' })).toBeVisible();
+  expect(requests.count('/api/v1/auth/profile')).toBe(1);
+  expect(requests.count('/api/v1/organizer/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/notifications')).toBe(0);
+  expect(requests.count('/api/v1/organizer/reports')).toBe(0);
+  expect(requests.count('/api/v1/organizer/feedbacks')).toBe(0);
   await expectIdleNetwork(page, requests.total);
 });
 
@@ -154,5 +169,7 @@ test('Partner workspace does not load Participant data or poll while idle', asyn
   expect(requests.count('/api/v1/partner/organization')).toBe(1);
   expect(requests.count('/api/v1/partner/applications')).toBe(1);
   expect(requests.count('/api/v1/partner/booth-requests')).toBe(1);
+  expect(requests.count('/api/v1/partner/notifications')).toBe(0);
+  expect(requests.count('/api/v1/partner/reports')).toBe(0);
   await expectIdleNetwork(page, requests.total);
 });

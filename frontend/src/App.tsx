@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import './RoleWorkspace.css';
@@ -42,9 +42,7 @@ import { PartnerBoothDetailPage } from './pages/partner/PartnerBoothDetailPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
-import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPage';
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
-import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
 import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
 import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
@@ -71,7 +69,6 @@ import {
   PartnerEventApplication,
   PartnerNotification,
   PartnerOrganization,
-  PartnerReportStats,
   PartnerTodoItem
 } from './types';
 
@@ -80,6 +77,26 @@ import './WorkspacePageHeading.css';
 const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,
 };
+
+const LANDING_EVENT_WINDOW_DAYS = 90;
+const LANDING_EVENT_LIMIT = 8;
+
+function getLandingEvents(events: EventItem[], now = Date.now()): EventItem[] {
+  const horizon = now + LANDING_EVENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const activeOrNear = events.filter(event => {
+    const startAt = event.startAt ? new Date(event.startAt).getTime() : Number.NaN;
+    const endAt = event.endAt ? new Date(event.endAt).getTime() : Number.NaN;
+    if (!Number.isFinite(startAt) || !Number.isFinite(endAt)) {
+      return event.status === 'happening' || event.status === 'upcoming';
+    }
+    return endAt >= now && startAt <= horizon;
+  });
+  const nearest = activeOrNear.length > 0
+    ? activeOrNear
+    : events.filter(event => !event.endAt || new Date(event.endAt).getTime() >= now);
+
+  return nearest.slice(0, LANDING_EVENT_LIMIT);
+}
 
 export function App() {
   const location = useLocation();
@@ -125,7 +142,6 @@ export function App() {
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
-  const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
@@ -159,7 +175,7 @@ export function App() {
       cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
-  }, [location.key, location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
 
   useEffect(() => {
     if (isSlidePageOpen || isPortalRoute || !location.hash) return;
@@ -167,7 +183,7 @@ export function App() {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'instant' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [location.key, location.hash, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, isSlidePageOpen, isPortalRoute]);
 
   const [heritageList, setHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
@@ -176,17 +192,42 @@ export function App() {
   const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
   const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const publicEventIdFromUrl = isBooths ? new URLSearchParams(location.search).get('eventId') : null;
-  const publicEventId = events.some(event => event.id === publicEventIdFromUrl)
+  const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
+  const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
+  const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
+  const defaultPublicEventId = publicContextEvents.find(event => event.status === 'happening')?.id
+    || publicContextEvents.find(event => event.status === 'upcoming')?.id
+    || publicContextEvents[0]?.id
+    || '';
+  const publicEventId = publicContextEvents.some(event => event.id === publicEventIdFromUrl)
     ? publicEventIdFromUrl as string
-    : events.some(event => event.id === selectedPublicEventId)
+    : publicContextEvents.some(event => event.id === selectedPublicEventId)
       ? selectedPublicEventId
-      : events[0]?.id || '';
+      : defaultPublicEventId;
 
   const selectPublicEvent = (eventId: string) => {
+    if (!publicContextEvents.some(event => event.id === eventId)) return;
     setSelectedPublicEventId(eventId);
-    if (isBooths) navigate(`/gian-hang?eventId=${encodeURIComponent(eventId)}`);
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', eventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+      hash: location.hash,
+    }, { replace: true, preventScrollReset: true });
   };
+
+  useEffect(() => {
+    if (!isPublicRoute || isPublicDataLoading || !publicEventIdFromUrl || !publicEventId) return;
+    if (publicEventIdFromUrl === publicEventId) return;
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', publicEventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+      hash: location.hash,
+    }, { replace: true, preventScrollReset: true });
+  }, [isPublicDataLoading, isPublicRoute, location.hash, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
 
   // Load real data from Backend REST API
   useEffect(() => {
@@ -367,7 +408,6 @@ export function App() {
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
     setPartnerNotifications([]);
-    _setPartnerReports(null);
     const refreshPartnerData = () => {
       const profileRequest = partnerApi.getProfile();
       void Promise.allSettled([
@@ -833,19 +873,8 @@ export function App() {
               applications={partnerApplications}
             />
           } />
-          <Route path="/partner/reports" element={
-            partnerReports
-              ? <PartnerReportsPage language={language} reportStats={partnerReports} />
-              : <p className="app-loading-state">Chưa có API báo cáo để tải dữ liệu từ hệ thống.</p>
-          } />
-          <Route path="/partner/notifications" element={
-            <PartnerNotificationsPage
-              language={language}
-              notifications={partnerNotifications}
-              onMarkAllAsRead={handleMarkAllPartnerNotifsRead}
-              onMarkItemAsRead={handleMarkPartnerNotifRead}
-            />
-          } />
+          <Route path="/partner/reports" element={<Navigate to="/partner" replace />} />
+          <Route path="/partner/notifications" element={<Navigate to="/partner" replace />} />
           <Route path="/partner/organization" element={<Navigate to="/partner/profile" replace />} />
           <Route path="/partner/profile" element={
             <PartnerProfilePage
@@ -912,6 +941,7 @@ export function App() {
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onParticipantLogout={handleParticipantLogout}
+        selectedPublicEventId={publicEventId}
       />
 
       <div className={`main-app-container ${isSlidePageOpen ? 'heritage-active-bg' : ''}`} inert={isSlidePageOpen} aria-hidden={isSlidePageOpen || undefined}>
@@ -936,9 +966,8 @@ export function App() {
             booths={booths}
             isLoading={isPublicDataLoading || isPublicBoothsLoading}
             error={publicBoothsError}
-            events={events}
+            events={publicContextEvents}
             selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
             onSearchQueryChange={setBoothSearchQuery}
@@ -948,12 +977,14 @@ export function App() {
           {/* 6. Events Schedule with Real Photography & Bookstall Proposal Flow */}
           <EventsSection 
             language={language} 
-            events={events}
+            events={publicContextEvents}
             isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
             onJoinEvent={handleJoinParticipantEvent}
+            selectedEventId={publicEventId}
+            onSelectEventId={selectPublicEvent}
           />
 
           {/* 6.5 Heritage Trail Section - Di sản văn hóa */}
@@ -966,9 +997,8 @@ export function App() {
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
           <InteractiveMap 
             language={language}
-            events={events}
+            events={publicContextEvents}
             selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
@@ -995,7 +1025,6 @@ export function App() {
         events={events}
         isLoading={isPublicDataLoading || isPublicBoothsLoading}
         selectedEventId={publicEventId}
-        onSelectEventId={selectPublicEvent}
         error={publicBoothsError}
         onSelectBoothOnMap={handleSelectBoothOnMap} 
       />
@@ -1007,6 +1036,7 @@ export function App() {
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onJoinEvent={handleJoinParticipantEvent}
+        selectedEventId={publicEventId}
       />
 
     </div>

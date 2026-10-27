@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
 import './BoothsSection.css';
 import { IconBookSpine, IconBookmark } from './CustomIcons';
+import { PublicEventContext } from './PublicEventContext';
 
 interface BoothsSectionProps {
   language: Language;
@@ -15,7 +16,6 @@ interface BoothsSectionProps {
   error?: string;
   events?: EventItem[];
   selectedEventId?: string;
-  onSelectEventId?: (eventId: string) => void;
   onSelectBoothOnMap: (boothId: string) => void;
   searchQuery?: string;
   onSearchQueryChange?: (q: string) => void;
@@ -31,13 +31,16 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
   error = '',
   events = [],
   selectedEventId = '',
-  onSelectEventId,
   onSelectBoothOnMap,
   searchQuery: externalSearchQuery,
   onSearchQueryChange,
   focusedBoothId,
 }) => {
   const booths = initialBooths || EMPTY_BOOTHS;
+  const selectedEvent = events.find(event => event.id === selectedEventId);
+  const boothsCatalogUrl = selectedEventId
+    ? `/gian-hang?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/gian-hang';
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const setSearchQuery = onSearchQueryChange || setInternalSearchQuery;
@@ -177,22 +180,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
 
         {/* Search & Category Filter Bar */}
         <div className="figma-stalls-controls">
-          {events.length > 0 && onSelectEventId && (
-            <label className="public-event-picker">
-              <span>{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</span>
-              <select
-                value={selectedEventId}
-                onChange={event => onSelectEventId(event.target.value)}
-                aria-label={language === 'vi' ? 'Sự kiện công khai' : 'Published event'}
-              >
-                {events.map(event => (
-                  <option key={event.id} value={event.id}>
-                    {language === 'vi' ? event.title : event.titleEn}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <PublicEventContext language={language} event={selectedEvent} />
           <div className="figma-search-bar">
             <Search size={18} className="search-ico" />
             <input
@@ -373,7 +361,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               );
             })}
             {showExploreCard && (
-              <Link to="/gian-hang" className="booths-explore-card">
+              <Link to={boothsCatalogUrl} className="booths-explore-card">
                 <span>{language === 'vi' ? 'Khám phá thêm gian hàng' : 'Explore more bookstalls'}</span>
                 <ChevronsRight size={30} aria-hidden="true" />
               </Link>
@@ -386,7 +374,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách */}
         <div className="section-bottom-see-more-row">
           <Link
-            to="/gian-hang"
+            to={boothsCatalogUrl}
             className="btn-section-see-more-borderless"
             aria-label="Xem thêm toàn bộ gian hàng tại Đường Sách"
           >

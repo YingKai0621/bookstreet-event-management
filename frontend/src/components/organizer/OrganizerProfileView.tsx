@@ -31,14 +31,13 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
 }) => {
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
-  const [editEmail, setEditEmail] = useState(profile.email);
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
 
-  // Notifications toggles state
-  const [notifyNewBooth, setNotifyNewBooth] = useState(profile.notificationPreferences?.newBooth ?? true);
-  const [notifyNewActivity, setNotifyNewActivity] = useState(profile.notificationPreferences?.newActivity ?? true);
-  const [notifyDailyEmail, setNotifyDailyEmail] = useState(profile.notificationPreferences?.dailyEmail ?? true);
+  // Notification preferences do not have an approved backend contract yet.
+  const notifyNewBooth = profile.notificationPreferences?.newBooth ?? false;
+  const notifyNewActivity = profile.notificationPreferences?.newActivity ?? false;
+  const notifyDailyEmail = profile.notificationPreferences?.dailyEmail ?? false;
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -48,12 +47,8 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   useModalDismiss(showLogoutConfirm, () => setShowLogoutConfirm(false));
 
   useEffect(() => {
-    setEditEmail(profile.email);
     setEditPhone(profile.phone);
     setEditAvatarUrl(profile.avatarUrl || '');
-    setNotifyNewBooth(profile.notificationPreferences?.newBooth ?? true);
-    setNotifyNewActivity(profile.notificationPreferences?.newActivity ?? true);
-    setNotifyDailyEmail(profile.notificationPreferences?.dailyEmail ?? true);
   }, [profile]);
 
   const showToast = (msg: string) => {
@@ -67,9 +62,8 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
     e.preventDefault();
     try {
       await onUpdateProfile({
-      email: editEmail,
-      phone: editPhone,
-      avatarUrl: editAvatarUrl
+        phone: editPhone,
+        avatarUrl: editAvatarUrl,
       });
       setIsEditing(false);
       showToast(language === 'vi' ? 'Đã lưu thay đổi thông tin cá nhân thành công!' : 'Profile changes saved successfully!');
@@ -79,27 +73,9 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   };
 
   const handleCancelEdit = () => {
-    setEditEmail(profile.email);
     setEditPhone(profile.phone);
     setEditAvatarUrl(profile.avatarUrl || '');
     setIsEditing(false);
-  };
-
-  const handleToggleNotification = async (key: 'booth' | 'activity' | 'email') => {
-    const next = {
-      newBooth: key === 'booth' ? !notifyNewBooth : notifyNewBooth,
-      newActivity: key === 'activity' ? !notifyNewActivity : notifyNewActivity,
-      dailyEmail: key === 'email' ? !notifyDailyEmail : notifyDailyEmail,
-    };
-    try {
-      await onUpdateProfile({ notificationPreferences: next });
-      setNotifyNewBooth(next.newBooth);
-      setNotifyNewActivity(next.newActivity);
-      setNotifyDailyEmail(next.dailyEmail);
-      showToast(language === 'vi' ? 'Đã cập nhật tùy chọn thông báo' : 'Notification preference updated');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Không thể cập nhật tùy chọn');
-    }
   };
 
   return (
@@ -538,19 +514,18 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                       <Mail size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="email"
-                        value={isEditing ? editEmail : profile.email}
-                        onChange={e => setEditEmail(e.target.value)}
-                        disabled={!isEditing}
+                        value={profile.email}
+                        disabled
                         style={{
                           width: '100%',
                           padding: '8px 12px 8px 34px',
                           borderRadius: 7,
-                          border: isEditing ? '1px solid #13241F' : '1px solid #E5E7EB',
-                          background: isEditing ? '#FFFFFF' : '#F9FAFB',
+                          border: '1px solid #E5E7EB',
+                          background: '#F9FAFB',
                           color: '#1F2937',
                           fontSize: '0.85rem',
                           outline: 'none',
-                          boxShadow: isEditing ? '0 0 0 3px rgba(19, 36, 31, 0.08)' : 'none'
+                          boxShadow: 'none',
                         }}
                       />
                     </div>
@@ -622,10 +597,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   <button
                     type="button"
                     className={`org-toggle-switch ${notifyNewBooth ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('booth')}
+                    disabled
                     role="switch"
                     aria-checked={notifyNewBooth}
                     aria-label="Thông báo đơn đăng ký gian hàng mới"
+                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>
@@ -650,10 +626,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   <button
                     type="button"
                     className={`org-toggle-switch ${notifyNewActivity ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('activity')}
+                    disabled
                     role="switch"
                     aria-checked={notifyNewActivity}
                     aria-label="Thông báo đề xuất hoạt động cần duyệt"
+                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>
@@ -677,10 +654,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   <button
                     type="button"
                     className={`org-toggle-switch ${notifyDailyEmail ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('email')}
+                    disabled
                     role="switch"
                     aria-checked={notifyDailyEmail}
                     aria-label="Nhận tóm tắt báo cáo định kỳ qua Email"
+                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>

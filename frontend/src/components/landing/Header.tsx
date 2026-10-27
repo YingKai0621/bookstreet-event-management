@@ -37,6 +37,7 @@ interface HeaderProps {
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
   onParticipantLogout?: () => void;
+  selectedPublicEventId?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   isParticipantAuthenticated = false,
   participantProfile,
   onParticipantLogout,
+  selectedPublicEventId = '',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
@@ -226,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
                   return (
                     <li key={item.href} className="ticket-nav-li">
                       <Link 
-                        to={`/${item.href}`}
+                        to={`/${selectedPublicEventId ? `?eventId=${encodeURIComponent(selectedPublicEventId)}` : ''}${item.href}`}
                         onClick={keepHeaderVisibleDuringNavigation}
                         className={`ticket-nav-item ${!isHeritage && isCurrent ? 'is-current' : ''} ${!isHeritage && isPassed ? 'is-passed' : ''}`}
                       >
@@ -507,7 +509,7 @@ export const Header: React.FC<HeaderProps> = ({
                   return (
                     <li key={item.href}>
                       <Link 
-                        to={`/${item.href}`}
+                        to={`/${selectedPublicEventId ? `?eventId=${encodeURIComponent(selectedPublicEventId)}` : ''}${item.href}`}
                         onClick={() => {
                           keepHeaderVisibleDuringNavigation();
                           setMobileMenuOpen(false);

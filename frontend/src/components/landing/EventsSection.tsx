@@ -8,16 +8,6 @@ import { IconEventTicket } from './CustomIcons';
 import './EventsSection.css';
 import { EventCoverflow } from '../ui/EventCoverflow';
 
-const parseEventDate = (value: string) => {
-  const parts = value.includes('/') ? value.split('/') : value.split('-');
-  if (parts.length !== 3) return null;
-
-  const [first, second, third] = parts.map(Number);
-  const [year, month, day] = value.includes('/') ? [third, second, first] : [first, second, third];
-  const date = new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
 const formatRegistrationDeadline = (value: string) => {
   const parts = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
@@ -42,6 +32,8 @@ interface EventsSectionProps {
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  selectedEventId?: string;
+  onSelectEventId?: (eventId: string) => void;
 }
 
 export const EventsSection: React.FC<EventsSectionProps> = ({ 
@@ -52,6 +44,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
   onJoinEvent,
+  selectedEventId,
+  onSelectEventId,
 }) => {
   const [activeEventDetail, setActiveEventDetail] = useState<EventItem | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState<EventItem | null>(null);
@@ -87,30 +81,17 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   useModalDismiss(Boolean(activeEventDetail), () => closeEventSheet('detail'));
   useModalDismiss(Boolean(showRegisterModal), () => closeEventSheet('register'));
 
-  const { displayedEvents, weekEventIds } = React.useMemo(() => {
+  const weekEventIds = React.useMemo(() => {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const weekStart = startOfWeek(today);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Hiển thị tất cả sự kiện sắp diễn ra từ hôm nay trở đi, hoặc danh sách sự kiện có sẵn
-    const upcomingEvents = events.filter((event) => {
-      const eventDate = parseEventDate(event.dateStr);
-      if (!eventDate) return true;
-      return eventDate >= startOfToday;
-    });
-
-    const activeEvents = upcomingEvents.length > 0 ? upcomingEvents : events;
-
-    return {
-      displayedEvents: activeEvents,
-      weekEventIds: new Set(activeEvents.filter((event) => {
-        const eventDate = parseEventDate(event.dateStr);
-        return eventDate && eventDate >= weekStart && eventDate <= weekEnd;
-      }).map((event) => event.id)),
-    };
+    return new Set(events.filter((event) => {
+      const eventDate = event.startAt ? new Date(event.startAt) : new Date(event.dateStr);
+      return !Number.isNaN(eventDate.getTime()) && eventDate >= weekStart && eventDate <= weekEnd;
+    }).map((event) => event.id));
   }, [events]);
 
   const handleOpenRegister = (evt: EventItem) => {
@@ -140,17 +121,19 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
         </div>
 
         <EventCoverflow
-          events={displayedEvents}
+          events={events}
           language={language}
           weekEventIds={weekEventIds}
           isLoading={isLoading}
+          selectedEventId={selectedEventId}
+          onSelectEvent={onSelectEventId}
           onDetails={setActiveEventDetail}
           onRegister={handleOpenRegister}
         />
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách sự kiện */}
         <div className="section-bottom-see-more-row">
           <Link
-            to="/su-kien"
+            to={selectedEventId ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}` : '/su-kien'}
             className="btn-section-see-more-borderless"
             aria-label="Xem thêm toàn bộ lịch hoạt động sự kiện"
           >

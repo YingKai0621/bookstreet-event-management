@@ -2,6 +2,7 @@ import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../co
 import { ListPagination } from '../ui/ListPagination';
 import {
   CalendarDays,
+  Ban,
   Edit3,
   Eye,
   ImageOff,
@@ -9,6 +10,7 @@ import {
   Search,
   Send,
   SlidersHorizontal,
+  Trash2,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -27,6 +29,8 @@ interface EventManagementViewProps {
   onOpenCreateEvent: () => void;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (event: OrganizerEvent) => void;
+  onCancelEvent: (event: OrganizerEvent) => void;
+  onDeleteEvent: (event: OrganizerEvent) => void;
 }
 
 type StatusFilter = 'ALL' | OrganizerEventStatus;
@@ -81,6 +85,8 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
   onOpenCreateEvent,
   onEditEvent,
   onPublishEvent,
+  onCancelEvent,
+  onDeleteEvent,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusCandidate = searchParams.get('status');
@@ -296,9 +302,13 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
                         <Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}
                       </button>
                       <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                      <button type="button" className="btn-org-danger" onClick={() => onDeleteEvent(event)}><Trash2 size={15} />{language === 'vi' ? 'Xóa' : 'Delete'}</button>
                     </>
                   ) : (
-                    <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                    <>
+                      <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                      {event.apiStatus === 'PUBLISHED' && <button type="button" className="btn-org-danger" onClick={() => onCancelEvent(event)}><Ban size={15} />{language === 'vi' ? 'Hủy sự kiện' : 'Cancel event'}</button>}
+                    </>
                   )}
                 </div>
               </article>

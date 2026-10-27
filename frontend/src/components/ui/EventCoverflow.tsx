@@ -8,20 +8,42 @@ interface EventCoverflowProps {
   language: Language;
   weekEventIds: Set<string>;
   isLoading?: boolean;
+  selectedEventId?: string;
+  onSelectEvent?: (eventId: string) => void;
   onDetails: (event: EventItem) => void;
   onRegister: (event: EventItem) => void;
 }
 
-export function EventCoverflow({ events, language, weekEventIds, isLoading = false, onDetails, onRegister }: EventCoverflowProps) {
+export function EventCoverflow({
+  events,
+  language,
+  weekEventIds,
+  isLoading = false,
+  selectedEventId,
+  onSelectEvent,
+  onDetails,
+  onRegister,
+}: EventCoverflowProps) {
   const [selected, setSelected] = useState(0);
   const dragStart = useRef<number | null>(null);
   const suppressClick = useRef(false);
   const count = events.length;
-  const selectedIndex = count > 0 ? Math.min(selected, count - 1) : 0;
+  const controlledIndex = selectedEventId
+    ? events.findIndex(event => event.id === selectedEventId)
+    : -1;
+  const selectedIndex = controlledIndex >= 0
+    ? controlledIndex
+    : count > 0 ? Math.min(selected, count - 1) : 0;
   const current = events[selectedIndex];
 
+  const selectIndex = (index: number) => {
+    if (!events[index]) return;
+    setSelected(index);
+    onSelectEvent?.(events[index].id);
+  };
+
   const move = (step: number) => {
-    if (count > 1) setSelected((index) => (index + step + count) % count);
+    if (count > 1) selectIndex((selectedIndex + step + count) % count);
   };
 
   const offsetFor = (index: number) => {
@@ -144,7 +166,7 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
                     return;
                   }
                   if (index === selectedIndex) onDetails(event);
-                  else setSelected(index);
+                  else selectIndex(index);
                 }}
                 aria-label={`${language === 'vi' ? event.title : event.titleEn}${index === selectedIndex ? '' : language === 'vi' ? ', chọn sự kiện' : ', select event'}`}
                 aria-current={index === selectedIndex ? 'true' : undefined}
@@ -188,7 +210,7 @@ export function EventCoverflow({ events, language, weekEventIds, isLoading = fal
         </div>
       </div>
       {count > 1 && <div className="event-coverflow-pagination" aria-label={language === 'vi' ? 'Chọn sự kiện' : 'Choose event'}>
-        {events.map((event, index) => <button key={event.id} type="button" className={index === selectedIndex ? 'is-selected' : ''} aria-label={`${language === 'vi' ? 'Sự kiện' : 'Event'} ${index + 1}`} aria-current={index === selectedIndex ? 'true' : undefined} onClick={() => setSelected(index)} />)}
+        {events.map((event, index) => <button key={event.id} type="button" className={index === selectedIndex ? 'is-selected' : ''} aria-label={`${language === 'vi' ? 'Sự kiện' : 'Event'} ${index + 1}`} aria-current={index === selectedIndex ? 'true' : undefined} onClick={() => selectIndex(index)} />)}
       </div>}
     </div>
   );
