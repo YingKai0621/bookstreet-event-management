@@ -1,6 +1,6 @@
 # Participant demo data
 
-Flyway migrations `V12`–`V14` add a Participant test schedule after the Sprint 6 schema. They run with the normal backend startup. The schedule dates are calculated once, when `V12` first runs, so recreate a local test database when those dates have passed. Do not edit migrations already recorded in `flyway_schema_history`.
+Flyway demo migrations `V12`–`V16` live in `backend/src/main/resources/db/demo`. They are opt-in so CI and production migrate only the business schema through V11. To enable them for a disposable local database, set `SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo` in the root `.env` before starting the backend. Keep that setting on any local database where V12–V16 have already run; Flyway must still be able to find those applied versions. The schedule dates are calculated once, when each migration first runs. Recreate only a disposable local demo database when those dates have passed. Do not edit applied migration contents.
 
 ## Accounts
 
