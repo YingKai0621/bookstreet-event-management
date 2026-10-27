@@ -7,7 +7,7 @@ mark-read through `POST /participant/notifications/read-all`. It supplements mar
 updates only the authenticated Participant's unread rows with one backend timestamp and is
 idempotent on retry. It does not add notification composition, broadcast or cross-role inbox scope.
 
-> Status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19. API paths,
+> Status: `COMPLETED` on 2026-10-28. API paths,
 > request/response schemas, all 65 Acceptance Criteria and developer ownership are frozen in the
 > linked Sprint 6 Use Case Specification, API Contract and Backend Work Assignment.
 >
@@ -87,7 +87,7 @@ it does not silently claim the general Event-announcement composer, BoothVisit, 
   slice defined in section 11; verified email remains an optional post-commit delivery channel.
 - Booth/Activity rewards and cross-Event loyalty progression.
 
-## 4. Mandatory prerequisite debt
+## 4. Resolved prerequisite debt
 
 Sprint 5 documentation defines public Activity APIs as:
 
@@ -96,20 +96,17 @@ GET /api/v1/activities
 GET /api/v1/activities/{activityId}
 ```
 
-The current backend has no corresponding public Activity controller, while the frontend calls
-`/api/v1/public/activities`. Sprint 6 registration must not build on that mismatch. The first
-implementation slice must restore the documented backend contract and point the frontend to the
-same canonical paths.
+At Sprint activation, the backend had no corresponding public Activity controller while the
+frontend called `/api/v1/public/activities`. Sprint 6 resolved that mismatch by implementing the
+documented canonical contract and pointing the frontend to the same paths.
 
-The current Participant QR screen also models the opposite flow: it gives a Participant-specific
-QR to present to staff. The approved baseline instead uses one Activity-owned QR displayed at the
-venue, which the authenticated Participant scans. That screen must be replaced rather than wired
-to the new Attendance API as-is.
+The pre-Sprint Participant QR screen modeled the opposite flow: it gave a Participant-specific QR
+to present to staff. It was replaced with the approved Activity-owned QR flow displayed at the
+venue and scanned by the authenticated Participant.
 
-The current My Events screen generates a synthetic Event QR even though the approved rules define
-no Event ticket/QR. It must be removed. Conversely, ParticipantLayout already calls notification
-endpoints that the backend does not implement. Sprint 6 must replace those phantom calls with the
-reviewed notification contract rather than keeping a permanently empty or failing popover.
+The pre-Sprint My Events screen generated a synthetic Event QR even though the approved rules define
+no Event ticket/QR; that behavior was removed. Participant Notification calls were aligned with the
+implemented reviewed contract instead of retaining phantom endpoints.
 
 ## 5. Domain baseline
 
@@ -238,7 +235,7 @@ create/reactivate ──┴──> ACTIVE                    │ eligible re-reg
 
 ### 6.2 Valid self-scan window
 
-The initial Sprint 6 policy is one global, backend-owned window:
+The implemented Sprint 6 policy is one backend-owned window per Activity:
 
 ```text
 [activity.startAt - attendanceEarlyScanMinutes minutes, activity.endAt)
@@ -252,8 +249,9 @@ The initial Sprint 6 policy is one global, backend-owned window:
   start. `DRAFT`, `COMPLETED` and `CANCELLED` reject a new self-scan.
 - The Event and ActivityRegistration must still be effective and the token must match exactly.
 
-The early-window duration should be an application configuration constant, not a frontend magic
-number and not a per-Activity field in this Sprint.
+The early-window duration is stored in `activities.attendance_early_scan_minutes`, defaults to 15,
+accepts 0–1440 and is never decided by the frontend. Organizer changes are rejected after the first
+valid Attendance.
 
 ### 6.3 Attendance and duplicate scans
 
@@ -577,7 +575,7 @@ unavailable.
 
 ## 15. Schema direction
 
-V1–V9 remain immutable. The approved Sprint 6 `V10` migration adds or activates:
+V1–V9 remain immutable. The implemented Sprint 6 `V10` migration adds or activates:
 
 - `event_registrations`;
 - `activity_registrations`, including cancellation source and timestamps;
@@ -588,12 +586,14 @@ V1–V9 remain immutable. The approved Sprint 6 `V10` migration adds or activate
 - `notifications`, activating the existing Physical ERD concept with a stable entity reference and
   deduplication identity for the Sprint 6 notification types.
 
-The Physical ERD report and source diagram were approved on 19/10/2026. The source diagram now has
+The implemented V11 migration adds `activities.attendance_early_scan_minutes` with default 15 and
+the approved 0–1440 database constraint.
+
+The Physical ERD report and source diagram were approved on 19/10/2026. The source diagram has
 the complete 34-table target, the `attendance_adjustments` audit table, the approved status/source
 fields and a dedicated `04 - Participant & Attendance` detail page. The overview and Participant /
-Attendance PNG assets were regenerated from that source in the same review step. The migration
-number is fixed as `V10`; the exact Sprint 6 columns are frozen in the Physical ERD report before
-DDL work.
+Attendance PNG assets were regenerated from that source in the same review step. V10 and V11 now
+form the immutable implemented Sprint 6 schema baseline.
 
 ## 16. Required alternative and exception paths
 
@@ -661,7 +661,7 @@ The documentation gate was completed and approved in this order:
 
 ## 19. Definition of done baseline
 
-Sprint 6 may later be marked complete only when:
+Sprint 6 is complete because:
 
 - canonical public Activity list/detail is implemented and frontend/backend paths agree;
 - Participant can Join/Leave Event and register/cancel/re-register Activity through real APIs;
@@ -678,8 +678,9 @@ Sprint 6 may later be marked complete only when:
 - Swagger/manual end-to-end evidence covers Participant and Organizer roles;
 - a Sprint 6 completion report records exact delivered scope, test counts and remaining debt.
 
-This Definition of Done is active. The Use Case Specification and API Contract provide traceable
-Acceptance Criteria and canonical error behavior.
+The completion evidence and AC-to-test traceability are recorded in
+`docs/development/SPRINT_06_COMPLETION_REPORT.md`. The Use Case Specification and API Contract remain
+the canonical behavior baseline.
 
 ## 20. Audit result and review gates
 
@@ -688,8 +689,8 @@ gaps that are now explicit in this document:
 
 1. Existing frontend QR behavior is reversed for Attendance and invents an Event QR forbidden by
    the approved baseline.
-2. The current frontend calls Participant Notification APIs that do not exist, while excluding
-   durable Notification would conflict with the Participant module and optional-email model.
+2. The pre-Sprint frontend called Participant Notification APIs that did not exist, while excluding
+   durable Notification would have conflicted with the Participant module and optional-email model.
 3. Attendance correction needs lifecycle-sensitive outcomes; voiding Attendance must not turn a
    cancellation into No-show or erase its source.
 4. `ACTIVE` registration history must be distinguished from a seat-active reservation so completed

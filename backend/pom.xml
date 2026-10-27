@@ -114,6 +114,22 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!--
+                            The PostgreSQL-backed suite caches several distinct Spring contexts.
+                            Small test-only pools keep those contexts below the database connection
+                            limit without changing the production datasource configuration.
+                        -->
+                        <spring.datasource.hikari.maximum-pool-size>2</spring.datasource.hikari.maximum-pool-size>
+                        <spring.datasource.hikari.minimum-idle>0</spring.datasource.hikari.minimum-idle>
+                        <spring.test.context.cache.maxSize>16</spring.test.context.cache.maxSize>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
