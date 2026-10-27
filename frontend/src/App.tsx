@@ -42,9 +42,7 @@ import { PartnerBoothDetailPage } from './pages/partner/PartnerBoothDetailPage';
 import { PartnerDashboard } from './pages/partner/PartnerDashboard';
 import { PartnerLayout } from './pages/partner/PartnerLayout';
 import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
-import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPage';
 import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
-import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
 import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
 import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
 import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
@@ -71,7 +69,6 @@ import {
   PartnerEventApplication,
   PartnerNotification,
   PartnerOrganization,
-  PartnerReportStats,
   PartnerTodoItem
 } from './types';
 
@@ -125,7 +122,6 @@ export function App() {
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
   const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
-  const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
@@ -367,7 +363,6 @@ export function App() {
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
     setPartnerNotifications([]);
-    _setPartnerReports(null);
     const refreshPartnerData = () => {
       const profileRequest = partnerApi.getProfile();
       void Promise.allSettled([
@@ -833,19 +828,8 @@ export function App() {
               applications={partnerApplications}
             />
           } />
-          <Route path="/partner/reports" element={
-            partnerReports
-              ? <PartnerReportsPage language={language} reportStats={partnerReports} />
-              : <p className="app-loading-state">Chưa có API báo cáo để tải dữ liệu từ hệ thống.</p>
-          } />
-          <Route path="/partner/notifications" element={
-            <PartnerNotificationsPage
-              language={language}
-              notifications={partnerNotifications}
-              onMarkAllAsRead={handleMarkAllPartnerNotifsRead}
-              onMarkItemAsRead={handleMarkPartnerNotifRead}
-            />
-          } />
+          <Route path="/partner/reports" element={<Navigate to="/partner" replace />} />
+          <Route path="/partner/notifications" element={<Navigate to="/partner" replace />} />
           <Route path="/partner/organization" element={<Navigate to="/partner/profile" replace />} />
           <Route path="/partner/profile" element={
             <PartnerProfilePage

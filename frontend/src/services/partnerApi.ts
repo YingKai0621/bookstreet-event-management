@@ -72,8 +72,6 @@ export interface PartnerAvailableEvent {
   acceptingApplications: boolean;
 }
 
-const formatDate = (value: unknown) => value ? new Date(String(value)).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
-
 const formatDateTime = (value: unknown) => value ? new Date(String(value)).toLocaleString('vi-VN', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -303,16 +301,11 @@ export const partnerApi = {
     apiClient.post<PartnerActivityCancellationRequestResponse>(
       `/partner/activity-cancellation-requests/${encodeURIComponent(requestId)}/withdraw`,
     ),
-  async getNotifications(): Promise<PartnerNotification[]> {
-    const items = await apiClient.get<Array<Record<string, unknown>>>('/partner/notifications');
-    return items.map(item => ({
-      id: String(item.id), title: String(item.title), time: formatDate(item.createdAt),
-      type: ['activity', 'booth', 'event', 'reminder', 'system'].includes(String(item.kind)) ? String(item.kind) as PartnerNotification['type'] : 'system',
-      isRead: Boolean(item.isRead), link: item.link ? String(item.link) : undefined,
-    }));
-  },
-  markNotificationRead: (id: string) => apiClient.patch(`/partner/notifications/${encodeURIComponent(id)}/read`, {}),
-  markAllNotificationsRead: () => apiClient.patch('/partner/notifications/read-all', {}),
-  getReports: (eventId?: string) => apiClient.get<PartnerReportStats>(`/partner/reports${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`),
-  changePassword: (currentPassword: string, newPassword: string) => apiClient.post('/partner/password', { currentPassword, newPassword }),
+  getNotifications: async (): Promise<PartnerNotification[]> => [],
+  markNotificationRead: async (_id: string): Promise<void> => undefined,
+  markAllNotificationsRead: async (): Promise<void> => undefined,
+  getReports: async (_eventId?: string): Promise<PartnerReportStats> =>
+    Promise.reject(new Error('Báo cáo đối tác chưa có API backend trong phạm vi hiện tại.')),
+  changePassword: async (_currentPassword: string, _newPassword: string): Promise<void> =>
+    Promise.reject(new Error('Đổi mật khẩu chưa có API backend trong phạm vi hiện tại.')),
 };
