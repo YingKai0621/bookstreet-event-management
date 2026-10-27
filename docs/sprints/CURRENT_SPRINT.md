@@ -5,8 +5,9 @@
 - Status: `ACTIVE — IMPLEMENTATION AUTHORIZED WITHIN APPROVED BASELINE`
 - Activation date: `2026-10-19`
 - Previous completed Sprint: `Sprint 05 Activity Planning and Partner Proposal Workflow`
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V9`
-- Sprint 6 target migration: `V10`, owned only by Developer A
+- Implemented schema baseline: immutable Flyway migrations `V1` through `V11`
+- Sprint 6 migrations: `V10` participation schema and `V11` configurable Attendance early-scan
+  window, both already implemented
 - Sprint baseline: `docs/sprints/sprint-06.md`
 - Use Case Specifications: `docs/use-cases/sprint-06-use-case-specifications.md`
 - API Contract: `docs/api/sprint-06-api-contract.md`
@@ -38,27 +39,27 @@ Implementation is limited to the eight approved Use Case slices:
 - `UC-O06` Sprint 6 Activity lifecycle/cascade slice
 - `UC-O07` participation monitoring and audited correction
 
-The active baseline contains **65 Acceptance Criteria** and **29 canonical endpoint headings**.
+The active baseline contains **65 Acceptance Criteria** and **30 canonical endpoint headings**.
 Every implementation PR must identify its owned AC IDs and use the exact route, DTO, error-code,
 ownership, lifecycle and idempotency behavior in the approved API Contract.
 
 ## Ownership
 
-- **Developer A:** sole `V10` owner; shared schema/persistence foundation; canonical public Activity;
-  Event/Activity registration; Event update-freeze and cancellation propagation. Primary owner of
-  29 AC.
+- **Developer A:** sole Sprint 6 migration owner (`V10` and `V11`); shared schema/persistence
+  foundation; canonical public Activity; Event/Activity registration; Event update-freeze and
+  cancellation propagation. Primary owner of 29 AC.
 - **Developer B:** Activity QR Attendance, No-show, Organizer monitoring/correction and Activity
   lifecycle propagation. Primary owner of 27 AC.
 - **Developer C:** Certificate, Rating, notification query/read operations, downstream cascade
   commands and all Sprint 6 Participant/Organizer frontend integration. Primary owner of 9 backend
   AC plus frontend and end-to-end closure evidence.
 
-Only Developer A may create or edit the Sprint 6 `V10` migration. Migrations `V1` through `V9` are
-immutable.
+Only Developer A may create or edit the Sprint 6 `V10`/`V11` migrations. Migrations `V1` through
+`V9` are immutable.
 
 ## Mandatory delivery order
 
-1. `S6-1` — Developer A: `V10`, migration verification and shared persistence foundation.
+1. `S6-1` — Developer A: `V10`/`V11`, migration verification and shared persistence foundation.
 2. `S6-2` — Developer A: canonical public Activity and Flow A registration backend.
 3. `S6-3` — Developer C: Flow A frontend integration.
 4. `S6-4` — Developer C: internal Certificate/Rating/Notification cascade commands required by
@@ -82,8 +83,9 @@ Do not merge around an unmet earlier gate. The detailed handoff rules and comple
 - Participant identity comes from the authenticated Session, never a caller-selected user ID.
 - Correction history is append-only; cancellation and correction never hard-delete participation
   evidence.
-- Notifications are in-app, owner-only and deduplicated. Sprint 6 supports list, unread count and
-  mark-one-read; it does not add mark-all-read or a generic notification composer.
+- Notifications are in-app, owner-only and deduplicated. Sprint 6 supports list, unread count,
+  mark-one-read and owner-only idempotent mark-all-read; it does not add a generic notification
+  composer.
 - Participant and Organizer UI must use real approved endpoints and must not fall back to demo data
   after an API error.
 
@@ -99,7 +101,7 @@ Do not merge around an unmet earlier gate. The detailed handoff rules and comple
 
 ## Completion gate
 
-Sprint 6 remains active until all 65 AC are traceably verified, `V10` passes both clean `V1 -> V10`
-and upgrade `V9 -> V10`, backend/frontend automated checks pass, Swagger/browser role flows pass and
-the Sprint 6 completion report records delivered scope and remaining debt. A working happy path is
-not sufficient to mark the Sprint complete.
+Sprint 6 remains active until all 65 AC are traceably verified, the migration chain passes both
+clean `V1 -> V11` and upgrade `V9 -> V11`, backend/frontend automated checks pass, Swagger/browser
+role flows pass and the Sprint 6 completion report records delivered scope and remaining debt. A
+working happy path is not sufficient to mark the Sprint complete.

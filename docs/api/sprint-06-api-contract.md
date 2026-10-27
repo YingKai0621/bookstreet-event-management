@@ -2,6 +2,12 @@
 
 **QR window amendment (2026-10-26):** `POST /organizer/activities` and `PATCH /organizer/activities/{activityId}` accept `attendanceEarlyScanMinutes` (integer 0–1440). Omitted or null on creation means 15; the Activity response includes the effective value. PATCH omission retains the current value; explicit null resets it to 15. A value outside the range returns `422 ACTIVITY_ATTENDANCE_WINDOW_INVALID`. A change after the first `VALID` Attendance returns `409 ACTIVITY_ATTENDANCE_WINDOW_FROZEN`. The scan and correction window is `[startAt - attendanceEarlyScanMinutes minutes, endAt)`. Flyway V11 stores the value, default 15.
 
+**Notification inbox amendment (2026-10-27):** The Project Owner approved owner-only bulk
+mark-read through `POST /participant/notifications/read-all`. The command updates only unread
+Notifications owned by the authenticated Participant, applies one backend timestamp to that
+update set and is idempotent on retry. It does not add notification composition, broadcast or a
+cross-role inbox.
+
 > Status: `PROJECT OWNER APPROVED — ACTIVE IMPLEMENTATION BASELINE` on 2026-10-19.
 > Implementation is authorized only within this contract and the ownership/merge gates referenced
 > by `docs/sprints/CURRENT_SPRINT.md`.
@@ -807,6 +813,24 @@ Request body: none.
 Response: `200 ParticipantNotificationResponse` with stable first `readAt`. Exact retry returns the
 same result. Missing/foreign returns `404 NOTIFICATION_NOT_FOUND`.
 
+### 10.4 POST `/participant/notifications/read-all`
+
+Request body: none.
+
+Response:
+
+```json
+{
+  "updatedCount": 3
+}
+```
+
+The command scopes its update by the authenticated Participant and `read=false`; it never accepts
+a caller-supplied User ID. Every row changed by one command receives the same backend-generated
+`readAt`. Already-read rows keep their original `readAt`, and an exact retry after convergence
+returns `updatedCount=0`. Read state remains presentation state and does not change Event,
+Activity, registration, Attendance or Certificate lifecycle state.
+
 Notification creation is part of the related domain transaction and is deduplicated by recipient
 plus a stable business-transition key. Message wording is never the uniqueness key. Optional email
 is after commit and cannot replace or roll back the durable in-app row.
@@ -1229,8 +1253,9 @@ competing contracts:
 - `DELETE /participant/registrations/{registrationId}` becomes
   `POST /participant/activities/{activityId}/cancel-registration` after the UI resolves the owned
   registration/activity detail.
-- `PATCH /participant/notifications/{id}/read` becomes the command in section 10.3. The current
-  phantom `read-all` route is removed because mark-all-read is outside the approved Sprint 6 scope.
+- `PATCH /participant/notifications/{id}/read` becomes the canonical mark-one command in section
+  10.3. Owner-only mark-all-read uses the approved `POST /participant/notifications/read-all`
+  command in section 10.4; neither command accepts a caller-selected User ID.
 - Existing `/participant/certificates` and `/participant/notifications` UI adapters must consume
   paged responses. Notification fields become `type`, `read`, `referenceType` and `referenceId`;
   the frontend derives navigation instead of accepting a server-owned route string.
@@ -1268,10 +1293,13 @@ API conventions and current frontend services resolved these contract-level find
    path each and do not receive compatibility aliases.
 10. All 65 Acceptance Criterion identifiers appear exactly in both the Use Case Specification and
    this contract; no unknown identifier is introduced.
+11. The 2026-10-27 Notification inbox amendment documents the implemented owner-only,
+    idempotent bulk mark-read command without expanding notification creation or cross-role scope.
 
 No unresolved contradiction was found between the reviewed requirements, Use Cases, ERD and this
-contract. The Project Owner accepted these endpoint and DTO decisions on 2026-10-19, and
-`CURRENT_SPRINT.md` now activates them as the implementation contract.
+contract. The Project Owner accepted the baseline endpoint and DTO decisions on 2026-10-19 and the
+Notification inbox amendment on 2026-10-27; `CURRENT_SPRINT.md` activates both as the
+implementation contract.
 
 ## 20. Documentation gate result
 

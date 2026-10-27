@@ -60,17 +60,22 @@ Last updated: `2026-10-27`
   Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
   now the approved active Sprint 6 scope.
 - Sprint 6 Participant Activity Registration and Attendance remains the active Sprint. Its approved
-  baseline contains 65 Acceptance Criteria and 29 canonical endpoint headings. The core backend,
-  V10/V11 migrations and Participant/Organizer frontend workflows are implemented on `main`
-  through PR #80 (merge commit `d26ff5a`). Delivered slices include Event and Activity
-  registration, shared Activity Attendance QR self-scan, Attendance lifecycle and cascade,
-  Certificate issuance/list/detail, Activity Rating, Participant notification inbox and Organizer
-  participation monitoring with audited Attendance correction.
-- Sprint 6 is not yet formally closed. The 2026-10-27 API/frontend audit identified contract drift
-  and integration debt that must be resolved before declaring completion: an unapproved
-  `/participant/notifications/read-all` route exists; several role workspaces still call phantom
-  frontend endpoints; Organizer Event cancel/delete APIs are not yet exposed by the frontend; and
-  the full 65-AC traceability/manual smoke evidence has not been recorded as complete.
+  baseline contains 65 Acceptance Criteria and 30 canonical endpoint headings, including the
+  2026-10-27 owner-only Notification bulk-read amendment. The core backend, V10/V11 migrations and
+  Participant/Organizer frontend workflows are implemented on `main` through PR #83 (merge commit
+  `32e8121`). Delivered slices include Event and Activity registration, shared Activity Attendance
+  QR self-scan, Attendance lifecycle and cascade, Certificate issuance/list/detail, Activity
+  Rating, Participant notification inbox and Organizer participation monitoring with audited
+  Attendance correction.
+- The API/frontend reconciliation work through PR #83 removed unsupported Organizer/Partner
+  workspace network calls, wired the approved Organizer Event lifecycle/profile flows, aligned the
+  Participant registration schedule format and synchronized the selected public Event across
+  Event, Booth and map browsing. The implemented
+  `POST /participant/notifications/read-all` command is now an approved owner-only, idempotent
+  extension rather than contract drift.
+- Sprint 6 is not yet formally closed. Implementation scope is substantially complete, but the
+  full 65-AC traceability record, backend/frontend verification evidence and focused manual demo
+  smoke results still need to be recorded before changing the Sprint status to complete.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -186,23 +191,19 @@ Last updated: `2026-10-27`
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
 - Formal Sprint 6 closure evidence across all 65 Acceptance Criteria and required manual smoke flows
-- Approved frontend integration for the existing Organizer Event cancel/delete commands
-- Resolution of API-contract drift and removal or replacement of phantom frontend endpoints; do
-  not create backend APIs merely to satisfy placeholder UI modules
 - General feedback/reporting, points/badges, persisted heritage/map data and notifications for
   Organizer/Partner/Admin remain absent from the approved Sprint 6 backend contract
 
 ## Active implementation task
 
-- Stabilize and formally close Sprint 6 from the current `main` baseline after PR #80.
-- Reconcile backend controller mappings, frontend API clients and the canonical Sprint 6 API
-  contract. Remove unsupported compatibility calls instead of inventing endpoints.
-- Resolve the Participant notification bulk-read contract drift, then review the remaining phantom
-  Admin/Organizer/Partner/Public modules by approved Use Case and Sprint ownership.
-- Connect the already-approved Organizer Event cancel/delete commands only if their frontend flow is
-  part of the current acceptance baseline; keep unrelated placeholder modules out of scope.
-- Re-run backend verification, frontend lint/build and focused role smoke flows; record 65-AC
-  traceability before changing Sprint 6 to complete.
+- Formally close Sprint 6 from the reconciled `main` baseline after PR #83 and the approved
+  Notification inbox documentation amendment.
+- Re-run backend verification and frontend lint/build, then execute focused Participant,
+  Organizer, Partner and public demo smoke flows.
+- Record implementation/test evidence against all 65 Acceptance Criteria and publish the Sprint 6
+  completion report before changing the Sprint status to complete.
+- Keep unrelated placeholder Admin/Organizer/Partner/Public modules out of scope; do not create
+  backend APIs merely to satisfy unapproved UI concepts.
 - Keep the approved Sprint 6 exclusions closed: no Event QR, Participant-specific QR, BoothVisit,
   Points, Badge, generic notification composer or unapproved compatibility route.
 - Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
