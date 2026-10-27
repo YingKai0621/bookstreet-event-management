@@ -2,8 +2,9 @@
 
 ## Sprint 06 Participant Activity Registration and Attendance
 
-- Status: `ACTIVE — IMPLEMENTATION AUTHORIZED WITHIN APPROVED BASELINE`
+- Status: `COMPLETED`
 - Activation date: `2026-10-19`
+- Completion date: `2026-10-28`
 - Previous completed Sprint: `Sprint 05 Activity Planning and Partner Proposal Workflow`
 - Implemented schema baseline: immutable Flyway migrations `V1` through `V11`
 - Sprint 6 migrations: `V10` participation schema and `V11` configurable Attendance early-scan
@@ -13,6 +14,7 @@
 - API Contract: `docs/api/sprint-06-api-contract.md`
 - Physical ERD: `docs/design/12_Physical_ERD_Report.md`
 - Backend Work Assignment: `docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`
+- Completion Report: `docs/development/SPRINT_06_COMPLETION_REPORT.md`
 
 ## Sprint goal
 
@@ -99,9 +101,9 @@ Do not merge around an unmet earlier gate. The detailed handoff rules and comple
 - public Certificate verification and bulk Certificate export
 - migration rewrites or unapproved compatibility endpoints
 
-## Completion gate
+## Completion result
 
-Sprint 6 remains active until all 65 AC are traceably verified, the migration chain passes both
-clean `V1 -> V11` and upgrade `V9 -> V11`, backend/frontend automated checks pass, Swagger/browser
-role flows pass and the Sprint 6 completion report records delivered scope and remaining debt. A
-working happy path is not sufficient to mark the Sprint complete.
+All 65 AC are traceably covered in the completion report. Clean `V1 -> V11` and upgrade
+`V9 -> V11` migration paths pass, the PostgreSQL-backed Sprint 6 integration suite and focused
+Participant/Organizer browser suites pass, frontend lint/build pass, and the remaining cross-sprint
+test/frontend warnings are recorded as technical debt rather than hidden from closure evidence.

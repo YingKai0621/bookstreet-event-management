@@ -16,6 +16,7 @@ skills-lock.json
 # Local documentation, scripts, and generated reports
 *.md
 !docs/development/SPRINT_05_COMPLETION_REPORT.md
+!docs/development/SPRINT_06_COMPLETION_REPORT.md
 !docs/sprints/sprint-06.md
 *.docx
 *.doc

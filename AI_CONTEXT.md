@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-27`
+Last updated: `2026-10-28`
 
 ## Current implementation status
 
@@ -58,8 +58,8 @@ Last updated: `2026-10-27`
 - The delivered Sprint 5 scope covers shared Activity Locations, Partner Proposal review, official
   Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
   Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
-  now the approved active Sprint 6 scope.
-- Sprint 6 Participant Activity Registration and Attendance remains the active Sprint. Its approved
+  delivered in the completed Sprint 6 scope.
+- Sprint 6 Participant Activity Registration and Attendance is complete. Its approved
   baseline contains 65 Acceptance Criteria and 30 canonical endpoint headings, including the
   2026-10-27 owner-only Notification bulk-read amendment. The core backend, V10/V11 migrations and
   Participant/Organizer frontend workflows are implemented on `main` through PR #83 (merge commit
@@ -73,9 +73,9 @@ Last updated: `2026-10-27`
   Event, Booth and map browsing. The implemented
   `POST /participant/notifications/read-all` command is now an approved owner-only, idempotent
   extension rather than contract drift.
-- Sprint 6 is not yet formally closed. Implementation scope is substantially complete, but the
-  full 65-AC traceability record, backend/frontend verification evidence and focused manual demo
-  smoke results still need to be recorded before changing the Sprint status to complete.
+- Sprint 6 closure evidence is recorded in `docs/development/SPRINT_06_COMPLETION_REPORT.md`: all
+  65 AC are traceably mapped, the PostgreSQL-backed backend run passed 566/566 with no skips, the
+  focused Sprint 6 browser run passed 44/44, and lint/build plus migration paths are green.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -190,18 +190,13 @@ Last updated: `2026-10-27`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Formal Sprint 6 closure evidence across all 65 Acceptance Criteria and required manual smoke flows
 - General feedback/reporting, points/badges, persisted heritage/map data and notifications for
   Organizer/Partner/Admin remain absent from the approved Sprint 6 backend contract
 
-## Active implementation task
+## Next implementation task
 
-- Formally close Sprint 6 from the reconciled `main` baseline after PR #83 and the approved
-  Notification inbox documentation amendment.
-- Re-run backend verification and frontend lint/build, then execute focused Participant,
-  Organizer, Partner and public demo smoke flows.
-- Record implementation/test evidence against all 65 Acceptance Criteria and publish the Sprint 6
-  completion report before changing the Sprint status to complete.
+- Select and approve the next sprint baseline before adding new business behavior.
+- Keep the Sprint 6 completion report and immutable V1–V11 baseline as regression references.
 - Keep unrelated placeholder Admin/Organizer/Partner/Public modules out of scope; do not create
   backend APIs merely to satisfy unapproved UI concepts.
 - Keep the approved Sprint 6 exclusions closed: no Event QR, Participant-specific QR, BoothVisit,
@@ -209,11 +204,10 @@ Last updated: `2026-10-27`
 - Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
   Event → Location(s) → Activity/request lock order and approved Sprint 6 Participant lock order.
 
-## Active and latest completed Sprint
+## Latest completed Sprint
 
-Sprint 06 Participant Activity Registration and Attendance is the active implementation Sprint as
-of 2026-10-27. Sprint 05 Activity Planning and Partner Proposal Workflow remains the latest
-completed Sprint.
+Sprint 06 Participant Activity Registration and Attendance is the latest completed Sprint as of
+2026-10-28. No later Sprint is active until the Project Owner approves its baseline.
 
 Sprint 6 includes these approved Use Case slices:
 
@@ -237,7 +231,7 @@ Sprint 6 includes these approved Use Case slices:
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
-source. Use the active Sprint 6 Physical ERD report and drawio source.
+source. Use the completed Sprint 6 Physical ERD report and drawio source.
 
 ## Authentication baseline
 
