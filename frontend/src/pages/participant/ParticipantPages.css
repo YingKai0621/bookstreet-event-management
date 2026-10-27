@@ -2814,3 +2814,16 @@
       gap: 0.2rem;
     }
   }
+.participant-event-rejoin-note {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+}
+
+.participant-event-rejoin-note a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
