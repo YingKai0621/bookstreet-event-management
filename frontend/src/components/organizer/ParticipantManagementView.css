@@ -1,5 +1,5 @@
 .participant-management { font-family: var(--font-sans); color: #172421; }
-.participant-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.participant-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .participant-event-select, .participant-activity-select { display: grid; gap: 7px; color: #334943; font-size: 14px; font-weight: 700; }
 .participant-event-select { width: min(420px, 100%); }
 .participant-event-select select, .participant-activity-select select, .participant-filters select, .participant-correction-form select, .participant-correction-form input, .participant-correction-form textarea {

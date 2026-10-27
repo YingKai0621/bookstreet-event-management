@@ -18,6 +18,7 @@ async function mockWorkspace(page: Page, role: Role) {
     else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
     else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
     else if (path === '/api/v1/organizer/reports') body = { eventId: 501, eventName: 'Sự kiện kiểm thử', totalParticipants: 0, attended: 0, pending: 0, cancelled: 0, totalBooths: 0, totalActivities: 0, attendanceRate: 0, averageRating: 0, ratingCount: 0, activityStats: [], ratingDistribution: [] };
+    else if (path.endsWith('/organizer/events/501/event-registrations')) body = emptyPage;
     else if (path === '/api/v1/participant/notifications') body = emptyPage;
     else if (path === '/api/v1/participant/notifications/unread-count') body = { unreadCount: 0 };
     else if (path.endsWith('/dashboard') || path.endsWith('/dashboard/summary')) body = {};
