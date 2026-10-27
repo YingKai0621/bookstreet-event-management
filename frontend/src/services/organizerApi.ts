@@ -116,7 +116,7 @@ export interface OrganizerEventRegistrationResponse {
 export interface OrganizerAttendanceSummary {
   attendanceId: number;
   status: 'VALID' | 'VOIDED';
-  recordedSource: 'PARTICIPANT_SCAN' | 'ORGANIZER_CORRECTION';
+  recordedSource: 'SELF_SCAN' | 'ORGANIZER_CORRECTION';
   attendedAt: string;
   createdAt: string;
   updatedAt: string;

@@ -328,7 +328,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
                   <div><span>Kết quả hiện tại</span><strong><span className={`participant-status ${outcomeClass(detail.outcome)}`}>{outcomeLabel(detail.outcome, language)}</span></strong></div>
                   <div><span>Ngày đăng ký</span><strong>{formatDateTime(detail.registeredAt, language)}</strong></div>
                   <div><span>Điểm danh</span><strong>{detail.attendance?.status === 'VALID' ? formatDateTime(detail.attendance.attendedAt, language) : detail.attendance?.status === 'VOIDED' ? 'Đã vô hiệu' : 'Chưa có bản ghi'}</strong></div>
-                  <div><span>Nguồn ghi nhận</span><strong>{detail.attendance?.recordedSource === 'PARTICIPANT_SCAN' ? 'Độc giả quét QR' : detail.attendance?.recordedSource === 'ORGANIZER_CORRECTION' ? 'Ban tổ chức điều chỉnh' : 'Chưa có'}</strong></div>
+                  <div><span>Nguồn ghi nhận</span><strong>{detail.attendance?.recordedSource === 'SELF_SCAN' ? 'Độc giả quét QR' : detail.attendance?.recordedSource === 'ORGANIZER_CORRECTION' ? 'Ban tổ chức điều chỉnh' : 'Chưa có'}</strong></div>
                   <div><span>Chứng nhận</span><strong>{detail.certificate ? `${detail.certificate.status === 'ISSUED' ? 'Đã cấp' : 'Đã thu hồi'} · ${detail.certificate.certificateCode}` : 'Chưa cấp'}</strong></div>
                   <div><span>Đánh giá</span><strong>{detail.ratingStatus === 'ACTIVE' ? 'Có hiệu lực' : detail.ratingStatus === 'INVALIDATED' ? 'Đã vô hiệu' : 'Chưa có'}</strong></div>
                 </section>

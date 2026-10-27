@@ -29,7 +29,7 @@ const eventRegistration = {
 };
 
 const attendance = {
-  attendanceId: 501, status: 'VALID', recordedSource: 'PARTICIPANT_SCAN', attendedAt: '2027-03-20T03:10:00Z',
+  attendanceId: 501, status: 'VALID', recordedSource: 'SELF_SCAN', attendedAt: '2027-03-20T03:10:00Z',
   createdAt: '2027-03-20T03:10:00Z', updatedAt: '2027-03-20T03:10:00Z', voidedAt: null,
 };
 
