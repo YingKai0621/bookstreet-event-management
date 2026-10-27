@@ -67,6 +67,8 @@ export interface EventItem {
   id: string;
   title: string;
   titleEn: string;
+  startAt?: string;
+  endAt?: string;
   type: 'talkshow' | 'launch' | 'workshop' | 'exhibition';
   typeLabelVi: string;
   typeLabelEn: string;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import './RoleWorkspace.css';
@@ -78,6 +78,26 @@ const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,
 };
 
+const LANDING_EVENT_WINDOW_DAYS = 90;
+const LANDING_EVENT_LIMIT = 8;
+
+function getLandingEvents(events: EventItem[], now = Date.now()): EventItem[] {
+  const horizon = now + LANDING_EVENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const activeOrNear = events.filter(event => {
+    const startAt = event.startAt ? new Date(event.startAt).getTime() : Number.NaN;
+    const endAt = event.endAt ? new Date(event.endAt).getTime() : Number.NaN;
+    if (!Number.isFinite(startAt) || !Number.isFinite(endAt)) {
+      return event.status === 'happening' || event.status === 'upcoming';
+    }
+    return endAt >= now && startAt <= horizon;
+  });
+  const nearest = activeOrNear.length > 0
+    ? activeOrNear
+    : events.filter(event => !event.endAt || new Date(event.endAt).getTime() >= now);
+
+  return nearest.slice(0, LANDING_EVENT_LIMIT);
+}
+
 export function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -155,7 +175,7 @@ export function App() {
       cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
-  }, [location.key, location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
 
   useEffect(() => {
     if (isSlidePageOpen || isPortalRoute || !location.hash) return;
@@ -163,7 +183,7 @@ export function App() {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'instant' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [location.key, location.hash, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, isSlidePageOpen, isPortalRoute]);
 
   const [heritageList, setHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [booths, setBooths] = useState<Booth[]>([]);
@@ -172,19 +192,21 @@ export function App() {
   const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
   const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
+  const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
+  const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
   const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
-  const defaultPublicEventId = events.find(event => event.status === 'happening')?.id
-    || events.find(event => event.status === 'upcoming')?.id
-    || events[0]?.id
+  const defaultPublicEventId = publicContextEvents.find(event => event.status === 'happening')?.id
+    || publicContextEvents.find(event => event.status === 'upcoming')?.id
+    || publicContextEvents[0]?.id
     || '';
-  const publicEventId = events.some(event => event.id === publicEventIdFromUrl)
+  const publicEventId = publicContextEvents.some(event => event.id === publicEventIdFromUrl)
     ? publicEventIdFromUrl as string
-    : events.some(event => event.id === selectedPublicEventId)
+    : publicContextEvents.some(event => event.id === selectedPublicEventId)
       ? selectedPublicEventId
       : defaultPublicEventId;
 
   const selectPublicEvent = (eventId: string) => {
-    if (!events.some(event => event.id === eventId)) return;
+    if (!publicContextEvents.some(event => event.id === eventId)) return;
     setSelectedPublicEventId(eventId);
     const params = new URLSearchParams(location.search);
     params.set('eventId', eventId);
@@ -192,7 +214,7 @@ export function App() {
       pathname: location.pathname,
       search: `?${params.toString()}`,
       hash: location.hash,
-    }, { replace: true });
+    }, { replace: true, preventScrollReset: true });
   };
 
   useEffect(() => {
@@ -204,7 +226,7 @@ export function App() {
       pathname: location.pathname,
       search: `?${params.toString()}`,
       hash: location.hash,
-    }, { replace: true });
+    }, { replace: true, preventScrollReset: true });
   }, [isPublicDataLoading, isPublicRoute, location.hash, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
 
   // Load real data from Backend REST API
@@ -944,7 +966,7 @@ export function App() {
             booths={booths}
             isLoading={isPublicDataLoading || isPublicBoothsLoading}
             error={publicBoothsError}
-            events={events}
+            events={publicContextEvents}
             selectedEventId={publicEventId}
             onSelectBoothOnMap={handleSelectBoothOnMap}
             searchQuery={boothSearchQuery}
@@ -955,7 +977,7 @@ export function App() {
           {/* 6. Events Schedule with Real Photography & Bookstall Proposal Flow */}
           <EventsSection 
             language={language} 
-            events={events}
+            events={publicContextEvents}
             isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}
             participantProfile={participantProfile}
@@ -975,7 +997,7 @@ export function App() {
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
           <InteractiveMap 
             language={language}
-            events={events}
+            events={publicContextEvents}
             selectedEventId={publicEventId}
             booths={booths}
             isLoading={isPublicDataLoading}

@@ -65,7 +65,7 @@ interface PublicEventResponse {
   partnerApplicationDeadlineAt: string | null;
   participantRegistrationDeadlineAt: string | null;
   bannerUrl: string | null;
-  status: 'PUBLISHED';
+  status: 'PUBLISHED' | 'ONGOING';
 }
 
 interface PageResponse<T> {
@@ -117,6 +117,8 @@ function toEventItem(event: PublicEventResponse): EventItem {
     id: String(event.eventId),
     title: event.name,
     titleEn: event.name,
+    startAt: event.startAt,
+    endAt: event.endAt,
     type: 'exhibition',
     typeLabelVi: 'Sự kiện',
     typeLabelEn: 'Event',
@@ -249,7 +251,7 @@ export const publicApi = {
   async getBooths(eventId: string): Promise<Booth[]> {
     if (!eventId) return [];
     const rows = await boothApi.listAllPublicEventBooths(eventId);
-    return rows.map(toPublicBooth);
+    return rows.filter(row => row.enabled).map(toPublicBooth);
   },
   async getHeritages(): Promise<HeritageProfile[]> {
     // Heritage persistence/API belongs to a future module and is not part of the
