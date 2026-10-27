@@ -22,6 +22,9 @@ const EVENT_SCOPED_TABS: OrganizerTab[] = ['booth_requests', 'booths', 'activiti
 const EVENT_LIST_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const EVENT_LIST_SORTS = new Set(['updated_desc', 'start_asc', 'title_asc']);
 const ACTIVITY_VIEWS = new Set(['activities', 'proposals', 'changes', 'cancellations']);
+const PARTICIPANT_VIEWS = new Set(['event', 'activity']);
+const EVENT_REGISTRATION_STATUSES = new Set(['ACTIVE', 'LEFT']);
+const PARTICIPATION_OUTCOMES = new Set(['ACTIVE', 'CANCELLED', 'ATTENDED', 'NO_SHOW']);
 const EVENT_DETAIL_SECTIONS = new Set(['overview', 'partners', 'booths', 'activities', 'participants', 'schedule', 'settings']);
 
 export interface OrganizerRouteState {
@@ -87,6 +90,17 @@ export function normalizeOrganizerSearch(tab: OrganizerTab, search: string): URL
     copyNonEmpty('search');
     copyNonEmpty('status');
     if (source.get('late') === 'true') normalized.set('late', 'true');
+    copyPositivePage();
+  }
+  if (tab === 'participants') {
+    const view = source.get('view');
+    if (view && PARTICIPANT_VIEWS.has(view) && view !== 'event') normalized.set('view', view);
+    if (view === 'activity') copyNonEmpty('activityId');
+    copyNonEmpty('search');
+    const status = source.get('status');
+    if (status && EVENT_REGISTRATION_STATUSES.has(status) && view !== 'activity') normalized.set('status', status);
+    const outcome = source.get('outcome');
+    if (outcome && PARTICIPATION_OUTCOMES.has(outcome) && view === 'activity') normalized.set('outcome', outcome);
     copyPositivePage();
   }
   return normalized;

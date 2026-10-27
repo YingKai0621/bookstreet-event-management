@@ -8,7 +8,6 @@ import {
   OrganizerEventResponse,
   OrganizerEventStatus,
   OrganizerNotificationItem,
-  OrganizerParticipantItem,
   OrganizerProfile,
   OrganizerReport,
 } from '../types/organizer';
@@ -519,11 +518,6 @@ export const organizerApi = {
     apiClient.get<OrganizerActivityResponse>(
       `/organizer/activities/${encodeURIComponent(activityId)}`,
     ),
-  async getParticipants(eventId?: string): Promise<OrganizerParticipantItem[]> {
-    const rows = await apiClient.get<any[]>(`/organizer/participants${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`);
-    if (!Array.isArray(rows)) throw new Error('Dữ liệu người tham gia không hợp lệ.');
-    return rows;
-  },
   publishActivity: (id: number | string) =>
     apiClient.post<OrganizerActivityResponse>(`/organizer/activities/${encodeURIComponent(id)}/publish`),
   createActivity: (data: CreateOrganizerActivityRequest) =>
@@ -692,12 +686,6 @@ export const organizerApi = {
       `/organizer/activity-cancellation-requests/${encodeURIComponent(requestId)}/reject`,
       { reviewNote },
     ),
-  // Quét QR điểm danh (BR-45, BR-47)
-  async scanAttendance(ticketCode: string, activityId?: string): Promise<any> {
-    return await apiClient.post('/organizer/checkin', { ticketCode, activityId });
-  },
-  overrideAttendance: (registrationId: string, status: string, reason: string, durationMinutes = 30) =>
-    apiClient.post(`/organizer/participants/${encodeURIComponent(registrationId)}/override-attendance`, { status, reason, durationMinutes }),
   async getReport(eventId: string): Promise<OrganizerReport> {
     return apiClient.get<OrganizerReport>(`/organizer/reports?eventId=${encodeURIComponent(eventId)}`);
   },

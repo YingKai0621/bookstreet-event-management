@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import { OrganizerPartnerApplication } from '../../services/organizerApi';
 import type { BoothRequest } from '../../types/booth';
 import { Language } from '../../types';
-import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent, OrganizerParticipantItem } from '../../types/organizer';
+import { OrganizerActivityItem, OrganizerBoothItem, OrganizerEvent } from '../../types/organizer';
 import { EventBoothConfigurationPanel } from './EventBoothConfigurationPanel';
 import { OrganizerEventStatusChip } from './OrganizerEventStatusChip';
 import { OrganizerPartnerApplicationsPanel } from './OrganizerPartnerApplicationsPanel';
@@ -28,7 +28,6 @@ interface EventDetailViewProps {
   booths: OrganizerBoothItem[];
   boothRequests: BoothRequest[];
   activities: OrganizerActivityItem[];
-  participants: OrganizerParticipantItem[];
   partnerApplications?: OrganizerPartnerApplication[];
   activePhysicalBoothCount: number;
   isLoadingOperations: boolean;
@@ -38,6 +37,7 @@ interface EventDetailViewProps {
   onBack: () => void;
   onNavigateToBoothsMap: () => void;
   onNavigateToBoothRequests: () => void;
+  onNavigateToParticipants: () => void;
   onRetryOperations: () => void;
   onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
@@ -91,7 +91,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   booths,
   boothRequests,
   activities,
-  participants,
   partnerApplications = [],
   activePhysicalBoothCount,
   isLoadingOperations,
@@ -101,6 +100,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onBack,
   onNavigateToBoothsMap,
   onNavigateToBoothRequests,
+  onNavigateToParticipants,
   onRetryOperations,
   onBoothConfigurationChanged,
   onEditEvent,
@@ -468,33 +468,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#172421', margin: '0 0 1.25rem 0' }}>
             {language === 'vi' ? 'Độc giả đăng ký tham gia sự kiện' : 'Registered Participants'}
           </h2>
-
-          <PaginatedList items={participants}>{pageItems => (<div className="org-table-container">
-            <table className="org-table">
-              <thead>
-                <tr>
-                  <th>Họ tên</th>
-                  <th>Email</th>
-                  <th>Mã vé</th>
-                  <th>Hoạt động đăng ký</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageItems.map((p) => (
-                  <tr key={p.id}>
-                    <td><strong>{p.fullName}</strong></td>
-                    <td>{p.email}</td>
-                    <td><code>{p.ticketCode}</code></td>
-                    <td>{p.registeredActivitiesCount} hoạt động</td>
-                    <td>
-                      <span className={`org-chip ${p.status}`}>● {p.statusLabelVi}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>)}</PaginatedList>
+          <p style={{ margin: '0 0 1rem', color: '#556B65', lineHeight: 1.6 }}>
+            Danh sách đăng ký và điểm danh được quản lý trên màn Người tham gia để tải đúng dữ liệu theo sự kiện và từng hoạt động.
+          </p>
+          <button type="button" className="btn-org-primary" onClick={onNavigateToParticipants}>
+            <Users size={16} /> Mở danh sách người tham gia
+          </button>
         </div>
       )}
 

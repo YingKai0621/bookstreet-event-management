@@ -166,21 +166,6 @@ export interface OrganizerActivityItem {
   conflictNotes?: string;
 }
 
-export interface OrganizerParticipantItem {
-  id: string;
-  eventId: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  registeredActivitiesCount: number;
-  status: 'attended' | 'not_attended' | 'cancelled';
-  statusLabelVi: string;
-  checkInTime?: string;
-  registeredDate: string;
-  ticketCode: string;
-  manualOverrideReason?: string;
-}
-
 export interface OrganizerNotificationItem {
   id: string;
   title: string;
