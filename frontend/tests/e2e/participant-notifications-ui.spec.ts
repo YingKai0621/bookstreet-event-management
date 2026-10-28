@@ -15,14 +15,15 @@ type NotificationType =
   | 'ACTIVITY_CANCELLED'
   | 'EVENT_CANCELLED'
   | 'CERTIFICATE_ISSUED'
-  | 'CERTIFICATE_REVOKED';
+  | 'CERTIFICATE_REVOKED'
+  | 'BADGE_UNLOCKED';
 
 interface MockNotification {
   notificationId: number;
   type: NotificationType;
   title: string;
   message: string;
-  referenceType: 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+  referenceType: 'EVENT' | 'ACTIVITY' | 'CERTIFICATE' | 'BADGE';
   referenceId: number;
   createdAt: string;
   readAt: string | null;
@@ -40,11 +41,11 @@ const types: NotificationType[] = [
 function createNotifications(): MockNotification[] {
   return Array.from({ length: 12 }, (_, index) => ({
     notificationId: index + 1,
-    type: types[index % types.length],
+    type: index === 0 ? 'BADGE_UNLOCKED' : types[index % types.length],
     title: `Thông báo kiểm thử ${String(index + 1).padStart(2, '0')}`,
     message: `Nội dung cập nhật số ${index + 1}`,
-    referenceType: index % 3 === 0 ? 'EVENT' : index % 3 === 1 ? 'ACTIVITY' : 'CERTIFICATE',
-    referenceId: index % 3 === 0 ? 746 : index % 3 === 1 ? 91 : 501,
+    referenceType: index === 0 ? 'BADGE' : index % 3 === 0 ? 'EVENT' : index % 3 === 1 ? 'ACTIVITY' : 'CERTIFICATE',
+    referenceId: index === 0 ? 83 : index % 3 === 0 ? 746 : index % 3 === 1 ? 91 : 501,
     createdAt: `2026-10-${String(26 - index).padStart(2, '0')}T01:00:00Z`,
     readAt: index % 2 === 0 ? null : '2026-10-26T02:00:00Z',
     read: index % 2 !== 0,
@@ -96,6 +97,13 @@ async function mockNotifications(
     }
     if (path === '/api/v1/participant/notifications/unread-count') {
       return json(route, { unreadCount: notifications.filter(item => !item.read).length });
+    }
+    if (path === '/api/v1/participant/rewards/summary') {
+      return json(route, { totalPoints: 0, totalVisits: 0, earnedBadgeCount: 0, activeBadgeCount: 0, nextBadge: null });
+    }
+    if (path === '/api/v1/participant/rewards/badges'
+      || path === '/api/v1/participant/rewards/point-transactions') {
+      return json(route, pageOf([], 0, Number(url.searchParams.get('size') || 10), 0));
     }
     if (path === '/api/v1/participant/notifications' && method === 'GET') {
       const requestedPage = Number(url.searchParams.get('page') || 0);
@@ -214,6 +222,22 @@ test('bell dropdown is a five-item preview linking to the notification workspace
   await dropdown.getByRole('link', { name: 'Xem tất cả thông báo →' }).click();
   await expect(page).toHaveURL(/\/participant\/notifications$/);
   await expect(page.getByRole('heading', { name: 'Thông báo', exact: true })).toBeVisible();
+});
+
+test('Badge unlock notification filters, marks read and opens the Rewards page', async ({ page }) => {
+  const requests = await mockNotifications(page);
+  await page.goto('/participant/notifications');
+
+  await page.getByLabel('Loại thông báo').selectOption('BADGE_UNLOCKED');
+  const badge = page.locator('.participant-notification-card');
+  await expect(badge).toHaveCount(1);
+  await expect(badge).toContainText('Mở khóa huy hiệu');
+  await expect(badge).toHaveClass(/is-unread/);
+  await badge.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await expect(page).toHaveURL(/\/participant\/rewards$/);
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+  expect(requests.some(entry => entry.method === 'POST'
+    && /\/participant\/notifications\/\d+\/read$/.test(entry.path))).toBe(true);
 });
 
 for (const viewport of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {

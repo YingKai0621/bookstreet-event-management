@@ -151,8 +151,7 @@ test('Admin Badge catalog fits a phone viewport and keeps actions visible', asyn
     const card = document.querySelector('.badge-catalog-card')?.getBoundingClientRect();
     const action = document.querySelector('.badge-card-actions button:last-child')?.getBoundingClientRect();
     const filters = document.querySelector('.badge-catalog-filters')?.getBoundingClientRect();
-    const main = document.querySelector('.admin-main-viewport');
-    return { card: [card?.left, card?.right], action: [action?.left, action?.right], filters: [filters?.left, filters?.right], width: window.innerWidth, main: [main?.getBoundingClientRect().left, main?.getBoundingClientRect().right, main && getComputedStyle(main).paddingLeft] };
+    return { card: [card?.left, card?.right], action: [action?.left, action?.right], filters: [filters?.left, filters?.right], width: window.innerWidth };
   });
   expect(bounds.card[0]).toBeGreaterThanOrEqual(0);
   expect(bounds.card[1]).toBeLessThanOrEqual(bounds.width);

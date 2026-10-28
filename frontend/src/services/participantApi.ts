@@ -7,12 +7,7 @@ import {
 } from '../types';
 import { apiClient } from './apiClient';
 import type { AttendanceScanResponse } from '../types/attendance';
-import type {
-  BoothScanResponse,
-  RewardPointPageResponse,
-  RewardBadgePageResponse,
-  RewardSummaryResponse,
-} from '../types/reward';
+import type { BoothScanResponse } from '../types/reward';
 
 export type ParticipantNotificationType =
   | 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'
@@ -442,42 +437,6 @@ export const participantApi = {
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
   scanBooth: (token: string) =>
     apiClient.post<BoothScanResponse>('/participant/booth-visits/scan', { token }),
-  getRewardSummary: () =>
-    apiClient.get<RewardSummaryResponse>('/participant/rewards/summary'),
-  getRewardBadges: (query: {
-    page?: number;
-    size?: number;
-    state?: 'ALL' | 'EARNED' | 'IN_PROGRESS';
-    sort?: string;
-  } = {}) => {
-    const params = new URLSearchParams({
-      page: String(query.page ?? 0),
-      size: String(query.size ?? 12),
-      state: query.state ?? 'ALL',
-    });
-    if (query.sort) params.set('sort', query.sort);
-    return apiClient.get<RewardBadgePageResponse>(
-      `/participant/rewards/badges?${params.toString()}`,
-    );
-  },
-  getRewardPointTransactions: (query: {
-    page?: number;
-    size?: number;
-    sort?: string;
-    eventId?: number;
-    boothId?: number;
-  } = {}) => {
-    const params = new URLSearchParams({
-      page: String(query.page ?? 0),
-      size: String(query.size ?? 10),
-      sort: query.sort ?? 'createdAt,desc',
-    });
-    if (query.eventId) params.set('eventId', String(query.eventId));
-    if (query.boothId) params.set('boothId', String(query.boothId));
-    return apiClient.get<RewardPointPageResponse>(
-      `/participant/rewards/point-transactions?${params.toString()}`,
-    );
-  },
   async getActivityRating(activityId: string): Promise<ParticipantActivityRating> {
     const rating = await apiClient.get<ActivityRatingResponse>(
       `/participant/activities/${encodeURIComponent(activityId)}/rating`,

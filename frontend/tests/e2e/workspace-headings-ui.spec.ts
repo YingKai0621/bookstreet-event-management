@@ -16,6 +16,7 @@ async function mockWorkspace(page: Page, role: Role) {
     else if ((path.endsWith('/organizations/me') || path.endsWith('/partner/organization'))) body = { partnerOrganizationId: 9, representativeUserId: 1, name: 'Nhà xuất bản kiểm thử', description: '', categoryCode: 'PUBLISHER', logoUrl: null, address: null, contactEmail: 'partner@example.com', contactPhone: '0901234567', status: 'ACTIVE' };
     else if (path === '/api/v1/events' || path === '/api/v1/organizer/events') body = { ...emptyPage, content: [sampleEvent], totalElements: 1, totalPages: 1 };
     else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
+    else if (path === '/api/v1/admin/badges') body = emptyPage;
     else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
     else if (path === '/api/v1/admin/settings') body = [{ key: 'admin.system', value: {
       general: { systemName: 'Book Street', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },

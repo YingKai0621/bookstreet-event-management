@@ -6,6 +6,9 @@ import com.swp391.bookstreet.certificate.dto.CertificatePageResponse;
 import com.swp391.bookstreet.certificate.dto.CertificateSummaryResponse;
 import com.swp391.bookstreet.certificate.entity.Certificate;
 import com.swp391.bookstreet.certificate.entity.CertificateStatus;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import com.swp391.bookstreet.certificate.repository.CertificateDetailRecord;
 import com.swp391.bookstreet.certificate.repository.CertificateRepository;
 import com.swp391.bookstreet.certificate.security.CertificateCurrentUser;
@@ -120,9 +123,9 @@ class ParticipantCertificateServiceTests {
     void detailReturnsCertificateWithActivityAndEvent() {
         when(currentUser.requireParticipantId()).thenReturn(PARTICIPANT_ID);
 
-        Certificate certificate = createCertificate(601L, 10L, "BKS-2027-ABC1", "Nguyen Minh An", CertificateStatus.ISSUED);
-        Activity activity = createActivity(91L, "Giao luu tac gia tre");
-        Event event = createEvent(7L, "Ngay hoi Van hoa Doc 2027");
+        Certificate certificate = createCertificate(601L, 10L, "BKS-2027-ABC1", "Nguyễn Minh An", CertificateStatus.ISSUED);
+        Activity activity = createActivity(91L, "Giao lưu tác giả trẻ");
+        Event event = createEvent(7L, "Ngày hội Văn hóa Đọc 2027");
 
         when(certificateRepository.findOwnedDetail(601L, PARTICIPANT_ID))
                 .thenReturn(Optional.of(new CertificateDetailRecord(certificate, activity, event)));
@@ -134,9 +137,9 @@ class ParticipantCertificateServiceTests {
         assertThat(detail.certificate().status()).isEqualTo("ISSUED");
         assertThat(detail.certificate().downloadAvailable()).isTrue();
         assertThat(detail.activity().activityId()).isEqualTo(91L);
-        assertThat(detail.activity().title()).isEqualTo("Giao luu tac gia tre");
+        assertThat(detail.activity().title()).isEqualTo("Giao lưu tác giả trẻ");
         assertThat(detail.event().eventId()).isEqualTo(7L);
-        assertThat(detail.event().name()).isEqualTo("Ngay hoi Van hoa Doc 2027");
+        assertThat(detail.event().name()).isEqualTo("Ngày hội Văn hóa Đọc 2027");
     }
 
     @Test
@@ -175,12 +178,12 @@ class ParticipantCertificateServiceTests {
     }
 
     @Test
-    void downloadReturnsPdfBytesForIssuedCertificate() {
+    void downloadReturnsPdfBytesForIssuedCertificate() throws Exception {
         when(currentUser.requireParticipantId()).thenReturn(PARTICIPANT_ID);
 
-        Certificate certificate = createCertificate(601L, 10L, "BKS-2027-ABC1", "Nguyen Minh An", CertificateStatus.ISSUED);
-        Activity activity = createActivity(91L, "Giao luu tac gia tre");
-        Event event = createEvent(7L, "Ngay hoi Van hoa Doc 2027");
+        Certificate certificate = createCertificate(601L, 10L, "BKS-2027-ABC1", "Nguyễn Minh An", CertificateStatus.ISSUED);
+        Activity activity = createActivity(91L, "Giao lưu tác giả trẻ");
+        Event event = createEvent(7L, "Ngày hội Văn hóa Đọc 2027");
 
         when(certificateRepository.findOwnedDetail(601L, PARTICIPANT_ID))
                 .thenReturn(Optional.of(new CertificateDetailRecord(certificate, activity, event)));
@@ -189,7 +192,15 @@ class ParticipantCertificateServiceTests {
 
         assertThat(result.filename()).isEqualTo("certificate-BKS-2027-ABC1.pdf");
         assertThat(result.pdfContent()).isNotEmpty();
-        assertThat(new String(result.pdfContent())).startsWith("%PDF-1.4");
+        assertThat(new String(result.pdfContent(), java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF-");
+        try (PDDocument document = Loader.loadPDF(result.pdfContent())) {
+            String content = new PDFTextStripper().getText(document);
+            assertThat(content)
+                    .contains("ĐƯỜNG SÁCH", "GIẤY CHỨNG NHẬN", "NGUYỄN MINH AN")
+                    .contains("Giao lưu tác giả trẻ", "Ngày hội Văn hóa Đọc 2027", "BKS-2027-ABC1");
+        } catch (java.io.IOException exception) {
+            throw new AssertionError("Generated certificate should be a readable PDF", exception);
+        }
     }
 
     @Test

@@ -11,11 +11,37 @@ async function mockWorkspace(page: Page, role: 'ADMIN' | 'PARTICIPANT') {
     else if (path.endsWith('/admin/profile')) body = { id: 1, fullName: 'Tài khoản kiểm thử', email: 'admin@example.com', department: 'Quản trị hệ thống' };
     else if (path === '/api/v1/events') body = { content: [], totalElements: 0, totalPages: 0 };
     else if (path.endsWith('/admin/dashboard')) body = {};
-    else if (path.endsWith('/admin/badge-rules')) body = Array.from({ length: 11 }, (_, index) => ({
-      id: String(index + 1), code: `BADGE${index + 1}`, name: `Huy hiệu ${String(index + 1).padStart(2, '0')}`,
-      nameEn: `Badge ${index + 1}`, title: `Huy hiệu ${String(index + 1).padStart(2, '0')}`, iconName: 'award', minPoints: index * 100,
-      status: 'active', statusLabelVi: 'Đang áp dụng', description: 'Hoàn thành hoạt động để tích lũy điểm.', perks: [],
-    }));
+    else if (path.endsWith('/admin/badge-rules') || path.endsWith('/admin/badges')) {
+      const pageNum = Number(new URL(request.url()).searchParams.get('page') || 0);
+      const allItems = Array.from({ length: 11 }, (_, index) => ({
+        badgeId: index + 1,
+        id: String(index + 1),
+        code: `BADGE${index + 1}`,
+        name: `Huy hiệu ${String(index + 1).padStart(2, '0')}`,
+        nameEn: `Badge ${index + 1}`,
+        title: `Huy hiệu ${String(index + 1).padStart(2, '0')}`,
+        description: 'Hoàn thành hoạt động để tích lũy điểm.',
+        requiredPoints: index * 100,
+        iconUrl: null,
+        isActive: true,
+        awardedUserCount: 0,
+        remainingEligibleCount: 0,
+        status: 'active',
+        statusLabelVi: 'Đang áp dụng',
+        perks: [],
+        createdAt: '2026-10-25T01:00:00Z',
+        updatedAt: '2026-10-25T01:00:00Z',
+      }));
+      const start = pageNum * 10;
+      const content = allItems.slice(start, start + 10);
+      body = {
+        content,
+        page: pageNum,
+        size: 10,
+        totalElements: allItems.length,
+        totalPages: Math.ceil(allItems.length / 10),
+      };
+    }
     else if (path.endsWith('/participant/notifications')) {
       const allItems = Array.from({ length: 11 }, (_, index) => ({
         notificationId: index + 1,

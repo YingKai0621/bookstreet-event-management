@@ -32,6 +32,8 @@ const successfulScan = {
 interface MockOptions {
   authenticated?: boolean;
   scanReplies?: Array<{ status: number; body: unknown } | 'abort'>;
+  emptyRewards?: boolean;
+  rewardFailures?: number;
 }
 
 async function json(route: Route, body: unknown, status = 200): Promise<void> {
@@ -41,6 +43,7 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
 async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
   let authenticated = options.authenticated ?? true;
   let scanCount = 0;
+  let rewardFailures = options.rewardFailures ?? 0;
   const scanBodies: unknown[] = [];
   const rewardRequests: string[] = [];
   const replies = [...(options.scanReplies ?? [{ status: 200, body: successfulScan }])];
@@ -72,13 +75,31 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
       });
     }
     if (path === '/api/v1/participant/notifications') {
-      return json(route, { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+      const items = scanCount > 0 ? [{
+        notificationId: 950,
+        type: 'BADGE_UNLOCKED',
+        title: 'Huy hiệu mới được mở khóa',
+        message: 'Bạn đã đạt mốc điểm.',
+        referenceType: 'BADGE',
+        referenceId: 1,
+        createdAt: '2026-10-28T08:20:00Z',
+        readAt: null,
+        read: false,
+      }] : [];
+      return json(route, { content: items, page: 0, size: 5, totalElements: items.length, totalPages: items.length ? 1 : 0 });
     }
     if (path === '/api/v1/participant/notifications/unread-count') {
-      return json(route, { unreadCount: 0 });
+      return json(route, { unreadCount: scanCount > 0 ? 1 : 0 });
     }
     if (path === '/api/v1/participant/rewards/summary') {
       rewardRequests.push(url.toString());
+      if (rewardFailures > 0) {
+        rewardFailures -= 1;
+        return json(route, { code: 'TEMPORARILY_UNAVAILABLE', message: 'Rewards unavailable' }, 503);
+      }
+      if (options.emptyRewards) {
+        return json(route, { totalPoints: 0, totalVisits: 0, earnedBadgeCount: 0, activeBadgeCount: 0, nextBadge: null });
+      }
       return json(route, {
         totalPoints: 30,
         totalVisits: 3,
@@ -93,6 +114,7 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
     }
     if (path === '/api/v1/participant/rewards/badges') {
       rewardRequests.push(url.toString());
+      if (options.emptyRewards) return json(route, { content: [], page: 0, size: 12, totalElements: 0, totalPages: 0 });
       const earned = {
         badgeId: 1, name: 'Khởi đầu', description: 'Ghé gian hàng đầu tiên.', iconUrl: null,
         requiredPoints: 10, isActive: true, state: 'EARNED', earned: true,
@@ -108,6 +130,7 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
     }
     if (path === '/api/v1/participant/rewards/point-transactions') {
       rewardRequests.push(url.toString());
+      if (options.emptyRewards) return json(route, { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 });
       const pageNumber = Number(url.searchParams.get('page') || 0);
       const content = pageNumber === 0 ? [{
         pointTransactionId: 901,
@@ -267,12 +290,51 @@ test('participant rewards renders real summary, badges and paged point history',
   await expect.poll(() => state.rewardRequests().some(request => request.includes('state=EARNED')))
     .toBe(true);
   await expect(page.getByText('Khởi đầu')).toBeVisible();
+  await page.getByLabel('Sắp xếp huy hiệu').selectOption('requiredPoints,asc');
+  await expect.poll(() => state.rewardRequests().some(request => request.includes('sort=requiredPoints%2Casc')))
+    .toBe(true);
 
   const history = page.locator('.reward-history-section');
   await history.getByRole('button', { name: 'Sau' }).click();
   await expect.poll(() => state.rewardRequests().some(request => request.includes('page=1')))
     .toBe(true);
   await expect(history.getByText('Chưa có giao dịch điểm')).toBeVisible();
+});
+
+test('first Booth scan refreshes Badge inbox and Rewards when the participant opens them', async ({ page }) => {
+  const state = await mockBoothScanApp(page);
+  await page.goto(`/participant/booth-scan#token=${BOOTH_TOKEN}`);
+  await expect(page.getByRole('heading', { name: 'Ghi nhận lượt ghé thành công' })).toBeVisible();
+
+  const notificationNav = page.locator('.role-sidebar-item').filter({ hasText: 'Thông báo' });
+  await expect(notificationNav.locator('.role-sidebar-item-badge')).toHaveText('1');
+  await notificationNav.click();
+  await expect(page.getByRole('heading', { name: 'Huy hiệu mới được mở khóa' })).toBeVisible();
+  await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await expect(page).toHaveURL(/\/participant\/rewards$/);
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+  expect(state.rewardRequests().some(request => request.endsWith('/participant/rewards/summary'))).toBeTruthy();
+});
+
+test('participant rewards shows successful zero and empty states without placeholders', async ({ page }) => {
+  await mockBoothScanApp(page, { emptyRewards: true });
+  await page.goto('/participant/rewards');
+
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+  await expect(page.getByText('Chưa có giao dịch điểm')).toBeVisible();
+  await expect(page.getByText('Không có huy hiệu phù hợp')).toBeVisible();
+  await expect(page.getByText('0', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('participant rewards keeps a stable retry state after an API error', async ({ page }) => {
+  const state = await mockBoothScanApp(page, { rewardFailures: 1 });
+  await page.goto('/participant/rewards');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await page.getByRole('button', { name: 'Thử lại' }).click();
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+  await expect(page.getByText('Nhà thám hiểm').first()).toBeVisible();
+  expect(state.rewardRequests().length).toBeGreaterThan(3);
 });
 
 test('participant rewards remains readable on a phone viewport', async ({ page }) => {

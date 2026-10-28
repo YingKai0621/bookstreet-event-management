@@ -12,7 +12,7 @@ import {
   Target,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { participantApi } from '../../services/participantApi';
+import { rewardApi } from '../../services/rewardApi';
 import type { Language } from '../../types';
 import type {
   ParticipantBadgeResponse,
@@ -53,14 +53,14 @@ export function RewardsPage({ language }: RewardsPageProps) {
     setLoadError('');
     try {
       const [nextSummary, nextBadges, nextPoints] = await Promise.all([
-        participantApi.getRewardSummary(),
-        participantApi.getRewardBadges({
+        rewardApi.getSummary(),
+        rewardApi.getBadges({
           page: badgePage,
           size: 12,
           state: badgeFilter,
           sort: badgeSort || undefined,
         }),
-        participantApi.getRewardPointTransactions({ page: pointPage, size: 10 }),
+        rewardApi.getPointTransactions({ page: pointPage, size: 10 }),
       ]);
       setSummary(nextSummary);
       setBadgeResult(nextBadges);
