@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -31,9 +33,13 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException exception
     ) throws IOException, ServletException {
+        boolean badgeCsrfFailure = request.getRequestURI().startsWith("/api/v1/admin/badges")
+                && (exception instanceof MissingCsrfTokenException
+                    || exception instanceof InvalidCsrfTokenException);
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-                "ACCESS_DENIED",
-                "You do not have permission to access this resource.",
+                badgeCsrfFailure ? "CSRF_INVALID" : "ACCESS_DENIED",
+                badgeCsrfFailure ? "CSRF token is missing or invalid."
+                        : "You do not have permission to access this resource.",
                 List.of(),
                 Instant.now(),
                 request.getRequestURI()

@@ -1,355 +1,159 @@
-import {
-  Award,
-  BookOpen,
-  CheckCircle2,
-  Crown,
-  Edit2,
-  Gift,
-  Plus,
-  Sprout,
-  X
-} from 'lucide-react';
-import React, { useState } from 'react';
-import { AdminBadgeRule } from '../../types/admin';
+import { Award, Edit2, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { useListPagination } from '../../hooks/useListPagination';
-import { CompactPagination } from '../ui/CompactPagination';
+import { badgeAdminApi } from '../../services/badgeAdminApi';
+import { ApiError } from '../../services/apiError';
+import type { AdminBadge, AdminBadgeInput, RewardManagementPage } from '../../types/rewardManagement';
+import { ListPagination } from '../ui/ListPagination';
+import './AdminBadgeRulesView.css';
 
-interface AdminBadgeRulesViewProps {
-  badgeRules: AdminBadgeRule[];
-  onAddBadgeRule: (rule: Omit<AdminBadgeRule, 'id'>) => void;
-  onUpdateBadgeRule: (id: string, updates: Partial<AdminBadgeRule>) => void;
-  onToggleBadgeStatus: (id: string) => void;
+function message(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === 'BADGE_NAME_CONFLICT') return 'Tên huy hiệu đã được sử dụng. Vui lòng chọn tên khác.';
+    if (error.code === 'BADGE_NOT_ACTIVE') return 'Huy hiệu đang tạm dừng. Hãy kích hoạt trước khi đồng bộ.';
+    if (error.code === 'BADGE_NOT_FOUND') return 'Không tìm thấy huy hiệu. Hãy làm mới danh sách.';
+    if (error.status === 403) return 'Bạn không có quyền quản lý huy hiệu hoặc phiên làm việc cần được tải lại.';
+  }
+  return error instanceof Error ? error.message : 'Không thể thực hiện yêu cầu. Vui lòng thử lại.';
 }
 
-export const AdminBadgeRulesView: React.FC<AdminBadgeRulesViewProps> = ({
-  badgeRules,
-  onAddBadgeRule,
-  onUpdateBadgeRule,
-  onToggleBadgeStatus
-}) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<AdminBadgeRule | null>(null);
-  useModalDismiss(isModalOpen, () => setIsModalOpen(false));
-  const pagination = useListPagination(badgeRules);
+function inputOf(badge: AdminBadge): AdminBadgeInput {
+  return { name: badge.name, description: badge.description, iconUrl: badge.iconUrl, requiredPoints: badge.requiredPoints, isActive: badge.isActive };
+}
 
-  // Form states
-  const [formCode, setFormCode] = useState('');
-  const [formName, setFormName] = useState('');
-  const [formNameEn, setFormNameEn] = useState('');
-  const [formIconType, setFormIconType] = useState<'seedling' | 'book' | 'award' | 'crown'>('seedling');
-  const [formThreshold, setFormThreshold] = useState<number>(100);
-  const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active');
-  const [formDesc, setFormDesc] = useState('');
-  const [formPerksText, setFormPerksText] = useState('');
+export function AdminBadgeRulesView() {
+  const [catalog, setCatalog] = useState<{ key: string; data: RewardManagementPage<AdminBadge> | null; error: string } | null>(null);
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [active, setActive] = useState('all');
+  const [sort, setSort] = useState('');
+  const [reload, setReload] = useState(0);
+  const [actionError, setActionError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [form, setForm] = useState<AdminBadgeInput>({ name: '', description: null, iconUrl: null, requiredPoints: 10, isActive: false });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(modalOpen, () => { if (!saving) setModalOpen(false); });
+  const requestKey = `${page}|${search}|${active}|${sort}|${reload}`;
+  const loading = catalog?.key !== requestKey;
+  const data = loading ? null : catalog.data;
+  const loadError = loading ? '' : catalog.error;
 
-  const handleOpenAdd = () => {
-    setEditingRule(null);
-    setFormCode('NEW_TIER');
-    setFormName('');
-    setFormNameEn('');
-    setFormIconType('seedling');
-    setFormThreshold(150);
-    setFormStatus('active');
-    setFormDesc('');
-    setFormPerksText('Ưu tiên đặt chỗ sự kiện\nQuà lưu niệm đặc biệt');
-    setIsModalOpen(true);
-  };
+  useEffect(() => {
+    let current = true;
+    badgeAdminApi.list({ page, size: 20, sort: sort || undefined, search: search || undefined, active: active === 'all' ? undefined : active === 'true' })
+      .then(result => { if (current) setCatalog({ key: requestKey, data: result, error: '' }); })
+      .catch(error => { if (current) setCatalog({ key: requestKey, data: null, error: message(error) }); });
+    return () => { current = false; };
+  }, [page, search, active, sort, reload, requestKey]);
 
-  const handleOpenEdit = (rule: AdminBadgeRule) => {
-    setEditingRule(rule);
-    setFormCode(rule.code);
-    setFormName(rule.name);
-    setFormNameEn(rule.nameEn);
-    setFormIconType(rule.iconType);
-    setFormThreshold(rule.pointsThreshold);
-    setFormStatus(rule.status);
-    setFormDesc(rule.description);
-    setFormPerksText(rule.perks.join('\n'));
-    setIsModalOpen(true);
-  };
+  useEffect(() => {
+    if (!modalOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    return () => previous?.focus();
+  }, [modalOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim()) return;
+  function openCreate() {
+    setEditing(null); setForm({ name: '', description: null, iconUrl: null, requiredPoints: 10, isActive: false });
+    setFormError(''); setFieldErrors({}); setModalOpen(true);
+  }
 
-    const perksArray = formPerksText
-      .split('\n')
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
+  async function edit(badge: AdminBadge) {
+    setBusyId(badge.badgeId); setActionError('');
+    try {
+      const latest = await badgeAdminApi.detail(badge.badgeId);
+      setEditing(latest.badgeId); setForm(inputOf(latest)); setFormError(''); setFieldErrors({}); setModalOpen(true);
+    } catch (error) { setActionError(message(error)); }
+    finally { setBusyId(null); }
+  }
 
-    if (editingRule) {
-      onUpdateBadgeRule(editingRule.id, {
-        code: formCode.trim().toUpperCase(),
-        name: formName.trim(),
-        nameEn: formNameEn.trim(),
-        iconType: formIconType,
-        pointsThreshold: formThreshold,
-        status: formStatus,
-        statusLabelVi: formStatus === 'active' ? 'Đang áp dụng' : 'Tạm dừng',
-        description: formDesc.trim(),
-        perks: perksArray
-      });
-    } else {
-      onAddBadgeRule({
-        code: formCode.trim().toUpperCase(),
-        name: formName.trim(),
-        nameEn: formNameEn.trim(),
-        iconType: formIconType,
-        pointsThreshold: formThreshold,
-        status: formStatus,
-        statusLabelVi: formStatus === 'active' ? 'Đang áp dụng' : 'Tạm dừng',
-        description: formDesc.trim(),
-        descriptionEn: formNameEn.trim(),
-        perks: perksArray
-      });
-    }
+  async function save(event: FormEvent) {
+    event.preventDefault(); setSaving(true); setFormError(''); setFieldErrors({});
+    try {
+      const result = editing === null ? await badgeAdminApi.create(form) : await badgeAdminApi.update(editing, form);
+      setModalOpen(false); setReload(value => value + 1);
+      setNotice(result.synchronizationTriggered ? `Đã lưu “${result.badge.name}” và bắt đầu đồng bộ phần thưởng. Làm mới để xem tiến độ.` : `Đã lưu “${result.badge.name}”.`);
+    } catch (error) {
+      setFormError(message(error));
+      if (error instanceof ApiError) setFieldErrors(Object.fromEntries(error.fieldErrors.map(field => [field.field, field.message])));
+    } finally { setSaving(false); }
+  }
 
-    setIsModalOpen(false);
-  };
+  async function toggle(badge: AdminBadge) {
+    setBusyId(badge.badgeId); setActionError(''); setNotice('');
+    try {
+      const latest = await badgeAdminApi.detail(badge.badgeId);
+      const result = await badgeAdminApi.update(badge.badgeId, { ...inputOf(latest), isActive: !latest.isActive });
+      setNotice(result.synchronizationTriggered ? 'Đã kích hoạt huy hiệu và bắt đầu đồng bộ phần thưởng.' : 'Đã tạm dừng huy hiệu. Lịch sử đã đạt vẫn được giữ lại.');
+      setReload(value => value + 1);
+    } catch (error) { setActionError(message(error)); }
+    finally { setBusyId(null); }
+  }
 
-  const renderBadgeEmblem = (type: string) => {
-    switch (type) {
-      case 'seedling':
-        return <Sprout size={28} className="adm-emblem-icon emblem-green" />;
-      case 'book':
-        return <BookOpen size={28} className="adm-emblem-icon emblem-blue" />;
-      case 'award':
-        return <Award size={28} className="adm-emblem-icon emblem-gold" />;
-      case 'crown':
-        return <Crown size={28} className="adm-emblem-icon emblem-purple" />;
-      default:
-        return <Award size={28} className="adm-emblem-icon emblem-gold" />;
-    }
-  };
+  async function synchronize(badge: AdminBadge) {
+    setBusyId(badge.badgeId); setActionError(''); setNotice('');
+    try {
+      const result = await badgeAdminApi.synchronize(badge.badgeId);
+      setNotice(`“${badge.name}”: đã xét ${result.processedCount} người, cấp mới ${result.awardedCount} huy hiệu. ${result.completed ? 'Đã đồng bộ đầy đủ.' : `Còn ${result.remainingEligibleCount} người đủ điều kiện; hệ thống tiếp tục xử lý. Bạn có thể làm mới hoặc đồng bộ tiếp nếu bị gián đoạn.`}`);
+      setReload(value => value + 1);
+    } catch (error) { setActionError(`${message(error)} Có thể thử đồng bộ lại; các phần thưởng đã cấp sẽ được giữ nguyên.`); }
+    finally { setBusyId(null); }
+  }
 
-  return (
-    <div className="adm-badges-view">
-      {/* Header */}
-      <div className="adm-page-header">
-        <div>
-          <h1 className="adm-page-title workspace-page-title">Quy tắc Điểm & Huy hiệu</h1>
-          <p className="adm-page-subtitle workspace-page-subtitle">
-            Cấu hình tiêu chí xét danh hiệu, điểm sàn tích lũy và đặc quyền độc giả tại Đường Sách TP.HCM.
-          </p>
-        </div>
-        <div className="adm-page-header-actions">
-          <button className="adm-btn adm-btn-primary" onClick={handleOpenAdd}>
-            <Plus size={16} />
-            <span>Thêm quy tắc mới</span>
-          </button>
-        </div>
-      </div>
+  function submitSearch(event: FormEvent) { event.preventDefault(); setSearch(searchInput.trim()); setPage(0); }
+  const fieldError = (field: string) => fieldErrors[field] ? <small className="badge-field-error" id={`badge-error-${field}`}>{fieldErrors[field]}</small> : null;
 
-      <div className="admin-insight-strip" aria-label="Tổng quan quy tắc">
-        <div><span className="admin-insight-icon"><Award size={20} /></span><div><span>Tổng số quy tắc</span><strong>{badgeRules.length}</strong></div></div>
-        <div><span className="admin-insight-icon mint"><CheckCircle2 size={20} /></span><div><span>Đang áp dụng</span><strong>{badgeRules.filter(rule => rule.status === 'active').length}</strong></div></div>
-        <div><span className="admin-insight-icon amber"><BookOpen size={20} /></span><div><span>Ngưỡng điểm thấp nhất</span><strong>{badgeRules.length ? Math.min(...badgeRules.map(rule => rule.pointsThreshold)).toLocaleString('vi-VN') : '—'} <small>điểm</small></strong></div></div>
-      </div>
-      <div className="admin-section-caption"><div><h2>Danh sách huy hiệu</h2><p>Điều chỉnh ngưỡng điểm và trạng thái áp dụng của từng huy hiệu.</p></div><span>{badgeRules.length} quy tắc</span></div>
-      {/* Badges Grid */}
-      <div className="adm-badge-cards-grid">
-        {pagination.items.map((rule) => {
-          const isActive = rule.status === 'active';
-          return (
-            <div key={rule.id} className={`adm-card adm-badge-item-card ${!isActive ? 'card-inactive' : ''}`}>
-              <div className="adm-badge-item-header">
-                <div className="adm-badge-emblem-wrap">
-                  {renderBadgeEmblem(rule.iconType)}
-                </div>
-                <div className="adm-badge-header-actions">
-                  <span className={`adm-badge-status ${isActive ? 'badge-status-active' : 'badge-status-pending'}`}>
-                    <span className="adm-status-dot"></span>
-                    {rule.statusLabelVi}
-                  </span>
-                  <button 
-                    className="adm-icon-btn" 
-                    title="Chỉnh sửa quy tắc"
-                    onClick={() => handleOpenEdit(rule)}
-                  >
-                    <Edit2 size={15} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="adm-badge-item-body">
-                <div className="adm-badge-name-row">
-                  <h3 className="adm-badge-item-name">{rule.name}</h3>
-                </div>
-                {rule.nameEn !== rule.name && <div className="adm-badge-name-en">{rule.nameEn}</div>}
-                <p className="adm-badge-desc">{rule.description}</p>
-
-                <div className="adm-badge-threshold-box">
-                  <span className="adm-threshold-label">Mức điểm yêu cầu:</span>
-                  <span className="adm-threshold-val">{rule.pointsThreshold.toLocaleString('vi-VN')} điểm</span>
-                </div>
-
-                {rule.perks.length > 0 && <div className="adm-badge-perks-section">
-                  <div className="adm-perks-title">
-                    <Gift size={14} />
-                    <span>Đặc quyền độc quyền:</span>
-                  </div>
-                  <ul className="adm-perks-list">
-                    {rule.perks.map((perk, i) => (
-                      <li key={i}>
-                        <CheckCircle2 size={13} className="adm-perk-check" />
-                        <span>{perk}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>}
-              </div>
-
-              <div className="adm-badge-item-footer">
-                <span className="adm-footer-toggle-label">
-                  {isActive ? 'Đang kích hoạt' : 'Đang tạm dừng'}
-                </span>
-                <label className="adm-toggle-label">
-                  <input 
-                    type="checkbox"
-                    className="adm-toggle-checkbox"
-                    checked={isActive}
-                    onChange={() => onToggleBadgeStatus(rule.id)}
-                  />
-                  <span className="adm-toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Modal: Add or Edit Badge Rule */}
-      <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />
-      {isModalOpen && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">
-                {editingRule ? `Chỉnh sửa huy hiệu: ${editingRule.name}` : 'Thêm quy tắc huy hiệu mới'}
-              </h3>
-              <button className="adm-modal-close" onClick={() => setIsModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="adm-modal-body">
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Mã định danh (Code) *</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="VD: BAN_DOC_XUAT_SAC"
-                      className="adm-form-input"
-                      value={formCode}
-                      onChange={(e) => setFormCode(e.target.value)}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Biểu tượng</label>
-                    <select 
-                      className="adm-form-select"
-                      value={formIconType}
-                      onChange={(e) => setFormIconType(e.target.value as any)}
-                    >
-                      <option value="seedling">Mầm đọc (Sprout)</option>
-                      <option value="book">Sách tri thức (Book)</option>
-                      <option value="award">Huy chương danh dự (Award)</option>
-                      <option value="crown">Vương miện tinh hoa (Crown)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Tên huy hiệu (Tiếng Việt) *</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="Ví dụ: Bạn Đọc Tích Cực"
-                      className="adm-form-input"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Tên tiếng Anh</label>
-                    <input 
-                      type="text"
-                      placeholder="e.g. Active Reader"
-                      className="adm-form-input"
-                      value={formNameEn}
-                      onChange={(e) => setFormNameEn(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Điểm tích lũy sàn (Points Threshold) *</label>
-                    <input 
-                      type="number"
-                      required
-                      min={0}
-                      step={50}
-                      className="adm-form-input"
-                      value={formThreshold}
-                      onChange={(e) => setFormThreshold(parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Trạng thái</label>
-                    <select 
-                      className="adm-form-select"
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value as any)}
-                    >
-                      <option value="active">Đang áp dụng</option>
-                      <option value="inactive">Tạm dừng</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Mô tả tiêu chí đạt được</label>
-                  <textarea 
-                    rows={2}
-                    className="adm-form-textarea"
-                    placeholder="Mô tả ngắn gọn điều kiện để độc giả nhận được danh hiệu này..."
-                    value={formDesc}
-                    onChange={(e) => setFormDesc(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Danh sách đặc quyền (Mỗi dòng một đặc quyền)</label>
-                  <textarea 
-                    rows={3}
-                    className="adm-form-textarea"
-                    placeholder="Ưu tiên tham gia workshop&#10;Tặng voucher sách 10%"
-                    value={formPerksText}
-                    onChange={(e) => setFormPerksText(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="adm-modal-footer">
-                <button 
-                  type="button" 
-                  className="adm-btn adm-btn-secondary"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn adm-btn-primary">
-                  {editingRule ? 'Lưu cập nhật' : 'Thêm huy hiệu'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+  return <div className="adm-badges-view badge-management">
+    <div className="adm-page-header"><div><h1 className="adm-page-title workspace-page-title">Quản lý huy hiệu</h1><p className="adm-page-subtitle workspace-page-subtitle">Thiết lập ngưỡng điểm và đồng bộ huy hiệu cho người tham gia đủ điều kiện.</p></div>
+      <div className="adm-page-header-actions"><button type="button" className="adm-btn adm-btn-secondary" onClick={() => setReload(value => value + 1)} disabled={loading}><RefreshCw size={16} /> Làm mới</button><button type="button" className="adm-btn adm-btn-primary" onClick={openCreate}><Plus size={16} /> Thêm huy hiệu</button></div></div>
+    {notice && <div className="badge-notice" role="status">{notice}</div>}
+    {actionError && <div className="badge-error" role="alert">{actionError}</div>}
+    <div className="badge-catalog-filters">
+      <form onSubmit={submitSearch}><Search size={18} /><input aria-label="Tìm huy hiệu" placeholder="Tìm theo tên huy hiệu" maxLength={100} value={searchInput} onChange={event => setSearchInput(event.target.value)} /><button type="submit" className="adm-btn adm-btn-secondary">Tìm kiếm</button></form>
+      <label>Trạng thái<select value={active} onChange={event => { setActive(event.target.value); setPage(0); }}><option value="all">Tất cả</option><option value="true">Đang áp dụng</option><option value="false">Tạm dừng</option></select></label>
+      <label>Sắp xếp<select value={sort} onChange={event => { setSort(event.target.value); setPage(0); }}><option value="">Mới tạo nhất</option><option value="name,asc">Tên A–Z</option><option value="requiredPoints,asc">Ngưỡng điểm tăng dần</option><option value="requiredPoints,desc">Ngưỡng điểm giảm dần</option><option value="updatedAt,desc">Mới cập nhật</option></select></label>
     </div>
-  );
-};
+    {loading && <p className="badge-empty" role="status">Đang tải huy hiệu...</p>}
+    {loadError && <div className="badge-error" role="alert"><p>{loadError}</p><button className="adm-btn adm-btn-secondary" onClick={() => setReload(value => value + 1)}>Thử lại</button></div>}
+    {!loading && !loadError && data && <>
+      <div className="admin-section-caption"><div><h2>Danh sách huy hiệu</h2><p>Tiến độ được cập nhật khi tải danh sách hoặc làm mới.</p></div><span>{data.totalElements} huy hiệu</span></div>
+      {data.content.length === 0 ? <div className="badge-empty"><Award size={32} /><h3>Chưa có huy hiệu phù hợp</h3><p>Thêm huy hiệu đầu tiên hoặc thay đổi bộ lọc.</p></div> : <div className="badge-catalog-grid">{data.content.map(badge => <article className="badge-catalog-card" key={badge.badgeId}>
+        <div className="badge-card-heading">{badge.iconUrl ? <img src={badge.iconUrl} alt="" referrerPolicy="no-referrer" /> : <span className="badge-card-icon"><Award size={30} /></span>}<span className={`badge-state ${badge.isActive ? 'active' : ''}`}>{badge.isActive ? 'Đang áp dụng' : 'Tạm dừng'}</span></div>
+        <h3>{badge.name}</h3><p className="badge-description">{badge.description || 'Chưa có mô tả.'}</p>
+        <dl><div><dt>Ngưỡng điểm</dt><dd>{badge.requiredPoints.toLocaleString('vi-VN')}</dd></div><div><dt>Đã được cấp</dt><dd>{badge.awardedUserCount.toLocaleString('vi-VN')} người</dd></div><div><dt>Chờ đồng bộ</dt><dd>{badge.remainingEligibleCount.toLocaleString('vi-VN')} người</dd></div></dl>
+        <p className={`badge-sync-state ${badge.remainingEligibleCount ? 'pending' : ''}`}>{!badge.isActive ? 'Tạm dừng cấp mới · giữ lịch sử đã đạt' : badge.remainingEligibleCount > 0 ? 'Còn người đủ điều kiện chưa nhận huy hiệu' : 'Đã đồng bộ theo ngưỡng hiện tại'}</p>
+        <div className="badge-card-actions"><button type="button" className="adm-btn adm-btn-secondary" aria-label={`Sửa ${badge.name}`} onClick={() => void edit(badge)} disabled={busyId !== null}><Edit2 size={15} /> Sửa</button>
+          <button type="button" className="adm-btn adm-btn-secondary" onClick={() => void toggle(badge)} disabled={busyId !== null}>{badge.isActive ? 'Tạm dừng' : 'Kích hoạt'}</button>
+          {badge.isActive && <button type="button" className="adm-btn adm-btn-primary" onClick={() => void synchronize(badge)} disabled={busyId !== null}><RefreshCw size={15} />{busyId === badge.badgeId ? 'Đang xử lý...' : 'Đồng bộ phần thưởng'}</button>}</div>
+      </article>)}</div>}
+      <ListPagination page={page + 1} pages={data.totalPages} onPage={value => setPage(value - 1)} disabled={loading} />
+    </>}
+    {modalOpen && <div className="adm-modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModalOpen(false); }}>
+      <div className="adm-modal-content badge-editor" role="dialog" aria-modal="true" aria-labelledby="badge-editor-title" ref={dialogRef} onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+        if (!focusable?.length) return;
+        const first = focusable[0]; const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }}><div className="adm-modal-header"><h2 className="adm-modal-title" id="badge-editor-title">{editing === null ? 'Thêm huy hiệu' : 'Chỉnh sửa huy hiệu'}</h2><button type="button" className="adm-modal-close" aria-label="Đóng" disabled={saving} onClick={() => setModalOpen(false)}><X size={22} /></button></div>
+        <form onSubmit={event => void save(event)}><fieldset disabled={saving}><div className="adm-modal-body">
+          <label className="adm-form-group">Tên huy hiệu<input className="adm-form-input" required maxLength={100} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'badge-error-name' : undefined} />{fieldError('name')}</label>
+          <div className="adm-form-row"><label className="adm-form-group">Ngưỡng điểm<input className="adm-form-input" type="number" min={1} max={2147483647} step={1} required value={Number.isNaN(form.requiredPoints) ? '' : form.requiredPoints} onChange={event => setForm({ ...form, requiredPoints: event.target.valueAsNumber })} />{fieldError('requiredPoints')}</label>
+            <label className="adm-form-group">Trạng thái áp dụng<select className="adm-form-select" value={String(form.isActive)} onChange={event => setForm({ ...form, isActive: event.target.value === 'true' })}><option value="false">Tạm dừng</option><option value="true">Đang áp dụng</option></select>{fieldError('isActive')}</label></div>
+          <label className="adm-form-group">Mô tả<textarea className="adm-form-textarea" rows={3} maxLength={1000} value={form.description || ''} onChange={event => setForm({ ...form, description: event.target.value || null })} />{fieldError('description')}</label>
+          <label className="adm-form-group">Đường dẫn ảnh<input className="adm-form-input" type="url" maxLength={2048} placeholder="https://..." value={form.iconUrl || ''} onChange={event => setForm({ ...form, iconUrl: event.target.value || null })} />{fieldError('iconUrl')}</label>
+          <p className="adm-form-hint">Kích hoạt hoặc giảm ngưỡng điểm đang áp dụng sẽ tự đồng bộ cho người đủ điều kiện. Tăng ngưỡng hoặc tạm dừng vẫn giữ các huy hiệu đã đạt.</p>
+          {formError && <div className="badge-error" role="alert">{formError}</div>}
+        </div><div className="adm-modal-footer"><button type="button" className="adm-btn adm-btn-secondary" onClick={() => setModalOpen(false)}>Hủy</button><button type="submit" className="adm-btn adm-btn-primary">{saving ? 'Đang lưu...' : 'Lưu huy hiệu'}</button></div></fieldset></form>
+      </div>
+    </div>}
+  </div>;
+}
