@@ -1,3 +1,4 @@
+import '../participant/EventFeedback.css';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
@@ -252,7 +253,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
           aria-labelledby="registration-modal-title"
         >
           <div
-            className={`modal-content modal-register-content ${closingSheet === 'register' ? 'is-closing' : ''}`}
+            className={`modal-content modal-register-content ${registeredSuccess ? 'event-feedback-modal' : ''} ${closingSheet === 'register' ? 'is-closing' : ''}`}
             style={closingSheet !== 'register' && (isSheetDragging || sheetDragOffset !== 0) ? { transform: `translateY(${sheetDragOffset}px)`, transition: isSheetDragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' } : undefined}
             onClick={(e) => e.stopPropagation()}
           >
@@ -411,10 +412,12 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               </>
             ) : (
               <div className="success-box-center">
-                <CheckCircle2 size={52} color="#15803D" style={{ margin: '0 auto 0.75rem' }} />
-                <h3 id="registration-modal-title" className="modal-heading-title" style={{ color: '#1B2B25' }}>
-                  {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
-                </h3>
+                <div className="event-feedback-header">
+                  <span className="event-feedback-icon"><CheckCircle2 size={32} aria-hidden="true" /></span>
+                  <h3 id="registration-modal-title" className="modal-heading-title">
+                    {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
+                  </h3>
+                </div>
                 <p className="success-event-badge">
                   {language === 'vi' ? showRegisterModal.title : showRegisterModal.titleEn}
                 </p>
@@ -423,7 +426,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                     ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp và quét mã QR hoạt động tại nơi diễn ra để điểm danh.'
                     : 'Your account has joined this event. Register for an activity and scan its QR at the venue to check in.'}
                 </p>
-                <div className="success-actions-row" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div className="success-actions-row">
                   {isParticipantAuthenticated && (
                     <Link
                       to="/participant/events"
