@@ -58,6 +58,9 @@ server:
   error:
     include-stacktrace: never
 
+rewards:
+  booth-visit-points: ${REWARDS_BOOTH_VISIT_POINTS:10}
+
 springdoc:
   swagger-ui:
     csrf:

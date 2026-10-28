@@ -50,6 +50,7 @@ class ParticipantNotificationWriterServiceTests {
                 null,
                 19L,
                 null,
+                null,
                 "activity-cancelled:19",
                 "Hoạt động đã hủy",
                 "Hoạt động không còn diễn ra.",
@@ -61,7 +62,7 @@ class ParticipantNotificationWriterServiceTests {
         Instant createdAt = Instant.parse("2026-10-19T10:00:00Z");
         ParticipantNotification stored = mock(ParticipantNotification.class);
         when(repository.insertIfAbsent(
-                41L, "EVENT_CANCELLED", 7L, null, null,
+                41L, "EVENT_CANCELLED", 7L, null, null, null,
                 "event-cancelled:7", "Sự kiện đã hủy", "Sự kiện không còn diễn ra.", createdAt))
                 .thenReturn(0);
         when(repository.findByRecipientUserIdAndDeduplicationKey(
@@ -98,6 +99,39 @@ class ParticipantNotificationWriterServiceTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("exactly its approved reference");
         verifyNoInteractions(repository);
+    }
+
+    @Test
+    void writeSupportsBadgeUnlockedWithExactlyOneBadgeReference() {
+        Instant createdAt = Instant.parse("2026-10-28T08:20:00Z");
+        ParticipantNotification stored = mock(ParticipantNotification.class);
+        when(repository.findByRecipientUserIdAndDeduplicationKey(
+                41L, "badge-unlocked:user-badge:82")).thenReturn(Optional.of(stored));
+
+        ParticipantNotification result = service.write(new ParticipantNotificationCommand(
+                41L,
+                ParticipantNotificationType.BADGE_UNLOCKED,
+                null,
+                null,
+                null,
+                9L,
+                "badge-unlocked:user-badge:82",
+                "Bạn vừa mở khóa huy hiệu",
+                "Bạn đã mở khóa huy hiệu Người khám phá.",
+                createdAt));
+
+        assertThat(result).isSameAs(stored);
+        verify(repository).insertIfAbsent(
+                41L,
+                "BADGE_UNLOCKED",
+                null,
+                null,
+                null,
+                9L,
+                "badge-unlocked:user-badge:82",
+                "Bạn vừa mở khóa huy hiệu",
+                "Bạn đã mở khóa huy hiệu Người khám phá.",
+                createdAt);
     }
 
     @Test

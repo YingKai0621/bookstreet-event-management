@@ -35,6 +35,9 @@ public class ParticipantNotification {
     @Column(name = "certificate_id", updatable = false)
     private Long certificateId;
 
+    @Column(name = "badge_id", updatable = false)
+    private Long badgeId;
+
     @Column(name = "deduplication_key", nullable = false, length = 200, updatable = false)
     private String deduplicationKey;
 
@@ -66,13 +69,15 @@ public class ParticipantNotification {
     public ParticipantNotificationReferenceType getReferenceType() {
         if (eventId != null) return ParticipantNotificationReferenceType.EVENT;
         if (activityId != null) return ParticipantNotificationReferenceType.ACTIVITY;
-        return ParticipantNotificationReferenceType.CERTIFICATE;
+        if (certificateId != null) return ParticipantNotificationReferenceType.CERTIFICATE;
+        return ParticipantNotificationReferenceType.BADGE;
     }
 
     public Long getReferenceId() {
         if (eventId != null) return eventId;
         if (activityId != null) return activityId;
-        return certificateId;
+        if (certificateId != null) return certificateId;
+        return badgeId;
     }
 
     public Long getNotificationId() { return notificationId; }
@@ -81,6 +86,7 @@ public class ParticipantNotification {
     public Long getEventId() { return eventId; }
     public Long getActivityId() { return activityId; }
     public Long getCertificateId() { return certificateId; }
+    public Long getBadgeId() { return badgeId; }
     public String getDeduplicationKey() { return deduplicationKey; }
     public String getTitle() { return title; }
     public String getMessage() { return message; }

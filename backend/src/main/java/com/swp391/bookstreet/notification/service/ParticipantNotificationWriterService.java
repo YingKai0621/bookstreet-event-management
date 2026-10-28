@@ -26,6 +26,7 @@ public class ParticipantNotificationWriterService implements ParticipantNotifica
                 notification.eventId(),
                 notification.activityId(),
                 notification.certificateId(),
+                notification.badgeId(),
                 notification.deduplicationKey(),
                 notification.title(),
                 notification.message(),
@@ -44,7 +45,8 @@ public class ParticipantNotificationWriterService implements ParticipantNotifica
         Long eventId = optionalPositive(command.eventId(), "eventId");
         Long activityId = optionalPositive(command.activityId(), "activityId");
         Long certificateId = optionalPositive(command.certificateId(), "certificateId");
-        validateReference(type, eventId, activityId, certificateId);
+        Long badgeId = optionalPositive(command.badgeId(), "badgeId");
+        validateReference(type, eventId, activityId, certificateId, badgeId);
         String deduplicationKey = normalizedRequired(
                 command.deduplicationKey(), 200, "deduplicationKey");
         String title = normalizedRequired(command.title(), 200, "title");
@@ -55,6 +57,7 @@ public class ParticipantNotificationWriterService implements ParticipantNotifica
                 eventId,
                 activityId,
                 certificateId,
+                badgeId,
                 deduplicationKey,
                 title,
                 message,
@@ -62,14 +65,20 @@ public class ParticipantNotificationWriterService implements ParticipantNotifica
     }
 
     private void validateReference(ParticipantNotificationType type, Long eventId,
-            Long activityId, Long certificateId) {
+            Long activityId, Long certificateId, Long badgeId) {
         boolean valid = switch (type) {
             case ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED, ACTIVITY_CANCELLED ->
-                    activityId != null && eventId == null && certificateId == null;
+                    activityId != null && eventId == null && certificateId == null
+                            && badgeId == null;
             case EVENT_CANCELLED ->
-                    eventId != null && activityId == null && certificateId == null;
+                    eventId != null && activityId == null && certificateId == null
+                            && badgeId == null;
             case CERTIFICATE_ISSUED, CERTIFICATE_REVOKED ->
-                    certificateId != null && eventId == null && activityId == null;
+                    certificateId != null && eventId == null && activityId == null
+                            && badgeId == null;
+            case BADGE_UNLOCKED ->
+                    badgeId != null && eventId == null && activityId == null
+                            && certificateId == null;
         };
         if (!valid) {
             throw new IllegalArgumentException(
@@ -107,6 +116,7 @@ public class ParticipantNotificationWriterService implements ParticipantNotifica
             Long eventId,
             Long activityId,
             Long certificateId,
+            Long badgeId,
             String deduplicationKey,
             String title,
             String message,
