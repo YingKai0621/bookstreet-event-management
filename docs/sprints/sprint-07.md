@@ -152,6 +152,11 @@ Minimum fields:
 - active/inactive status;
 - creation/update audit timestamps.
 
+The Sprint 7 persisted/API Badge model is limited to `name`, optional `description`,
+`requiredPoints`, optional `iconUrl`, `isActive` and audit/identity fields. Placeholder frontend
+fields such as `code`, `nameEn`, `perks` and `iconType` are not Sprint 7 persistence requirements
+and must be removed or derived locally rather than sent to phantom APIs.
+
 Badge names and thresholds are business data. Sprint 7 must not introduce a generic
 `system_settings` table to store them.
 
@@ -178,9 +183,13 @@ The approved prospective/backfill behavior of Badge configuration changes is rec
   Assignment is created.
 - The Partner may display the QR for its assigned Booth through the already authorized Assignment
   view.
-- The displayed QR should encode an application scan URL containing only the opaque token.
+- The displayed QR encodes a frontend application route that keeps the opaque token in a URI
+  fragment or equivalent client-only state, not in a backend path/query that default access logs
+  record.
 - The Participant authenticates before the command is evaluated; after login, the application may
-  safely resume the pending scan URL.
+  safely resume the pending client-side scan state.
+- The frontend submits the token to the authenticated scan command in the HTTPS request body;
+  request-body logging must redact or omit that field.
 - The backend resolves Event, Booth, Assignment, Partner and Participant from trusted persistence
   and Session data.
 
@@ -245,6 +254,12 @@ An exact duplicate scan returns the already-achieved visit result and current re
 must not surface as a generic server error. Races that hit a unique constraint must be recovered
 into the same idempotent outcome or a stable domain conflict; they must never leak SQL details.
 
+Admin Badge mutation, scan reward evaluation and backfill all lock affected Badge rows by ascending
+Badge identity and recheck `isActive`/`requiredPoints` under lock. If Admin mutation commits first,
+the new rule controls a later evaluation. If an award commits first, its UserBadge remains earned.
+Scan and backfill racing for the same User/Badge converge through the unique UserBadge identity;
+only the transaction that creates it creates the matching Notification.
+
 ## 8. Reward evaluation
 
 For a newly accepted BoothVisit, the transaction performs:
@@ -273,6 +288,21 @@ PointTransaction is not an acceptable committed state.
 - the scan response still provides immediate unlock feedback without waiting for inbox refresh.
 
 No Badge broadcast, notification preference, email/push delivery or generic composer is included.
+
+Badge eligibility backfill uses one shared processor:
+
+- creating an active Badge, lowering an active threshold or reactivating a Badge schedules the
+  processor only after the Badge mutation commits;
+- one batch handles at most 100 eligible Users with missing UserBadge rows in stable User order;
+- each batch commits independently and produces processed, awarded and remaining-eligible counts;
+- the after-commit processor automatically continues successive batches until remaining eligibility
+  reaches zero or a batch fails;
+- an idempotent Admin synchronization command returns the batch counts and is the explicit
+  resume/retry path after interruption;
+- the Admin view exposes remaining eligibility and can invoke that command until it reaches zero;
+- no `badge_award_jobs` or generic settings table is required for Sprint 7; current progress is
+  derived from eligible Users still missing the UserBadge;
+- scan/backfill concurrency follows the Badge/UserBadge locking and uniqueness rules above.
 
 ## 9. Role-facing target state
 
@@ -436,7 +466,7 @@ The Project Owner approved the following decisions on 2026-10-28:
 | D1 | Point amount for one first valid BoothVisit | Exactly 10 Points from server property `rewards.booth-visit-points=10`; no generic settings UI | BR-48 requires configured behavior, while MVP explicitly excludes generic System Settings; PointTransaction snapshots the awarded amount so later property changes do not rewrite history |
 | D2 | Booth QR time window | Event `ONGOING` and `[startAt, endAt)` only | Prevents remote/pre-event reward farming and gives an unambiguous backend clock rule |
 | D3 | Registration deadline during on-site Booth scan | Allow auto-create/reactivation during the valid on-site scan window | BR-12 expects auto-registration from a valid scan; the visit itself proves on-site participation |
-| D4 | New Badge or lowered/reactivated threshold | Backfill eligible Users in a bounded, retry-safe Admin command/after-commit job, not in an unbounded request transaction | Keeps BR-50 true for existing totals without holding one Admin HTTP transaction across all Users |
+| D4 | New Badge or lowered/reactivated threshold | After the Badge mutation commits, run the shared backfill processor in batches of at most 100 Users; expose an idempotent Admin resume command with processed/awarded/remaining counts; derive remaining work instead of adding a job table | Keeps BR-50 true for existing totals, survives interruption through explicit retry and avoids one unbounded transaction |
 | D5 | Badge deactivation or raised threshold | Never revoke an already earned UserBadge; apply the new rule prospectively | Preserves historical achievement and avoids destructive reward history |
 | D6 | Organizer monitoring depth | Event summary, Booth grouping and paginated visit rows only | Completes the UC-O07 slice without pulling the broad UC-O08 report module into Sprint 7 |
 | D7 | Badge unlock notification | Create one durable `BADGE_UNLOCKED` Notification for every newly persisted UserBadge, including scan and backfill awards | Provides an auditable Participant-facing unlock event while keeping notification scope narrow and idempotent |
