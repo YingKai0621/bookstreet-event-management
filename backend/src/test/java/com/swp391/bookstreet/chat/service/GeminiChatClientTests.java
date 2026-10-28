@@ -28,4 +28,30 @@ class GeminiChatClientTests {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("502");
     }
+
+    @Test
+    void acceptsOnlyBoundedClassificationValues() {
+        var valid = mapper.readTree("""
+                {"intent":"ACTIVITY","timeframe":"THIS_WEEKEND","availableOnly":true}
+                """);
+        var invalidIntent = mapper.readTree("""
+                {"intent":"RUN_SQL","timeframe":"NONE","availableOnly":false}
+                """);
+        var invalidFlag = mapper.readTree("""
+                {"intent":"ACTIVITY","timeframe":"NONE","availableOnly":"true"}
+                """);
+        var extraField = mapper.readTree("""
+                {"intent":"ACTIVITY","timeframe":"NONE","availableOnly":false,
+                 "sql":"SELECT * FROM users"}
+                """);
+
+        assertThat(GeminiChatClient.parseClassification(valid).intent())
+                .isEqualTo(ChatClassification.Kind.ACTIVITY);
+        assertThat(GeminiChatClient.parseClassification(invalidIntent).intent())
+                .isEqualTo(ChatClassification.Kind.UNKNOWN);
+        assertThat(GeminiChatClient.parseClassification(invalidFlag).intent())
+                .isEqualTo(ChatClassification.Kind.UNKNOWN);
+        assertThat(GeminiChatClient.parseClassification(extraField).intent())
+                .isEqualTo(ChatClassification.Kind.UNKNOWN);
+    }
 }
