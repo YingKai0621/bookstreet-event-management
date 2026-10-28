@@ -76,10 +76,11 @@ note/
 /frontend/test-results/
 /frontend/blob-report/
 
-# Reviewed Sprint 6 planning artifacts are versioned despite the global *.md rule.
+# Reviewed Sprint planning artifacts are versioned despite the global *.md rule.
 !docs/use-cases/sprint-06-use-case-specifications.md
 !docs/use-cases/sprint-07-use-case-specifications.md
 !docs/api/sprint-06-api-contract.md
+!docs/api/sprint-07-api-contract.md
 !docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md
 !docs/development/FRONTEND_ROUTING_REMEDIATION_PLAN.md
 !docs/development/SPRINT_06_PR1_PARTICIPANT_ATTENDANCE_FRONTEND_PLAN.md
