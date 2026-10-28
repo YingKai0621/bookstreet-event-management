@@ -1,0 +1,63 @@
+Sprint 7 — Developer B implementation and review notes
+
+Scope: S7-3A Organizer BoothVisit monitoring and S7-3B Admin Badge/backfill.
+Primary criteria: AC-O07-S7-01..06 and AC-A03-01..12.
+
+Ownership coordination for this implementation:
+- Developer B owns the new reward management controllers, queries, DTOs, orchestration,
+  Organizer monitoring panel, Admin Badge catalog and their isolated frontend adapters.
+- AdminPortal.tsx wiring is part of the Admin Badge slice. Its Badge screen uses the
+  existing authenticated account for the header and avoids unsupported Admin APIs.
+- organizerRoutes.ts needs a narrow compatibility change: retain view=booth in the
+  Participant-management URL allowlist. No top-level route or App.tsx change is needed.
+- ParticipantManagementView.tsx adds the Event-scoped Booth tab and defers Activity
+  requests until the Activity tab is opened; existing Attendance commands are retained.
+- No edit to Developer A's migrations, reward entities, command repositories, award
+  service or Notification writer. Every backfill award calls BadgeAwardService.
+- No edit to Developer C's Participant reward/Notification screens.
+- The shared RestAccessDeniedHandler needs a path-scoped CSRF code branch for
+  /api/v1/admin/badges. The existing handler returns ACCESS_DENIED for every
+  CSRF failure, while the Sprint 7 Badge contract requires CSRF_INVALID.
+  Restrict the branch to this feature so Sprint 1-6 responses stay stable.
+
+Database constraint from the user:
+- Do not add or edit migrations, including seed migrations.
+- Tests use a dedicated *_event_test database with a generated schema and disposable
+  fixtures. No test fixture is written to the shared application schema.
+- No additional production/demo seed is necessary for this feature: Admin can create
+  Badge definitions through the new UI/API and real Booth scans supply monitoring data.
+- Any future requested demo seed must be supplied as an explicit SQL command for the
+  user to run; it must not become a Flyway migration.
+
+Known baseline documentation drift:
+AI_CONTEXT.md and CURRENT_SPRINT.md still describe V12/rewards as unimplemented.
+Main at 2178ba6 already contains the V12 foundation and Participant reward APIs.
+Shared context/status files have not been edited.
+
+Validation evidence, 2026-10-28:
+- PostgreSQL-backed focused Java suite: 55 tests, 0 failures, 0 errors, 0 skips.
+  Includes clean/upgrade V12 migration, Hibernate validation, BrowserSecurity
+  regression and Developer B's Organizer/Admin integration/concurrency tests.
+- Real browser/real API smoke: PASS with isolated PostgreSQL schema and actual
+  Spring Session/CSRF. First and duplicate Booth scans, Organizer owned/empty
+  views, foreign Event concealment, Admin create/explicit synchronize/retry,
+  Participant Badge progress and exactly one Badge Notification were verified.
+- Playwright UI suite: 13 passed (8 Developer B, 5 Organizer Sprint 6 regression).
+  Includes desktop/phone layouts, empty/forbidden/conflict/retry states, route
+  normalization, Event switching and no idle request storm.
+- Frontend production build: PASS. Lint: PASS with existing non-fatal warnings.
+- Visual smoke captures against the real API, with generated test accounts only:
+  assets/sprint7-developer-b/organizer-groups.png
+  assets/sprint7-developer-b/organizer-visits.png
+  assets/sprint7-developer-b/organizer-empty.png
+  assets/sprint7-developer-b/admin-create.png
+  assets/sprint7-developer-b/admin-pending-sync.png
+  assets/sprint7-developer-b/admin-synchronized.png
+  assets/sprint7-developer-b/admin-mobile.png
+- The default local bookstreet_db database has an older, unrelated applied V12
+  seed checksum. The focused suite used a separate *_event_test database to
+  preserve that local data and validate the official V12 migration. Do not
+  repair the old V12 checksum in place: that would mark the reward schema as
+  applied without actually creating it. A fresh development database can be
+  created with CREATE DATABASE bookstreet_s7_dev; then point local POSTGRES_DB
+  to it so Flyway applies the official migration chain.

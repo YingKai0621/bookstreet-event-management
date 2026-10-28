@@ -15,6 +15,7 @@ import { Language } from '../../types';
 import type { OrganizerActivityResponse } from '../../types/activity';
 import { OrganizerEvent } from '../../types/organizer';
 import { ListPagination } from '../ui/ListPagination';
+import { BoothVisitMonitoringPanel } from './BoothVisitMonitoringPanel';
 import './ParticipantManagementView.css';
 
 interface ParticipantManagementViewProps {
@@ -24,7 +25,7 @@ interface ParticipantManagementViewProps {
   onSelectEventId: (id: string) => void;
 }
 
-type ParticipantView = 'event' | 'activity';
+type ParticipantView = 'event' | 'activity' | 'booth';
 type EventRegistrationStatus = 'all' | 'ACTIVE' | 'LEFT';
 type ActivityOutcomeFilter = 'all' | OrganizerParticipationOutcome;
 type AttendanceTarget = 'VALID' | 'VOIDED';
@@ -94,7 +95,7 @@ function outcomeClass(outcome: OrganizerParticipationOutcome): string {
 
 export const ParticipantManagementView: React.FC<ParticipantManagementViewProps> = ({ language, events, selectedEventId, onSelectEventId }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const view: ParticipantView = searchParams.get('view') === 'activity' ? 'activity' : 'event';
+  const view: ParticipantView = searchParams.get('view') === 'booth' ? 'booth' : searchParams.get('view') === 'activity' ? 'activity' : 'event';
   const eventStatus = (['ACTIVE', 'LEFT'].includes(searchParams.get('status') || '') ? searchParams.get('status') : 'all') as EventRegistrationStatus;
   const outcome = (['ACTIVE', 'CANCELLED', 'ATTENDED', 'NO_SHOW'].includes(searchParams.get('outcome') || '') ? searchParams.get('outcome') : 'all') as ActivityOutcomeFilter;
   const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
@@ -137,7 +138,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (!selectedEventId || selectedEventId === 'all') { setActivities([]); return; }
+    if (view !== 'activity' || !selectedEventId || selectedEventId === 'all') { setActivities([]); return; }
     let active = true;
     setIsLoadingActivities(true);
     organizerApi.listActivities({ eventId: Number(selectedEventId), page: 0, size: 100, sort: 'startAt,asc' })
@@ -145,7 +146,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
       .catch(error => { if (active) { setActivities([]); setLoadError(errorMessage(error, 'Không tải được danh sách hoạt động.')); } })
       .finally(() => { if (active) setIsLoadingActivities(false); });
     return () => { active = false; };
-  }, [selectedEventId, reloadKey]);
+  }, [selectedEventId, reloadKey, view]);
 
   useEffect(() => {
     if (view !== 'activity' || activities.length === 0) return;
@@ -155,7 +156,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   }, [activities, activityId, updateQuery, view]);
 
   useEffect(() => {
-    if (!selectedEventId || selectedEventId === 'all' || (view === 'activity' && !activityId)) return;
+    if (view === 'booth' || !selectedEventId || selectedEventId === 'all' || (view === 'activity' && !activityId)) return;
     let active = true;
     setIsLoadingRows(true);
     setLoadError('');
@@ -191,7 +192,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   }, [successMessage]);
 
   const switchView = (nextView: ParticipantView) => {
-    updateQuery({ view: nextView === 'activity' ? 'activity' : null, activityId: nextView === 'activity' ? activityId || null : null, status: null, outcome: null, search: null, page: null });
+    updateQuery({ view: nextView === 'event' ? null : nextView, activityId: nextView === 'activity' ? activityId || null : null, status: null, outcome: null, search: null, page: null });
     setSearchInput('');
   };
 
@@ -243,7 +244,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
       <header className='participant-page-header'>
         <div>
           <h1 className='organizer-view-title workspace-page-title'>{language === 'vi' ? 'Người tham gia' : 'Participants'}</h1>
-          <p className='organizer-view-sub workspace-page-subtitle'>{language === 'vi' ? 'Theo dõi đăng ký sự kiện, đăng ký hoạt động và lịch sử điều chỉnh điểm danh.' : 'Track event and activity registrations with attendance correction history.'}</p>
+          <p className='organizer-view-sub workspace-page-subtitle'>{language === 'vi' ? 'Theo dõi đăng ký sự kiện, hoạt động, điểm danh và lượt ghé gian hàng.' : 'Track event and activity registrations, attendance, and Booth visits.'}</p>
         </div>
         <label className='participant-event-select'>
           <span>{language === 'vi' ? 'Sự kiện' : 'Event'}</span>
@@ -255,8 +256,9 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
       <div className='participant-view-tabs' role='tablist' aria-label='Phạm vi người tham gia'>
         <button type='button' role='tab' aria-selected={view === 'event'} className={view === 'event' ? 'is-active' : ''} onClick={() => switchView('event')}>Đăng ký sự kiện</button>
         <button type='button' role='tab' aria-selected={view === 'activity'} className={view === 'activity' ? 'is-active' : ''} onClick={() => switchView('activity')}>Đăng ký hoạt động</button>
+        <button type='button' role='tab' aria-selected={view === 'booth'} className={view === 'booth' ? 'is-active' : ''} onClick={() => switchView('booth')}>Lượt ghé gian hàng</button>
       </div>
-      <section className='participant-list-card'>
+      {view === 'booth' ? <BoothVisitMonitoringPanel key={selectedEventId} eventId={selectedEventId} /> : <section className='participant-list-card'>
         <div className='participant-list-heading'>
           <div><h2>{view === 'event' ? 'Danh sách tham gia sự kiện' : 'Danh sách tham gia hoạt động'}</h2><p>{currentPage.totalElements.toLocaleString('vi-VN')} bản ghi theo bộ lọc hiện tại</p></div>
           <button type='button' className='participant-refresh-button' onClick={() => setReloadKey(value => value + 1)} disabled={isLoadingRows}><RefreshCw size={16} /> Làm mới</button>
@@ -314,7 +316,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
         {!loadError && !isLoadingRows && currentPage.totalPages > 1 && (
           <div className='participant-pagination'><span>{currentPage.totalElements.toLocaleString('vi-VN')} bản ghi</span><ListPagination page={page} pages={currentPage.totalPages} onPage={next => updateQuery({ page: next > 1 ? String(next) : null })} /></div>
         )}
-      </section>
+      </section>}
       {selectedRegistrationId !== null && (
         <div className='participant-drawer-backdrop' onMouseDown={() => { if (!isSavingCorrection) setSelectedRegistrationId(null); }}>
           <aside className='participant-drawer' role='dialog' aria-modal='true' aria-labelledby='participant-detail-title' onMouseDown={event => event.stopPropagation()}>
