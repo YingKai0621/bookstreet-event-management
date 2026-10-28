@@ -15,10 +15,9 @@ public interface BadgeRepository extends JpaRepository<Badge, Long> {
             select badge
             from Badge badge
             where badge.active = true
-              and badge.requiredPoints <= :totalPoints
             order by badge.badgeId
             """)
-    List<Badge> findActiveEligibleForUpdate(@Param("totalPoints") long totalPoints);
+    List<Badge> findAllActiveForUpdate();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -29,4 +28,6 @@ public interface BadgeRepository extends JpaRepository<Badge, Long> {
     Optional<Badge> findByBadgeIdForUpdate(@Param("badgeId") Long badgeId);
 
     boolean existsByNameIgnoreCase(String name);
+
+    long countByActiveTrue();
 }

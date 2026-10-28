@@ -52,7 +52,7 @@ public interface ParticipantNotificationRepository
 
     @Modifying(flushAutomatically = true)
     @Query(value = """
-            INSERT INTO notifications (
+            INSERT INTO {h-schema}notifications (
                 recipient_user_id,
                 notification_type,
                 event_id,

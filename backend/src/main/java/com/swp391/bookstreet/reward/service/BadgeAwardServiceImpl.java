@@ -6,6 +6,7 @@ import com.swp391.bookstreet.notification.service.ParticipantNotificationWriter;
 import com.swp391.bookstreet.reward.entity.Badge;
 import com.swp391.bookstreet.reward.entity.UserBadge;
 import com.swp391.bookstreet.reward.repository.BadgeRepository;
+import com.swp391.bookstreet.reward.repository.PointTransactionRepository;
 import com.swp391.bookstreet.reward.repository.UserBadgeRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,34 +22,36 @@ public class BadgeAwardServiceImpl implements BadgeAwardService {
     private static final String NOTIFICATION_TITLE = "Bạn vừa mở khóa huy hiệu";
 
     private final BadgeRepository badgeRepository;
+    private final PointTransactionRepository pointTransactionRepository;
     private final UserBadgeRepository userBadgeRepository;
     private final ParticipantNotificationWriter notificationWriter;
 
     public BadgeAwardServiceImpl(
             BadgeRepository badgeRepository,
+            PointTransactionRepository pointTransactionRepository,
             UserBadgeRepository userBadgeRepository,
             ParticipantNotificationWriter notificationWriter) {
         this.badgeRepository = badgeRepository;
+        this.pointTransactionRepository = pointTransactionRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.notificationWriter = notificationWriter;
     }
 
     @Override
     @Transactional
-    public BadgeAwardResult awardEligibleBadges(
-            Long userId, long totalPoints, Instant earnedAt) {
+    public BadgeAwardResult awardEligibleBadges(Long userId, Instant earnedAt) {
         Long normalizedUserId = positive(userId, "userId");
-        requireNonNegative(totalPoints);
         Instant normalizedEarnedAt = normalizeTime(earnedAt);
 
-        List<Badge> lockedBadges = badgeRepository.findActiveEligibleForUpdate(totalPoints);
+        List<Badge> lockedBadges = badgeRepository.findAllActiveForUpdate();
+        long totalPoints = pointTransactionRepository.sumPointsByUserId(normalizedUserId);
         List<AwardedBadge> awards = new ArrayList<>();
         for (Badge badge : lockedBadges) {
             awardIfStillEligible(normalizedUserId, totalPoints, normalizedEarnedAt, badge)
                     .ifPresent(awards::add);
         }
         awards.sort(Comparator.comparing(AwardedBadge::badgeId));
-        return new BadgeAwardResult(awards);
+        return new BadgeAwardResult(awards, totalPoints);
     }
 
     @Override
@@ -65,7 +68,7 @@ public class BadgeAwardServiceImpl implements BadgeAwardService {
                         normalizedUserId, totalPoints, normalizedEarnedAt, badge))
                 .stream()
                 .toList();
-        return new BadgeAwardResult(awards);
+        return new BadgeAwardResult(awards, totalPoints);
     }
 
     private java.util.Optional<AwardedBadge> awardIfStillEligible(

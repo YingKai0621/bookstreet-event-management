@@ -68,7 +68,6 @@ import {
   ExtendedHeritageProfile,
   Language,
   ParticipantActivity,
-  ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
@@ -306,7 +305,6 @@ export function App() {
   const [participantParticipationError, setParticipantParticipationError] = useState('');
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
   const participationRefresh = useParticipationRefresh((isParticipantRoute || isPublicRoute) && isParticipantAuthenticated && !isParticipantAttendanceScanRoute);
-  const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
   const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
   const [participantCertificatesError, setParticipantCertificatesError] = useState('');
@@ -332,7 +330,6 @@ export function App() {
     setParticipantActivities([]);
     setParticipantParticipationLoading(true);
     setParticipantParticipationError('');
-    setParticipantBadges([]);
     setParticipantCertificates([]);
     setParticipantCertificatesLoading(false);
     setParticipantCertificatesError('');
@@ -788,8 +785,6 @@ export function App() {
           <Route path="/participant/rewards" element={
             <RewardsPage
               language={language}
-              profile={participantProfile}
-              badges={participantBadges}
             />
           } />
           <Route path="/participant/certificates" element={

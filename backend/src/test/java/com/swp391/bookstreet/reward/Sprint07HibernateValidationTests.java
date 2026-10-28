@@ -1,8 +1,11 @@
 package com.swp391.bookstreet.reward;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.swp391.bookstreet.common.exception.ApiException;
 import com.swp391.bookstreet.reward.service.ParticipantBoothVisitService;
+import com.swp391.bookstreet.reward.service.ParticipantRewardQueryService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -32,6 +35,7 @@ class Sprint07HibernateValidationTests {
 
     @Autowired JdbcTemplate jdbc;
     @Autowired ParticipantBoothVisitService boothVisitService;
+    @Autowired ParticipantRewardQueryService rewardQueryService;
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -64,6 +68,12 @@ class Sprint07HibernateValidationTests {
         long organizerId = insertUser("organizer");
         long partnerId = insertUser("partner");
         long participantId = insertUser("participant");
+        jdbc.update("""
+                insert into %s(name, required_points, is_active, created_at, updated_at)
+                values ('First visit', 10, true, ?, ?),
+                       ('Booth explorer', 20, true, ?, ?)
+                """.formatted(table("badges")), Timestamp.from(now), Timestamp.from(now),
+                Timestamp.from(now), Timestamp.from(now));
         long eventId = jdbc.queryForObject("""
                 insert into %s(
                     organizer_user_id, name, start_at, end_at,
@@ -137,6 +147,18 @@ class Sprint07HibernateValidationTests {
         try {
             var first = boothVisitService.scan(token.toString());
             var duplicate = boothVisitService.scan(token.toString());
+            var summary = rewardQueryService.summary();
+            var transactions = rewardQueryService.pointTransactions(
+                    0, 20, "createdAt,desc", eventId, boothId);
+            var unfilteredTransactions = rewardQueryService.pointTransactions(
+                    0, 20, "visitedAt,desc", null, null);
+            var badges = rewardQueryService.badges(0, 20, "ALL", null);
+            var earnedBadges = rewardQueryService.badges(
+                    0, 20, "EARNED", "earnedAt,desc");
+            var progressBadges = rewardQueryService.badges(
+                    0, 20, "IN_PROGRESS", "name,asc");
+            var emptyFilter = rewardQueryService.pointTransactions(
+                    0, 20, "points,asc", Long.MAX_VALUE, null);
 
             assertThat(first.alreadyVisited()).isFalse();
             assertThat(first.newlyAwardedPoints()).isEqualTo(10);
@@ -146,6 +168,32 @@ class Sprint07HibernateValidationTests {
             assertThat(duplicate.boothVisit().boothVisitId())
                     .isEqualTo(first.boothVisit().boothVisitId());
             assertThat(duplicate.newlyAwardedPoints()).isZero();
+            assertThat(first.newlyUnlockedBadges()).hasSize(1);
+            assertThat(summary.totalPoints()).isEqualTo(10);
+            assertThat(summary.totalVisits()).isOne();
+            assertThat(summary.earnedBadgeCount()).isOne();
+            assertThat(summary.activeBadgeCount()).isEqualTo(2);
+            assertThat(summary.nextBadge().badgeId()).isNotNull();
+            assertThat(summary.nextBadge().requiredPoints()).isEqualTo(20);
+            assertThat(transactions.totalElements()).isOne();
+            assertThat(unfilteredTransactions.totalElements()).isOne();
+            assertThat(transactions.content()).singleElement().satisfies(transaction -> {
+                assertThat(transaction.points()).isEqualTo(10);
+                assertThat(transaction.event().eventId()).isEqualTo(eventId);
+                assertThat(transaction.booth().boothId()).isEqualTo(boothId);
+                assertThat(transaction.booth().code()).isEqualTo("S7-A01");
+            });
+            assertThat(badges.content()).extracting("state")
+                    .containsExactly("EARNED", "IN_PROGRESS");
+            assertThat(earnedBadges.content()).singleElement()
+                    .satisfies(badge -> assertThat(badge.earned()).isTrue());
+            assertThat(progressBadges.content()).singleElement()
+                    .satisfies(badge -> assertThat(badge.earned()).isFalse());
+            assertThat(emptyFilter.content()).isEmpty();
+            assertThatThrownBy(() -> rewardQueryService.badges(0, 20, "UNKNOWN", null))
+                    .isInstanceOfSatisfying(ApiException.class,
+                            error -> assertThat(error.getCode())
+                                    .isEqualTo("INVALID_ENUM_VALUE"));
             assertThat(jdbc.queryForObject("select count(*) from " + table("booth_visits"),
                     Long.class)).isOne();
             assertThat(jdbc.queryForObject(

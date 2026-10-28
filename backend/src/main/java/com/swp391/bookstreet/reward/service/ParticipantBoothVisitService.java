@@ -104,9 +104,9 @@ public class ParticipantBoothVisitService {
         int visitPoints = rewardProperties.getBoothVisitPoints();
         pointRepository.saveAndFlush(PointTransaction.award(
                 visit.getBoothVisitId(), visitPoints, now));
-        long totalPoints = pointRepository.sumPointsByUserId(userId);
-        List<ParticipantBadgeResponse> unlocked = badgeAwardService
-                .awardEligibleBadges(userId, totalPoints, now)
+        BadgeAwardResult badgeAward = badgeAwardService.awardEligibleBadges(userId, now);
+        long totalPoints = badgeAward.totalPoints();
+        List<ParticipantBadgeResponse> unlocked = badgeAward
                 .awardedBadges().stream()
                 .map(ParticipantBadgeResponse::newlyEarned)
                 .toList();

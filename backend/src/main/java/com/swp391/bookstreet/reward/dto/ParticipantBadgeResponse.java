@@ -16,6 +16,15 @@ public record ParticipantBadgeResponse(
         long remainingPoints,
         int progressPercent) {
 
+    public static int calculateProgressPercent(long totalPoints, int requiredPoints) {
+        if (totalPoints < 0) throw new IllegalArgumentException("totalPoints must not be negative");
+        if (requiredPoints <= 0) {
+            throw new IllegalArgumentException("requiredPoints must be positive");
+        }
+        if (totalPoints >= requiredPoints) return 100;
+        return (int) (totalPoints * 100L / requiredPoints);
+    }
+
     public static ParticipantBadgeResponse newlyEarned(AwardedBadge badge) {
         return new ParticipantBadgeResponse(
                 badge.badgeId(), badge.name(), badge.description(), badge.iconUrl(),

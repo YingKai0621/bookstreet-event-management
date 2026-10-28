@@ -42,6 +42,7 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
   let authenticated = options.authenticated ?? true;
   let scanCount = 0;
   const scanBodies: unknown[] = [];
+  const rewardRequests: string[] = [];
   const replies = [...(options.scanReplies ?? [{ status: 200, body: successfulScan }])];
 
   await page.route('**/api/v1/**', async route => {
@@ -76,6 +77,50 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
     if (path === '/api/v1/participant/notifications/unread-count') {
       return json(route, { unreadCount: 0 });
     }
+    if (path === '/api/v1/participant/rewards/summary') {
+      rewardRequests.push(url.toString());
+      return json(route, {
+        totalPoints: 30,
+        totalVisits: 3,
+        earnedBadgeCount: 1,
+        activeBadgeCount: 2,
+        nextBadge: {
+          badgeId: 2, name: 'Nhà thám hiểm', description: null, iconUrl: null,
+          requiredPoints: 50, isActive: true, state: 'IN_PROGRESS', earned: false,
+          earnedAt: null, remainingPoints: 20, progressPercent: 60,
+        },
+      });
+    }
+    if (path === '/api/v1/participant/rewards/badges') {
+      rewardRequests.push(url.toString());
+      const earned = {
+        badgeId: 1, name: 'Khởi đầu', description: 'Ghé gian hàng đầu tiên.', iconUrl: null,
+        requiredPoints: 10, isActive: true, state: 'EARNED', earned: true,
+        earnedAt: '2026-10-28T08:20:00Z', remainingPoints: 0, progressPercent: 100,
+      };
+      const progress = {
+        badgeId: 2, name: 'Nhà thám hiểm', description: null, iconUrl: null,
+        requiredPoints: 50, isActive: true, state: 'IN_PROGRESS', earned: false,
+        earnedAt: null, remainingPoints: 20, progressPercent: 60,
+      };
+      const content = url.searchParams.get('state') === 'EARNED' ? [earned] : [earned, progress];
+      return json(route, { content, page: 0, size: 12, totalElements: content.length, totalPages: 1 });
+    }
+    if (path === '/api/v1/participant/rewards/point-transactions') {
+      rewardRequests.push(url.toString());
+      const pageNumber = Number(url.searchParams.get('page') || 0);
+      const content = pageNumber === 0 ? [{
+        pointTransactionId: 901,
+        boothVisitId: 701,
+        boothAssignmentId: 601,
+        points: 10,
+        createdAt: '2026-10-28T08:20:00Z',
+        visitedAt: '2026-10-28T08:20:00Z',
+        event: { eventId: 7, name: 'Ngày hội sách cuối tuần' },
+        booth: { boothId: 22, code: 'A01', name: 'Gian hàng Nhà sách Trẻ' },
+      }] : [];
+      return json(route, { content, page: pageNumber, size: 10, totalElements: 11, totalPages: 2 });
+    }
     if (path === '/api/v1/participant/booth-visits/scan' && method === 'POST') {
       scanCount += 1;
       scanBodies.push(route.request().postDataJSON());
@@ -90,6 +135,7 @@ async function mockBoothScanApp(page: Page, options: MockOptions = {}) {
   return {
     scanCount: () => scanCount,
     scanBodies: () => scanBodies,
+    rewardRequests: () => rewardRequests,
   };
 }
 
@@ -205,4 +251,40 @@ test('scan result is mobile-readable without horizontal overflow', async ({ page
   }));
   expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
   await expect(page.locator('.booth-scan-card')).toBeInViewport();
+});
+
+test('participant rewards renders real summary, badges and paged point history', async ({ page }) => {
+  const state = await mockBoothScanApp(page);
+
+  await page.goto('/participant/rewards');
+
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+  await expect(page.getByText('Nhà thám hiểm').first()).toBeVisible();
+  await expect(page.getByText('Gian hàng Nhà sách Trẻ')).toBeVisible();
+  await expect(page.getByText('+10')).toBeVisible();
+
+  await page.getByLabel('Lọc huy hiệu').selectOption('EARNED');
+  await expect.poll(() => state.rewardRequests().some(request => request.includes('state=EARNED')))
+    .toBe(true);
+  await expect(page.getByText('Khởi đầu')).toBeVisible();
+
+  const history = page.locator('.reward-history-section');
+  await history.getByRole('button', { name: 'Sau' }).click();
+  await expect.poll(() => state.rewardRequests().some(request => request.includes('page=1')))
+    .toBe(true);
+  await expect(history.getByText('Chưa có giao dịch điểm')).toBeVisible();
+});
+
+test('participant rewards remains readable on a phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockBoothScanApp(page);
+
+  await page.goto('/participant/rewards');
+  await expect(page.getByRole('heading', { name: 'Điểm & Huy hiệu' })).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }));
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
 });

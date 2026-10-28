@@ -23,7 +23,7 @@ spring:
 
   flyway:
     enabled: true
-    locations: ${SPRING_FLYWAY_LOCATIONS:classpath:db/migration}
+    locations: classpath:db/migration
 
   mail:
     host: ${MAIL_HOST:localhost}

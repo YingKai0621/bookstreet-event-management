@@ -9,6 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BoothVisitRepository extends JpaRepository<BoothVisit, Long> {
+    @Query("""
+            select count(visit)
+            from BoothVisit visit, EventRegistration registration
+            where visit.eventRegistrationId = registration.eventRegistrationId
+              and registration.userId = :userId
+            """)
+    long countByUserId(@Param("userId") Long userId);
+
     Optional<BoothVisit> findByEventRegistrationIdAndBoothAssignmentId(
             Long eventRegistrationId, Long boothAssignmentId);
 

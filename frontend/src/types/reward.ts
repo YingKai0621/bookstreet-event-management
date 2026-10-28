@@ -37,3 +37,45 @@ export interface BoothScanResponse {
   alreadyVisited: boolean;
   newlyUnlockedBadges: ParticipantBadgeResponse[];
 }
+
+export interface RewardSummaryResponse {
+  totalPoints: number;
+  totalVisits: number;
+  earnedBadgeCount: number;
+  activeBadgeCount: number;
+  nextBadge: ParticipantBadgeResponse | null;
+}
+
+export interface RewardBadgePageResponse {
+  content: ParticipantBadgeResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface PointTransactionResponse {
+  pointTransactionId: number;
+  boothVisitId: number;
+  boothAssignmentId: number;
+  points: number;
+  createdAt: string;
+  visitedAt: string;
+  event: {
+    eventId: number;
+    name: string;
+  };
+  booth: {
+    boothId: number;
+    code: string;
+    name: string;
+  };
+}
+
+export interface RewardPointPageResponse {
+  content: PointTransactionResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}

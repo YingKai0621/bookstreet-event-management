@@ -7,6 +7,7 @@ import com.swp391.bookstreet.notification.service.ParticipantNotificationWriter;
 import com.swp391.bookstreet.reward.entity.Badge;
 import com.swp391.bookstreet.reward.entity.UserBadge;
 import com.swp391.bookstreet.reward.repository.BadgeRepository;
+import com.swp391.bookstreet.reward.repository.PointTransactionRepository;
 import com.swp391.bookstreet.reward.repository.UserBadgeRepository;
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +30,7 @@ class BadgeAwardServiceImplTests {
     private static final Instant EARNED_AT = Instant.parse("2026-10-28T08:20:00.123456Z");
 
     private BadgeRepository badgeRepository;
+    private PointTransactionRepository pointTransactionRepository;
     private UserBadgeRepository userBadgeRepository;
     private ParticipantNotificationWriter notificationWriter;
     private BadgeAwardServiceImpl service;
@@ -36,10 +38,12 @@ class BadgeAwardServiceImplTests {
     @BeforeEach
     void setUp() {
         badgeRepository = mock(BadgeRepository.class);
+        pointTransactionRepository = mock(PointTransactionRepository.class);
         userBadgeRepository = mock(UserBadgeRepository.class);
         notificationWriter = mock(ParticipantNotificationWriter.class);
         service = new BadgeAwardServiceImpl(
-                badgeRepository, userBadgeRepository, notificationWriter);
+                badgeRepository, pointTransactionRepository,
+                userBadgeRepository, notificationWriter);
 
         AtomicLong ids = new AtomicLong(100);
         when(userBadgeRepository.saveAndFlush(any(UserBadge.class))).thenAnswer(invocation -> {
@@ -55,15 +59,20 @@ class BadgeAwardServiceImplTests {
     void awardsMissingEligibleBadgesAndCreatesStableNotifications() {
         Badge first = badge(11L, "Người khám phá", 10, true);
         Badge second = badge(19L, "Nhà sưu tầm", 20, true);
-        when(badgeRepository.findActiveEligibleForUpdate(20)).thenReturn(List.of(first, second));
+        when(badgeRepository.findAllActiveForUpdate()).thenReturn(List.of(first, second));
+        when(pointTransactionRepository.sumPointsByUserId(7L)).thenReturn(20L);
         when(userBadgeRepository.existsByUserIdAndBadgeId(7L, 11L)).thenReturn(false);
         when(userBadgeRepository.existsByUserIdAndBadgeId(7L, 19L)).thenReturn(false);
 
-        BadgeAwardResult result = service.awardEligibleBadges(7L, 20, EARNED_AT);
+        BadgeAwardResult result = service.awardEligibleBadges(7L, EARNED_AT);
 
         assertThat(result.awardedBadges())
                 .extracting(AwardedBadge::badgeId)
                 .containsExactly(11L, 19L);
+        assertThat(result.totalPoints()).isEqualTo(20);
+        var lockThenTotal = inOrder(badgeRepository, pointTransactionRepository);
+        lockThenTotal.verify(badgeRepository).findAllActiveForUpdate();
+        lockThenTotal.verify(pointTransactionRepository).sumPointsByUserId(7L);
         var ordered = inOrder(userBadgeRepository, notificationWriter);
         ordered.verify(userBadgeRepository).saveAndFlush(any(UserBadge.class));
         ordered.verify(notificationWriter).write(any(ParticipantNotificationCommand.class));
@@ -87,10 +96,11 @@ class BadgeAwardServiceImplTests {
     @Test
     void existingAwardIsAnIdempotentAchievedResult() {
         Badge badge = badge(11L, "Người khám phá", 10, true);
-        when(badgeRepository.findActiveEligibleForUpdate(10)).thenReturn(List.of(badge));
+        when(badgeRepository.findAllActiveForUpdate()).thenReturn(List.of(badge));
+        when(pointTransactionRepository.sumPointsByUserId(7L)).thenReturn(10L);
         when(userBadgeRepository.existsByUserIdAndBadgeId(7L, 11L)).thenReturn(true);
 
-        BadgeAwardResult result = service.awardEligibleBadges(7L, 10, EARNED_AT);
+        BadgeAwardResult result = service.awardEligibleBadges(7L, EARNED_AT);
 
         assertThat(result.awardedBadges()).isEmpty();
         verify(userBadgeRepository, never()).saveAndFlush(any());

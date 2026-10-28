@@ -88,9 +88,8 @@ class ParticipantBoothVisitServiceTests {
         });
         when(points.saveAndFlush(any(PointTransaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(points.sumPointsByUserId(USER_ID)).thenReturn(30L);
-        when(badgeAwardService.awardEligibleBadges(USER_ID, 30L, NOW))
-                .thenReturn(new BadgeAwardResult(List.of()));
+        when(badgeAwardService.awardEligibleBadges(USER_ID, NOW))
+                .thenReturn(new BadgeAwardResult(List.of(), 30L));
 
         var result = service.scan(TOKEN);
 
@@ -130,7 +129,7 @@ class ParticipantBoothVisitServiceTests {
         assertThat(result.totalPoints()).isEqualTo(40);
         verify(visits, never()).saveAndFlush(any());
         verify(points, never()).saveAndFlush(any());
-        verify(badgeAwardService, never()).awardEligibleBadges(any(), any(Long.class), any());
+        verify(badgeAwardService, never()).awardEligibleBadges(any(), any());
     }
 
     @Test
