@@ -1,109 +1,102 @@
 # Current Sprint
 
-## Sprint 06 Participant Activity Registration and Attendance
+## Sprint 07 Booth Visit, Points and Badge Progression
 
-- Status: `COMPLETED`
-- Activation date: `2026-10-19`
-- Completion date: `2026-10-28`
-- Previous completed Sprint: `Sprint 05 Activity Planning and Partner Proposal Workflow`
+- Status: `ACTIVE`
+- Activation date: `2026-10-28`
+- Previous completed Sprint: `Sprint 06 Participant Activity Registration and Attendance`
 - Implemented schema baseline: immutable Flyway migrations `V1` through `V11`
-- Sprint 6 migrations: `V10` participation schema and `V11` configurable Attendance early-scan
-  window, both already implemented
-- Sprint baseline: `docs/sprints/sprint-06.md`
-- Use Case Specifications: `docs/use-cases/sprint-06-use-case-specifications.md`
-- API Contract: `docs/api/sprint-06-api-contract.md`
+- Planned Sprint 7 migration: `V12__create_sprint7_reward_schema.sql`, owned only by Developer A
+- Sprint baseline: `docs/sprints/sprint-07.md`
+- Current-state audit: `docs/development/SPRINT_07_CURRENT_STATE_AUDIT.md`
+- Use Case Specifications: `docs/use-cases/sprint-07-use-case-specifications.md`
+- API Contract: `docs/api/sprint-07-api-contract.md`
 - Physical ERD: `docs/design/12_Physical_ERD_Report.md`
-- Backend Work Assignment: `docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`
-- Completion Report: `docs/development/SPRINT_06_COMPLETION_REPORT.md`
+- Backend and Frontend Work Assignment: `docs/sprints/SPRINT_07_BACKEND_WORK_ASSIGNMENT.md`
+- Sprint 6 regression reference: `docs/development/SPRINT_06_COMPLETION_REPORT.md`
 
 ## Sprint goal
 
-Connect the official Activity planning delivered in Sprint 5 to the Participant journey:
+Deliver the Booth visit reward journey as one coherent vertical slice:
 
-1. Join/Leave Event and manage My Events.
-2. Register, cancel and re-register capacity-controlled Activities.
-3. Self-scan the shared Activity QR within the authoritative Attendance window.
-4. Finalize No-show, issue/revoke Certificate and preserve audited Organizer correction history.
-5. Submit or update one eligible Activity Rating.
-6. Deliver durable, deduplicated in-app notifications for the approved participation impacts.
-7. Integrate real Participant and Organizer screens without phantom endpoints or mock fallbacks.
+1. Partner displays the existing authorized BoothAssignment QR through a secure frontend route.
+2. An authenticated Participant scans during the exact ongoing Event window.
+3. The first valid visit atomically creates one BoothVisit and one immutable 10-Point transaction.
+4. Cumulative Points unlock eligible Badges and one durable Notification per new UserBadge.
+5. Participant views real reward totals, Point history, Badge progress and unlock notifications.
+6. Organizer monitors Event-owned Booth visits by summary, Booth group and paginated records.
+7. Admin manages Badge definitions and bounded, retry-safe award synchronization.
 
 ## Scope and acceptance baseline
 
-Implementation is limited to the eight approved Use Case slices:
+Implementation is limited to these approved slices:
 
-- `UC-G01` public Activity discovery debt
-- `UC-P01` Event participation
-- `UC-P02` Activity registration
-- `UC-P03` participation tracking, notification and Certificate slice
-- `UC-P04` Activity Rating
-- `UC-O01` Sprint 6 Event update/cancellation slice
-- `UC-O06` Sprint 6 Activity lifecycle/cascade slice
-- `UC-O07` participation monitoring and audited correction
+- `UC-P01` Booth-scan EventRegistration create/reactivate/reuse extension
+- `UC-P03` BoothVisit, PointTransaction, Badge/UserBadge and reward Notification progression
+- `UC-O07` Event-owned BoothVisit monitoring
+- `UC-A03` Badge catalog and bounded synchronization
 
-The active baseline contains **65 Acceptance Criteria** and **30 canonical endpoint headings**.
-Every implementation PR must identify its owned AC IDs and use the exact route, DTO, error-code,
-ownership, lifecycle and idempotency behavior in the approved API Contract.
+The active baseline contains **41 Acceptance Criteria**, **12 new endpoint headings** and extensions
+to **4 existing Participant Notification operations**. Every implementation PR must identify its
+owned AC IDs and follow the exact route, DTO, error-code, transaction, locking, privacy and
+idempotency behavior in the approved API Contract.
 
 ## Ownership
 
-- **Developer A:** sole Sprint 6 migration owner (`V10` and `V11`); shared schema/persistence
-  foundation; canonical public Activity; Event/Activity registration; Event update-freeze and
-  cancellation propagation. Primary owner of 29 AC.
-- **Developer B:** Activity QR Attendance, No-show, Organizer monitoring/correction and Activity
-  lifecycle propagation. Primary owner of 27 AC.
-- **Developer C:** Certificate, Rating, notification query/read operations, downstream cascade
-  commands and all Sprint 6 Participant/Organizer frontend integration. Primary owner of 9 backend
-  AC plus frontend and end-to-end closure evidence.
+- **Developer A:** sole V12/reward-write owner; shared Badge award boundary; Booth scan command;
+  Partner QR surfaces and Participant scan route/page. Primary owner of 20 AC.
+- **Developer B:** Organizer BoothVisit APIs and Event-scoped UI; Admin Badge CRUD, bounded
+  synchronization APIs and UI. Primary owner of 18 AC.
+- **Developer C:** Participant reward read APIs and Rewards/Badge Notification UI; frontend
+  consistency review and cross-role end-to-end closure. Primary owner of 3 AC.
 
-Only Developer A may create or edit the Sprint 6 `V10`/`V11` migrations. Migrations `V1` through
-`V9` are immutable.
+Frontend ownership follows the vertical feature slice. Only one declared owner may edit a shared
+frontend file in one PR. Only Developer A may create or edit Sprint 7 migration V12, reward command
+entities or the backend `BADGE_UNLOCKED` writer.
 
 ## Mandatory delivery order
 
-1. `S6-1` — Developer A: `V10`/`V11`, migration verification and shared persistence foundation.
-2. `S6-2` — Developer A: canonical public Activity and Flow A registration backend.
-3. `S6-3` — Developer C: Flow A frontend integration.
-4. `S6-4` — Developer C: internal Certificate/Rating/Notification cascade commands required by
-   atomic completion and Attendance correction; no Flow C actor API yet.
-5. `S6-5` — Developer B with Developer A Event integration: Flow B backend.
-6. `S6-6` — Developer C: Flow B frontend integration.
-7. `S6-7` — Developer C: Flow C actor/query backend APIs.
-8. `S6-8` — Developer C: Flow C frontend and cross-role regression.
-9. `S6-9` — full migration, concurrency, security, Swagger/browser and regression closure.
+1. `S7-1` — Developer A: V12, reward entities/repositories, configuration, Notification extension
+   and shared Badge award boundary.
+2. `S7-2A` — Developer A: Participant Booth scan write flow and concurrency tests.
+3. `S7-2B` — Developer A: Partner QR integration and mobile-first Participant scan UI.
+4. `S7-3A` — Developer B: Organizer BoothVisit API and Event-scoped monitoring UI.
+5. `S7-3B` — Developer B: Admin Badge/backfill API and management UI.
+6. `S7-3C` — Developer C: Participant reward read API, Rewards UI and Badge Notification support.
+7. `S7-4` — Developer C coordinates cross-role verification, phone-on-LAN smoke, Playwright and
+   documentation closure.
 
-Do not merge around an unmet earlier gate. The detailed handoff rules and completion checks are in
-`SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`.
+S7-3A, S7-3B and S7-3C may proceed in parallel only after S7-1 is merged. Do not merge around an
+unmet earlier dependency. Detailed file ownership and gates are in the approved work assignment.
 
 ## Non-negotiable implementation rules
 
-- PostgreSQL is the durable source of truth; Redis stores Session only.
-- Use the existing Spring Security Session and CSRF model; do not introduce JWT.
-- Backend `Clock` decides every deadline, scan window, completion and No-show boundary.
-- Capacity, scan, completion and correction races require the approved Event-rooted lock order.
-- Public, Partner and Participant responses never expose the raw Activity QR token.
-- Participant identity comes from the authenticated Session, never a caller-selected user ID.
-- Correction history is append-only; cancellation and correction never hard-delete participation
-  evidence.
-- Notifications are in-app, owner-only and deduplicated. Sprint 6 supports list, unread count,
-  mark-one-read and owner-only idempotent mark-all-read; it does not add a generic notification
-  composer.
-- Participant and Organizer UI must use real approved endpoints and must not fall back to demo data
-  after an API error.
+- PostgreSQL is durable truth; Redis stores Session only; do not introduce JWT.
+- Hibernate remains `ddl-auto: validate`; V1 through V11 are immutable.
+- Backend `Clock` decides Event lifecycle and the exact `[startAt, endAt)` scan window.
+- Participant identity comes from Session; no command accepts caller-selected User or reward data.
+- One first visit awards exactly `10` Points from `rewards.booth-visit-points=10`.
+- Point total is ledger-derived; do not add a duplicated User balance.
+- UserBadge and its `BADGE_UNLOCKED` Notification commit atomically and remain historical.
+- Badge backfill processes at most 100 Users per transaction and uses the shared award boundary.
+- Raw Booth QR token stays in client-only fragment state and the HTTPS request body; it must not
+  appear in backend paths, queries, responses, logs, notifications or committed evidence.
+- Keep Activity Attendance QR and every completed Sprint 1-6 behavior backward compatible.
+- Each backend feature connects its smallest usable UI before the vertical slice closes, except the
+  documented shared foundation and scan-API dependency PRs.
 
 ## Explicitly out of scope
 
-- Event QR or Participant-specific QR
-- BoothVisit, points, badges and cross-Event loyalty
-- paid Activity tickets, waitlist, seat transfer or resale
-- Attendance Operator, check-out, GPS, face recognition or device fingerprinting
-- generic announcements, notification preferences, SMS/push or transactional outbox
-- public Certificate verification and bulk Certificate export
-- migration rewrites or unapproved compatibility endpoints
+- Event entrance QR, Participant-specific QR or changes to Activity Attendance QR
+- Point spending, transfer, expiry, redemption or manual adjustment
+- manual Badge award/revoke, Badge hard delete or removal of earned history
+- generic settings, roles/permissions, notification composer or preference system
+- email, SMS or push delivery for Badge unlocks
+- unbounded reporting beyond the approved Organizer BoothVisit monitoring slice
+- rewriting V1 through V11 or introducing a persistent backfill-job table
 
-## Completion result
+## Activation result
 
-All 65 AC are traceably covered in the completion report. Clean `V1 -> V11` and upgrade
-`V9 -> V11` migration paths pass, the PostgreSQL-backed Sprint 6 integration suite and focused
-Participant/Organizer browser suites pass, frontend lint/build pass, and the remaining cross-sprint
-test/frontend warnings are recorded as technical debt rather than hidden from closure evidence.
+The Project Owner approved and merged the Sprint 7 audit, baseline, 41-AC Use Case Specification,
+API Contract and three-developer vertical-slice work assignment through PR #86. Sprint 7 is active
+from 2026-10-28. The next implementation task is `S7-1` on a new branch from updated `main`.

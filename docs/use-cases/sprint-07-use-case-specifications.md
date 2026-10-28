@@ -1,10 +1,10 @@
 # Sprint 07 Use Case Specifications
 
-> Baseline status: `DRAFT - REVIEW REQUIRED - NOT ACTIVE`.
+> Baseline status: `APPROVED - ACTIVE 2026-10-28`.
 >
-> This document refines the product decisions recorded in `docs/sprints/sprint-07.md` into
-> observable behavior and 41 Acceptance Criteria. It does not authorize implementation or freeze
-> endpoint paths, DTO fields and error codes; those belong to the Sprint 7 API Contract.
+> This document refines the approved decisions in `docs/sprints/sprint-07.md` into observable
+> behavior and 41 Acceptance Criteria. Endpoint paths, DTO fields and error codes remain governed
+> by the active Sprint 7 API Contract.
 
 ## 1. Source and traceability
 
@@ -857,7 +857,7 @@ redemption, manual Point/UserBadge editing, generic System Settings or a broad r
 
 Total: **41 Sprint 7 Acceptance Criteria**.
 
-Review gate before approval:
+Approved review gate confirmed on 2026-10-28:
 
 - verify all 41 IDs are unique;
 - confirm every alternative/exception flow maps to at least one Acceptance Criterion or shared

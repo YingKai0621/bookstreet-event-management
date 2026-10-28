@@ -1,11 +1,9 @@
 # Sprint 07 API Contract
 
-> Status: `DRAFT - REVIEW REQUIRED - NOT ACTIVE`.
+> Status: `APPROVED - ACTIVE 2026-10-28`.
 >
-> This contract freezes the proposed HTTP, DTO, error, persistence and transaction boundaries for
-> Sprint 7. It does not authorize implementation until the Project Owner approves this document,
-> the three-developer work assignment is complete, and `docs/sprints/CURRENT_SPRINT.md` activates
-> Sprint 7.
+> This contract freezes the approved HTTP, DTO, error, persistence and transaction boundaries for
+> active Sprint 7. Semantic changes require documentation review before implementation changes.
 >
 > Sources of truth: `05_Business_Rules.md`, `06_Use_Case_List.md`,
 > `sprint-07-use-case-specifications.md`, `12_Physical_ERD_Report.md`, then this contract. Existing
@@ -1146,7 +1144,7 @@ The approved implementation must reconcile these current placeholders:
 
 ## 17. Contract review gate
 
-Before approval, reviewers must confirm:
+Reviewers confirmed these conditions before activation on 2026-10-28:
 
 - every one of the 41 Acceptance Criteria maps to a frozen API or shared invariant;
 - first and duplicate scan response semantics are unambiguous;
@@ -1158,8 +1156,8 @@ Before approval, reviewers must confirm:
 - endpoint ownership can be divided among three developers without parallel edits to the scan
   transaction, V12 migration or shared Badge award service.
 
-Until this gate is approved, this file remains planning evidence and Sprint 7 implementation stays
-unauthorized.
+This gate is approved. Later semantic changes require the same checks and Project Owner review
+before implementation diverges from this contract.
 
 ## 18. Author self-audit result
 
@@ -1183,5 +1181,5 @@ Self-audited on 2026-10-28 against the committed Sprint 7 baseline and current V
 - repository hygiene: PASS — Markdown fences/headings and whitespace validation pass, and no
   existing backend endpoint collides with the proposed paths.
 
-This is an author audit, not Project Owner approval. The contract remains a review-required,
-non-active draft until the review gate in section 17 is accepted.
+The author audit supported Project Owner approval; the review gate in section 17 was accepted when
+Sprint 7 was activated on 2026-10-28.

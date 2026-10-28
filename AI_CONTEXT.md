@@ -76,6 +76,13 @@ Last updated: `2026-10-28`
 - Sprint 6 closure evidence is recorded in `docs/development/SPRINT_06_COMPLETION_REPORT.md`: all
   65 AC are traceably mapped, the PostgreSQL-backed backend run passed 566/566 with no skips, the
   focused Sprint 6 browser run passed 44/44, and lint/build plus migration paths are green.
+- Sprint 7 Booth Visit, Points and Badge Progression is active from 2026-10-28. PR #86 (merge
+  commit `27a88e8`) approved and merged its current-state audit, product baseline, 41-AC Use Case
+  Specification, 12-endpoint API Contract plus four Notification extensions, and vertical-slice
+  three-developer work assignment. No Sprint 7 implementation or V12 exists yet.
+- Sprint 7 implementation ownership is vertical: Developer A owns V12/reward writes plus Booth
+  scan/Partner QR UI; Developer B owns Organizer monitoring and Admin Badge/backfill APIs plus UI;
+  Developer C owns Participant reward reads/UI and integration closure.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -183,6 +190,11 @@ Last updated: `2026-10-28`
 - adds `activities.attendance_early_scan_minutes`;
 - defaults the early-scan window to 15 minutes and constrains it to `0..1440` minutes.
 
+Active Sprint 7 plans exactly one next migration,
+`V12__create_sprint7_reward_schema.sql`, for BoothVisit, PointTransaction, Badge, UserBadge and the
+smallest compatible `BADGE_UNLOCKED` Notification extension. V12 is not implemented yet and V1
+through V11 remain immutable.
+
 ## Not yet implemented
 
 - Forgot/Reset Password
@@ -190,24 +202,25 @@ Last updated: `2026-10-28`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- General feedback/reporting, points/badges, persisted heritage/map data and notifications for
-  Organizer/Partner/Admin remain absent from the approved Sprint 6 backend contract
+- Active Sprint 7 BoothVisit, Point, Badge, UserBadge and Badge Notification implementation
+- General feedback/reporting, persisted heritage/map data and broad Organizer/Partner/Admin
+  notifications outside the approved Sprint 7 slice
 
 ## Next implementation task
 
-- Select and approve the next sprint baseline before adding new business behavior.
+- Start `S7-1` from updated `main` on `feat/s7-reward-foundation`.
+- Developer A creates the sole V12 migration, reward entities/repositories, positive
+  `rewards.booth-visit-points=10` configuration, backend `BADGE_UNLOCKED` extension and shared Badge
+  award boundary.
+- Prove clean `V1 -> V12` and upgrade `V11 -> V12` paths before downstream feature merges.
 - Keep the Sprint 6 completion report and immutable V1–V11 baseline as regression references.
-- Keep unrelated placeholder Admin/Organizer/Partner/Public modules out of scope; do not create
-  backend APIs merely to satisfy unapproved UI concepts.
-- Keep the approved Sprint 6 exclusions closed: no Event QR, Participant-specific QR, BoothVisit,
-  Points, Badge, generic notification composer or unapproved compatibility route.
-- Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
-  Event → Location(s) → Activity/request lock order and approved Sprint 6 Participant lock order.
+- Preserve the approved lock orders and keep Event QR, Participant-specific QR, Point spending,
+  generic settings/permissions and generic Notification composer outside Sprint 7.
 
 ## Latest completed Sprint
 
 Sprint 06 Participant Activity Registration and Attendance is the latest completed Sprint as of
-2026-10-28. No later Sprint is active until the Project Owner approves its baseline.
+2026-10-28. Sprint 7 is active but not yet completed.
 
 Sprint 6 includes these approved Use Case slices:
 
@@ -222,16 +235,23 @@ Sprint 6 includes these approved Use Case slices:
 
 ## Current approved baselines
 
-- Requirement baseline: active MVP rules plus approved Sprint 6 Participant refinements
+- Requirement baseline: active MVP rules plus approved Sprint 6 Participant and Sprint 7 reward
+  refinements
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v8 plus the approved Sprint 6 Participant interpretation in the active Use Cases
+- Logical ERD: v8 plus approved Sprint 6 Participant and Sprint 7 reward interpretations
 - Physical implementation source: immutable Flyway V1–V11. V10 implements the Sprint 6
-  participation overlay and V11 adds the Activity early-scan configuration.
+  participation overlay and V11 adds the Activity early-scan configuration. The approved Sprint 7
+  contract freezes the proposed V12 overlay; it is not implemented yet.
+- Active Sprint baseline: `docs/sprints/sprint-07.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-07-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-07-api-contract.md`
+- Active Sprint work assignment: `docs/sprints/SPRINT_07_BACKEND_WORK_ASSIGNMENT.md`
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
-source. Use the completed Sprint 6 Physical ERD report and drawio source.
+source. Use the current Physical ERD report/drawio together with the approved Sprint 7 V12 overlay
+in the active API Contract.
 
 ## Authentication baseline
 
