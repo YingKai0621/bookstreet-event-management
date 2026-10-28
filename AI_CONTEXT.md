@@ -6,13 +6,14 @@ Last updated: `2026-10-28`
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V11. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V12. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
   Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
-  schema; V11 adds the configurable Activity Attendance early-scan window.
+  schema; V11 adds the configurable Activity Attendance early-scan window; V12 owns the Sprint 7
+  BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover the immutable migration chain through V11 and the relevant prior
+- Flyway migration tests cover the immutable migration chain through V12 and the relevant prior
   Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
@@ -79,7 +80,10 @@ Last updated: `2026-10-28`
 - Sprint 7 Booth Visit, Points and Badge Progression is active from 2026-10-28. PR #86 (merge
   commit `27a88e8`) approved and merged its current-state audit, product baseline, 41-AC Use Case
   Specification, 12-endpoint API Contract plus four Notification extensions, and vertical-slice
-  three-developer work assignment. No Sprint 7 implementation or V12 exists yet.
+  three-developer work assignment. PR #92 (merge commit `2178ba6`) implemented V12, the shared
+  reward/Notification foundation, Participant Booth scan, Partner QR display, Participant Rewards
+  reads/UI and Badge Notification support. PR #93 (merge commit `1b95584`) implemented Organizer
+  BoothVisit monitoring plus Admin Badge CRUD and bounded award synchronization.
 - Sprint 7 implementation ownership is vertical: Developer A owns V12/reward writes plus Booth
   scan/Partner QR UI; Developer B owns Organizer monitoring and Admin Badge/backfill APIs plus UI;
   Developer C owns Participant reward reads/UI and integration closure.
@@ -190,10 +194,9 @@ Last updated: `2026-10-28`
 - adds `activities.attendance_early_scan_minutes`;
 - defaults the early-scan window to 15 minutes and constrains it to `0..1440` minutes.
 
-Active Sprint 7 plans exactly one next migration,
-`V12__create_sprint7_reward_schema.sql`, for BoothVisit, PointTransaction, Badge, UserBadge and the
-smallest compatible `BADGE_UNLOCKED` Notification extension. V12 is not implemented yet and V1
-through V11 remain immutable.
+`V12__create_sprint7_reward_schema.sql` is the implemented Sprint 7 migration. It creates
+BoothVisit, PointTransaction, Badge and UserBadge persistence and adds the smallest compatible
+`BADGE_UNLOCKED` Notification extension. V1 through V12 are now immutable.
 
 ## Not yet implemented
 
@@ -202,20 +205,19 @@ through V11 remain immutable.
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Active Sprint 7 BoothVisit, Point, Badge, UserBadge and Badge Notification implementation
+- Sprint 7 `S7-4` cross-role verification, phone-on-LAN smoke and completion report
 - General feedback/reporting, persisted heritage/map data and broad Organizer/Partner/Admin
   notifications outside the approved Sprint 7 slice
 
 ## Next implementation task
 
-- Start `S7-1` from updated `main` on `feat/s7-reward-foundation`.
-- Developer A creates the sole V12 migration, reward entities/repositories, positive
-  `rewards.booth-visit-points=10` configuration, backend `BADGE_UNLOCKED` extension and shared Badge
-  award boundary.
-- Prove clean `V1 -> V12` and upgrade `V11 -> V12` paths before downstream feature merges.
-- Keep the Sprint 6 completion report and immutable V1–V11 baseline as regression references.
-- Preserve the approved lock orders and keep Event QR, Participant-specific QR, Point spending,
-  generic settings/permissions and generic Notification composer outside Sprint 7.
+- Start `S7-4` from updated `main` after PR #93.
+- Developer C audits the already-implemented Participant Rewards/Badge Notification slice, closes
+  only documented gaps and coordinates cross-role verification without duplicating reward writes.
+- Run the focused scan-to-reward, Organizer monitoring and Admin synchronization Playwright paths,
+  phone-on-LAN smoke and final Sprint 1-6 regression checks.
+- Produce Sprint 7 completion evidence while preserving immutable V1–V12 and the approved lock,
+  ownership, QR-secrecy and idempotency boundaries.
 
 ## Latest completed Sprint
 
@@ -240,9 +242,9 @@ Sprint 6 includes these approved Use Case slices:
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant and Sprint 7 reward interpretations
-- Physical implementation source: immutable Flyway V1–V11. V10 implements the Sprint 6
-  participation overlay and V11 adds the Activity early-scan configuration. The approved Sprint 7
-  contract freezes the proposed V12 overlay; it is not implemented yet.
+- Physical implementation source: immutable Flyway V1–V12. V10 implements the Sprint 6
+  participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
+  approved Sprint 7 reward/Notification overlay.
 - Active Sprint baseline: `docs/sprints/sprint-07.md`
 - Active Sprint Use Cases: `docs/use-cases/sprint-07-use-case-specifications.md`
 - Active Sprint API Contract: `docs/api/sprint-07-api-contract.md`

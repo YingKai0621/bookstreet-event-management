@@ -5,8 +5,9 @@
 - Status: `ACTIVE`
 - Activation date: `2026-10-28`
 - Previous completed Sprint: `Sprint 06 Participant Activity Registration and Attendance`
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V11`
-- Planned Sprint 7 migration: `V12__create_sprint7_reward_schema.sql`, owned only by Developer A
+- Implemented schema baseline: immutable Flyway migrations `V1` through `V12`
+- Sprint 7 migration: `V12__create_sprint7_reward_schema.sql`, implemented by Developer A and
+  merged through PR #92 (merge commit `2178ba6`)
 - Sprint baseline: `docs/sprints/sprint-07.md`
 - Current-state audit: `docs/development/SPRINT_07_CURRENT_STATE_AUDIT.md`
 - Use Case Specifications: `docs/use-cases/sprint-07-use-case-specifications.md`
@@ -56,23 +57,26 @@ entities or the backend `BADGE_UNLOCKED` writer.
 
 ## Mandatory delivery order
 
-1. `S7-1` — Developer A: V12, reward entities/repositories, configuration, Notification extension
-   and shared Badge award boundary.
-2. `S7-2A` — Developer A: Participant Booth scan write flow and concurrency tests.
-3. `S7-2B` — Developer A: Partner QR integration and mobile-first Participant scan UI.
-4. `S7-3A` — Developer B: Organizer BoothVisit API and Event-scoped monitoring UI.
-5. `S7-3B` — Developer B: Admin Badge/backfill API and management UI.
-6. `S7-3C` — Developer C: Participant reward read API, Rewards UI and Badge Notification support.
-7. `S7-4` — Developer C coordinates cross-role verification, phone-on-LAN smoke, Playwright and
-   documentation closure.
+1. `S7-1` — complete in PR #92: V12, reward entities/repositories, configuration, Notification
+   extension and shared Badge award boundary.
+2. `S7-2A` — complete in PR #92: Participant Booth scan write flow and concurrency tests.
+3. `S7-2B` — complete in PR #92: Partner QR integration and mobile-first Participant scan UI.
+4. `S7-3A` — complete in PR #93 (merge commit `1b95584`): Organizer BoothVisit API and
+   Event-scoped monitoring UI.
+5. `S7-3B` — complete in PR #93: Admin Badge/backfill API and management UI.
+6. `S7-3C` — implementation is already present in PR #92: Participant reward read API, Rewards UI
+   and Badge Notification support. Developer C must verify and close gaps rather than reimplement it.
+7. `S7-4` — remaining: Developer C coordinates cross-role verification, phone-on-LAN smoke,
+   Playwright and documentation closure.
 
-S7-3A, S7-3B and S7-3C may proceed in parallel only after S7-1 is merged. Do not merge around an
-unmet earlier dependency. Detailed file ownership and gates are in the approved work assignment.
+Detailed historical ownership and merge gates remain in the approved work assignment. New work
+must start from the V12/PR #93 baseline and must not duplicate the shared award or Participant
+reward implementations.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL is durable truth; Redis stores Session only; do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`; V1 through V11 are immutable.
+- Hibernate remains `ddl-auto: validate`; V1 through V12 are immutable.
 - Backend `Clock` decides Event lifecycle and the exact `[startAt, endAt)` scan window.
 - Participant identity comes from Session; no command accepts caller-selected User or reward data.
 - One first visit awards exactly `10` Points from `rewards.booth-visit-points=10`.
@@ -93,10 +97,12 @@ unmet earlier dependency. Detailed file ownership and gates are in the approved 
 - generic settings, roles/permissions, notification composer or preference system
 - email, SMS or push delivery for Badge unlocks
 - unbounded reporting beyond the approved Organizer BoothVisit monitoring slice
-- rewriting V1 through V11 or introducing a persistent backfill-job table
+- rewriting V1 through V12 or introducing a persistent backfill-job table
 
 ## Activation result
 
 The Project Owner approved and merged the Sprint 7 audit, baseline, 41-AC Use Case Specification,
-API Contract and three-developer vertical-slice work assignment through PR #86. Sprint 7 is active
-from 2026-10-28. The next implementation task is `S7-1` on a new branch from updated `main`.
+API Contract and three-developer vertical-slice work assignment through PR #86. PR #92 delivered
+V12, the reward write/scan foundation and Participant reward experience. PR #93 delivered
+Organizer BoothVisit monitoring and Admin Badge synchronization. Sprint 7 remains active until
+`S7-4` cross-role verification and closure evidence are complete.
