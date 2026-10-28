@@ -284,7 +284,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       {registerSuccessToast && (
         <NotificationCallout
           variant="success"
-          title={language === 'vi' ? 'Cáº­p nháº­t Ä‘Äƒng kÃ½' : 'Registration update'}
+          title={language === 'vi' ? 'Cập nhật đăng ký' : 'Registration update'}
           floating
         >
           {registerSuccessToast}
@@ -292,7 +292,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
             type="button" 
             onClick={() => setRegisterSuccessToast(null)} 
             style={{ background: 'none', border: 'none', color: 'currentColor', cursor: 'pointer', marginLeft: '0.5rem' }}
-            aria-label={language === 'vi' ? 'ÄÃ³ng thÃ´ng bÃ¡o' : 'Dismiss notification'}
+            aria-label={language === 'vi' ? 'Đóng thông báo' : 'Dismiss notification'}
           >
             <X size={16} />
           </button>

@@ -48,13 +48,17 @@ export function LeaveEventDialog({ eventName, language, onConfirm, onClose }: Le
   };
 
   return createPortal(
-    <dialog ref={dialogRef} className="leave-event-dialog" role="alertdialog" aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={pending}
+    <dialog ref={dialogRef} className="leave-event-dialog" role="alertdialog" aria-labelledby={titleId} aria-describedby={`${descriptionId}-prompt ${descriptionId}`} aria-busy={pending}
       onCancel={event => { event.preventDefault(); if (!pending) onClose(); }}>
       <button type="button" className="leave-event-close" aria-label={vi ? 'Đóng xác nhận' : 'Close confirmation'} disabled={pending} onClick={onClose}><X size={19} aria-hidden="true" /></button>
-      <span className="leave-event-icon" aria-hidden="true"><LogOut size={23} /></span>
-      <h2 id={titleId}>{vi ? 'Rời sự kiện?' : 'Leave this event?'}</h2>
+      <div className="leave-event-header">
+        <span className="leave-event-icon" aria-hidden="true"><LogOut size={23} /></span>
+        <div className="leave-event-heading">
+          <h2 id={titleId}>{vi ? 'Rời sự kiện?' : 'Leave this event?'}</h2>
+          <p id={`${descriptionId}-prompt`}>{vi ? 'Bạn có chắc muốn rời sự kiện này?' : 'Are you sure you want to leave this event?'}</p>
+        </div>
+      </div>
       <div id={descriptionId}>
-        <p>{vi ? 'Bạn có chắc muốn rời sự kiện này?' : 'Are you sure you want to leave this event?'}</p>
         <strong className="leave-event-name">{eventName}</strong>
         <p className="leave-event-note">{vi ? 'Sự kiện sẽ không còn trong mục Đang tham gia. Bạn có thể đăng ký lại nếu vẫn còn hạn đăng ký.' : 'The event will leave your joined events list. You can rejoin while registration remains open.'}</p>
       </div>

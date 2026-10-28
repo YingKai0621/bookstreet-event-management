@@ -1,3 +1,4 @@
+import '../../components/participant/EventFeedback.css';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
@@ -395,7 +396,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
         {/* Event Registration Modal — rendered via Portal */}
         {registeredEvent && createPortal(
           <div className="modal-overlay registration-modal-overlay" onClick={() => setRegisteredEvent(null)} role="dialog" aria-modal="true" aria-labelledby="reg-modal-heading">
-            <div className="modal-content modal-register-content" onClick={(e) => e.stopPropagation()}>
+            <div className={`modal-content modal-register-content ${registerSuccess ? 'event-feedback-modal' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setRegisteredEvent(null)} aria-label="Đóng">
                 <X size={20} />
               </button>
@@ -416,28 +417,26 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                   </button>
                 </div>
               ) : registerSuccess ? (
-                <div className="success-box-center" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <CheckCircle size={58} color="#15803D" style={{ margin: '0 auto 1rem' }} />
-                  <span className="reg-badge-tag" style={{ background: '#DCFCE7', color: '#15803D', marginBottom: '0.65rem' }}>
-                    {vi ? 'ĐÃ THAM GIA SỰ KIỆN' : 'EVENT JOINED'}
-                  </span>
-                  <h3 id="reg-modal-heading" className="modal-heading-title" style={{ color: '#1A2823', marginTop: '0.25rem' }}>
-                    {vi ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
-                  </h3>
-                  <div className="success-event-badge" style={{ margin: '0.85rem auto 1rem' }}>
+                <div className="success-box-center">
+                  <div className="event-feedback-header">
+                    <span className="event-feedback-icon"><CheckCircle size={32} aria-hidden="true" /></span>
+                    <h3 id="reg-modal-heading" className="modal-heading-title">
+                      {vi ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
+                    </h3>
+                  </div>
+                  <div className="success-event-badge">
                     {registeredEvent.title}
                   </div>
-                  <p className="modal-body-desc" style={{ maxWidth: '440px', margin: '0 auto 1.5rem', lineHeight: '1.6' }}>
+                  <p className="success-desc">
                     {vi
                       ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp; khi đến nơi, quét mã QR hoạt động do Ban tổ chức hiển thị để điểm danh.'
                       : 'Your account has joined this event. Register for an activity, then scan the Activity QR displayed by the Organizer at the venue to check in.'}
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem', alignItems: 'center' }}>
+                  <div className="success-actions-row">
                     {isParticipantAuthenticated && (
                       <button
                         type="button"
                         className="btn-figma-primary"
-                        style={{ minWidth: '220px', padding: '0.75rem 1.5rem' }}
                         onClick={() => {
                           setRegisteredEvent(null);
                           navigate('/participant/events');
@@ -449,10 +448,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                     <button
                       type="button"
                       className={isParticipantAuthenticated ? 'btn-figma-secondary' : 'btn-figma-primary'}
-                      style={{ minWidth: '180px', padding: '0.75rem 2rem' }}
                       onClick={() => setRegisteredEvent(null)}
                     >
-                      {vi ? 'Hoàn tất' : 'Done'}
+                      {vi ? 'Đóng' : 'Close'}
                     </button>
                   </div>
                 </div>
