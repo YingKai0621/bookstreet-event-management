@@ -1,12 +1,10 @@
 # Sprint 07 Booth Visit, Points and Badge Progression
 
-> Status: `DRAFT BASELINE - PRODUCT DECISIONS RECORDED - NOT ACTIVE`.
+> Status: `ACTIVE - APPROVED 2026-10-28`.
 >
-> This document defines the reviewed product direction for the next delivery baseline after
-> completed Sprint 6/V11. It does not
-> authorize implementation, activate Sprint 7, reserve API paths or change `CURRENT_SPRINT.md`.
-> The Use Case Specification, API Contract and three-developer work assignment must be reviewed
-> before feature code or Flyway V12 is created.
+> This document is the approved product baseline after completed Sprint 6/V11. Sprint 7 was
+> activated on 2026-10-28 after approval of its Use Case Specification, API Contract and
+> three-developer work assignment. Implementation must follow those frozen artifacts.
 >
 > Evidence: this proposal follows the current-state audit in
 > `docs/development/SPRINT_07_CURRENT_STATE_AUDIT.md`, active Business Rules BR-12, BR-43, BR-44 and
@@ -415,13 +413,13 @@ testable Acceptance Criteria:
 
 Implementation starts only after the planning artifacts are approved in this order:
 
-1. current-state audit — completed as draft evidence;
-2. this Sprint 7 scope baseline — current document;
-3. Sprint 7 Use Case Specification and numbered Acceptance Criteria;
-4. Sprint 7 API Contract, error catalog and transaction semantics;
-5. Sprint 7 three-developer work assignment and file/ownership boundaries;
-6. activate `CURRENT_SPRINT.md` and update `AI_CONTEXT.md`;
-7. create the implementation branch(es), V12 and code;
+1. current-state audit — approved evidence;
+2. this Sprint 7 scope baseline — approved;
+3. Sprint 7 Use Case Specification and numbered Acceptance Criteria — approved;
+4. Sprint 7 API Contract, error catalog and transaction semantics — approved;
+5. Sprint 7 three-developer work assignment and file/ownership boundaries — approved;
+6. activate `CURRENT_SPRINT.md` and update `AI_CONTEXT.md` — completed 2026-10-28;
+7. create the implementation branch(es), V12 and code — next;
 8. backend integration/concurrency tests, frontend integration and focused Playwright demo flow;
 9. completion report and baseline closeout.
 
@@ -471,6 +469,5 @@ The Project Owner approved the following decisions on 2026-10-28:
 | D6 | Organizer monitoring depth | Event summary, Booth grouping and paginated visit rows only | Completes the UC-O07 slice without pulling the broad UC-O08 report module into Sprint 7 |
 | D7 | Badge unlock notification | Create one durable `BADGE_UNLOCKED` Notification for every newly persisted UserBadge, including scan and backfill awards | Provides an auditable Participant-facing unlock event while keeping notification scope narrow and idempotent |
 
-D1 through D7 are now product-approved. This Sprint document remains `NOT ACTIVE` until its Use
-Case Specification, API Contract and three-developer work assignment are reviewed; until then,
-`CURRENT_SPRINT.md` continues to show no active Sprint after Sprint 6.
+D1 through D7 are product-approved and form part of the active Sprint 7 baseline. Semantic changes
+require the corresponding baseline documents and `CURRENT_SPRINT.md` to be reviewed together.

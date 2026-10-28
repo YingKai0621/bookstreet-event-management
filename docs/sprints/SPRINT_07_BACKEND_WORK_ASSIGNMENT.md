@@ -1,10 +1,9 @@
 # Sprint 07 Backend and Frontend Work Assignment
 
-> Status: `DRAFT - REVIEW REQUIRED - NOT ACTIVE`.
+> Status: `APPROVED - ACTIVE 2026-10-28`.
 >
-> This document divides Sprint 7 among three developers. It does not authorize implementation
-> until the Project Owner approves the assignment and the context owner activates Sprint 7 in
-> `docs/sprints/CURRENT_SPRINT.md` and `AI_CONTEXT.md`.
+> This approved document divides active Sprint 7 among three developers. Implementation branches
+> must follow its vertical-slice ownership, merge order and completion gates.
 
 ## 1. Purpose and implementation boundary
 
@@ -787,4 +786,5 @@ The Project Owner must confirm:
 - the merge order and shared-file restrictions are workable with the team's branch schedule;
 - phone-on-LAN verification is closure evidence, not a requirement to deploy a public environment.
 
-After approval, the context owner may activate Sprint 7 and implementation branches may begin.
+Sprint 7 was activated on 2026-10-28 after this review gate was approved. Implementation branches
+may begin in the mandatory delivery order above.
