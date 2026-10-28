@@ -1,9 +1,12 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { EventItem, Language } from '../../types';
 import './EventCoverflow.css';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
 interface EventCoverflowProps {
+  registeredEventIds?: ReadonlySet<string>;
   events: EventItem[];
   language: Language;
   weekEventIds: Set<string>;
@@ -15,6 +18,7 @@ interface EventCoverflowProps {
 }
 
 export function EventCoverflow({
+  registeredEventIds = new Set<string>(),
   events,
   language,
   weekEventIds,
@@ -35,6 +39,7 @@ export function EventCoverflow({
     ? controlledIndex
     : count > 0 ? Math.min(selected, count - 1) : 0;
   const current = events[selectedIndex];
+  const registrationNow = useDeadlineClock([current?.registrationDeadlineAt]);
 
   const selectIndex = (index: number) => {
     if (!events[index]) return;
@@ -173,6 +178,11 @@ export function EventCoverflow({
                 tabIndex={visible ? 0 : -1}
               >
                 <img src={event.image.url || undefined} alt={event.image.alt} draggable={false} loading={distance > 1 ? 'lazy' : 'eager'} />
+                {registeredEventIds.has(event.id) && (
+                  <span className="event-coverflow-registered-badge" data-event-id={event.id}>
+                    <CheckCircle2 size={15} aria-hidden="true" />{language === 'vi' ? 'Đã đăng ký' : 'Registered'}
+                  </span>
+                )}
                 {weekEventIds.has(event.id) && (
                   <span className="event-coverflow-week-badge">
                     {language === 'vi' ? 'Trong tuần' : 'This week'}
@@ -206,7 +216,7 @@ export function EventCoverflow({
         </div>
         <div className="event-coverflow-actions">
           <button type="button" className="event-coverflow-detail-btn" onClick={() => onDetails(current)}>{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
-          <button type="button" className="event-coverflow-register-btn" onClick={() => onRegister(current)}>{language === 'vi' ? 'Đăng ký tham gia' : 'Register'}</button>
+          <button type="button" className={`event-coverflow-register-btn ${registeredEventIds.has(current.id) ? 'is-registered' : ''}`} disabled={registeredEventIds.has(current.id) || registrationDeadlinePassed(current.registrationDeadlineAt, registrationNow)} onClick={() => onRegister(current)}>{registeredEventIds.has(current.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(current.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia' : 'Register')}</button>
         </div>
       </div>
       {count > 1 && <div className="event-coverflow-pagination" aria-label={language === 'vi' ? 'Chọn sự kiện' : 'Choose event'}>

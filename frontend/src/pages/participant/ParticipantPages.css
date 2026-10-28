@@ -4,6 +4,10 @@
 
 .participant-page-header {
   margin-bottom: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .participant-page-title {
@@ -199,6 +203,32 @@
 .participant-event-card:hover .event-card-media img {
   transform: scale(1.04);
 }
+
+/* Keep the whole event poster visible, including portrait artwork and its text. */
+.participant-my-events-view .event-card-media {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: #edf0ec;
+}
+
+.participant-my-events-view .event-card-media img {
+  display: block;
+  object-fit: contain;
+  transform: none;
+  transition: none;
+}
+
+.participant-my-events-view .participant-event-card:hover .event-card-media img { transform: none; }
+
+.participant-event-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.participant-event-card-heading .event-card-title { flex: 1; min-width: 0; margin: 0; }
+.participant-event-card-heading .event-status-pill { position: static; flex-shrink: 0; white-space: nowrap; }
 
 .event-status-pill {
   position: absolute;

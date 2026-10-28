@@ -179,7 +179,7 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
   return (
     <div className="participant-notifications-page">
       <div className="participant-page-header participant-notifications-header">
-        <div>
+        <div className="participant-notifications-header-copy">
           <h1 className="participant-page-title workspace-page-title">
             {vi ? 'Thông báo' : 'Notifications'}
           </h1>
@@ -238,13 +238,28 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
         </div>
       ) : items.length === 0 ? (
         <div className="participant-data-state">
-          <Bell size={30} aria-hidden="true" />
+          <div className="participant-empty-icon-circle">
+            <Bell size={28} strokeWidth={2.2} aria-hidden="true" />
+          </div>
           <strong>{isFiltered
             ? (vi ? 'Không có kết quả phù hợp' : 'No matching notifications')
             : (vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications')}</strong>
           <p>{isFiltered
             ? (vi ? 'Hãy thay đổi bộ lọc để xem các thông báo khác.' : 'Change the filters to see other notifications.')
             : (vi ? 'Thông báo mới về hoạt động và chứng nhận sẽ xuất hiện tại đây.' : 'Updates about activities and certificates will appear here.')}</p>
+          {isFiltered && (
+            <button
+              type="button"
+              className="btn-part-secondary participant-clear-filter-btn"
+              onClick={() => {
+                setReadFilter('all');
+                setTypeFilter('all');
+                setPage(0);
+              }}
+            >
+              {vi ? 'Xóa bộ lọc' : 'Clear filters'}
+            </button>
+          )}
         </div>
       ) : (
         <>

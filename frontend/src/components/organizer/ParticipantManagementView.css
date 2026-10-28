@@ -1,5 +1,5 @@
 .participant-management { font-family: var(--font-sans); color: #172421; }
-.participant-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.participant-management .participant-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .participant-event-select, .participant-activity-select { display: grid; gap: 7px; color: #334943; font-size: 14px; font-weight: 700; }
 .participant-event-select { width: min(420px, 100%); }
 .participant-event-select select, .participant-activity-select select, .participant-filters select, .participant-correction-form select, .participant-correction-form input, .participant-correction-form textarea {
@@ -83,7 +83,7 @@
 .participant-history-empty { padding: 18px; border-radius: 8px; background: #f5f8f6; color: #6f827c; text-align: center; }
 .participant-toast { position: fixed; right: 24px; bottom: 24px; z-index: 1400; display: flex; align-items: center; gap: 9px; max-width: 460px; padding: 13px 16px; border-radius: 9px; background: #123c31; color: #fff; box-shadow: 0 12px 30px rgba(7, 22, 17, .22); font-size: 14px; font-weight: 650; }
 @media (max-width: 900px) {
-  .participant-page-header, .participant-filters { align-items: stretch; flex-direction: column; }
+  .participant-management .participant-page-header, .participant-management .participant-filters { align-items: stretch; flex-direction: column; }
   .participant-event-select { width: 100%; }
   .participant-filters > select, .participant-search { width: 100%; min-width: 0; }
 }

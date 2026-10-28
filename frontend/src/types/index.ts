@@ -220,6 +220,7 @@ export interface ParticipantProfile {
 }
 
 export interface ParticipantEvent {
+  registrationDeadlineAt?: string | null;
   id: string;
   title: string;
   dateRange: string;

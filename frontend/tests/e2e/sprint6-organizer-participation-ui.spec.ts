@@ -56,7 +56,7 @@ async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockOrganizerParticipation(page: Page, failFirstCorrection = false) {
+async function mockOrganizerParticipation(page: Page, failFirstCorrection = false, eventRows = () => [eventRegistration]) {
   const correctionKeys: string[] = [];
   const correctionBodies: unknown[] = [];
   const requestedUrls: string[] = [];
@@ -73,7 +73,7 @@ async function mockOrganizerParticipation(page: Page, failFirstCorrection = fals
     if (path.endsWith('/auth/me')) return json(route, { userId: 1, username: 'organizer', fullName: 'Demo Organizer', email: 'organizer@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'ORGANIZER'] });
     if (path.endsWith('/organizer/events') && method === 'GET') return json(route, pageOf([event]));
     if (path.endsWith('/organizer/activities') && method === 'GET') return json(route, pageOf([activity]));
-    if (path.endsWith('/organizer/events/501/event-registrations')) return json(route, pageOf([eventRegistration]));
+    if (path.endsWith('/organizer/events/501/event-registrations')) return json(route, pageOf(eventRows()));
     if (path.endsWith('/organizer/activities/71/registrations')) return json(route, pageOf([participation]));
     if (path.endsWith('/organizer/activity-registrations/401/attendance-adjustments') && method === 'GET') return json(route, pageOf([priorAdjustment]));
     if (path.endsWith('/organizer/activity-registrations/401/attendance-adjustments') && method === 'POST') {
@@ -107,6 +107,23 @@ async function openCorrectionForm(page: Page) {
   await page.getByLabel('Lý do điều chỉnh').fill('Xác minh trực tiếp từ biên bản tại cổng vào.');
   await page.getByText('Tôi xác nhận thay đổi này là chính xác').click();
 }
+
+test('Organizer sees newly recorded registrations on cross-tab changes and when returning to the screen', async ({ page }) => {
+  let registered = false;
+  await mockOrganizerParticipation(page, false, () => registered ? [eventRegistration] : []);
+  await page.goto('/organizer/participants?eventId=501');
+  await expect(page.getByText('Chưa có người tham gia', { exact: true })).toBeVisible();
+  registered = true;
+  await page.evaluate(() => {
+    const publisher = new BroadcastChannel('bookstreet:participation');
+    publisher.postMessage({ type: 'changed', sender: 'external-test-tab' });
+    publisher.close();
+  });
+  await expect(page.getByText('Nguyễn Minh Anh', { exact: true })).toBeVisible();
+  registered = false;
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByText('Chưa có người tham gia', { exact: true })).toBeVisible();
+});
 
 test('organizer browses event and activity registrations without legacy endpoints', async ({ page }) => {
   const state = await mockOrganizerParticipation(page);

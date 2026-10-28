@@ -3,6 +3,7 @@ import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, Search, Us
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { publicApi, type PublicActivity } from '../../services/publicApi';
+import { useParticipationRefresh } from '../../hooks/useParticipationRefresh';
 import type { Language, ParticipantActivity, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 
@@ -65,6 +66,7 @@ export const EventDetailPage = ({
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState('');
   const [catalogRevision, setCatalogRevision] = useState(0);
+  const participationRefresh = useParticipationRefresh();
   const requestedSection = searchParams.get('section');
   const section: EventSection = requestedSection === 'discover' || requestedSection === 'activities'
     ? requestedSection
@@ -94,7 +96,7 @@ export const EventDetailPage = ({
       })
       .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, [catalogRevision, currentEventId, isLoading, loadError]);
+  }, [catalogRevision, participationRefresh, currentEventId, isLoading, loadError]);
 
   const setSection = (nextSection: EventSection) => {
     const next = new URLSearchParams(searchParams);

@@ -1,0 +1,110 @@
+/* Participant phone layout: one reading surface, compact calendar and thumb navigation. */
+.participant-bottom-nav,
+.participant-mobile-agenda { display: none; }
+
+@media (max-width: 960px) {
+  body:has(.participant-app-shell) .bookstreet-chat { bottom: calc(82px + env(safe-area-inset-bottom)); right: 12px; }
+  body:has(.participant-app-shell) .bookstreet-chat__panel { max-height: calc(100dvh - 210px - env(safe-area-inset-bottom)); }
+  .participant-app-shell { min-height: 100dvh; }
+  .participant-app-shell .participant-top-bar { height: 56px; padding-inline: 12px; box-shadow: none; }
+  .participant-app-shell .participant-mobile-toggle { display: grid; place-items: center; width: 44px; height: 44px; }
+  .participant-app-shell .participant-brand { display: flex; gap: 8px; }
+  .participant-app-shell .brand-main { font-size: 12px; }
+  .participant-app-shell .brand-sub { font-size: 9px; }
+  .participant-app-shell .participant-brand-icon { width: 28px; height: 28px; }
+  .participant-app-shell .top-bar-left { gap: 4px; min-width: 0; }
+  .participant-app-shell .top-bar-right { flex: 0 0 auto; gap: 4px; }
+  .participant-app-shell .participant-icon-btn { width: 44px; height: 44px; border: 0; background: transparent; }
+  .participant-app-shell .participant-user-pill { padding: 6px; border: 0; background: transparent; min-height: 44px; }
+  .participant-app-shell :is(.user-info-text, .user-chevron) { display: none; }
+  .participant-app-shell .participant-body-container { min-height: calc(100dvh - 56px); }
+  .participant-app-shell.participant-app-shell .participant-main-viewport {
+    padding: 18px 16px calc(84px + env(safe-area-inset-bottom));
+    --workspace-title-size: 1.5rem;
+    --workspace-subtitle-size: .8125rem;
+  }
+  .participant-app-shell .participant-bottom-nav {
+    position: fixed; inset: auto 0 0; z-index: 80; display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: #fff; border-top: 1px solid #dce7e2;
+  }
+  .participant-bottom-nav a {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 52px; gap: 5px; padding: 5px 2px; border-radius: 10px;
+    color: #60756d; text-decoration: none; font-size: 10px; font-weight: 600; text-align: center;
+  }
+  .participant-bottom-nav a[aria-current="page"] { color: #185e48; background: #edf5f1; }
+  .participant-app-shell :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #b3862a; outline-offset: 3px; }
+}
+
+@media (max-width: 640px) {
+  .participant-app-shell .participant-page-header { margin-bottom: 16px; gap: 4px; }
+  .participant-app-shell .participant-page-sub { line-height: 1.5; }
+  .participant-app-shell :is(.participant-dashboard-view, .participant-my-events-view, .participant-notifications-page, .reader-profile-page) { min-width: 0; }
+  .participant-app-shell .participant-summary-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0; margin-bottom: 16px; border: 1px solid #dce7e2; border-radius: 12px;
+    background: #fff; overflow: hidden; max-width: none;
+  }
+  .participant-app-shell .summary-stat-card {
+    min-width: 0; padding: 12px 10px; border: 0; border-right: 1px solid #e8eeea;
+    border-radius: 0; box-shadow: none; gap: 6px; background: transparent;
+  }
+  .participant-app-shell .summary-stat-card:last-child { border-right: 0; }
+  .participant-app-shell .stat-number-box { font-size: 24px; gap: 4px; font-variant-numeric: tabular-nums; }
+  .participant-app-shell .stat-number-box svg { width: 18px; height: 18px; }
+  .participant-app-shell .stat-label-text { font-size: 11px; line-height: 1.4; }
+  .participant-app-shell .dashboard-calendar-card { padding: 14px 10px 0; margin-top: 0; margin-bottom: 16px; border-radius: 12px; box-shadow: none; overflow: hidden; }
+  .participant-app-shell .dashboard-calendar-header { gap: 12px; margin-bottom: 12px; padding: 0 2px; }
+  .participant-app-shell .dashboard-calendar-title-wrap { width: 100%; justify-content: space-between; }
+  .participant-app-shell .dashboard-calendar-month-title { font-size: 19px; }
+  .participant-app-shell .calendar-arrow-btn { width: 44px; height: 44px; }
+  .participant-app-shell .dashboard-calendar-filter-tabs { display: flex; width: 100%; gap: 2px; }
+  .participant-app-shell .dashboard-calendar-filter-tabs .partner-tab-btn { flex: 1; min-width: 0; padding: 10px 4px; font-size: 11px; min-height: 44px; white-space: normal; }
+  .participant-app-shell .dashboard-calendar-scroll-wrap { overflow: visible; padding: 0; }
+  .participant-app-shell .dashboard-calendar-inner-grid { min-width: 0; width: 100%; }
+  .participant-app-shell .dashboard-weekdays-row { font-size: 9px; gap: 2px; padding: 6px 0; }
+  .participant-app-shell .dashboard-days-grid { gap: 3px; }
+  .participant-app-shell .participant-calendar-day {
+    position: relative; min-width: 0; min-height: 44px !important; padding: 4px !important;
+    border-radius: 8px !important; box-shadow: none !important; transition: none !important;
+    align-items: center; justify-content: center !important;
+  }
+  .participant-calendar-day > div:first-child { margin: 0 !important; justify-content: center !important; }
+  .participant-calendar-day > div:first-child > span:last-child,
+  .participant-calendar-day > div:not(:first-child) { display: none !important; }
+  .participant-calendar-day.has-events::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: #185e48; }
+  .participant-app-shell .participant-mobile-agenda { display: block; margin: 12px -10px 0; padding: 14px 12px; border-top: 1px solid #dce7e2; background: #f6f9f7; }
+  .participant-agenda-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .participant-agenda-heading h3 { margin: 0; font-size: 14px; }
+  .participant-agenda-heading a { color: #185e48; font-size: 11px; }
+  .participant-mobile-agenda > p { margin: 0; font-size: 12px; line-height: 1.6; color: #60756d; }
+  .participant-agenda-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 0; border: 0; border-bottom: 1px solid #dce7e2; background: transparent; color: #185e48; text-align: left; font: inherit; cursor: pointer; }
+  .participant-agenda-item:last-child { border-bottom: 0; }
+  .participant-agenda-item > span { flex: 1; min-width: 0; }
+  .participant-agenda-item strong { display: block; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .participant-agenda-item small { display: block; margin-top: 3px; color: #60756d; font-size: 11px; }
+  .participant-app-shell .participant-tabs-bar { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px; margin-bottom: 12px; padding-bottom: 6px; }
+  .participant-app-shell .participant-tab-btn { flex: 1 0 auto; min-height: 44px; padding: 10px 8px; font-size: 11px; }
+  .participant-app-shell :is(.participant-events-grid, .participant-rating-list) { gap: 12px; }
+  .participant-app-shell :is(.participant-event-card, .participant-rating-card, .certificate-card-row, .participant-event-overview-card) { border-radius: 12px; box-shadow: none; }
+  .participant-app-shell .participant-my-events-view .event-card-media { height: auto; aspect-ratio: 16 / 9; }
+  .participant-app-shell .event-card-body { padding: 14px; }
+  .participant-app-shell .event-card-actions { gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .participant-app-shell :is(.btn-part-primary, .btn-part-secondary, .btn-part-danger-outline) { min-height: 44px; font-size: 12px; justify-content: center; }
+  .participant-app-shell .participant-data-state { min-height: 0; padding: 28px 16px; gap: 10px; border-radius: 12px; }
+  .participant-app-shell .participant-notification-card { grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 14px 0; border-radius: 0; border-width: 0 0 1px; box-shadow: none; }
+  .participant-app-shell .participant-notification-icon { width: 32px; height: 32px; }
+  .participant-app-shell .participant-notification-actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; min-width: 0; }
+  .participant-app-shell .participant-notification-title-row { gap: 6px; }
+  .participant-app-shell .participant-notification-filters { gap: 8px; margin-bottom: 12px; }
+  .participant-app-shell .participant-notification-filters select { min-height: 44px; font-size: 16px; max-width: 100%; }
+  .participant-app-shell .reader-profile-page .profile-card-header { padding: 16px; margin: 0; gap: 12px; }
+  .participant-app-shell .reader-profile-page .reader-profile-body { padding: 16px; gap: 16px; }
+  .participant-app-shell .reader-profile-page .profile-card-header button { width: auto; }
+  .participant-app-shell .participant-detail-breadcrumbs { flex-wrap: wrap; gap: 8px; }
+  .participant-app-shell .participant-registration-facts { grid-template-columns: 1fr; padding: 16px; gap: 12px; }
+  .participant-app-shell .participant-attendance-guidance { margin: 0 16px 16px; }
+  .participant-app-shell :is(input, textarea) { font-size: 16px; }
+}

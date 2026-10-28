@@ -1,6 +1,7 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Award,
+  Bot,
   CalendarDays,
   ChevronDown,
   FileText,
@@ -25,6 +26,7 @@ import {
   IconMapBookPin
 } from './CustomIcons';
 import './Header.css';
+import { useChatLauncher } from '../chat/chatLauncherState';
 
 interface HeaderProps {
   language: Language;
@@ -54,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedPublicEventId = '',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { dismissed: chatbotDismissed, restore: restoreChatbot } = useChatLauncher();
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
   const [passedSections, setPassedSections] = useState<string[]>([]);
@@ -175,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const activeIndex = getActiveProgressIndex();
   // Khi ở đỉnh trang (trước Giới thiệu): 0%. Khi ở Giới thiệu: 0%. Khi ở Gian hàng: 20%. Khi ở Sự kiện: 40%... Khi ở Góp ý: 100%.
-  const progressPercent = activeIndex > 0 ? (activeIndex / (navLinks.length - 1)) * 100 : (activeIndex === 0 ? 0 : 0);
+  const progressPercent = activeIndex > 0 ? (activeIndex / (navLinks.length - 1)) * 100 : 0;
 
   useModalDismiss(mobileMenuOpen, () => setMobileMenuOpen(false));
 
@@ -205,6 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Ticket Center Section: Navigation Items with horizontal connecting progress line */}
+          <div className="ticket-navigation-group">
           <nav className="ticket-nav-section" aria-label="Điều hướng chính">
             <div className="ticket-nav-timeline">
               {/* Baseline continuous track between item node centers */}
@@ -245,6 +249,11 @@ export const Header: React.FC<HeaderProps> = ({
               </ul>
             </div>
           </nav>
+            {chatbotDismissed && <button type="button" className="ticket-chatbot-button" onClick={restoreChatbot} aria-label="Chatbot" title={language === 'vi' ? 'Hiện lại nút chatbot' : 'Restore chatbot button'}>
+              <span className="ticket-chatbot-circle"><Bot size={22} aria-hidden="true" /></span>
+              <span className="ticket-chatbot-label">Chatbot</span>
+            </button>}
+          </div>
 
           {/* Ticket Right Section: Account + Language Switcher + Mobile Menu Toggle */}
           <div className="ticket-actions-section">

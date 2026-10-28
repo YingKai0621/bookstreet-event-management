@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, ChevronRight, ClipboardCheck, History, Refre
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useParticipationRefresh } from '../../hooks/useParticipationRefresh';
 import {
   organizerApi,
   type OrganizerAttendanceAdjustmentResponse,
@@ -107,6 +108,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const participationRefresh = useParticipationRefresh(Boolean(selectedEventId && selectedEventId !== 'all'));
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<number | null>(null);
   const [detail, setDetail] = useState<OrganizerParticipationResponse | null>(null);
   const [history, setHistory] = useState<OrganizerAttendanceAdjustmentResponse[]>([]);
@@ -165,7 +167,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
     request.catch(error => { if (active) setLoadError(errorMessage(error, 'Không tải được danh sách người tham gia.')); })
       .finally(() => { if (active) setIsLoadingRows(false); });
     return () => { active = false; };
-  }, [activityId, eventStatus, outcome, page, reloadKey, search, selectedEventId, view]);
+  }, [activityId, eventStatus, outcome, page, reloadKey, participationRefresh, search, selectedEventId, view]);
 
   useEffect(() => {
     if (selectedRegistrationId === null) { setDetail(null); setHistory([]); setDetailError(''); return; }
@@ -180,7 +182,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
     }).catch(error => { if (active) setDetailError(errorMessage(error, 'Không tải được chi tiết đăng ký.')); })
       .finally(() => { if (active) setIsLoadingDetail(false); });
     return () => { active = false; };
-  }, [detailReloadKey, selectedRegistrationId]);
+  }, [detailReloadKey, participationRefresh, selectedRegistrationId]);
 
   useEffect(() => {
     if (!successMessage) return;

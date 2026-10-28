@@ -144,12 +144,12 @@ test('Admin user management does not preload unrelated tabs or poll in the backg
   await expectIdleNetwork(page, requests.total);
 });
 
-test('Participant workspace does not load the public catalog and stays idle', async ({ page }) => {
+test('Participant workspace loads published events and stays idle', async ({ page }) => {
   const requests = await mockRoleApi(page, 'PARTICIPANT');
   await page.goto('/participant');
 
   await expect(page.getByRole('heading', { name: 'Xin chào, PARTICIPANT Test!' })).toBeVisible();
-  expect(requests.count('/api/v1/events')).toBe(0);
+  expect(requests.count('/api/v1/events')).toBe(1);
   expect(requests.count('/api/v1/heritages')).toBe(0);
   expect(requests.count('/api/v1/events/746/booths')).toBe(0);
   expect(requests.count('/api/v1/auth/profile')).toBe(1);
