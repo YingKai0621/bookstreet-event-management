@@ -112,8 +112,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     {
       id: 'rewards',
       path: '/participant/rewards',
-      labelVi: 'Điểm & Đổi thưởng',
-      labelEn: 'Rewards',
+      labelVi: 'Điểm & Huy hiệu',
+      labelEn: 'Points & Badges',
       icon: <Award size={18} />,
     },
     {

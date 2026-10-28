@@ -1,22 +1,28 @@
 import {
   ParticipantActivity,
   ParticipantActivityRating,
-  ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
 } from '../types';
 import { apiClient } from './apiClient';
 import type { AttendanceScanResponse } from '../types/attendance';
+import type {
+  BoothScanResponse,
+  RewardPointPageResponse,
+  RewardBadgePageResponse,
+  RewardSummaryResponse,
+} from '../types/reward';
 
 export type ParticipantNotificationType =
   | 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'
   | 'ACTIVITY_CANCELLED'
   | 'EVENT_CANCELLED'
   | 'CERTIFICATE_ISSUED'
-  | 'CERTIFICATE_REVOKED';
+  | 'CERTIFICATE_REVOKED'
+  | 'BADGE_UNLOCKED';
 
-export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE' | 'BADGE';
 
 interface ParticipantNotificationResponse {
   notificationId: number;
@@ -303,6 +309,9 @@ function notificationLink(notification: ParticipantNotificationResponse): string
   if (notification.referenceType === 'ACTIVITY') {
     return `/participant/activities/detail/${encodeURIComponent(notification.referenceId)}`;
   }
+  if (notification.referenceType === 'BADGE') {
+    return '/participant/rewards';
+  }
   return '/participant/certificates';
 }
 
@@ -405,14 +414,6 @@ export const participantApi = {
   mapEventRegistration,
   leaveEvent: (eventId: string) =>
     apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/leave`),
-  async getBadges(): Promise<ParticipantBadge[]> {
-    const badges = await apiClient.get<Array<Record<string, unknown>>>('/participant/badges');
-    return badges.map(badge => ({
-      id: String(badge.id), code: String(badge.code || ''), title: String(badge.title), iconName: String(badge.iconName || 'book'),
-      earnedDate: badge.earnedDate ? new Date(String(badge.earnedDate)).toLocaleDateString('vi-VN') : '',
-      isLocked: Boolean(badge.isLocked),
-    }));
-  },
   async getCertificates(): Promise<ParticipantCertificate[]> {
     const certificates = await getAllPages<CertificateSummaryResponse>(
       '/participant/certificates?sort=issuedAt,desc',
@@ -439,6 +440,44 @@ export const participantApi = {
   mapActivityRegistration: mapActivityRegistrationWithEvents,
   scanAttendance: (token: string) =>
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
+  scanBooth: (token: string) =>
+    apiClient.post<BoothScanResponse>('/participant/booth-visits/scan', { token }),
+  getRewardSummary: () =>
+    apiClient.get<RewardSummaryResponse>('/participant/rewards/summary'),
+  getRewardBadges: (query: {
+    page?: number;
+    size?: number;
+    state?: 'ALL' | 'EARNED' | 'IN_PROGRESS';
+    sort?: string;
+  } = {}) => {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 0),
+      size: String(query.size ?? 12),
+      state: query.state ?? 'ALL',
+    });
+    if (query.sort) params.set('sort', query.sort);
+    return apiClient.get<RewardBadgePageResponse>(
+      `/participant/rewards/badges?${params.toString()}`,
+    );
+  },
+  getRewardPointTransactions: (query: {
+    page?: number;
+    size?: number;
+    sort?: string;
+    eventId?: number;
+    boothId?: number;
+  } = {}) => {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 0),
+      size: String(query.size ?? 10),
+      sort: query.sort ?? 'createdAt,desc',
+    });
+    if (query.eventId) params.set('eventId', String(query.eventId));
+    if (query.boothId) params.set('boothId', String(query.boothId));
+    return apiClient.get<RewardPointPageResponse>(
+      `/participant/rewards/point-transactions?${params.toString()}`,
+    );
+  },
   async getActivityRating(activityId: string): Promise<ParticipantActivityRating> {
     const rating = await apiClient.get<ActivityRatingResponse>(
       `/participant/activities/${encodeURIComponent(activityId)}/rating`,

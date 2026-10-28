@@ -52,12 +52,13 @@ public interface ParticipantNotificationRepository
 
     @Modifying(flushAutomatically = true)
     @Query(value = """
-            INSERT INTO notifications (
+            INSERT INTO {h-schema}notifications (
                 recipient_user_id,
                 notification_type,
                 event_id,
                 activity_id,
                 certificate_id,
+                badge_id,
                 deduplication_key,
                 title,
                 message,
@@ -68,6 +69,7 @@ public interface ParticipantNotificationRepository
                 :eventId,
                 :activityId,
                 :certificateId,
+                :badgeId,
                 :deduplicationKey,
                 :title,
                 :message,
@@ -81,6 +83,7 @@ public interface ParticipantNotificationRepository
             @Param("eventId") Long eventId,
             @Param("activityId") Long activityId,
             @Param("certificateId") Long certificateId,
+            @Param("badgeId") Long badgeId,
             @Param("deduplicationKey") String deduplicationKey,
             @Param("title") String title,
             @Param("message") String message,

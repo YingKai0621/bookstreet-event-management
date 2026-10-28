@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileCheck2,
   FileX2,
+  Medal,
   RefreshCw,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -37,6 +38,7 @@ const typeOptions: ParticipantNotificationType[] = [
   'EVENT_CANCELLED',
   'CERTIFICATE_ISSUED',
   'CERTIFICATE_REVOKED',
+  'BADGE_UNLOCKED',
 ];
 
 function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
@@ -46,6 +48,7 @@ function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
     EVENT_CANCELLED: ['Sự kiện bị hủy', 'Event cancelled'],
     CERTIFICATE_ISSUED: ['Đã cấp chứng nhận', 'Certificate issued'],
     CERTIFICATE_REVOKED: ['Thu hồi chứng nhận', 'Certificate revoked'],
+    BADGE_UNLOCKED: ['Mở khóa huy hiệu', 'Badge unlocked'],
   };
   return labels[type][vi ? 0 : 1];
 }
@@ -54,6 +57,7 @@ function NotificationIcon({ type }: { type: ParticipantNotificationType }) {
   if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED') return <CalendarClock size={20} />;
   if (type === 'ACTIVITY_CANCELLED' || type === 'EVENT_CANCELLED') return <CalendarX size={20} />;
   if (type === 'CERTIFICATE_ISSUED') return <FileCheck2 size={20} />;
+  if (type === 'BADGE_UNLOCKED') return <Medal size={20} />;
   return <FileX2 size={20} />;
 }
 
@@ -185,8 +189,8 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
           </h1>
           <p className="participant-page-sub workspace-page-subtitle">
             {vi
-              ? 'Theo dõi thay đổi của sự kiện, hoạt động và chứng nhận.'
-              : 'Track changes to your events, activities, and certificates.'}
+              ? 'Theo dõi thay đổi của sự kiện, hoạt động, chứng nhận và huy hiệu.'
+              : 'Track changes to your events, activities, certificates, and badges.'}
           </p>
         </div>
         <button
@@ -246,7 +250,7 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
             : (vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications')}</strong>
           <p>{isFiltered
             ? (vi ? 'Hãy thay đổi bộ lọc để xem các thông báo khác.' : 'Change the filters to see other notifications.')
-            : (vi ? 'Thông báo mới về hoạt động và chứng nhận sẽ xuất hiện tại đây.' : 'Updates about activities and certificates will appear here.')}</p>
+            : (vi ? 'Thông báo mới về hoạt động, chứng nhận và huy hiệu sẽ xuất hiện tại đây.' : 'Updates about activities, certificates, and badges will appear here.')}</p>
           {isFiltered && (
             <button
               type="button"

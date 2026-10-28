@@ -23,7 +23,7 @@ spring:
 
   flyway:
     enabled: true
-    locations: ${SPRING_FLYWAY_LOCATIONS:classpath:db/migration}
+    locations: classpath:db/migration
 
   mail:
     host: ${MAIL_HOST:localhost}
@@ -57,6 +57,9 @@ server:
   port: ${SERVER_PORT:8080}
   error:
     include-stacktrace: never
+
+rewards:
+  booth-visit-points: ${REWARDS_BOOTH_VISIT_POINTS:10}
 
 springdoc:
   swagger-ui:

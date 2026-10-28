@@ -1,6 +1,14 @@
-# Participant demo data
+# Legacy Sprint 6 participant demo data
 
-Flyway demo migrations `V12`–`V16` live in `backend/src/main/resources/db/demo`. They are opt-in so CI and production migrate only the business schema through V11. To enable them for a disposable local database, set `SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo` in the root `.env` before starting the backend. Keep that setting on any local database where V12–V16 have already run; Flyway must still be able to find those applied versions. The schedule dates are calculated once, when each migration first runs. Recreate only a disposable local demo database when those dates have passed. Do not edit applied migration contents.
+The historical Sprint 6 demo migrations `V12`–`V16` remain in
+`backend/src/main/resources/db/demo` as immutable reference data. They must not be loaded together
+with the production migration location after Sprint 7 because the approved production reward
+schema now owns version `V12`. The backend therefore loads only `classpath:db/migration`.
+
+Any disposable local database that previously applied the demo `V12`–`V16` chain must be recreated
+before running the Sprint 7 backend. Do not edit, renumber or copy these applied migration contents
+into the production migration directory. A future demo dataset must use a non-conflicting delivery
+mechanism and receive a separate review.
 
 ## Accounts
 
@@ -20,7 +28,10 @@ Flyway demo migrations `V12`–`V16` live in `backend/src/main/resources/db/demo
 
 ## Quick check
 
-1. Start PostgreSQL, Redis and the backend, then confirm Flyway has applied through `V14`.
+The steps below describe the archived Sprint 6 dataset only. They are retained as reference and are
+not an instruction to enable `db/demo` in a Sprint 7 database.
+
+1. On an archived Sprint 6 disposable database, confirm Flyway applied the legacy demo chain.
 2. Open `/su-kien` and look for the `[Demo Participant]` Events.
 3. Sign in as `participantdemo`, join an open Event, and open **Sự kiện của tôi**.
 4. Open the Event detail and its **Hoạt động** tab. Register the talk. The reading area needs no registration.

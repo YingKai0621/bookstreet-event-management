@@ -5,11 +5,20 @@
     <meta name="referrer" content="no-referrer" />
     <script>
       (() => {
-        if (window.location.pathname !== '/participant/attendance/scan') return;
+        const attendancePath = '/participant/attendance/scan';
+        const boothPath = '/participant/booth-scan';
+        const isAttendanceScan = window.location.pathname === attendancePath;
+        const isBoothScan = window.location.pathname === boothPath;
+        if (!isAttendanceScan && !isBoothScan) return;
 
-        const tokenValues = new URLSearchParams(window.location.search).getAll('token');
+        const tokenValues = isAttendanceScan
+          ? new URLSearchParams(window.location.search).getAll('token')
+          : new URLSearchParams(window.location.hash.slice(1)).getAll('token');
         let consumed = false;
-        Object.defineProperty(window, '__takeAttendanceScanTokenBootstrap', {
+        const bootstrapKey = isAttendanceScan
+          ? '__takeAttendanceScanTokenBootstrap'
+          : '__takeBoothScanTokenBootstrap';
+        Object.defineProperty(window, bootstrapKey, {
           configurable: true,
           value: () => {
             if (consumed) return null;
@@ -21,7 +30,11 @@
         });
 
         if (window.location.search || window.location.hash) {
-          window.history.replaceState(window.history.state, '', '/participant/attendance/scan');
+          window.history.replaceState(
+            window.history.state,
+            '',
+            isAttendanceScan ? attendancePath : boothPath,
+          );
         }
       })();
     </script>

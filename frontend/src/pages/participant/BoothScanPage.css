@@ -1,0 +1,220 @@
+.booth-scan-page {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 6vh, 4.5rem) 1rem;
+  font-family: var(--font-sans);
+}
+
+.booth-scan-card {
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid #d7e1dc;
+  border-top: 4px solid #c6922d;
+  border-radius: 14px;
+  background: #fffdf9;
+  box-shadow: 0 18px 45px rgba(19, 55, 45, 0.08);
+  color: #172b25;
+}
+
+.booth-scan-card.is-success { border-top-color: #197a55; }
+.booth-scan-card.is-error { border-top-color: #a23b32; }
+
+.booth-scan-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.booth-scan-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 1.15rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #fbf1dc;
+  color: #8f671d;
+}
+
+.booth-scan-icon.is-success { background: #e6f4ed; color: #176e4e; }
+.booth-scan-icon.is-error { background: #f9eae7; color: #9d342c; }
+.booth-scan-icon.is-loading svg { animation: booth-scan-pulse 1.25s ease-in-out infinite; }
+
+.booth-scan-eyebrow {
+  margin: 0 0 0.45rem;
+  color: #8a641f;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.booth-scan-card h1 {
+  margin: 0;
+  color: #132a23;
+  font-family: var(--font-sans);
+  font-size: clamp(1.55rem, 4vw, 2.2rem);
+  line-height: 1.25;
+}
+
+.booth-scan-centered > p:not(.booth-scan-eyebrow) {
+  max-width: 590px;
+  margin: 0.85rem 0 0;
+  color: #5b6f68;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.booth-scan-progress {
+  width: min(280px, 80%);
+  height: 4px;
+  margin-top: 1.5rem;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e6ebe8;
+}
+
+.booth-scan-progress::after {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background: #bd8624;
+  content: '';
+  animation: booth-scan-progress 1.2s ease-in-out infinite alternate;
+}
+
+.booth-scan-visit-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+  margin-top: 1.75rem;
+  padding: 1.1rem;
+  border: 1px solid #dce6e1;
+  border-radius: 10px;
+  background: #f6faf8;
+}
+
+.booth-scan-booth-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 10px;
+  background: #153d32;
+  color: #fff;
+}
+
+.booth-scan-visit-card div:nth-child(2) { min-width: 0; }
+.booth-scan-visit-card span { color: #9a6b1d; font-size: 0.78rem; font-weight: 800; }
+.booth-scan-visit-card strong { display: block; margin-top: 0.1rem; color: #17352c; font-size: 1.05rem; }
+.booth-scan-visit-card p { margin: 0.2rem 0 0; color: #64766f; font-size: 0.88rem; }
+.booth-scan-visit-card time { display: inline-flex; align-items: center; gap: 0.35rem; color: #64766f; font-size: 0.8rem; }
+
+.booth-scan-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.booth-scan-reward-grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 9px;
+  background: #f8f1e2;
+}
+
+.booth-scan-reward-grid span { color: #6c6049; font-size: 0.82rem; font-weight: 650; }
+.booth-scan-reward-grid strong { color: #8a5e12; font-size: 1.45rem; }
+
+.booth-scan-registration-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.85rem 0 0;
+  color: #336457;
+  font-size: 0.85rem;
+}
+
+.booth-scan-unlocks {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #efd493;
+  border-radius: 10px;
+  background: #fff9ea;
+}
+
+.booth-scan-unlocks > div { display: flex; align-items: center; gap: 0.5rem; color: #966919; }
+.booth-scan-unlocks h2 { margin: 0; font-family: var(--font-sans); font-size: 1rem; }
+.booth-scan-unlocks ul { display: grid; gap: 0.6rem; margin: 0.85rem 0 0; padding: 0; list-style: none; }
+.booth-scan-unlocks li { display: grid; grid-template-columns: auto 1fr auto; gap: 0.65rem; align-items: center; }
+.booth-scan-unlocks li > span,
+.booth-scan-unlocks img { width: 38px; height: 38px; border-radius: 50%; }
+.booth-scan-unlocks li > span { display: grid; place-items: center; background: #f1d793; color: #805612; }
+.booth-scan-unlocks img { object-fit: cover; }
+.booth-scan-unlocks small { color: #806d45; }
+
+.booth-scan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+}
+
+.booth-scan-actions a,
+.booth-scan-retry,
+.booth-scan-back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.booth-scan-actions a { flex: 1; padding: 0.7rem 1rem; border: 1px solid #cbd9d3; color: #285247; }
+.booth-scan-actions a.is-primary,
+.booth-scan-retry { border-color: #143c31; background: #143c31; color: #fff; }
+.booth-scan-retry { margin-top: 1.4rem; padding: 0.7rem 1.15rem; cursor: pointer; }
+.booth-scan-back { margin-top: 1rem; color: #315d51; text-decoration: underline; text-underline-offset: 4px; }
+
+.booth-scan-actions a:hover,
+.booth-scan-back:hover { border-color: #143c31; color: #143c31; }
+.booth-scan-actions a.is-primary:hover,
+.booth-scan-retry:hover { background: #0f3027; color: #fff; }
+
+.booth-scan-actions a:focus-visible,
+.booth-scan-retry:focus-visible,
+.booth-scan-back:focus-visible { outline: 3px solid rgba(198, 146, 45, 0.35); outline-offset: 3px; }
+
+@keyframes booth-scan-pulse {
+  50% { opacity: 0.45; transform: scale(0.92); }
+}
+
+@keyframes booth-scan-progress {
+  from { transform: translateX(-15%); }
+  to { transform: translateX(140%); }
+}
+
+@media (max-width: 640px) {
+  .booth-scan-page { padding: 0.8rem 0.65rem; }
+  .booth-scan-card { padding: 1.5rem 1rem; border-radius: 10px; }
+  .booth-scan-visit-card { grid-template-columns: auto 1fr; }
+  .booth-scan-visit-card time { grid-column: 1 / -1; padding-top: 0.65rem; border-top: 1px solid #dce6e1; }
+  .booth-scan-reward-grid { grid-template-columns: 1fr; }
+  .booth-scan-actions { flex-direction: column; }
+  .booth-scan-actions a { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booth-scan-icon.is-loading svg,
+  .booth-scan-progress::after { animation: none; }
+}

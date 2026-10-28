@@ -54,6 +54,8 @@ jobs:
       POSTGRES_USER: bookstreet
       POSTGRES_PASSWORD: bookstreet_ci_password
       EVENT_TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/bookstreet_event_test
+      EVENT_TEST_DATABASE_USER: bookstreet
+      EVENT_TEST_DATABASE_PASSWORD: bookstreet_ci_password
       REDIS_HOST: localhost
       REDIS_PORT: 6379
 

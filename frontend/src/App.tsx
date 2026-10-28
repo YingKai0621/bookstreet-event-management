@@ -25,6 +25,7 @@ import { PortalLoginPage } from './pages/organizer/PortalLoginPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
 import { AttendanceScanPage } from './pages/participant/AttendanceScanPage';
+import { BoothScanPage } from './pages/participant/BoothScanPage';
 import { EventDetailPage } from './pages/participant/EventDetailPage';
 import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
 import { MyEventsPage } from './pages/participant/MyEventsPage';
@@ -52,6 +53,10 @@ import {
   clearAttendanceScanToken,
   PARTICIPANT_ATTENDANCE_SCAN_PATH,
 } from './security/attendanceScanToken';
+import {
+  clearBoothScanToken,
+  PARTICIPANT_BOOTH_SCAN_PATH,
+} from './security/boothScanToken';
 import { participantApi } from './services/participantApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
@@ -63,7 +68,6 @@ import {
   ExtendedHeritageProfile,
   Language,
   ParticipantActivity,
-  ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
@@ -110,6 +114,7 @@ export function App() {
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
+  const isParticipantBoothScanRoute = location.pathname === PARTICIPANT_BOOTH_SCAN_PATH;
   const isParticipantCertificatesRoute = location.pathname === '/participant/certificates';
   const isVnPayReturn = location.pathname === '/payment/vnpay/return';
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
@@ -137,6 +142,11 @@ export function App() {
     if (isParticipantAttendanceScanRoute || isLoginRoute) return;
     clearAttendanceScanToken();
   }, [isLoginRoute, isParticipantAttendanceScanRoute]);
+
+  useEffect(() => {
+    if (isParticipantBoothScanRoute || isLoginRoute) return;
+    clearBoothScanToken();
+  }, [isLoginRoute, isParticipantBoothScanRoute]);
 
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
@@ -295,7 +305,6 @@ export function App() {
   const [participantParticipationError, setParticipantParticipationError] = useState('');
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
   const participationRefresh = useParticipationRefresh((isParticipantRoute || isPublicRoute) && isParticipantAuthenticated && !isParticipantAttendanceScanRoute);
-  const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
   const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
   const [participantCertificatesError, setParticipantCertificatesError] = useState('');
@@ -321,7 +330,6 @@ export function App() {
     setParticipantActivities([]);
     setParticipantParticipationLoading(true);
     setParticipantParticipationError('');
-    setParticipantBadges([]);
     setParticipantCertificates([]);
     setParticipantCertificatesLoading(false);
     setParticipantCertificatesError('');
@@ -350,7 +358,8 @@ export function App() {
   }, [isParticipantRoute, isPublicRoute, participantUserId]);
 
   useEffect(() => {
-    if (participantUserId === undefined || !isParticipantRoute || isParticipantAttendanceScanRoute) return;
+    if (participantUserId === undefined || !isParticipantRoute
+        || isParticipantAttendanceScanRoute || isParticipantBoothScanRoute) return;
     let active = true;
     const refreshParticipation = async () => {
       setParticipantParticipationLoading(true);
@@ -376,7 +385,8 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participationRefresh, participantUserId]);
+  }, [isParticipantAttendanceScanRoute, isParticipantBoothScanRoute, isParticipantRoute,
+    participantParticipationRevision, participationRefresh, participantUserId]);
 
   useEffect(() => {
     if (!isPublicRoute || participantUserId === undefined) return;
@@ -589,6 +599,8 @@ export function App() {
   };
 
   const handleParticipantLogout = () => {
+    clearAttendanceScanToken();
+    clearBoothScanToken();
     void handleLogout();
   };
 
@@ -702,6 +714,18 @@ export function App() {
       );
     }
 
+    if (isParticipantBoothScanRoute) {
+      return (
+        <ParticipantLayout
+          language={language}
+          profile={participantProfile}
+          onLogout={handleParticipantLogout}
+        >
+          <BoothScanPage language={language} />
+        </ParticipantLayout>
+      );
+    }
+
     if (participantProfileError) return <p role="alert">Không tải được hồ sơ: {participantProfileError}</p>;
     if (storedParticipantProfile.id !== String(authenticatedUser?.userId)) {
       return <p className="app-loading-state">Đang tải hồ sơ...</p>;
@@ -761,8 +785,6 @@ export function App() {
           <Route path="/participant/rewards" element={
             <RewardsPage
               language={language}
-              profile={participantProfile}
-              badges={participantBadges}
             />
           } />
           <Route path="/participant/certificates" element={
