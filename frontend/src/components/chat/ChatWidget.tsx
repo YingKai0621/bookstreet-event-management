@@ -1,25 +1,30 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { Bot, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { askChatbot, ChatRequestError, type ChatSource } from '../../services/chatApi';
 import './ChatWidget.css';
+import { useChatLauncher } from './chatLauncherState';
 
 interface Message { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] }
 
 export function ChatWidget() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, dismissed, dismiss } = useChatLauncher();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const { user } = useAuth();
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, busy]);
+  useEffect(() => { if (open) inputRef.current?.focus({ preventScroll: true }); }, [open]);
 
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/organizer')
       || location.pathname.startsWith('/partner') || location.pathname.startsWith('/portal')) return null;
   if (user && !user.roles.includes('PARTICIPANT')) return null;
+  if (dismissed && !open) return null;
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -53,10 +58,10 @@ export function ChatWidget() {
 
   return (
     <aside className={`bookstreet-chat ${open ? 'bookstreet-chat--open' : ''}`} aria-label="Trợ lý BookStreet">
-      {open && <section className="bookstreet-chat__panel" aria-label="Cuộc trò chuyện">
+      {open && <section id="bookstreet-chat-panel" className="bookstreet-chat__panel" aria-label="Cuộc trò chuyện">
         <header className="bookstreet-chat__header">
-          <div><strong>Trợ lý BookStreet</strong><small>Hỏi về sự kiện và hoạt động</small></div>
-          <button type="button" onClick={() => setOpen(false)} aria-label="Đóng trò chuyện">×</button>
+          <span className="bookstreet-chat__avatar" aria-hidden="true"><Bot size={25} strokeWidth={1.7} /></span>
+          <div className="bookstreet-chat__heading"><strong>Trợ lý BookStreet</strong><small>Hỏi về sự kiện và hoạt động</small></div>
         </header>
         <div className="bookstreet-chat__messages" aria-live="polite">
           {messages.length === 0 && <p className="bookstreet-chat__intro">Xin chào! Bạn có thể hỏi về cách tham gia, sự kiện hoặc hoạt động tại BookStreet.</p>}
@@ -71,15 +76,22 @@ export function ChatWidget() {
         </div>
         <form onSubmit={send} className="bookstreet-chat__form">
           <label htmlFor="bookstreet-chat-input" className="bookstreet-chat__sr">Câu hỏi của bạn</label>
-          <input id="bookstreet-chat-input" value={input} onChange={event => setInput(event.target.value)}
+          <input ref={inputRef} id="bookstreet-chat-input" value={input} onChange={event => setInput(event.target.value)}
             maxLength={500} placeholder="Nhập câu hỏi…" disabled={busy} autoComplete="off" />
           <button type="submit" disabled={busy || !input.trim()} aria-label="Gửi câu hỏi">Gửi</button>
         </form>
       </section>}
+      {!dismissed && <div className="bookstreet-chat__launcher">
+      {!open && <button type="button" className="bookstreet-chat__dismiss" onClick={dismiss}
+        aria-label="Ẩn chatbot nổi" title="Ẩn chatbot nổi và chuyển lên menu">
+        <X size={11} aria-hidden="true" />
+      </button>}
       <button type="button" className="bookstreet-chat__toggle" onClick={() => setOpen(!open)}
+        aria-controls="bookstreet-chat-panel" title={open ? 'Đóng trò chuyện' : 'Nhắn với trợ lý BookStreet'}
         aria-expanded={open} aria-label={open ? 'Đóng trợ lý BookStreet' : 'Mở trợ lý BookStreet'}>
-        {open ? '×' : 'Hỏi BookStreet'}
+        {open ? <X size={26} aria-hidden="true" /> : <Bot size={30} strokeWidth={1.8} aria-hidden="true" />}
       </button>
+      </div>}
     </aside>
   );
 }

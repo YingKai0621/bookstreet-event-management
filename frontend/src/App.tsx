@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import './App.css';
 import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
+import { useParticipationRefresh } from './hooks/useParticipationRefresh';
 import { AboutSection } from './components/landing/AboutSection';
 import { BoothsSection } from './components/landing/BoothsSection';
 import { EventsSection } from './components/landing/EventsSection';
@@ -288,10 +289,12 @@ export function App() {
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantProfileError, setParticipantProfileError] = useState('');
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
+  const [landingRegistrations, setLandingRegistrations] = useState<{ userId: number; eventIds: string[] } | null>(null);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
   const [participantParticipationLoading, setParticipantParticipationLoading] = useState(true);
   const [participantParticipationError, setParticipantParticipationError] = useState('');
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
+  const participationRefresh = useParticipationRefresh((isParticipantRoute || isPublicRoute) && isParticipantAuthenticated && !isParticipantAttendanceScanRoute);
   const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
   const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
@@ -373,7 +376,16 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participantUserId]);
+  }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participationRefresh, participantUserId]);
+
+  useEffect(() => {
+    if (!isPublicRoute || participantUserId === undefined) return;
+    let active = true;
+    participantApi.getEventRegistrations().then(registrations => {
+      if (active) setLandingRegistrations({ userId: participantUserId, eventIds: registrations.filter(event => event.isJoined).map(event => event.id) });
+    }).catch(error => console.warn('Không tải được trạng thái đăng ký sự kiện', error));
+    return () => { active = false; };
+  }, [isPublicRoute, participantUserId, participationRefresh, participantEvents]);
 
   useEffect(() => {
     if (participantUserId === undefined || !isParticipantCertificatesRoute) return;
@@ -515,13 +527,37 @@ export function App() {
   };
 
   const handleJoinParticipantEvent = async (eventId: string) => {
-    await participantApi.joinEvent(eventId);
-    setParticipantEvents(await participantApi.getEvents());
+    const userId = currentParticipantId.current;
+    const registration = await participantApi.joinEvent(eventId);
+    if (currentParticipantId.current !== userId) return;
+    const event = participantApi.mapEventRegistration(registration);
+    if (userId !== undefined) setLandingRegistrations(current => ({
+      userId,
+      eventIds: [...new Set([...(current?.userId === userId ? current.eventIds : []), event.id])],
+    }));
+    setParticipantEvents(current => {
+      const existing = current.find(item => item.id === event.id);
+      return existing
+        ? current.map(item => item.id === event.id ? { ...existing, ...event } : item)
+        : [event, ...current];
+    });
+    try {
+      const events = await participantApi.getEvents();
+      if (currentParticipantId.current === userId) setParticipantEvents(events);
+    } catch {
+      // The command has committed; keep its authoritative response if refresh fails.
+    }
   };
 
   const handleLeaveParticipantEvent = async (eventId: string) => {
-    await participantApi.leaveEvent(eventId);
-    setParticipantEvents(await participantApi.getEvents());
+    const userId = currentParticipantId.current;
+    const registration = await participantApi.leaveEvent(eventId);
+    if (currentParticipantId.current !== userId) return;
+    const event = participantApi.mapEventRegistration(registration);
+    if (userId !== undefined) setLandingRegistrations(current => current?.userId === userId
+      ? { userId, eventIds: current.eventIds.filter(id => id !== event.id) }
+      : current);
+    setParticipantEvents(current => current.map(item => item.id === event.id ? { ...item, ...event } : item));
     navigate('/participant');
   };
 
@@ -977,6 +1013,7 @@ export function App() {
           {/* 6. Events Schedule with Real Photography & Bookstall Proposal Flow */}
           <EventsSection 
             language={language} 
+            registeredEventIds={new Set(landingRegistrations?.userId === participantUserId ? landingRegistrations?.eventIds : [])}
             events={publicContextEvents}
             isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}

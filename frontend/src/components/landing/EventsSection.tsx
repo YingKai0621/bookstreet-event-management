@@ -7,6 +7,8 @@ import { EventItem, Language, ParticipantProfile } from '../../types';
 import { IconEventTicket } from './CustomIcons';
 import './EventsSection.css';
 import { EventCoverflow } from '../ui/EventCoverflow';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
 const formatRegistrationDeadline = (value: string) => {
   const parts = new Intl.DateTimeFormat('vi-VN', {
@@ -25,6 +27,7 @@ const startOfWeek = (date: Date) => {
 };
 
 interface EventsSectionProps {
+  registeredEventIds?: ReadonlySet<string>;
   language: Language;
   events?: EventItem[];
   isLoading?: boolean;
@@ -38,6 +41,7 @@ interface EventsSectionProps {
 
 export const EventsSection: React.FC<EventsSectionProps> = ({ 
   language, 
+  registeredEventIds = new Set<string>(),
   events = [],
   isLoading = false,
   isParticipantAuthenticated = false,
@@ -51,6 +55,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   const [showRegisterModal, setShowRegisterModal] = useState<EventItem | null>(null);
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const registrationNow = useDeadlineClock([activeEventDetail?.registrationDeadlineAt, showRegisterModal?.registrationDeadlineAt]);
   const [closingSheet, setClosingSheet] = useState<'detail' | 'register' | null>(null);
   const sheetDragStartY = React.useRef<number | null>(null);
   const didSheetDrag = React.useRef(false);
@@ -95,6 +100,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   }, [events]);
 
   const handleOpenRegister = (evt: EventItem) => {
+    if (registeredEventIds.has(evt.id)) return;
     setClosingSheet(null);
     setSheetDragOffset(0);
     setShowRegisterModal(evt);
@@ -121,6 +127,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
         </div>
 
         <EventCoverflow
+          registeredEventIds={registeredEventIds}
           events={events}
           language={language}
           weekEventIds={weekEventIds}
@@ -221,13 +228,14 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             <button
               type="button"
               className="btn-figma-primary"
+              disabled={registeredEventIds.has(activeEventDetail.id) || registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow)}
               onClick={() => {
                 const e = activeEventDetail;
                 setActiveEventDetail(null);
                 handleOpenRegister(e);
               }}
             >
-              {language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event'}
+              {registeredEventIds.has(activeEventDetail.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event')}
             </button>
           </div>
         </div>,
@@ -380,6 +388,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   onSubmit={async (e) => {
                     e.preventDefault();
                     if (!isParticipantAuthenticated) return;
+                    if (registeredEventIds.has(showRegisterModal.id)) return;
+                    if (registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt)) return;
                     if (showRegisterModal && onJoinEvent) {
                       try {
                         setRegistrationError(null);
@@ -393,9 +403,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   className="figma-reg-form"
                 >
                   {registrationError && <p role="alert" className="app-loading-state">{registrationError}</p>}
-                  <button type="submit" className="btn-figma-primary reg-submit-button">
+                  <button type="submit" className="btn-figma-primary reg-submit-button" disabled={registeredEventIds.has(showRegisterModal.id) || registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt, registrationNow)}>
                     <CheckCircle2 size={18} />
-                    <span>{language === 'vi' ? 'Xác nhận Đăng ký Tham dự' : 'Confirm Registration'}</span>
+                    <span>{registeredEventIds.has(showRegisterModal.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Xác nhận Đăng ký Tham dự' : 'Confirm Registration')}</span>
                   </button>
                 </form>
               </>

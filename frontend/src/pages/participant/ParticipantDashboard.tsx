@@ -20,6 +20,9 @@ import { Link } from 'react-router-dom';
 import { NotificationCallout } from '../../components/ui/NotificationCallout';
 import { Language, ParticipantActivity, ParticipantEvent, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
+import './ParticipantCalendar.css';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
 interface ParticipantDashboardProps {
   language: Language;
@@ -32,6 +35,7 @@ interface ParticipantDashboardProps {
 }
 
 interface CalendarEventItem {
+  registrationDeadlineAt?: string | null;
   id: string;
   title: string;
   time?: string;
@@ -57,6 +61,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 }) => {
   // Chỉ lấy những hoạt động người dùng thực sự đã đăng ký (status === 'registered' hoặc 'attended')
   const registeredActivities = activities.filter(a => a.status === 'registered' || a.status === 'attended');
+  const registrationNow = useDeadlineClock(events.map(event => event.registrationDeadlineAt));
 
   const vietnamToday = (() => {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -76,10 +81,12 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
     dateStr: string;
     events: CalendarEventItem[];
   } | null>(null);
-  const [confirmingEvent, setConfirmingEvent] = useState<CalendarEventItem | null>(null);
+  const [confirmingEventSnapshot, setConfirmingEvent] = useState<CalendarEventItem | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationError, setRegistrationError] = useState('');
   const [registerSuccessToast, setRegisterSuccessToast] = useState<string | null>(null);
   useModalDismiss(Boolean(selectedDayEvents), () => setSelectedDayEvents(null));
-  useModalDismiss(Boolean(confirmingEvent), () => setConfirmingEvent(null));
+  useModalDismiss(Boolean(confirmingEventSnapshot), () => { if (!isRegistering) setConfirmingEvent(null); });
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -105,8 +112,10 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
   const activitiesOnDate = (date: string) => (date < vietnamToday ? [] : activities)
     .filter(activity => {
+      const isoDate = activity.date.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
       const match = activity.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      return Boolean(match && `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}` === date);
+      const activityDate = isoDate || (match ? `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}` : '');
+      return activityDate === date;
     })
     .map(activity => ({
       id: activity.id,
@@ -129,25 +138,28 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       .filter(event => {
         const dates = event.dateRange.match(/\d{4}-\d{2}-\d{2}/g) || [];
         const startDate = dates[0];
-        // An event may span several days, but the calendar presents its card once
-        // on its first day; activities remain displayed on their actual dates.
-        // Lịch tổng quan chỉ là lịch sắp diễn ra: không hiển thị lại thẻ của
-        // sự kiện đã bắt đầu ở ngày trước đó. Lịch sử vẫn nằm trong “Sự kiện của tôi”.
-        return startDate === date && startDate >= vietnamToday;
+        const endDate = dates[1] || startDate;
+        return Boolean(startDate && endDate && date >= startDate && date <= endDate);
       })
-      .map(event => ({
-        id: event.id,
-        title: event.title,
-        location: event.location,
-        category: language === 'vi' ? 'Sự kiện' : 'Event',
-        type: 'event' as const,
-        link: '/participant/events',
-        badgeColor: '#185E48',
-        status: event.status === 'ended' ? 'ended' as const : statusForDate(date),
-        isRegistered: event.isJoined,
-        shortDesc: event.shortDesc,
-        dateStr: event.dateRange,
-      }));
+      .map(event => {
+        const times = event.dateRange.match(/\d{2}:\d{2}/g) || [];
+        const timeStr = times.length >= 2 ? `${times[0]} – ${times[1]}` : (times[0] || '');
+        return {
+          id: event.id,
+          title: event.title,
+          time: timeStr,
+          location: event.location,
+          category: language === 'vi' ? 'Sự kiện' : 'Event',
+          type: 'event' as const,
+          link: `/participant/events/${event.id}`,
+          badgeColor: '#185E48',
+          status: event.status === 'ended' ? ('ended' as const) : statusForDate(date),
+          isRegistered: event.isJoined,
+          registrationDeadlineAt: event.registrationDeadlineAt,
+          shortDesc: event.shortDesc,
+          dateStr: event.dateRange,
+        };
+      });
     const list = [...calendarEvents, ...activitiesOnDate(date)];
     return activeFilter === 'all' ? list : list.filter(event => event.status === activeFilter);
   };
@@ -214,11 +226,20 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   const currentMonthName = language === 'vi' ? monthNamesVi[currentMonth] : monthNamesEn[currentMonth];
+  const confirmingEvent = confirmingEventSnapshot
+    ? calendarCells.flatMap(cell => cell.events).find(item => item.id === confirmingEventSnapshot.id && item.type === confirmingEventSnapshot.type) || confirmingEventSnapshot
+    : null;
+  const registrationLabel = (registered?: boolean, deadline?: string | null) => registered
+    ? (language === 'vi' ? 'Đã đăng ký' : 'Registered')
+    : registrationDeadlinePassed(deadline, registrationNow)
+      ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed')
+      : (language === 'vi' ? 'Chưa đăng ký' : 'Not registered');
 
   // Handler when clicking on an event chip
   const handleEventClick = (ev: CalendarEventItem, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    setRegistrationError('');
 
     // Luôn mở popup đăng ký / chi tiết sự kiện
     setConfirmingEvent(ev);
@@ -226,17 +247,24 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
   // Perform registration on confirmation
   const handleConfirmRegistration = async () => {
-    if (!confirmingEvent) return;
+    if (!confirmingEvent || isRegistering || confirmingEvent.isRegistered) return;
+    if (registrationDeadlinePassed(confirmingEvent.registrationDeadlineAt)) return;
+    setIsRegistering(true);
+    setRegistrationError('');
 
     try {
       if (confirmingEvent.type === 'event') {
-        await onJoinEvent?.(confirmingEvent.id);
+        if (!onJoinEvent) throw new Error(language === 'vi' ? 'Chưa thể đăng ký sự kiện. Vui lòng tải lại trang.' : 'Registration unavailable. Reload the page.');
+        await onJoinEvent(confirmingEvent.id);
       } else {
-        await onRegisterActivity?.(confirmingEvent.id);
+        if (!onRegisterActivity) throw new Error(language === 'vi' ? 'Chưa thể đăng ký hoạt động. Vui lòng tải lại trang.' : 'Registration unavailable. Reload the page.');
+        await onRegisterActivity(confirmingEvent.id);
       }
     } catch (error) {
-      setRegisterSuccessToast(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể đăng ký. Vui lòng thử lại.' : 'Registration failed. Please try again.'));
+      setRegistrationError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể đăng ký. Vui lòng thử lại.' : 'Registration failed. Please try again.'));
       return;
+    } finally {
+      setIsRegistering(false);
     }
 
     const title = confirmingEvent.title;
@@ -255,7 +283,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       {/* Registration Success Toast Notification */}
       {registerSuccessToast && (
         <NotificationCallout
-          variant={registerSuccessToast.toLowerCase().includes('failed') || registerSuccessToast.toLowerCase().includes('khÃ´ng') ? 'error' : 'success'}
+          variant="success"
           title={language === 'vi' ? 'Cáº­p nháº­t Ä‘Äƒng kÃ½' : 'Registration update'}
           floating
         >
@@ -374,6 +402,10 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           </div>
         </div>
 
+        <div className="participant-calendar-legend" aria-label={language === 'vi' ? 'Trạng thái trên lịch' : 'Calendar status'}>
+          <span className="is-registered"><CheckCircle2 size={14} />{registrationLabel(true)}</span>
+          <span className="is-unregistered"><CalendarIcon size={14} />{registrationLabel(false)}</span>
+        </div>
         {/* Scrollable Calendar Area on Mobile */}
         <div className="dashboard-calendar-scroll-wrap">
           <div className="dashboard-calendar-inner-grid">
@@ -401,6 +433,17 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
             return (
               <div
                 key={idx}
+                className={`participant-calendar-day ${hasEvents ? 'has-events' : ''} ${cell.events.some(item => item.isRegistered) ? 'has-registrations' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`${cell.dateStr}, ${cell.events.length} ${language === 'vi' ? 'sự kiện' : 'events'}`}
+                aria-pressed={isSelected}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedDateStr(cell.dateStr);
+                  }
+                }}
                 onClick={() => {
                   setSelectedDateStr(cell.dateStr);
                   if (hasEvents) {
@@ -488,13 +531,16 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
                     {visibleEvents.map((ev) => {
                       const isJoined = ev.isRegistered;
-                      const borderColor = isJoined ? '#10B981' : '#EF4444'; // Green if registered, Red if unregistered/not joined
-                      const leftBarColor = isJoined ? '#059669' : '#DC2626';
-                      const bgCard = isJoined ? '#F0FDF4' : '#FEF2F2';
+                      const borderColor = isJoined ? '#78B99D' : '#DEC994';
+                      const leftBarColor = isJoined ? '#185E48' : '#976512';
+                      const bgCard = isJoined ? '#E8F5EF' : '#FFFAED';
 
                       return (
                         <div
-                          key={ev.id}
+                          key={`${ev.type}-${ev.id}`}
+                          className={`participant-calendar-entry ${isJoined ? 'is-registered' : 'is-unregistered'}`}
+                          data-calendar-id={`${ev.type}-${ev.id}`}
+                          data-registered={Boolean(isJoined)}
                           onClick={(e) => handleEventClick(ev, e)}
                           style={{
                             borderRadius: '8px',
@@ -515,7 +561,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                           <div style={{
                             fontSize: '0.68rem',
                             fontWeight: 750,
-                            color: isJoined ? '#047857' : '#B91C1C',
+                            color: isJoined ? '#185E48' : '#80570E',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '3.5px',
@@ -557,15 +603,15 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                                 whiteSpace: 'nowrap'
                               }}>
                                 <CheckCircle2 size={10} />
-                                <span>Sẽ tham gia</span>
+                                <span>{registrationLabel(true)}</span>
                               </span>
                             ) : (
                               <span style={{
                                 fontSize: '0.62rem',
                                 fontWeight: 750,
-                                background: '#FEE2E2',
-                                color: '#DC2626',
-                                border: '1px solid #FECACA',
+                                background: '#FFF4D5',
+                                color: '#80570E',
+                                border: '1px solid #DEC994',
                                 padding: '1px 5px',
                                 borderRadius: '4px',
                                 display: 'inline-flex',
@@ -573,7 +619,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                                 gap: '3px',
                                 whiteSpace: 'nowrap'
                               }}>
-                                <span>Chưa đăng ký</span>
+                                <span>{registrationLabel(false, ev.registrationDeadlineAt)}</span>
                               </span>
                             )}
                           </div>
@@ -621,6 +667,22 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
             </div>
           </div>
         </div>
+        <section className="participant-mobile-agenda" aria-live="polite" aria-label={language === 'vi' ? 'Lịch trong ngày' : 'Daily schedule'}>
+          <div className="participant-agenda-heading">
+            <h3>{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { day: 'numeric', month: 'long' }).format(new Date(`${selectedDateStr}T12:00:00`))}</h3>
+            <Link to="/participant/events">{language === 'vi' ? 'Sự kiện của tôi' : 'My events'}</Link>
+          </div>
+          {(calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events || []).map(item => (
+            <button key={`${item.type}-${item.id}`} type="button" className={`participant-agenda-item ${item.isRegistered ? 'is-registered' : 'is-unregistered'}`} data-calendar-id={`${item.type}-${item.id}`} data-registered={Boolean(item.isRegistered)} onClick={() => { setRegistrationError(''); setConfirmingEvent(item); }}>
+              <CalendarIcon size={20} aria-hidden="true" />
+              <span><strong>{item.title}</strong><small>{[item.time, item.location].filter(Boolean).join(' · ') || item.category}</small><span className="participant-calendar-status">{item.isRegistered && <CheckCircle2 size={12} />}{registrationLabel(item.isRegistered, item.registrationDeadlineAt)}</span></span>
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          ))}
+          {!calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events.length && (
+            <p>{language === 'vi' ? 'Chưa có lịch trong ngày này. Chọn ngày có dấu chấm để xem hoạt động.' : 'No plans for this day. Select a marked date to view your schedule.'}</p>
+          )}
+        </section>
       </div>
 
       {/* 4. Modal "Xem Thêm" Sự Kiện trong ngày */}
@@ -647,7 +709,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
             <div className="calendar-modal-body">
               <PaginatedList items={selectedDayEvents.events}>{pageItems => (<div className="calendar-modal-events-list">
                 {pageItems.map((evt) => (
-                  <div key={evt.id} className="calendar-modal-event-card">
+                  <div key={`${evt.type}-${evt.id}`} className={`calendar-modal-event-card ${evt.isRegistered ? 'is-registered' : 'is-unregistered'}`}>
                     <div className="modal-event-card-left" style={{ borderLeftColor: evt.badgeColor || '#185E48' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
                         <div className="modal-event-badge">
@@ -696,13 +758,15 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                         <button
                           type="button"
                           className="modal-event-action-btn"
+                          disabled={registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow)}
                           style={{ background: '#185E48', border: 'none', cursor: 'pointer' }}
                           onClick={() => {
+                            setRegistrationError('');
                             setConfirmingEvent(evt);
                           }}
                         >
                           <CalendarCheck size={14} />
-                          <span>{language === 'vi' ? 'Đăng ký tham gia' : 'Register'}</span>
+                          <span>{registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia' : 'Register')}</span>
                         </button>
                       ) : (
                         <Link 
@@ -727,8 +791,11 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       {confirmingEvent && (
         <div 
           className="participant-calendar-modal-backdrop" 
+          role="dialog"
+          aria-modal="true"
+          aria-label={language === 'vi' ? 'Đăng ký trên lịch' : 'Calendar registration'}
           style={{ zIndex: 10000 }}
-          onClick={() => setConfirmingEvent(null)}
+          onClick={() => { if (!isRegistering) setConfirmingEvent(null); }}
         >
           <div 
             className="participant-calendar-modal" 
@@ -762,6 +829,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
               <button 
                 type="button" 
                 className="calendar-modal-close-btn"
+                disabled={isRegistering}
+                aria-label={language === 'vi' ? 'Đóng đăng ký' : 'Close registration'}
                 onClick={() => setConfirmingEvent(null)}
               >
                 <X size={18} />
@@ -811,7 +880,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       padding: '2px 8px',
                       borderRadius: '6px'
                     }}>
-                      {language === 'vi' ? 'Chưa đăng ký' : 'Not registered'}
+                      {registrationLabel(false, confirmingEvent.registrationDeadlineAt)}
                     </span>
                   )}
                 </div>
@@ -885,6 +954,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                 </div>
               )}
 
+              {registrationError && <p className="participant-inline-error" role="alert">{registrationError}</p>}
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
@@ -899,6 +969,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                     cursor: 'pointer'
                   }}
                   onClick={() => setConfirmingEvent(null)}
+                  disabled={isRegistering}
                 >
                   {language === 'vi' ? 'Đóng' : 'Close'}
                 </button>
@@ -921,9 +992,10 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       boxShadow: '0 4px 12px rgba(24, 94, 72, 0.25)'
                     }}
                     onClick={handleConfirmRegistration}
+                    disabled={isRegistering || registrationDeadlinePassed(confirmingEvent.registrationDeadlineAt, registrationNow)}
                   >
                     <CheckCircle2 size={16} />
-                    <span>{language === 'vi' ? 'Xác nhận Đăng ký' : 'Confirm Registration'}</span>
+                    <span>{registrationDeadlinePassed(confirmingEvent.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : isRegistering ? (language === 'vi' ? 'Đang đăng ký...' : 'Registering...') : (language === 'vi' ? 'Xác nhận Đăng ký' : 'Confirm Registration')}</span>
                   </button>
                 )}
               </div>

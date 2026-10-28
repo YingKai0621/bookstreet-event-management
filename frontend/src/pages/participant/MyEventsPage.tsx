@@ -22,28 +22,21 @@ export const MyEventsPage = ({
   loadError,
   onRetry,
   onLeaveEvent,
-  onJoinEvent,
 }: MyEventsPageProps) => {
   const vi = language === 'vi';
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'ended' | 'left'>('ongoing');
+  const [activeTab, setActiveTab] = useState<'ongoing' | 'ended'>('ongoing');
   const [actionId, setActionId] = useState('');
   const [actionError, setActionError] = useState('');
 
   const ongoingCount = events.filter(event => event.status === 'ongoing' && event.isJoined).length;
   const endedCount = events.filter(event => event.status === 'ended' && event.isJoined).length;
-  const leftCount = events.filter(event => !event.isJoined || event.status === 'left').length;
-  const filteredEvents = events.filter(event => {
-    if (activeTab === 'ongoing') return event.status === 'ongoing' && event.isJoined;
-    if (activeTab === 'ended') return event.status === 'ended' && event.isJoined;
-    return !event.isJoined || event.status === 'left';
-  });
+  const filteredEvents = events.filter(event => event.isJoined && event.status === activeTab);
 
   const runAction = async (event: ParticipantEvent) => {
     setActionId(event.id);
     setActionError('');
     try {
-      if (event.isJoined) await onLeaveEvent(event.id);
-      else await onJoinEvent?.(event.id);
+      await onLeaveEvent(event.id);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : (vi ? 'Không thể cập nhật đăng ký sự kiện.' : 'Unable to update the event registration.'));
     } finally {
@@ -66,9 +59,6 @@ export const MyEventsPage = ({
         </button>
         <button type="button" className={`participant-tab-btn ${activeTab === 'ended' ? 'is-active' : ''}`} onClick={() => setActiveTab('ended')}>
           {vi ? `Đã kết thúc (${endedCount})` : `Ended (${endedCount})`}
-        </button>
-        <button type="button" className={`participant-tab-btn ${activeTab === 'left' ? 'is-active' : ''}`} onClick={() => setActiveTab('left')}>
-          {vi ? `Đã rời (${leftCount})` : `Left (${leftCount})`}
         </button>
       </div>
 
@@ -99,14 +89,14 @@ export const MyEventsPage = ({
               <article key={event.id} className="participant-event-card">
                 <div className="event-card-media">
                   <img src={event.imageUrl} alt="" />
-                  <span className={`event-status-pill ${event.status}`}>
-                    {event.status === 'ended'
-                      ? (vi ? 'Đã kết thúc' : 'Ended')
-                      : event.isJoined ? (vi ? 'Đang tham gia' : 'Joined') : (vi ? 'Đã rời' : 'Left')}
-                  </span>
                 </div>
                 <div className="event-card-body">
-                  <h2 className="event-card-title">{event.title}</h2>
+                  <div className="participant-event-card-heading">
+                    <h2 className="event-card-title">{event.title}</h2>
+                    <span className={`event-status-pill ${event.status}`}>
+                      {event.status === 'ended' ? (vi ? 'Đã kết thúc' : 'Ended') : (vi ? 'Đang tham gia' : 'Joined')}
+                    </span>
+                  </div>
                   <div className="event-card-meta">
                     <div className="event-meta-item"><Calendar size={15} /><span>{event.dateRange}</span></div>
                     <div className="event-meta-item"><MapPin size={15} /><span>{event.location}</span></div>
@@ -114,14 +104,6 @@ export const MyEventsPage = ({
                   <p className="event-card-activity-count">
                     {vi ? `${event.activitiesCount} hoạt động đang giữ đăng ký` : `${event.activitiesCount} active activity registrations`}
                   </p>
-                  {!event.isJoined && event.status === 'left' && (
-                    <p className="participant-event-rejoin-note">
-                      {vi ? 'Bạn đã rời sự kiện. ' : 'You have left this event. '}
-                      <Link to={`/su-kien/${encodeURIComponent(event.id)}`}>
-                        {vi ? 'Đăng ký lại ở đây' : 'Rejoin here'}
-                      </Link>
-                    </p>
-                  )}
                   <div className="event-card-actions">
                     <Link className="btn-part-primary" to={`/participant/events/${encodeURIComponent(event.id)}`}>
                       {vi ? 'Xem hoạt động' : 'View activities'}<ArrowRight size={14} />
@@ -131,11 +113,6 @@ export const MyEventsPage = ({
                         if (window.confirm(vi ? 'Bạn có chắc chắn muốn rời sự kiện này?' : 'Are you sure you want to leave this event?')) void runAction(event);
                       }}>
                         {actionId === event.id ? (vi ? 'Đang xử lý...' : 'Working...') : (vi ? 'Rời sự kiện' : 'Leave')}
-                      </button>
-                    )}
-                    {!event.isJoined && onJoinEvent && (
-                      <button type="button" className="btn-part-secondary" disabled={actionId === event.id} onClick={() => void runAction(event)}>
-                        {actionId === event.id ? (vi ? 'Đang xử lý...' : 'Working...') : (vi ? 'Tham gia lại' : 'Rejoin')}
                       </button>
                     )}
                   </div>

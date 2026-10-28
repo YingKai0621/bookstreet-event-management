@@ -21,6 +21,9 @@
 .event-coverflow-actions button { min-height: 42px; padding: .55rem .85rem; border-radius: 5px; font-weight: 750; cursor: pointer; }
 .event-coverflow-detail-btn { border: 1px solid #9aafa4; background: transparent; color: #193a2f; }
 .event-coverflow-register-btn { border: 1px solid #e2ad52; background: #e2ad52; color: #1b2b25; }
+.event-coverflow-register-btn:disabled { background: #edf0ed; border-color: #d3dcd6; color: #596b62; cursor: not-allowed; }
+.event-coverflow-register-btn.is-registered:disabled { background: #e8f5ef; border-color: #78b99d; color: #185e48; }
+.event-coverflow-registered-badge { position: absolute; bottom: 12px; left: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; border: 1px solid #b6d9c7; border-radius: 6px; background: #e8f5ef; color: #185e48; font-size: 12px; font-weight: 700; }
 .event-coverflow-pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: .45rem; margin-top: 1.5rem; }
 .event-coverflow-pagination button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #9eaea4; cursor: pointer; }
 .event-coverflow-pagination button.is-selected { width: 24px; border-radius: 10px; background: #193a2f; }

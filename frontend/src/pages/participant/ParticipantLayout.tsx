@@ -1,5 +1,6 @@
 import {
   Award,
+  Bot,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -18,6 +19,8 @@ import { RoleSidebar } from '../../components/ui/RoleSidebar';
 import { participantApi, type ParticipantNotificationItem } from '../../services/participantApi';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
+import './ParticipantMobile.css';
+import { useChatLauncher } from '../../components/chat/chatLauncherState';
 
 interface ParticipantLayoutProps {
   language: Language;
@@ -34,6 +37,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { dismissed: chatbotDismissed, restore: restoreChatbot } = useChatLauncher();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -164,6 +168,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
             className="participant-mobile-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle navigation"
+            aria-expanded={sidebarOpen}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -200,6 +205,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
         </div>
 
         <div className="top-bar-right">
+          {chatbotDismissed && <button type="button" className="participant-icon-btn" aria-label={language === 'vi' ? 'Hiện lại nút chatbot' : 'Restore chatbot button'} onClick={restoreChatbot}><Bot size={20} aria-hidden="true" /></button>}
           {/* Notifications Bell Dropdown */}
           <div className="participant-notif-menu" ref={notifDropdownRef}>
             <button 
@@ -286,6 +292,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
             <button
               type="button"
               className="participant-user-pill"
+              aria-label={language === 'vi' ? 'Tài khoản của bạn' : 'Your account'}
+              aria-expanded={userDropdownOpen}
               onClick={() => {
                 setUserDropdownOpen(!userDropdownOpen);
                 setNotifDropdownOpen(false);
@@ -363,6 +371,14 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
           {children}
         </main>
       </div>
+      <nav className="participant-bottom-nav" aria-label={language === 'vi' ? 'Điều hướng chính' : 'Primary navigation'}>
+        {navItems.filter(item => ['dashboard', 'events', 'rewards', 'profile'].includes(item.id)).map(item => (
+          <Link key={item.id} to={item.path} aria-current={isNavActive(item.path, item.exact) ? 'page' : undefined}>
+            {item.icon}
+            <span>{item.id === 'events' ? (language === 'vi' ? 'Sự kiện' : 'Events') : item.id === 'rewards' ? (language === 'vi' ? 'Điểm & huy hiệu' : 'Rewards') : item.id === 'profile' ? (language === 'vi' ? 'Cá nhân' : 'Profile') : (language === 'vi' ? 'Tổng quan' : 'Overview')}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 };

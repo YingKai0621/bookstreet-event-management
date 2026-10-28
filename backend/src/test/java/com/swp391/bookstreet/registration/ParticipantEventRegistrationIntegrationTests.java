@@ -169,6 +169,42 @@ class ParticipantEventRegistrationIntegrationTests {
     }
 
     @Test
+    void organizerReadsRegistrationsCommittedByParticipantCommands() throws Exception {
+        long eventId = insertEvent("Shared registration evidence", BASE.plus(Duration.ofHours(1)));
+        long activityId = insertActivity(eventId, insertLocation(), "Shared activity",
+                BASE.plus(Duration.ofHours(2)), BASE.plus(Duration.ofHours(3)),
+                BASE.plus(Duration.ofHours(1)), 10, true, "PUBLISHED");
+        JsonNode registered = body(mvc.perform(post(PARTICIPANT + "/activities/" + activityId + "/register")
+                        .with(participant(participantId)).with(csrf()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        long registrationId = registered.get("activityRegistrationId").asLong();
+
+        mvc.perform(get("/api/v1/organizer/events/" + eventId + "/event-registrations")
+                        .with(organizer(organizerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].participant.userId").value(participantId))
+                .andExpect(jsonPath("$.content[0].seatActiveActivityCount").value(1));
+        mvc.perform(get("/api/v1/organizer/activities/" + activityId + "/registrations")
+                        .with(organizer(organizerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].activityRegistrationId").value(registrationId))
+                .andExpect(jsonPath("$.content[0].registrationStatus").value("ACTIVE"));
+
+        mvc.perform(post(PARTICIPANT + "/activities/" + activityId + "/cancel-registration")
+                        .with(participant(participantId)).with(csrf())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/organizer/activities/" + activityId + "/registrations")
+                        .with(organizer(organizerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].activityRegistrationId").value(registrationId))
+                .andExpect(jsonPath("$.content[0].registrationStatus").value("CANCELLED"));
+        mvc.perform(get("/api/v1/organizer/events/" + eventId + "/event-registrations")
+                        .with(organizer(organizerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].seatActiveActivityCount").value(0));
+    }
+
+    @Test
     void joinListDetailLeaveAndRejoinReuseOneDurableIdentity() throws Exception {
         long eventId = insertEvent("Alpha Event", BASE.plus(Duration.ofHours(1)));
 

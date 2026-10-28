@@ -1,6 +1,7 @@
 import { API_BASE_URL } from './apiConfig';
 import { ApiError, createApiError } from './apiError';
 import { clearCsrfToken, getCsrfToken } from './csrfToken';
+import { publishParticipationChange } from './participationSync';
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
@@ -161,6 +162,7 @@ async function sendRequest<T>(
 
   if (isMutationMethod(method)) {
     notifyDataChanged();
+    publishParticipationChange(endpoint);
   }
 
   return responseBody;

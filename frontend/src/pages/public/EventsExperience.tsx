@@ -16,6 +16,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../services/apiError';
 import { EventItem, Language, ParticipantProfile } from '../../types';
 import './EventsExperience.css';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
 interface EventsExperienceProps {
   language: Language;
@@ -72,6 +74,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const registrationNow = useDeadlineClock(events.map(event => event.registrationDeadlineAt));
   const eventCatalogUrl = selectedEventId
     ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}`
     : '/su-kien';
@@ -313,7 +316,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                     <p className="heritage-card-summary">{vi ? evt.summary : evt.summaryEn}</p>
                     <div className="event-card-footer">
                       <span className="heritage-card-arrow-text">
-                        {vi ? 'Đăng ký & Xem chi tiết' : 'Register & Details'}
+                        {registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký · Xem chi tiết' : 'Registration deadline passed · View details') : (vi ? 'Đăng ký & Xem chi tiết' : 'Register & Details')}
                       </span>
                       <ArrowRight size={16} />
                     </div>
@@ -371,6 +374,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 type="button"
                 className="btn-figma-primary"
                 style={{ width: '100%' }}
+                disabled={registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow)}
                 onClick={() => {
                   const ev = activeModalEvent;
                   navigate(eventCatalogUrl);
@@ -381,7 +385,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 }}
               >
                 <CheckCircle size={16} />
-                <span>{vi ? 'Tham gia sự kiện' : 'Join Event'}</span>
+                <span>{registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (vi ? 'Tham gia sự kiện' : 'Join Event')}</span>
               </button>
             </div>
           </div>,
@@ -396,7 +400,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <X size={20} />
               </button>
 
-              {deadlinePassed ? (
+              {deadlinePassed || (!registerSuccess && registrationDeadlinePassed(registeredEvent.registrationDeadlineAt, registrationNow)) ? (
                 <div className="registration-deadline-notice" role="alert">
                   <Clock size={46} aria-hidden="true" />
                   <h3 id="reg-modal-heading">{vi ? 'Sự kiện đã hết hạn đăng ký' : 'Event registration has closed'}</h3>

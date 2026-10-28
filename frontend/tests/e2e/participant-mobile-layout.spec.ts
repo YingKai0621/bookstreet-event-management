@@ -1,0 +1,38 @@
+import { expect, test } from '@playwright/test';
+
+for (const width of [360, 390, 640]) {
+  test(`Participant phone navigation and connected layout at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.route('**/api/v1/**', async route => {
+      const path = new URL(route.request().url()).pathname;
+      const account = { userId: 42, username: 'reader', fullName: 'Nguyễn Minh Anh', email: 'reader@example.test', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT'] };
+      const body = path.endsWith('/auth/me') ? account
+        : path.endsWith('/auth/profile') ? { ...account, id: 42 }
+        : path.endsWith('/auth/csrf') ? { headerName: 'X-CSRF-TOKEN', token: 'test' }
+        : path.endsWith('/unread-count') ? { unreadCount: 0 }
+        : { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    await page.goto('/participant');
+    const navigation = page.locator('.participant-bottom-nav');
+    await expect(navigation).toBeVisible();
+    await expect(page.locator('.participant-mobile-agenda')).toBeVisible();
+    const calendar = await page.locator('.dashboard-calendar-card').boundingBox();
+    expect(calendar!.height).toBeLessThan(650);
+    await page.screenshot({ path: `test-results/participant-dashboard-mobile-${width}.png`, fullPage: true });
+    for (const route of ['/participant/events', '/participant/rewards', '/participant/certificates', '/participant/feedback', '/participant/notifications', '/participant/profile']) {
+      await page.goto(route);
+      await expect(page.locator('.participant-main-viewport h1')).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      const main = await page.locator('.participant-main-viewport').boundingBox();
+      expect(main!.x).toBeLessThanOrEqual(16);
+    }
+    await navigation.getByRole('link', { name: 'Sự kiện', exact: true }).click();
+    await expect(page).toHaveURL(/\/participant\/events$/);
+    await expect(navigation.getByRole('link', { name: 'Sự kiện', exact: true })).toHaveAttribute('aria-current', 'page');
+    const chat = await page.locator('.bookstreet-chat').boundingBox();
+    const nav = await navigation.boundingBox();
+    if (chat) expect(chat.y + chat.height).toBeLessThanOrEqual(nav!.y);
+    await page.screenshot({ path: `test-results/participant-mobile-${width}.png`, fullPage: true });
+  });
+}

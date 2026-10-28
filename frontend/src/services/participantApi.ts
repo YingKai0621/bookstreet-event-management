@@ -83,6 +83,17 @@ interface EventRegistrationResponse {
   seatActiveActivityCount: number;
 }
 
+interface PublicEventSummaryResponse {
+  participantRegistrationDeadlineAt?: string | null;
+  eventId: number;
+  name: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  bannerUrl: string | null;
+  status: string;
+}
+
 export interface ActivityRegistrationResponse {
   activityRegistrationId: number;
   activity: {
@@ -243,13 +254,17 @@ function mapCertificateDetail(detail: CertificateDetailResponse): ParticipantCer
 
 async function getAllPages<T>(endpoint: string): Promise<T[]> {
   const separator = endpoint.includes('?') ? '&' : '?';
-  const first = await apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=0&size=100`);
-  const remaining = first.totalPages > 1
-    ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+  const first = await apiClient.get<ParticipantPageResponse<T> | T[]>(`${endpoint}${separator}page=0&size=100`);
+  if (!first) return [];
+  if (Array.isArray(first)) return first;
+  const totalPages = typeof first.totalPages === 'number' ? first.totalPages : 1;
+  const remaining = totalPages > 1
+    ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) =>
       apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=${index + 1}&size=100`)))
     : [];
   return [first, ...remaining]
-    .sort((left, right) => left.page - right.page)
+    .filter(page => page && Array.isArray(page.content))
+    .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
     .flatMap(page => page.content);
 }
 
@@ -331,13 +346,63 @@ export const participantApi = {
     return registrations.map(registration => mapActivityRegistrationWithEvents(registration, events));
   },
   async getEvents(): Promise<ParticipantEvent[]> {
-    const registrations = await getAllPages<EventRegistrationResponse>(
-      '/participant/event-registrations?sort=activatedAt,desc',
-    );
+    const [registrations, publicEvents] = await Promise.all([
+      getAllPages<EventRegistrationResponse>(
+        '/participant/event-registrations?sort=activatedAt,desc',
+      ),
+      getAllPages<PublicEventSummaryResponse>(
+        '/events?sort=startAt,asc',
+      ).catch(() => [] as PublicEventSummaryResponse[]),
+    ]);
+
+    const registrationMap = new Map<number, EventRegistrationResponse>();
+    registrations.forEach(reg => {
+      if (reg?.event?.eventId) {
+        registrationMap.set(reg.event.eventId, reg);
+      }
+    });
+
+    const mappedEvents: ParticipantEvent[] = [];
+    const seenEventIds = new Set<number>();
+
+    for (const pub of publicEvents) {
+      if (!pub?.eventId) continue;
+      seenEventIds.add(pub.eventId);
+      const reg = registrationMap.get(pub.eventId);
+      const joined = reg?.status === 'ACTIVE';
+      const isLeft = reg?.status === 'LEFT';
+      const ended = ['COMPLETED', 'CANCELLED'].includes(pub.status);
+      mappedEvents.push({
+        registrationDeadlineAt: pub.participantRegistrationDeadlineAt,
+        id: String(pub.eventId),
+        title: pub.name,
+        dateRange: formatDateRange(pub.startAt, pub.endAt),
+        location: 'Đường Sách TP.HCM',
+        imageUrl: pub.bannerUrl || '/duong_sach_logo.png',
+        status: isLeft ? 'left' : (ended ? 'ended' : 'ongoing'),
+        shortDesc: pub.description || '',
+        activitiesCount: reg ? reg.seatActiveActivityCount : 0,
+        isJoined: joined,
+        canLeave: joined && (reg?.seatActiveActivityCount ?? 0) === 0 && !ended,
+      });
+    }
+
+    for (const reg of registrations) {
+      if (reg?.event?.eventId && !seenEventIds.has(reg.event.eventId)) {
+        seenEventIds.add(reg.event.eventId);
+        mappedEvents.push(mapEventRegistration(reg));
+      }
+    }
+
+    return mappedEvents;
+  },
+  async getEventRegistrations(): Promise<ParticipantEvent[]> {
+    const registrations = await getAllPages<EventRegistrationResponse>('/participant/event-registrations?sort=activatedAt,desc');
     return registrations.map(mapEventRegistration);
   },
   joinEvent: (eventId: string) =>
     apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/join`),
+  mapEventRegistration,
   leaveEvent: (eventId: string) =>
     apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/leave`),
   async getBadges(): Promise<ParticipantBadge[]> {
