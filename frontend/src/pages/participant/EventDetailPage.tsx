@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { publicApi, type PublicActivity } from '../../services/publicApi';
 import { useParticipationRefresh } from '../../hooks/useParticipationRefresh';
+import { LeaveEventDialog } from '../../components/participant/LeaveEventDialog';
 import type { Language, ParticipantActivity, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 
@@ -61,6 +62,7 @@ export const EventDetailPage = ({
   const [cancellingId, setCancellingId] = useState('');
   const [registeringId, setRegisteringId] = useState('');
   const [actionError, setActionError] = useState('');
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [catalogActivities, setCatalogActivities] = useState<PublicActivity[]>([]);
   const [catalogEventId, setCatalogEventId] = useState('');
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -177,6 +179,7 @@ export const EventDetailPage = ({
 
   return (
     <div className="event-detail-for-participant">
+      {leaveDialogOpen && <LeaveEventDialog eventName={currentEvent.title} language={language} onClose={() => setLeaveDialogOpen(false)} onConfirm={() => onLeaveEvent(currentEvent.id)} />}
       <button type="button" className="btn-part-secondary participant-back-button" onClick={() => navigate('/participant/events')}>
         <ArrowLeft size={15} />{vi ? 'Sự kiện của tôi' : 'My events'}
       </button>
@@ -219,9 +222,7 @@ export const EventDetailPage = ({
             {vi ? 'Xem hoạt động sự kiện' : 'Explore event activities'}
           </button>
           {currentEvent.isJoined && currentEvent.canLeave && (
-            <button type="button" className="btn-part-danger-outline" onClick={() => {
-              if (window.confirm(vi ? 'Bạn có chắc chắn muốn rời sự kiện này?' : 'Are you sure you want to leave this event?')) void onLeaveEvent(currentEvent.id);
-            }}>{vi ? 'Rời sự kiện' : 'Leave event'}</button>
+            <button type="button" className="btn-part-danger-outline" onClick={() => setLeaveDialogOpen(true)}>{vi ? 'Rời sự kiện' : 'Leave event'}</button>
           )}
         </section>
       ) : section === 'discover' ? (

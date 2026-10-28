@@ -4,12 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { askChatbot, ChatRequestError, type ChatSource } from '../../services/chatApi';
 import './ChatWidget.css';
-import { useChatLauncher } from './chatLauncherState';
 
 interface Message { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] }
 
 export function ChatWidget() {
-  const { open, setOpen, dismissed, dismiss } = useChatLauncher();
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
@@ -24,7 +23,6 @@ export function ChatWidget() {
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/organizer')
       || location.pathname.startsWith('/partner') || location.pathname.startsWith('/portal')) return null;
   if (user && !user.roles.includes('PARTICIPANT')) return null;
-  if (dismissed && !open) return null;
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -81,17 +79,13 @@ export function ChatWidget() {
           <button type="submit" disabled={busy || !input.trim()} aria-label="Gửi câu hỏi">Gửi</button>
         </form>
       </section>}
-      {!dismissed && <div className="bookstreet-chat__launcher">
-      {!open && <button type="button" className="bookstreet-chat__dismiss" onClick={dismiss}
-        aria-label="Ẩn chatbot nổi" title="Ẩn chatbot nổi và chuyển lên menu">
-        <X size={11} aria-hidden="true" />
-      </button>}
+      <div className="bookstreet-chat__launcher">
       <button type="button" className="bookstreet-chat__toggle" onClick={() => setOpen(!open)}
         aria-controls="bookstreet-chat-panel" title={open ? 'Đóng trò chuyện' : 'Nhắn với trợ lý BookStreet'}
         aria-expanded={open} aria-label={open ? 'Đóng trợ lý BookStreet' : 'Mở trợ lý BookStreet'}>
         {open ? <X size={26} aria-hidden="true" /> : <Bot size={30} strokeWidth={1.8} aria-hidden="true" />}
       </button>
-      </div>}
+      </div>
     </aside>
   );
 }

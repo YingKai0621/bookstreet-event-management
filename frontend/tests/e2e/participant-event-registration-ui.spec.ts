@@ -280,3 +280,48 @@ test('landing badge updates after successful registration and remains after relo
   await expect(badge).toHaveText('Đã đăng ký');
   expect(state.joinCount()).toBe(1);
 });
+
+for (const target of [{ path: '/participant/events', width: 1366 }, { path: '/participant/events/744', width: 390 }]) {
+  test(`event leave confirmation supports cancelling and saving at ${target.path}`, async ({ page }) => {
+    await page.setViewportSize({ width: target.width, height: 844 });
+    await mockParticipantRegistration(page, false, false, { joined: true });
+    let leaveCount = 0;
+    await page.route('**/api/v1/participant/events/744/leave', async route => {
+      leaveCount += 1;
+      expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
+      await json(route, { eventRegistrationId: 301, event: publicEvent, status: 'LEFT', seatActiveActivityCount: 0 });
+    });
+    await page.goto(target.path);
+    const leave = page.getByRole('button', { name: 'Rời sự kiện', exact: true });
+    await leave.click();
+    const modal = page.getByRole('alertdialog', { name: 'Rời sự kiện?' });
+    await expect(modal).toContainText(publicEvent.name);
+    await expect(modal.getByRole('button', { name: 'Ở lại', exact: true })).toBeFocused();
+    expect(leaveCount).toBe(0);
+    await page.screenshot({ path: `test-results/leave-event-confirmation-${target.width}.png` });
+    await modal.getByRole('button', { name: 'Ở lại', exact: true }).click();
+    await expect(modal).toHaveCount(0);
+    expect(leaveCount).toBe(0);
+    await expect(leave).toBeFocused();
+    await leave.click();
+    await modal.getByRole('button', { name: 'Rời sự kiện', exact: true }).click();
+    await expect(page).toHaveURL('/participant');
+    expect(leaveCount).toBe(1);
+  });
+}
+
+test('failed leave keeps the confirmation open and shows the backend reason', async ({ page }) => {
+  await mockParticipantRegistration(page, false, false, { joined: true });
+  await page.route('**/api/v1/participant/events/744/leave', route => json(route, {
+    code: 'EVENT_LEAVE_BLOCKED_BY_ACTIVE_ACTIVITY', message: 'Bạn cần hủy đăng ký hoạt động trước khi rời sự kiện.',
+  }, 409));
+  await page.goto('/participant/events');
+  await page.getByRole('button', { name: 'Rời sự kiện', exact: true }).click();
+  const modal = page.getByRole('alertdialog', { name: 'Rời sự kiện?' });
+  await modal.getByRole('button', { name: 'Rời sự kiện', exact: true }).click();
+  await expect(modal.getByRole('alert')).toContainText('Bạn cần hủy đăng ký hoạt động');
+  await expect(modal).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: publicEvent.name })).toBeVisible();
+});

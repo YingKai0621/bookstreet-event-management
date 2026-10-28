@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Language, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
+import { LeaveEventDialog } from '../../components/participant/LeaveEventDialog';
 
 interface MyEventsPageProps {
   language: Language;
@@ -25,24 +26,11 @@ export const MyEventsPage = ({
 }: MyEventsPageProps) => {
   const vi = language === 'vi';
   const [activeTab, setActiveTab] = useState<'ongoing' | 'ended'>('ongoing');
-  const [actionId, setActionId] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [leavingEvent, setLeavingEvent] = useState<ParticipantEvent | null>(null);
 
   const ongoingCount = events.filter(event => event.status === 'ongoing' && event.isJoined).length;
   const endedCount = events.filter(event => event.status === 'ended' && event.isJoined).length;
   const filteredEvents = events.filter(event => event.isJoined && event.status === activeTab);
-
-  const runAction = async (event: ParticipantEvent) => {
-    setActionId(event.id);
-    setActionError('');
-    try {
-      await onLeaveEvent(event.id);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : (vi ? 'Không thể cập nhật đăng ký sự kiện.' : 'Unable to update the event registration.'));
-    } finally {
-      setActionId('');
-    }
-  };
 
   return (
     <div className="participant-my-events-view">
@@ -62,7 +50,7 @@ export const MyEventsPage = ({
         </button>
       </div>
 
-      {actionError && <p className="participant-inline-error" role="alert">{actionError}</p>}
+      {leavingEvent && <LeaveEventDialog eventName={leavingEvent.title} language={language} onClose={() => setLeavingEvent(null)} onConfirm={() => onLeaveEvent(leavingEvent.id)} />}
 
       {isLoading ? (
         <div className="participant-data-state" role="status">
@@ -109,10 +97,8 @@ export const MyEventsPage = ({
                       {vi ? 'Xem hoạt động' : 'View activities'}<ArrowRight size={14} />
                     </Link>
                     {event.isJoined && event.canLeave && (
-                      <button type="button" className="btn-part-danger-outline" disabled={actionId === event.id} onClick={() => {
-                        if (window.confirm(vi ? 'Bạn có chắc chắn muốn rời sự kiện này?' : 'Are you sure you want to leave this event?')) void runAction(event);
-                      }}>
-                        {actionId === event.id ? (vi ? 'Đang xử lý...' : 'Working...') : (vi ? 'Rời sự kiện' : 'Leave')}
+                      <button type="button" className="btn-part-danger-outline" onClick={() => setLeavingEvent(event)}>
+                        {vi ? 'Rời sự kiện' : 'Leave'}
                       </button>
                     )}
                   </div>

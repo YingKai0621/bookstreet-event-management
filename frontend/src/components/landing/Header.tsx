@@ -1,7 +1,6 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   Award,
-  Bot,
   CalendarDays,
   ChevronDown,
   FileText,
@@ -26,7 +25,6 @@ import {
   IconMapBookPin
 } from './CustomIcons';
 import './Header.css';
-import { useChatLauncher } from '../chat/chatLauncherState';
 
 interface HeaderProps {
   language: Language;
@@ -56,7 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
   selectedPublicEventId = '',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { dismissed: chatbotDismissed, restore: restoreChatbot } = useChatLauncher();
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
   const [passedSections, setPassedSections] = useState<string[]>([]);
@@ -249,10 +246,6 @@ export const Header: React.FC<HeaderProps> = ({
               </ul>
             </div>
           </nav>
-            {chatbotDismissed && <button type="button" className="ticket-chatbot-button" onClick={restoreChatbot} aria-label="Chatbot" title={language === 'vi' ? 'Hiện lại nút chatbot' : 'Restore chatbot button'}>
-              <span className="ticket-chatbot-circle"><Bot size={22} aria-hidden="true" /></span>
-              <span className="ticket-chatbot-label">Chatbot</span>
-            </button>}
           </div>
 
           {/* Ticket Right Section: Account + Language Switcher + Mobile Menu Toggle */}

@@ -3,8 +3,6 @@
 .bookstreet-chat__toggle:hover{background:#103e40}
 .bookstreet-chat__toggle:focus-visible{outline:3px solid #e9bc63;outline-offset:3px}
 .bookstreet-chat__launcher{position:relative}
-.bookstreet-chat__dismiss{position:absolute;top:-3px;right:-3px;z-index:1;display:grid;place-items:center;width:20px;height:20px;padding:0;border:1px solid #d8e2df;border-radius:50%;background:#fff;color:#405a51;box-shadow:0 2px 6px #0002;cursor:pointer}
-.bookstreet-chat__dismiss:focus-visible{outline:3px solid #e9bc63;outline-offset:2px}
 .bookstreet-chat__panel{width:min(370px,calc(100vw - 32px));height:min(540px,calc(100dvh - 95px));margin-bottom:12px;display:flex;flex-direction:column;background:#fff;border:1px solid #d8e2df;border-radius:16px;overflow:hidden;box-shadow:0 12px 35px #0003}
 .bookstreet-chat__header{display:flex;align-items:center;gap:12px;flex-shrink:0;background:#164f52;color:#fff;padding:18px;border-bottom:1px solid #d5b66b}
 .bookstreet-chat__avatar{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#ffffff12;border:1px solid #ffffff38;color:#f1d99a}

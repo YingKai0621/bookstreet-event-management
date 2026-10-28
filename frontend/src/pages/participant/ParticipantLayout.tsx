@@ -1,6 +1,5 @@
 import {
   Award,
-  Bot,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -20,7 +19,6 @@ import { participantApi, type ParticipantNotificationItem } from '../../services
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
 import './ParticipantMobile.css';
-import { useChatLauncher } from '../../components/chat/chatLauncherState';
 
 interface ParticipantLayoutProps {
   language: Language;
@@ -37,7 +35,6 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { dismissed: chatbotDismissed, restore: restoreChatbot } = useChatLauncher();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -205,7 +202,6 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
         </div>
 
         <div className="top-bar-right">
-          {chatbotDismissed && <button type="button" className="participant-icon-btn" aria-label={language === 'vi' ? 'Hiện lại nút chatbot' : 'Restore chatbot button'} onClick={restoreChatbot}><Bot size={20} aria-hidden="true" /></button>}
           {/* Notifications Bell Dropdown */}
           <div className="participant-notif-menu" ref={notifDropdownRef}>
             <button 
