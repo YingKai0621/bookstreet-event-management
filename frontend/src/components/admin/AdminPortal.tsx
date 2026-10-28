@@ -17,6 +17,7 @@ import { AdminUserManagementView } from './AdminUserManagementView';
 import { FacilityManagementView } from './FacilityManagementView';
 import { OrganizerBoothManagementView } from '../organizer/OrganizerBoothManagementView';
 import { ADMIN_ROOT, ADMIN_TAB_PATHS, resolveAdminTab } from '../../routing/adminRoutes';
+import { useAuth } from '../../auth/useAuth';
 
 import {
   adminApi,
@@ -24,7 +25,6 @@ import {
 } from '../../services/adminApi';
 import {
   AdminAuditLogItem,
-  AdminBadgeRule,
   AdminNotificationItem,
   AdminPermissionItem,
   AdminProfile,
@@ -47,6 +47,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onLogout
 }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const resolvedTab = resolveAdminTab(location.pathname);
   const activeTab: AdminTab = resolvedTab ?? 'dashboard';
@@ -62,7 +63,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
   const [roleConfigs, setRoleConfigs] = useState<Record<AdminRoleType, AdminRolePermissionConfig>>({} as Record<AdminRoleType, AdminRolePermissionConfig>);
   const [permissions, setPermissions] = useState<AdminPermissionItem[]>([]);
-  const [badgeRules, setBadgeRules] = useState<AdminBadgeRule[]>([]);
   const [systemSettings, setSystemSettings] = useState<AdminSystemSettings>({
     general: { systemName: '', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
     security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },
@@ -75,13 +75,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [loadError, setLoadError] = useState('');
 
   const refreshAdminChrome = useCallback(async () => {
+    if (activeTab === 'badges') {
+      if (user) setProfile({ id: String(user.userId), name: user.fullName, role: 'ADMIN', department: '', email: user.email || '', phone: '', avatarInitials: user.fullName.split(' ').map(part => part[0]).slice(-2).join(''), lastLogin: '' });
+      setNotifications([]);
+      return;
+    }
     const [loadedProfile, loadedNotifications] = await Promise.all([
       adminApi.getProfile().catch(() => ({ id: '', name: 'Quản trị viên', role: 'ADMIN', department: '', email: '', phone: '', avatarInitials: 'AD', lastLogin: '' })),
       adminApi.getNotifications().catch(() => []),
     ]);
     setProfile(loadedProfile);
     setNotifications(loadedNotifications);
-  }, []);
+  }, [activeTab, user]);
 
   const refreshAdminData = useCallback(async () => {
     try {
@@ -103,8 +108,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         ]);
         setRoleConfigs(loadedRoles);
         setPermissions(loadedPermissions);
-      } else if (activeTab === 'badges') {
-        setBadgeRules(await adminApi.getBadgeRules());
       } else if (activeTab === 'settings') {
         setSystemSettings(await adminApi.getSettings());
       } else if (activeTab === 'audit') {
@@ -166,24 +169,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   const handleResetRoleDefaults = async (_roleId: AdminRoleType) => {
     setRoleConfigs(await adminApi.getRoles());
-  };
-
-  // --- Handlers: Badge Rules ---
-  const handleAddBadgeRule = async (newRuleData: Omit<AdminBadgeRule, 'id'>) => {
-    await adminApi.createBadgeRule(newRuleData);
-    await refreshAdminData();
-  };
-
-  const handleUpdateBadgeRule = async (id: string, updates: Partial<AdminBadgeRule>) => {
-    await adminApi.updateBadgeRule(id, updates);
-    await refreshAdminData();
-  };
-
-  const handleToggleBadgeStatus = async (id: string) => {
-    const rule = badgeRules.find(item => item.id === id);
-    if (!rule) return;
-    await adminApi.updateBadgeRule(id, { status: rule.status === 'active' ? 'inactive' : 'active' });
-    await refreshAdminData();
   };
 
   // --- Handlers: System Settings ---
@@ -285,12 +270,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           )}
 
           {activeTab === 'badges' && (
-            <AdminBadgeRulesView
-              badgeRules={badgeRules}
-              onAddBadgeRule={handleAddBadgeRule}
-              onUpdateBadgeRule={handleUpdateBadgeRule}
-              onToggleBadgeStatus={handleToggleBadgeStatus}
-            />
+            <AdminBadgeRulesView />
           )}
 
           {activeTab === 'settings' && (
