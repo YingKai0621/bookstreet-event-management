@@ -8,6 +8,7 @@ import {
 } from '../types';
 import { apiClient } from './apiClient';
 import type { AttendanceScanResponse } from '../types/attendance';
+import type { BoothScanResponse } from '../types/reward';
 
 export type ParticipantNotificationType =
   | 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'
@@ -439,6 +440,8 @@ export const participantApi = {
   mapActivityRegistration: mapActivityRegistrationWithEvents,
   scanAttendance: (token: string) =>
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
+  scanBooth: (token: string) =>
+    apiClient.post<BoothScanResponse>('/participant/booth-visits/scan', { token }),
   async getActivityRating(activityId: string): Promise<ParticipantActivityRating> {
     const rating = await apiClient.get<ActivityRatingResponse>(
       `/participant/activities/${encodeURIComponent(activityId)}/rating`,

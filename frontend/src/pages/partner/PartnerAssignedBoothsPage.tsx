@@ -21,6 +21,7 @@ import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import { paymentApi } from '../../services/paymentApi';
+import { boothScanUrl } from '../../security/boothScanToken';
 import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest } from '../../types/booth';
 import type { BoothAssignment } from '../../types/payment';
@@ -361,14 +362,14 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             <p>{selectedApplication?.eventTitle || `Sự kiện #${selectedItem.assignment.eventId}`}</p>
             <div className="my-booths-qr-frame">
               <QRCodeSVG
-                value={selectedItem.assignment.qrToken}
+                value={boothScanUrl(selectedItem.assignment.qrToken)}
                 size={190}
                 title={`Mã QR gian hàng ${selectedItem.assignment.boothCode}`}
               />
             </div>
             <div className="my-booths-qr-note">
               <CheckCircle2 size={17} />
-              <span>Mã QR gắn với đúng Assignment #{selectedItem.assignment.boothAssignmentId}. Không chia sẻ ngoài phạm vi vận hành gian hàng.</span>
+              <span>Mã QR dành cho độc giả quét tại gian hàng để ghi nhận lượt ghé và nhận điểm.</span>
             </div>
             <Link to={`/partner/booths/${selectedItem.request.boothRequestId}`} className="my-booths-modal-detail">
               Xem đầy đủ thông tin cấp gian <ArrowRight size={16} />
