@@ -535,7 +535,7 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page).toHaveURL(/\/partner\/booths$/);
   await expect(page.getByRole('heading', { name: 'Gian hàng của tôi' })).toBeVisible();
   await page.goto('/partner/booths/select');
-  await expect(page).toHaveURL(/\/partner\/booth-requests$/);
+  await expect(page).toHaveURL(/\/partner\/booth-requests(?:\?eventId=\d+)?$/);
   await expect(page.getByRole('heading', { name: 'Chọn và thuê gian hàng' })).toBeVisible();
 });
 

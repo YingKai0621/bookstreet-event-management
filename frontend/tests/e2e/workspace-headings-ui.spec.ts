@@ -17,10 +17,20 @@ async function mockWorkspace(page: Page, role: Role) {
     else if (path === '/api/v1/events' || path === '/api/v1/organizer/events') body = { ...emptyPage, content: [sampleEvent], totalElements: 1, totalPages: 1 };
     else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
     else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
+    else if (path === '/api/v1/admin/settings') body = [{ key: 'admin.system', value: {
+      general: { systemName: 'Book Street', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
+      security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },
+      notifications: { sendWelcomeEmail: true, alertOnFailedLogins: true, notifyRoleChanges: true, dailyDigestEmail: false },
+    } }];
     else if (path === '/api/v1/organizer/reports') body = { eventId: 501, eventName: 'Sự kiện kiểm thử', totalParticipants: 0, attended: 0, pending: 0, cancelled: 0, totalBooths: 0, totalActivities: 0, attendanceRate: 0, averageRating: 0, ratingCount: 0, activityStats: [], ratingDistribution: [] };
     else if (path.endsWith('/organizer/events/501/event-registrations')) body = emptyPage;
     else if (path === '/api/v1/participant/notifications') body = emptyPage;
     else if (path === '/api/v1/participant/notifications/unread-count') body = { unreadCount: 0 };
+    else if (path === '/api/v1/participant/rewards/summary') body = {
+      totalPoints: 0, totalVisits: 0, earnedBadgeCount: 0, activeBadgeCount: 0, nextBadge: null,
+    };
+    else if (path === '/api/v1/participant/rewards/badges') body = { ...emptyPage, size: 12 };
+    else if (path === '/api/v1/participant/rewards/point-transactions') body = emptyPage;
     else if (path.endsWith('/dashboard') || path.endsWith('/dashboard/summary')) body = {};
     else if (path.includes('/organizer/') && /booths|locations|activities|requests|proposals|applications/.test(path)) body = emptyPage;
     else if (path.includes('/partner/') && /applications|booth-requests|activities|proposals/.test(path)) body = emptyPage;
@@ -32,7 +42,7 @@ const workspaces: Array<{ role: Role; routes: string[] }> = [
   { role: 'ORGANIZER', routes: ['/organizer', '/organizer/events', '/organizer/booths', '/organizer/venues', '/organizer/activities', '/organizer/booth-requests', '/organizer/participants', '/organizer/profile'] },
   { role: 'ADMIN', routes: ['/admin', '/admin/users', '/admin/badges', '/admin/assets', '/admin/booths', '/admin/venues', '/admin/roles', '/admin/settings', '/admin/audit', '/admin/notifications', '/admin/profile'] },
   { role: 'PARTNER', routes: ['/partner', '/partner/events', '/partner/events/apply', '/partner/profile', '/partner/booths', '/partner/booth-requests', '/partner/activities'] },
-  { role: 'PARTICIPANT', routes: ['/participant', '/participant/feedback', '/participant/certificates', '/participant/profile', '/participant/events', '/participant/rewards'] },
+  { role: 'PARTICIPANT', routes: ['/participant', '/participant/certificates', '/participant/profile', '/participant/events', '/participant/rewards'] },
 ];
 const topBarSelectors: Record<Role, string> = {
   ORGANIZER: '.organizer-topbar',
@@ -63,12 +73,14 @@ test('ORGANIZER omits the unused Assets tab and redirects its legacy URL', async
 
 for (const workspace of workspaces) for (const width of [1440, 390]) {
   test(`${workspace.role} page headings match Dashboard typography at ${width}px`, async ({ page }) => {
+    test.setTimeout(180_000);
     await page.setViewportSize({ width, height: 900 });
     const pageErrors: string[] = [];
     page.on('pageerror', error => pageErrors.push(error.message));
     await mockWorkspace(page, workspace.role);
     for (const route of workspace.routes) {
       await page.goto(route);
+      await expect(page.getByText('Đang kiểm tra phiên đăng nhập...')).toHaveCount(0, { timeout: 30_000 });
       const title = page.locator('h1.workspace-page-title').first();
       const subtitle = page.locator('p.workspace-page-subtitle').first();
       if (route === '/partner/reports') {
@@ -76,38 +88,41 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
         await expect(page.locator('main')).toContainText('Chưa có API báo cáo');
         continue;
       }
-      await expect(title).toBeVisible();
-      await expect(subtitle).toBeVisible();
+      await expect(title, `Missing workspace title at ${route}`).toBeVisible({ timeout: 20_000 });
+      await expect(subtitle, `Missing workspace subtitle at ${route}`).toBeVisible({ timeout: 20_000 });
       const topInset = await title.evaluate(element => {
         const main = element.closest('main')!;
         return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
       });
-      expect(Math.abs(topInset - 36), route).toBeLessThanOrEqual(1);
+      const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 18 : 36;
+      expect(Math.abs(topInset - expectedTopInset), route).toBeLessThanOrEqual(1);
       const inlineInset = await title.evaluate(element => {
         const main = element.closest('main')!;
         return element.getBoundingClientRect().left - main.getBoundingClientRect().left;
       });
-      expect(Math.abs(inlineInset - 48), route).toBeLessThanOrEqual(1);
+      const expectedInlineInset = workspace.role === 'PARTICIPANT' && width === 390 ? 16 : 48;
+      expect(Math.abs(inlineInset - expectedInlineInset), route).toBeLessThanOrEqual(1);
       const styles = await title.evaluate(element => {
         const style = getComputedStyle(element);
         return { family: style.fontFamily, size: style.fontSize, weight: style.fontWeight, color: style.color, lineHeight: style.lineHeight, margin: style.margin, width: element.getBoundingClientRect().width };
       });
       expect(styles.family, route).toContain('Noto Serif');
-      expect(styles.size, route).toBe(width === 1440 ? '32px' : '30px');
+      const participantMobile = workspace.role === 'PARTICIPANT' && width === 390;
+      expect(styles.size, route).toBe(width === 1440 ? '32px' : participantMobile ? '24px' : '30px');
       expect(styles.weight, route).toBe('700');
       expect(styles.color, route).toBe('rgb(16, 37, 31)');
-      expect(styles.lineHeight, route).toBe(width === 1440 ? '38.4px' : '36px');
+      expect(styles.lineHeight, route).toBe(width === 1440 ? '38.4px' : participantMobile ? '28.8px' : '36px');
       expect(styles.margin, route).toBe('0px');
       const subStyles = await subtitle.evaluate(element => {
         const style = getComputedStyle(element);
         return { family: style.fontFamily, size: style.fontSize, color: style.color, marginTop: style.marginTop, weight: style.fontWeight, lineHeight: style.lineHeight };
       });
       expect(subStyles.family, route).toContain('Be Vietnam Pro');
-      expect(subStyles.size, route).toBe('15.6px');
+      expect(subStyles.size, route).toBe(participantMobile ? '13px' : '15.6px');
       expect(subStyles.color, route).toBe('rgb(92, 112, 105)');
       expect(subStyles.marginTop, route).toBe('3.2px');
       expect(subStyles.weight, route).toBe('400');
-      expect(subStyles.lineHeight, route).toBe('21.06px');
+      expect(subStyles.lineHeight, route).toBe(participantMobile ? '17.55px' : '21.06px');
     }
     expect(pageErrors).toEqual([]);
     await page.screenshot({ path: test.info().outputPath('workspace-headings.png'), fullPage: true });

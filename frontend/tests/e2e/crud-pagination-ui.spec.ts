@@ -19,7 +19,7 @@ async function mockWorkspace(page: Page, role: 'ADMIN' | 'PARTICIPANT') {
     else if (path.endsWith('/participant/notifications')) {
       const allItems = Array.from({ length: 11 }, (_, index) => ({
         notificationId: index + 1,
-        type: 'ACTIVITY_UPDATED',
+        type: 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED',
         title: `Thông báo ${String(index + 1).padStart(2, '0')}`,
         message: 'Cập nhật hoạt động',
         referenceType: 'ACTIVITY',
@@ -59,8 +59,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768
 
 test('Participant notification dropdown stays a compact preview and links to the workspace', async ({ page }) => {
   await mockWorkspace(page, 'PARTICIPANT');
-  await page.goto('/participant/feedback');
-  await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
+  await page.goto('/participant');
+  await page.locator('.participant-top-bar').getByRole('button', { name: 'Thông báo', exact: true }).click();
   const dropdown = page.getByRole('dialog', { name: 'Thông báo gần đây' });
   await expect(dropdown.locator('.notif-dropdown-item')).toHaveCount(5);
   await dropdown.getByRole('link', { name: 'Xem tất cả thông báo →' }).click();

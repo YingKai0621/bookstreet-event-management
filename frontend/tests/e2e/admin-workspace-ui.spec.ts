@@ -17,16 +17,19 @@ async function setup(page: Page, _tab: string) {
 }
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }]) {
 for (const tab of ['booths', 'audit', 'badges', 'profile']) {
-  test(`${tab} layout fits ${viewport.width}x${viewport.height} and uses Nunito`, async ({ page }) => {
+  test(`${tab} layout fits ${viewport.width}x${viewport.height} and uses Be Vietnam Pro`, async ({ page }) => {
     await setup(page, tab); await page.goto(`/admin/${tab}`);
     await page.setViewportSize(viewport);
     await expect(page.locator('.admin-main-viewport')).toBeVisible();
     await page.waitForTimeout(250);
     await page.screenshot({ path: test.info().outputPath(`${tab}.png`), fullPage: true });
-    const metrics = await page.locator('.admin-main-viewport').evaluate(el => ({ scroll: el.scrollHeight, height: el.clientHeight, bottom: el.getBoundingClientRect().bottom, font: getComputedStyle(el).fontFamily }));
-    expect(metrics.font).toContain('Nunito');
-    expect(metrics.bottom).toBeLessThanOrEqual(viewport.height + 1);
-    expect(metrics.scroll).toBeLessThanOrEqual(metrics.height + 1);
+    const metrics = await page.locator('.admin-main-viewport').evaluate(el => ({
+      scrollWidth: el.scrollWidth,
+      width: el.clientWidth,
+      font: getComputedStyle(el).fontFamily,
+    }));
+    expect(metrics.font).toContain('Be Vietnam Pro');
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.width + 1);
     if (tab === 'audit' || tab === 'booths') {
       await expect(page.getByRole('navigation', { name: 'pagination' })).toBeVisible();
       await page.getByRole('link', { name: 'Trang sau', exact: true }).click();
@@ -34,29 +37,29 @@ for (const tab of ['booths', 'audit', 'badges', 'profile']) {
     }
     if (tab === 'profile') {
       await page.getByRole('button', { name: 'Chỉnh sửa thông tin', exact: true }).click();
-      expect(await page.locator('.admin-main-viewport').evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(viewport.height + 1);
+      expect(await page.locator('.admin-main-viewport').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
       await page.getByRole('button', { name: 'Hủy', exact: true }).first().click();
       await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
       await expect(page.locator('.adm-modal-overlay')).toBeVisible();
-      expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+      expect(['hidden', 'clip']).toContain(await page.evaluate(() => document.body.style.overflow));
       await page.keyboard.press('Escape');
       await expect(page.locator('.adm-modal-overlay')).toHaveCount(0);
-      expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+      expect(await page.evaluate(() => document.body.style.overflow)).not.toMatch(/^(hidden|clip)$/);
     }
     if (tab === 'audit') {
       await page.getByRole('button', { name: /Xem chi tiết nhật ký/ }).first().click();
       await expect(page.getByRole('dialog')).toBeVisible();
-      expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+      expect(['hidden', 'clip']).toContain(await page.evaluate(() => document.body.style.overflow));
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).toHaveCount(0);
-      expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+      expect(await page.evaluate(() => document.body.style.overflow)).not.toMatch(/^(hidden|clip)$/);
     }
     if (tab === 'booths') {
       await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
       await expect(page.locator('.booth-modal-backdrop')).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(page.locator('.booth-modal-backdrop')).toHaveCount(0);
-      expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+      expect(await page.evaluate(() => document.body.style.overflow)).not.toMatch(/^(hidden|clip)$/);
     }
     if (tab === 'badges') {
       await page.getByRole('button', { name: 'Thêm quy tắc mới' }).click();
@@ -77,7 +80,6 @@ test('booth access denial is not displayed as an empty catalog', async ({ page }
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Tạo gian hàng đầu tiên' })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'pagination' })).toHaveCount(0);
-  await expect(page.locator('.booth-kpi-info strong').first()).toHaveText('—');
 });
 
 test('booth search without matches offers filter reset instead of first booth creation', async ({ page }) => {

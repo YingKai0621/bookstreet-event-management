@@ -238,15 +238,12 @@ test('pending withdrawal requires confirmation and uses existing withdrawal API'
   expect(state.withdrawals).toBe(1);
 });
 
-test('calendar proposal preselects the day and clearly marks unavailable submission', async ({ page }) => {
+test('event discovery does not expose the retired calendar proposal action', async ({ page }) => {
   const state = await setup(page);
   await page.goto('/partner/events/apply');
-  await page.getByRole('button', { name: 'Lịch sự kiện', exact: true }).click();
-  await page.getByRole('button', { name: 'Thêm đề xuất ngày 2026-10-22', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByLabel('Ngày đề xuất', { exact: true })).toHaveValue('2026-10-22');
-  await expect(dialog).toContainText('Thông tin nhập ở đây chưa được lưu');
-  await expect(dialog.getByRole('button', { name: 'Gửi đề xuất (chưa khả dụng)', exact: true })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Khám phá và đăng ký sự kiện' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lịch sự kiện', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Thêm đề xuất ngày/ })).toHaveCount(0);
   expect(state.unsupported).toEqual([]);
 });
 

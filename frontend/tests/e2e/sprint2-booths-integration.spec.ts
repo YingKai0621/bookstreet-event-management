@@ -5,6 +5,14 @@ interface Credentials {
   password: string;
 }
 
+test.skip(
+  !process.env.E2E_ORGANIZER_USERNAME
+    || !process.env.E2E_ORGANIZER_PASSWORD
+    || !process.env.E2E_PARTNER_USERNAME
+    || !process.env.E2E_PARTNER_PASSWORD,
+  'Cần đủ credential Organizer và Partner để chạy integration với backend thật.',
+);
+
 interface ApiResult<T> {
   status: number;
   body: T;

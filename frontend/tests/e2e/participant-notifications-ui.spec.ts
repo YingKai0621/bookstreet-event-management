@@ -208,7 +208,7 @@ test('list and mark-read failures provide recoverable UI', async ({ page }) => {
 test('bell dropdown is a five-item preview linking to the notification workspace', async ({ page }) => {
   await mockNotifications(page);
   await page.goto('/participant');
-  await page.getByRole('button', { name: 'Thông báo', exact: true }).click();
+  await page.locator('.participant-top-bar').getByRole('button', { name: 'Thông báo', exact: true }).click();
   const dropdown = page.getByRole('dialog', { name: 'Thông báo gần đây' });
   await expect(dropdown.locator('.notif-dropdown-item')).toHaveCount(5);
   await dropdown.getByRole('link', { name: 'Xem tất cả thông báo →' }).click();
