@@ -16,6 +16,7 @@ function failure(error: unknown): string {
 }
 
 export function BoothVisitMonitoringPanel({ eventId }: { eventId: string }) {
+  const hasSelectedEvent = /^[1-9]\d*$/.test(eventId);
   const [summaryResult, setSummaryResult] = useState<{ key: string; summary: OrganizerBoothVisitSummary | null; error: string } | null>(null);
   const [mode, setMode] = useState<'groups' | 'visits'>('groups');
   const [pageResult, setPageResult] = useState<{ key: string; data: RewardManagementPage<OrganizerBoothVisitGroup | OrganizerBoothVisit> | null; error: string } | null>(null);
@@ -34,26 +35,34 @@ export function BoothVisitMonitoringPanel({ eventId }: { eventId: string }) {
   const error = loading ? '' : pageResult.error;
 
   useEffect(() => {
+    if (!hasSelectedEvent) return;
     let active = true;
     boothVisitApi.summary(eventId).then(value => { if (active) setSummaryResult({ key: summaryKey, summary: value, error: '' }); })
       .catch(cause => { if (active) setSummaryResult({ key: summaryKey, summary: null, error: failure(cause) }); });
     return () => { active = false; };
-  }, [eventId, reload, summaryKey]);
+  }, [eventId, hasSelectedEvent, reload, summaryKey]);
 
   useEffect(() => {
+    if (!hasSelectedEvent) return;
     let active = true;
     const query = { page, size: PAGE_SIZE, sort, search: search || undefined, boothId: booth?.boothId };
     const request = mode === 'groups' ? boothVisitApi.groups(eventId, query) : boothVisitApi.visits(eventId, query);
     request.then(value => { if (active) setPageResult({ key: requestKey, data: value, error: '' }); })
       .catch(cause => { if (active) setPageResult({ key: requestKey, data: null, error: failure(cause) }); });
     return () => { active = false; };
-  }, [eventId, mode, page, sort, search, booth, reload, requestKey]);
+  }, [eventId, hasSelectedEvent, mode, page, sort, search, booth, reload, requestKey]);
 
   function switchMode(next: 'groups' | 'visits') {
     setMode(next); setPage(0); setSearch(''); setSearchInput('');
     setSort(next === 'groups' ? 'visitCount,desc' : 'visitedAt,desc');
   }
   function submitSearch(event: FormEvent) { event.preventDefault(); setSearch(searchInput.trim()); setPage(0); }
+
+  if (!hasSelectedEvent) {
+    return <section className="booth-visit-panel" aria-label="Theo dõi lượt ghé gian hàng">
+      <div className="participant-inline-state"><Store size={28} /><div><strong>Chưa có sự kiện được chọn</strong><p>Hãy chọn hoặc tạo một sự kiện trước khi xem lượt ghé gian hàng.</p></div></div>
+    </section>;
+  }
 
   return <section className="booth-visit-panel" aria-label="Theo dõi lượt ghé gian hàng">
     <div className="booth-visit-summary" aria-busy={!summary && !summaryError}>
