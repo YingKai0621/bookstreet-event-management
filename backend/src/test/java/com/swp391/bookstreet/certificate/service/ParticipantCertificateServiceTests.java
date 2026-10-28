@@ -192,7 +192,7 @@ class ParticipantCertificateServiceTests {
 
         assertThat(result.filename()).isEqualTo("certificate-BKS-2027-ABC1.pdf");
         assertThat(result.pdfContent()).isNotEmpty();
-        assertThat(new String(result.pdfContent(), java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF-");
+        assertThat(new String(result.pdfContent(), java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF-1.4");
         try (PDDocument document = Loader.loadPDF(result.pdfContent())) {
             String content = new PDFTextStripper().getText(document);
             assertThat(content)

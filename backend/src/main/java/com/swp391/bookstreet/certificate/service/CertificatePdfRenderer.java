@@ -18,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -60,6 +61,8 @@ public class CertificatePdfRenderer {
 
     private byte[] generatePdf(Certificate certificate, Activity activity, Event event) throws Exception {
         try (PDDocument document = new PDDocument(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            document.getDocument().setVersion(1.4f);
+            document.getDocumentCatalog().setVersion("1.4");
             PDPage page = new PDPage(PAGE_SIZE);
             document.addPage(page);
             PDFont regular;
@@ -76,7 +79,7 @@ public class CertificatePdfRenderer {
                 drawCertificateDetails(canvas, regular, bold, certificate, activity, event);
             }
 
-            document.save(output);
+            document.save(output, CompressParameters.NO_COMPRESSION);
             return output.toByteArray();
         }
     }
