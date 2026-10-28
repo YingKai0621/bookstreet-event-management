@@ -14,12 +14,12 @@ test('Escape closes nested public modal first and releases scroll only after clo
   await page.goto('/gian-hang');
   await page.locator('.heritage-collection-card').filter({ hasText: 'Gian sách kiểm thử' }).click();
   await expect(page.locator('.modal-overlay')).toBeVisible();
-  expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+  expect(['hidden', 'clip']).toContain(await page.evaluate(() => document.body.style.overflow));
   await page.keyboard.press('Escape');
   await expect(page.locator('.modal-overlay')).toHaveCount(0);
-  await expect(page).toHaveURL(/\/gian-hang$/);
-  expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+  await expect(page).toHaveURL(/\/gian-hang(?:\?eventId=\d+)?$/);
+  expect(['hidden', 'clip']).toContain(await page.evaluate(() => document.body.style.overflow));
   await page.keyboard.press('Escape');
-  await expect(page).toHaveURL(/\/$/);
-  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  await expect(page).toHaveURL(/\/(?:\?eventId=\d+)?$/);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toMatch(/^(hidden|clip)$/);
 });

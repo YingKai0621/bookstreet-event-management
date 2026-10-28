@@ -271,6 +271,7 @@
 /* 3. MAIN VIEWPORT & GENERIC CARDS */
 .admin-main-viewport {
   flex: 1;
+  min-width: 0;
   padding: 2.25rem 3rem 4rem;
   overflow-y: auto;
   max-width: 1440px;

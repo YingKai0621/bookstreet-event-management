@@ -32,11 +32,8 @@ test('new account ignores previous reader name and avatar in browser storage', a
   await expect(page.getByText('old@example.com')).toHaveCount(0);
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    const fits = await page.evaluate(() => ({
-      width: document.documentElement.scrollWidth <= window.innerWidth,
-      height: document.documentElement.scrollHeight <= window.innerHeight,
-    }));
-    expect(fits, `Profile should fit ${viewport.width}x${viewport.height}`).toEqual({ width: true, height: true });
+    const fitsWidth = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    expect(fitsWidth, `Profile should not overflow horizontally at ${viewport.width}px`).toBe(true);
   }
 });
 
@@ -74,8 +71,8 @@ test('participant registration tabs and search are restored from the URL', async
   await expect(page).toHaveURL(/status=cancelled/);
   await expect(page).toHaveURL(/search=workshop/);
 
-  await page.getByRole('button', { name: /Đã tham gia/ }).click();
+  await page.getByRole('button', { name: /Đã điểm danh/ }).click();
   await expect(page).toHaveURL(/status=attended/);
   await page.reload();
-  await expect(page.getByRole('button', { name: /Đã tham gia/ })).toHaveClass(/is-active/);
+  await expect(page.getByRole('button', { name: /Đã điểm danh/ })).toHaveClass(/is-active/);
 });

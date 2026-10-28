@@ -178,6 +178,7 @@ export function BoothScanPage({ language }: BoothScanPageProps) {
       const result = await participantApi.scanBooth(token);
       clearBoothScanToken();
       window.dispatchEvent(new Event('participant:rewards-changed'));
+      window.dispatchEvent(new Event('participant:notifications-changed'));
       setState({ kind: 'success', result });
     } catch (error) {
       const copy = errorCopy(error, language);
