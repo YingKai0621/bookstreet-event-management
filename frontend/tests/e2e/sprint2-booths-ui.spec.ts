@@ -418,9 +418,18 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   await expect(enabledToggle).toBeChecked();
+  await rentalPrice.fill('0');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
+  await expect(rentalPrice).toHaveValue('0');
+  await rentalPrice.fill('5500000');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   expect(getConfigurationRequests()).toEqual([
     { rentalPrice: 5_500_000, enabled: true },
     { rentalPrice: 5_500_000, enabled: false },
+    { rentalPrice: 5_500_000, enabled: true },
+    { rentalPrice: 0, enabled: true },
     { rentalPrice: 5_500_000, enabled: true },
   ]);
   await page.getByRole('button', { name: 'Đóng', exact: true }).click();
@@ -539,19 +548,18 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page.getByRole('heading', { name: 'Chọn và thuê gian hàng' })).toBeVisible();
 });
 
-test('Partner defaults to an approved Event that already has Booth requests', async ({ page }) => {
+test('Partner defaults to the newest approved Event and can search by Event name', async ({ page }) => {
   await mockPartner(page, { emptyEventFirst: true });
   await page.goto('/partner/booth-requests');
 
   const eventPicker = page.getByLabel('Sự kiện tham gia');
-  await expect(eventPicker).toHaveValue('101');
+  await expect(eventPicker).toHaveValue('102');
   await page.getByRole('tab', { name: /Yêu cầu của tôi/ }).click();
-  await expect(page.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
-
-  await eventPicker.selectOption('102');
   await expect(page.getByText('Sự kiện này chưa có yêu cầu thuê gian hàng')).toBeVisible();
-  await expect(page.getByText(/Bạn có 1 yêu cầu tại sự kiện/)).toBeVisible();
-  await page.getByRole('button', { name: 'Xem yêu cầu ở sự kiện đó' }).click();
+
+  await page.getByLabel('Tìm sự kiện').fill('ngay hoi sach');
+  await expect(eventPicker.locator('option')).toHaveCount(1);
+  await eventPicker.selectOption('101');
   await expect(eventPicker).toHaveValue('101');
   await expect(page.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
 });

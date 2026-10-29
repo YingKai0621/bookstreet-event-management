@@ -69,6 +69,7 @@ export interface PartnerAvailableEvent {
   endAt: string;
   partnerApplicationDeadlineAt: string | null;
   bannerUrl: string;
+  status: PublicEventResponse['status'];
   acceptingApplications: boolean;
 }
 
@@ -118,6 +119,7 @@ function toAvailableEvent(event: PublicEventResponse): PartnerAvailableEvent {
     endAt: event.endAt,
     partnerApplicationDeadlineAt: event.partnerApplicationDeadlineAt,
     bannerUrl: event.bannerUrl || '',
+    status: event.status,
     acceptingApplications: deadline !== null && deadline > Date.now(),
   };
 }
@@ -210,6 +212,8 @@ export const partnerApi = {
         dateRange: event ? `${formatDateTime(event.startAt)} - ${formatDateTime(event.endAt)}` : '',
         startAt: event?.startAt,
         endAt: event?.endAt,
+        eventStatus: event?.status,
+        eventAvailable: Boolean(event),
         location: '',
         imageUrl: event?.bannerUrl || '',
         status: application.status.toLowerCase() as PartnerEventApplication['status'],

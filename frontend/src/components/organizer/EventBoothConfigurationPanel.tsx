@@ -182,8 +182,8 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
       return;
     }
 
-    if (draftEnabled && rentalPrice <= 0) {
-      setDrawerError('Hãy nhập giá thuê lớn hơn 0 trước khi mở cho thuê.');
+    if (rentalPrice > 0 && rentalPrice < 5000) {
+      setDrawerError('Giá thuê phải bằng 0 (miễn phí) hoặc từ 5.000 VNĐ trở lên.');
       return;
     }
 
@@ -217,7 +217,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
   // Mini statistics (Phễu vận hành: Tổng số gian -> Đã có giá thuê -> Đang cho thuê)
   const totalCount = rows.length;
   const configuredPriceCount = useMemo(
-    () => rows.filter(row => row.rentalPrice !== null && row.rentalPrice > 0).length,
+    () => rows.filter(row => row.rentalPrice !== null).length,
     [rows],
   );
   const enabledCount = useMemo(() => rows.filter(row => row.enabled).length, [rows]);
@@ -413,7 +413,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
                   <span className="org-booth-price-unit">VNĐ</span>
                 </div>
                 <small className="org-booth-field-hint">
-                  Giá thuê cho toàn bộ sự kiện (chưa bao gồm VAT và dịch vụ phát sinh).
+                  Nhập 0 cho gian hàng miễn phí; giá có thu phí phải từ 5.000 VNĐ trở lên.
                 </small>
               </div>
             </section>
@@ -505,7 +505,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
           </div>
           <div className="org-booth-stat-content">
             <span className="org-booth-stat-val">{configuredPriceCount} gian hàng</span>
-            <span className="org-booth-stat-label">Gian hàng đã có giá thuê</span>
+            <span className="org-booth-stat-label">Gian hàng đã cấu hình giá</span>
           </div>
         </div>
 
