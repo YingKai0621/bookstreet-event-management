@@ -148,11 +148,14 @@ async function mockOrganizer(page: Page, options: { multipleEvents?: boolean } =
 
 async function mockPartner(page: Page, options: {
   quotaExceeded?: boolean;
+  requestDeadlinePassed?: boolean;
   selectedWithdrawalError?: 'PAYMENT_ATTEMPT_ALREADY_PENDING' | 'PAYMENT_RESULT_UNKNOWN';
   emptyEventFirst?: boolean;
+  refreshAddsApplication?: boolean;
   workflowStates?: boolean;
 } = {}): Promise<void> {
   let delayInitialEvent = true;
+  let applicationLoadCount = 0;
   let requests: Record<string, unknown>[] = [{
     boothRequestId: 80,
     eventId: 101,
@@ -248,6 +251,14 @@ async function mockPartner(page: Page, options: {
     booth: { ...physicalBooth, boothId: 13, code: 'C09', name: 'Gian sự kiện mùa xuân', mapX: 50, mapY: 55 },
     rentalPrice: 3_500_000,
   };
+  const unavailableBooth = {
+    ...eventBooth,
+    eventBoothConfigId: null,
+    booth: { ...physicalBooth, boothId: 14, code: 'D10', name: 'Gian chưa mở', mapX: 80, mapY: 60 },
+    rentalPrice: null,
+    enabled: false,
+    availability: 'UNAVAILABLE',
+  };
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -256,12 +267,16 @@ async function mockPartner(page: Page, options: {
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-token' });
     if (path.endsWith('/partner/organization')) return json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: 'Đối tác kiểm thử', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
     if (path.endsWith('/partner/applications')) {
+      applicationLoadCount += 1;
       const applicationWithRequest = { applicationId: 31, eventId: 101, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-02T00:00:00Z', withdrawnAt: null };
       const applicationWithoutRequests = { applicationId: 32, eventId: 102, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-02T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', withdrawnAt: null };
-      const applications = options.emptyEventFirst
+      const allApplications = options.emptyEventFirst
         ? [applicationWithoutRequests, applicationWithRequest]
         : [applicationWithRequest, applicationWithoutRequests];
-      return json(route, { content: applications, page: 0, size: 100, totalElements: 2, totalPages: 1 });
+      const applications = options.refreshAddsApplication && applicationLoadCount === 1
+        ? [applicationWithRequest]
+        : allApplications;
+      return json(route, { content: applications, page: 0, size: 100, totalElements: applications.length, totalPages: 1 });
     }
     if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, secondEvent], page: 0, size: 100, totalElements: 2, totalPages: 1 });
     if (path.endsWith('/events/101/booths') && method === 'GET') {
@@ -269,7 +284,8 @@ async function mockPartner(page: Page, options: {
         delayInitialEvent = false;
         await new Promise(resolve => setTimeout(resolve, 400));
       }
-      return json(route, { content: [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth], page: 0, size: 200, totalElements: 2, totalPages: 1 });
+      const booths = [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth, unavailableBooth];
+      return json(route, { content: booths, page: 0, size: 200, totalElements: booths.length, totalPages: 1 });
     }
     if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: [secondEventBooth], page: 0, size: 200, totalElements: 1, totalPages: 1 });
     if (path.endsWith('/partner/booth-requests/80/payments') && method === 'GET') return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
@@ -284,6 +300,12 @@ async function mockPartner(page: Page, options: {
         return json(route, {
           code: 'BOOTH_QUOTA_EXCEEDED',
           message: "The Partner has reached this Event's Booth quota.",
+        }, 409);
+      }
+      if (options.requestDeadlinePassed) {
+        return json(route, {
+          code: 'BOOTH_REQUEST_DEADLINE_PASSED',
+          message: 'The Booth request deadline has passed.',
         }, 409);
       }
       const request = { boothRequestId: 88, eventId: 101, boothId: 12, boothCode: 'B02', partnerOrganizationId: 9, partnerOrganizationName: 'NXB Demo', status: 'PENDING', requestNote: body.requestNote, reviewNote: null, submittedAt: '2026-10-08T01:00:00Z', reviewedAt: null, selectedAt: null, completedAt: null, paymentExpiredAt: null, withdrawnAt: null, hold: null };
@@ -439,8 +461,11 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('101');
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toHaveCount(0);
   await expect(page.getByText('NXB Demo')).toBeVisible();
-  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
+  const approveDialog = page.getByRole('dialog', { name: 'Xác nhận duyệt yêu cầu' });
+  await expect(approveDialog).toContainText('NXB Demo');
+  await expect(approveDialog).toContainText('A05');
+  await approveDialog.getByRole('button', { name: 'Xác nhận duyệt' }).click();
   await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
   await expect(page.getByText(/5.500.000/)).toBeVisible();
   await page.reload();
@@ -489,8 +514,9 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await eventPicker.selectOption('101');
   await expect(page.getByRole('button', { name: /B02.*Còn trống/ })).toBeVisible();
   const summary = page.getByRole('region', { name: 'Thống kê gian hàng của sự kiện' });
-  await expect(summary).toContainText('2');
-  await expect(summary).toContainText('Gian hàng được mở');
+  const enabledSummary = summary.locator('article').filter({ hasText: 'Gian hàng được mở' });
+  await expect(enabledSummary.locator('strong')).toHaveText('2');
+  await expect(enabledSummary).toContainText('Đã cấu hình cho thuê trong sự kiện');
   await expect(summary).toContainText('1');
   await expect(summary).toContainText('Gian hàng còn trống');
   await expect(summary).toContainText('Yêu cầu đã gửi');
@@ -562,6 +588,29 @@ test('Partner defaults to the newest approved Event and can search by Event name
   await eventPicker.selectOption('101');
   await expect(eventPicker).toHaveValue('101');
   await expect(page.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
+});
+
+test('Partner refresh reloads newly approved Event applications', async ({ page }) => {
+  await mockPartner(page, { refreshAddsApplication: true });
+  await page.goto('/partner/booth-requests');
+
+  const eventPicker = page.getByLabel('Sự kiện tham gia');
+  await expect(eventPicker.locator('option')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Làm mới' }).click();
+  await expect(eventPicker.locator('option')).toHaveCount(2);
+  await expect(eventPicker.locator('option', { hasText: 'Hội sách Mùa xuân' })).toHaveCount(1);
+});
+
+test('Partner sees a Vietnamese Booth request deadline message', async ({ page }) => {
+  await mockPartner(page, { requestDeadlinePassed: true });
+  await page.goto('/partner/booth-requests');
+
+  await page.getByRole('button', { name: /B02.*Còn trống/ }).click();
+  await page.getByLabel('Ghi chú gửi Ban tổ chức').fill('Ưu tiên trưng bày sách văn học.');
+  await page.getByRole('button', { name: 'Gửi yêu cầu thuê gian' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('Đã hết hạn gửi yêu cầu thuê gian hàng cho sự kiện này.');
+  await expect(page.getByText('The Booth request deadline has passed.')).toHaveCount(0);
 });
 
 test('Partner request cards expose truthful workflow progress for every terminal branch', async ({ page }) => {

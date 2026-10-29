@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import './RoleWorkspace.css';
@@ -157,6 +157,10 @@ export function App() {
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
   const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
+  const [partnerDataRevision, setPartnerDataRevision] = useState(0);
+  const requestPartnerDataRefresh = useCallback(() => {
+    setPartnerDataRevision(revision => revision + 1);
+  }, []);
 
   const [language, setLanguage] = useState<Language>('vi');
   const [highlightedBoothId, setHighlightedBoothId] = useState<string | null>(null);
@@ -469,11 +473,13 @@ export function App() {
     };
     refreshPartnerData();
     window.addEventListener('duongsach:data-changed', refreshPartnerData);
+    window.addEventListener('focus', refreshPartnerData);
     return () => {
       active = false;
       window.removeEventListener('duongsach:data-changed', refreshPartnerData);
+      window.removeEventListener('focus', refreshPartnerData);
     };
-  }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute]);
+  }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute, location.pathname, partnerDataRevision]);
 
   // Participant Action Handlers
   const applyParticipantActivityRegistration = (
@@ -917,6 +923,7 @@ export function App() {
               language={language}
               applications={partnerApplications}
               allRequests={partnerBoothRequests}
+              onRefreshData={requestPartnerDataRefresh}
             />
           } />
           <Route path="/partner/activities" element={

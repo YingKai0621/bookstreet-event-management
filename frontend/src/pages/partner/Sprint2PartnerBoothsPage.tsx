@@ -34,6 +34,7 @@ interface Props {
   language: Language;
   applications: PartnerEventApplication[];
   allRequests: BoothRequest[] | null;
+  onRefreshData: () => void;
 }
 
 interface WithdrawConflict {
@@ -73,6 +74,9 @@ const requestStatusLabel: Record<BoothRequest['status'], string> = {
 
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
+      return 'Đã hết hạn gửi yêu cầu thuê gian hàng cho sự kiện này.';
+    }
     return error.fieldErrors.map(item => item.message).filter(Boolean).join(' ') || error.message;
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
@@ -246,7 +250,7 @@ function holdStatusLabel(status: NonNullable<BoothRequest['hold']>['status']): s
   return 'Đang giữ chỗ';
 }
 
-export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests }) => {
+export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests, onRefreshData }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
@@ -303,6 +307,10 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     return boothEligibleApplications.filter(application =>
       normalizeEventSearch(application.eventTitle).includes(normalizedSearch));
   }, [boothEligibleApplications, eventSearch]);
+  const enabledBoothCount = useMemo(
+    () => booths.filter(booth => booth.enabled).length,
+    [booths],
+  );
   const loadGenerationRef = useRef(0);
   const currentEventIdRef = useRef(eventId);
   const handledDeepLinkRef = useRef('');
@@ -351,6 +359,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths(eventBooths);
       setRequests(ownRequests);
+      setSelectedBooth(current => current
+        ? eventBooths.find(item => item.booth.boothId === current.booth.boothId) || null
+        : null);
     } catch (caughtError) {
       if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths([]);
@@ -518,7 +529,15 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
           <h1 id="partner-booth-title" className="workspace-page-title">Chọn và thuê gian hàng</h1>
           <p className="workspace-page-subtitle">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi yêu cầu thuê gian hàng theo từng sự kiện.</p>
         </div>
-        <button className="s2-booth-refresh" type="button" onClick={() => void loadData()} disabled={loading}>
+        <button
+          className="s2-booth-refresh"
+          type="button"
+          onClick={() => {
+            onRefreshData();
+            void loadData();
+          }}
+          disabled={loading}
+        >
           <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
           {loading ? 'Đang cập nhật…' : 'Làm mới'}
         </button>
@@ -571,10 +590,10 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
 
       <section className="s2-booth-summary" aria-label="Thống kê gian hàng của sự kiện">
         <article>
-          <strong>{booths.length}</strong>
+          <strong>{enabledBoothCount}</strong>
           <div>
             <span>Gian hàng được mở</span>
-            <small>Toàn bộ danh mục gian của sự kiện</small>
+            <small>Đã cấu hình cho thuê trong sự kiện</small>
           </div>
         </article>
         <article>

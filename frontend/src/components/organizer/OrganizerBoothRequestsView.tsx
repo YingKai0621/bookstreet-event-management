@@ -54,6 +54,9 @@ const QUICK_REJECTION_REASONS = [
 
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
+      return 'Đã hết hạn xét duyệt yêu cầu thuê gian hàng cho sự kiện này.';
+    }
     return error.fieldErrors.map(item => item.message).filter(Boolean).join(' ') || error.message;
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
@@ -78,13 +81,18 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   const [requestFilter, setRequestFilter] = useState<'ALL' | 'PENDING' | 'SELECTED' | 'COMPLETED' | 'OTHER'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [boothFilter, setBoothFilter] = useState('ALL');
+  const [approvingRequest, setApprovingRequest] = useState<BoothRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<BoothRequest | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyKey, setBusyKey] = useState('');
-  useModalDismiss(Boolean(rejectingRequest), () => setRejectingRequest(null));
+  useModalDismiss(Boolean(approvingRequest || rejectingRequest), () => {
+    if (busyKey) return;
+    setApprovingRequest(null);
+    setRejectingRequest(null);
+  });
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
   const selectedEvent = events.find(event => event.id === eventId);
@@ -102,6 +110,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
 
     if (clearCurrent) {
       setRequests([]);
+      setApprovingRequest(null);
       setRejectingRequest(null);
       setReviewNote('');
       setSuccess('');
@@ -178,24 +187,21 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   }, [boothFilter, completedRequests, otherRequests, pendingRequests, requestFilter, requests, searchTerm, selectedRequests]);
 
   const handleSelectRequest = async (request: BoothRequest) => {
-    if (
-      !eventId ||
-      !window.confirm(
-        `Duyệt và cấp giữ chỗ cho đối tác "${request.partnerOrganizationName}" tại gian "${request.boothCode}"?`,
-      )
-    ) {
-      return;
-    }
+    if (!eventId) return;
     const requestedEventId = eventId;
     setBusyKey(`request-${request.boothRequestId}`);
     setError('');
     try {
       await boothApi.selectRequest(requestedEventId, request.boothRequestId);
       if (currentEventIdRef.current !== requestedEventId) return;
+      setApprovingRequest(null);
       setSuccess(`Đã duyệt chọn gian "${request.boothCode}" cho "${request.partnerOrganizationName}".`);
       await loadData();
     } catch (caughtError) {
-      if (currentEventIdRef.current === requestedEventId) setError(apiMessage(caughtError));
+      if (currentEventIdRef.current === requestedEventId) {
+        setApprovingRequest(null);
+        setError(apiMessage(caughtError));
+      }
     } finally {
       setBusyKey('');
     }
@@ -617,7 +623,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                     <button
                       type="button"
                       className="obr-btn-approve btn-request-approve"
-                      onClick={() => void handleSelectRequest(request)}
+                      onClick={() => setApprovingRequest(request)}
                       disabled={busyKey === `request-${request.boothRequestId}`}
                     >
                       {busyKey === `request-${request.boothRequestId}` ? (
@@ -661,6 +667,66 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
             </article>
           ))}
         </div>)}</PaginatedList>
+      )}
+
+      {/* Modal: Approve Request */}
+      {approvingRequest && (
+        <div
+          className="s2-modal-backdrop"
+          onClick={() => { if (!busyKey) setApprovingRequest(null); }}
+        >
+          <div
+            className="s2-modal s2-modal-small"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approve-booth-request-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="s2-modal-header">
+              <h2 id="approve-booth-request-title">Xác nhận duyệt yêu cầu</h2>
+              <button
+                type="button"
+                aria-label="Đóng"
+                disabled={Boolean(busyKey)}
+                onClick={() => setApprovingRequest(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="s2-stack-form">
+              <p>
+                Bạn sắp duyệt và cấp giữ chỗ cho đối tác{' '}
+                <strong>{approvingRequest.partnerOrganizationName}</strong> tại gian{' '}
+                <strong>{approvingRequest.boothCode}</strong>.
+              </p>
+              <p className="s2-modal-supporting-copy">
+                Giá thuê hiện tại của gian hàng sẽ được khóa cho yêu cầu này. Với gian hàng miễn phí,
+                hệ thống sẽ cấp gian ngay sau khi xác nhận.
+              </p>
+              <div className="s2-modal-actions" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn-org-secondary"
+                  disabled={Boolean(busyKey)}
+                  onClick={() => setApprovingRequest(null)}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="btn-org-primary"
+                  disabled={Boolean(busyKey)}
+                  onClick={() => void handleSelectRequest(approvingRequest)}
+                >
+                  {busyKey === `request-${approvingRequest.boothRequestId}` && (
+                    <Loader2 size={15} className="s2-spin" />
+                  )}
+                  Xác nhận duyệt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal: Reject Request */}
