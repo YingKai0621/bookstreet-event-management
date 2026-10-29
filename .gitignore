@@ -38,6 +38,7 @@ skills-lock.json
 
 # Local-only demo seed scripts and credentials
 /local-data/
+/.tmp/
 
 
 # IntelliJ IDEA

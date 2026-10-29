@@ -2,10 +2,11 @@ import { expect, test } from '@playwright/test';
 
 const organizerUsername = process.env.E2E_ORGANIZER_USERNAME;
 const organizerPassword = process.env.E2E_ORGANIZER_PASSWORD;
+const runLiveE2E = process.env.E2E_LIVE === 'true';
 
 test.skip(
-  !organizerUsername || !organizerPassword,
-  'Cần E2E_ORGANIZER_USERNAME và E2E_ORGANIZER_PASSWORD để chạy integration với backend thật.',
+  !runLiveE2E || !organizerUsername || !organizerPassword,
+  'Đặt E2E_LIVE=true và khai báo credential Organizer để chạy integration với backend thật.',
 );
 
 function requireOrganizerCredentials(): { username: string; password: string } {

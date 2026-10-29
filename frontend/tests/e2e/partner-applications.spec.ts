@@ -6,11 +6,12 @@ interface Credentials {
 }
 
 test.skip(
-  !process.env.E2E_ORGANIZER_USERNAME
+  process.env.E2E_LIVE !== 'true'
+    || !process.env.E2E_ORGANIZER_USERNAME
     || !process.env.E2E_ORGANIZER_PASSWORD
     || !process.env.E2E_PARTNER_USERNAME
     || !process.env.E2E_PARTNER_PASSWORD,
-  'Cần đủ credential Organizer và Partner để chạy integration với backend thật.',
+  'Đặt E2E_LIVE=true và khai báo đủ credential Organizer/Partner để chạy integration với backend thật.',
 );
 
 function requireCredentials(

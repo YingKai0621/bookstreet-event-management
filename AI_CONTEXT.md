@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-28`
+Last updated: `2026-10-29`
 
 ## Current implementation status
 
@@ -38,7 +38,9 @@ Last updated: `2026-10-28`
 - Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
-- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
+- GitHub Actions CI runs backend verification, frontend lint/build and an isolated Playwright UI
+  regression job for pushes and pull requests targeting `main`. Live-data Playwright tests require
+  explicit `E2E_LIVE=true` and do not run merely because local credentials exist.
 - GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis. Automated coverage includes
   migrations, Event and Activity lifecycles, ownership, lock ordering, Partner/Booth/Activity
   races, VNPay reconciliation, participation, Attendance, Certificate, Rating and notification
@@ -83,7 +85,9 @@ Last updated: `2026-10-28`
   three-developer work assignment. PR #92 (merge commit `2178ba6`) implemented V12, the shared
   reward/Notification foundation, Participant Booth scan, Partner QR display, Participant Rewards
   reads/UI and Badge Notification support. PR #93 (merge commit `1b95584`) implemented Organizer
-  BoothVisit monitoring plus Admin Badge CRUD and bounded award synchronization.
+  BoothVisit monitoring plus Admin Badge CRUD and bounded award synchronization. PR #95 (merge
+  commit `573f15a`) added Participant reward/Badge Notification integration coverage, Certificate
+  PDF font hardening and the final frontend consistency fixes.
 - Sprint 7 implementation ownership is vertical: Developer A owns V12/reward writes plus Booth
   scan/Partner QR UI; Developer B owns Organizer monitoring and Admin Badge/backfill APIs plus UI;
   Developer C owns Participant reward reads/UI and integration closure.
@@ -205,24 +209,22 @@ BoothVisit, PointTransaction, Badge and UserBadge persistence and adds the small
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Sprint 7 `S7-4` cross-role verification, phone-on-LAN smoke and completion report
+- Sprint 7 physical phone-on-LAN smoke and final completion status update
 - General feedback/reporting, persisted heritage/map data and broad Organizer/Partner/Admin
   notifications outside the approved Sprint 7 slice
 
 ## Next implementation task
 
-- Start `S7-4` from updated `main` after PR #93.
-- Developer C audits the already-implemented Participant Rewards/Badge Notification slice, closes
-  only documented gaps and coordinates cross-role verification without duplicating reward writes.
-- Run the focused scan-to-reward, Organizer monitoring and Admin synchronization Playwright paths,
-  phone-on-LAN smoke and final Sprint 1-6 regression checks.
-- Produce Sprint 7 completion evidence while preserving immutable V1–V12 and the approved lock,
-  ownership, QR-secrecy and idempotency boundaries.
+- Perform the physical phone-on-LAN Booth scan checklist in
+  `docs/development/SPRINT_07_CLOSURE_REPORT.md` and record its result without committing LAN values,
+  credentials or QR tokens.
+- Mark Sprint 7 complete only after that evidence is reviewed; automated backend, OpenAPI,
+  real-session and Playwright closure checks are already recorded as green.
 
 ## Latest completed Sprint
 
 Sprint 06 Participant Activity Registration and Attendance is the latest completed Sprint as of
-2026-10-28. Sprint 7 is active but not yet completed.
+2026-10-29. Sprint 7 is active but not yet completed.
 
 Sprint 6 includes these approved Use Case slices:
 
