@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
+import { organizerApi } from '../../services/organizerApi';
 import { Language } from '../../types';
 import { OrganizerEvent, OrganizerEventRequest } from '../../types/organizer';
 
@@ -93,6 +94,7 @@ const FORM_FIELDS = new Set<FormField>(Object.keys(FIELD_IDS) as FormField[]);
 
 function apiFieldToFormField(field: string): FormField | undefined {
   if (field === 'boothPaymentWindowMinutes') return 'boothPaymentWindowValue';
+  if (field === 'file') return 'bannerUrl';
   return FORM_FIELDS.has(field as FormField) ? field as FormField : undefined;
 }
 
@@ -143,6 +145,8 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const [isSaving, setIsSaving] = useState(false);
   const [isDeadlinesOpen, setIsDeadlinesOpen] = useState(Boolean(event));
   const [bannerPreviewFailed, setBannerPreviewFailed] = useState(false);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerObjectUrl, setBannerObjectUrl] = useState('');
   const errorAlertRef = useRef<HTMLDivElement>(null);
   useModalDismiss(isOpen, () => { if (!isSaving) onClose(); });
 
@@ -151,6 +155,10 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     errorAlertRef.current?.focus({ preventScroll: true });
     errorAlertRef.current?.scrollIntoView({ block: 'nearest' });
   }, [error]);
+
+  useEffect(() => () => {
+    if (bannerObjectUrl) URL.revokeObjectURL(bannerObjectUrl);
+  }, [bannerObjectUrl]);
 
   if (!isOpen) return null;
 
@@ -163,7 +171,34 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       return next;
     });
     setError('');
-    if (field === 'bannerUrl') setBannerPreviewFailed(false);
+    if (field === 'bannerUrl') {
+      setBannerFile(null);
+      setBannerObjectUrl('');
+      setBannerPreviewFailed(false);
+    }
+  };
+
+  const selectBannerFile = (file: File | undefined) => {
+    if (!file) return;
+    const supportedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    if (!supportedTypes.has(file.type)) {
+      setFieldErrors(current => ({ ...current, bannerUrl: 'Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.' }));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFieldErrors(current => ({ ...current, bannerUrl: 'Ảnh banner không được vượt quá 5 MB.' }));
+      return;
+    }
+    setBannerFile(file);
+    setBannerObjectUrl(URL.createObjectURL(file));
+    setBannerPreviewFailed(false);
+    setFieldErrors(current => {
+      if (!current.bannerUrl) return current;
+      const next = { ...current };
+      delete next.bannerUrl;
+      return next;
+    });
+    setError('');
   };
 
   const updatePaymentWindowUnit = (unit: EventFormState['boothPaymentWindowUnit']) => {
@@ -266,7 +301,10 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     setError('');
     setFieldErrors({});
     try {
-      await onSave(request, event?.id);
+      const bannerUrl = bannerFile
+        ? await organizerApi.uploadEventBanner(bannerFile)
+        : request.bannerUrl;
+      await onSave({ ...request, bannerUrl }, event?.id);
       onClose();
     } catch (caughtError) {
       if (caughtError instanceof ApiError) {
@@ -350,15 +388,44 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                 </div>
 
                 <div className="org-event-form-field org-event-form-field-full">
-                  <label htmlFor="event-banner-url">Ảnh banner <span className="org-event-optional-label">Không bắt buộc</span></label>
+                  <label htmlFor="event-banner-file">Ảnh banner <span className="org-event-optional-label">Không bắt buộc</span></label>
                   <div className="org-event-banner-field">
-                    <div className="org-event-banner-input">
-                      <ImageIcon size={17} aria-hidden="true" />
-                      <input id="event-banner-url" type="url" value={form.bannerUrl} onChange={changeEvent => updateField('bannerUrl', changeEvent.target.value)} placeholder="https://..." />
+                    <div className="org-event-banner-controls">
+                      <input
+                        id="event-banner-file"
+                        className="org-event-banner-file-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={isSaving}
+                        onChange={changeEvent => selectBannerFile(changeEvent.target.files?.[0])}
+                      />
+                      <div className="org-event-banner-upload-row">
+                        <label className="org-event-banner-upload-button" htmlFor="event-banner-file">
+                          <ImageIcon size={17} aria-hidden="true" />
+                          {bannerFile ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
+                        </label>
+                        {bannerFile && (
+                          <button
+                            type="button"
+                            className="org-event-banner-clear"
+                            onClick={() => { setBannerFile(null); setBannerObjectUrl(''); }}
+                            disabled={isSaving}
+                          >
+                            <X size={15} aria-hidden="true" /> Bỏ ảnh đã chọn
+                          </button>
+                        )}
+                      </div>
+                      <small>{bannerFile ? bannerFile.name : 'JPG, PNG hoặc WebP · tối đa 5 MB'}</small>
+                      <span className="org-event-banner-separator">hoặc dùng liên kết ảnh</span>
+                      <div className="org-event-banner-input">
+                        <ImageIcon size={17} aria-hidden="true" />
+                        <input id="event-banner-url" type="url" value={form.bannerUrl} onChange={changeEvent => updateField('bannerUrl', changeEvent.target.value)} placeholder="https://..." />
+                      </div>
                     </div>
-                    {form.bannerUrl && !bannerPreviewFailed && <img src={form.bannerUrl} alt="Xem trước banner sự kiện" onError={() => setBannerPreviewFailed(true)} />}
-                    {form.bannerUrl && bannerPreviewFailed && <div className="org-event-banner-error"><ImageIcon size={18} />Không tải được ảnh</div>}
+                    {(bannerObjectUrl || form.bannerUrl) && !bannerPreviewFailed && <img src={bannerObjectUrl || form.bannerUrl} alt="Xem trước banner sự kiện" onError={() => setBannerPreviewFailed(true)} />}
+                    {(bannerObjectUrl || form.bannerUrl) && bannerPreviewFailed && <div className="org-event-banner-error"><ImageIcon size={18} />Không tải được ảnh</div>}
                   </div>
+                  {renderFieldError('bannerUrl')}
                 </div>
               </div>
             </section>

@@ -202,6 +202,8 @@ export const apiClient = {
       body: body === undefined ? undefined : JSON.stringify(body),
       headers,
     }),
+  postForm: <T>(endpoint: string, body: FormData, headers?: HeadersInit) =>
+    request<T>(endpoint, { method: 'POST', body, headers }),
   put: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
     request<T>(endpoint, {
       method: 'PUT',

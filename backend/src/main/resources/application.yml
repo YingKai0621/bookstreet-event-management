@@ -53,6 +53,11 @@ spring:
     redis:
       namespace: bookstreet:session
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
 server:
   port: ${SERVER_PORT:8080}
   error:
@@ -67,6 +72,8 @@ springdoc:
       enabled: true
 
 bookstreet:
+  media:
+    event-banner-directory: ${EVENT_BANNER_UPLOAD_DIR:uploads/event-banners}
   chatbot:
     api-key: ${GEMINI_API_KEY:${CHATBOT_API_KEY:}}
     model: ${CHATBOT_MODEL:gemini-3.5-flash-lite}

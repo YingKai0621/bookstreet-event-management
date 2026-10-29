@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 // Scoped to Event so this feature does not change other modules' error handling.
 @RestControllerAdvice(basePackages = "com.swp391.bookstreet.event.controller")
@@ -36,6 +37,16 @@ public class EventExceptionHandler {
     ResponseEntity<EventErrorResponse> handleMalformed(Exception error, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(new EventErrorResponse(
                 "MALFORMED_REQUEST", "Invalid JSON, field type, or identifier.", List.of(),
+                Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<EventErrorResponse> handleOversizedUpload(
+            MaxUploadSizeExceededException error, HttpServletRequest request) {
+        return ResponseEntity.unprocessableContent().body(new EventErrorResponse(
+                "EVENT_BANNER_INVALID", "Ảnh banner không được vượt quá 5 MB.",
+                List.of(new EventErrorResponse.FieldError(
+                        "file", "Ảnh banner không được vượt quá 5 MB.")),
                 Instant.now(), request.getRequestURI()));
     }
 }

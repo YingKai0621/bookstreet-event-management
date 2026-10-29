@@ -2187,6 +2187,67 @@
   align-items: stretch;
 }
 
+.org-event-banner-controls {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.org-event-banner-file-input {
+  display: none;
+}
+
+.org-event-banner-upload-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.org-event-banner-upload-button,
+.org-event-banner-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  min-height: 40px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #9FB5AB;
+  border-radius: 4px;
+  background: #F5F9F7;
+  color: #17382E;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.org-event-banner-clear {
+  border-color: #D6C6C6;
+  background: #FFF;
+  color: #7D4040;
+}
+
+.org-event-banner-controls > small,
+.org-event-banner-separator {
+  color: #687B74;
+  font-size: 0.78rem;
+}
+
+.org-event-banner-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.org-event-banner-separator::before,
+.org-event-banner-separator::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #DFE7E3;
+}
+
 .org-event-banner-input {
   display: flex;
   align-items: center;
@@ -2212,7 +2273,7 @@
 .org-event-banner-field img,
 .org-event-banner-error {
   width: 144px;
-  height: 50px;
+  height: 112px;
   border: 1px solid #D4DEDA;
   border-radius: 4px;
   box-sizing: border-box;

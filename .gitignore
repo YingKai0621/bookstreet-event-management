@@ -71,6 +71,7 @@ note/
 
 # Local-only Flyway test fixtures and runner; never push test accounts/data.
 /backend/local-seed/
+/backend/uploads/
 
 # Playwright end-to-end test artifacts
 /frontend/playwright-report/
