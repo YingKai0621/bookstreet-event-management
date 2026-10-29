@@ -91,12 +91,14 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
       }
       await expect(title, `Missing workspace title at ${route}`).toBeVisible({ timeout: 20_000 });
       await expect(subtitle, `Missing workspace subtitle at ${route}`).toBeVisible({ timeout: 20_000 });
-      const topInset = await title.evaluate(element => {
-        const main = element.closest('main')!;
-        return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
-      });
       const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 18 : 36;
-      expect(Math.abs(topInset - expectedTopInset), route).toBeLessThanOrEqual(1);
+      await expect.poll(async () => {
+        const topInset = await title.evaluate(element => {
+          const main = element.closest('main')!;
+          return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
+        });
+        return Math.abs(topInset - expectedTopInset);
+      }, { message: route }).toBeLessThanOrEqual(1);
       const inlineInset = await title.evaluate(element => {
         const main = element.closest('main')!;
         return element.getBoundingClientRect().left - main.getBoundingClientRect().left;

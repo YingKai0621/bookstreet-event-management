@@ -34,6 +34,7 @@ interface Props {
   language: Language;
   applications: PartnerEventApplication[];
   allRequests: BoothRequest[] | null;
+  onRefreshData: () => void;
 }
 
 interface WithdrawConflict {
@@ -73,6 +74,9 @@ const requestStatusLabel: Record<BoothRequest['status'], string> = {
 
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
+      return 'Đã hết hạn gửi yêu cầu thuê gian hàng cho sự kiện này.';
+    }
     return error.fieldErrors.map(item => item.message).filter(Boolean).join(' ') || error.message;
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
@@ -144,6 +148,14 @@ function eventSchedule(application: PartnerEventApplication | undefined): string
   if (validStart) return `Bắt đầu ${dateTime(application?.startAt)}`;
   if (validEnd) return `Kết thúc ${dateTime(application?.endAt)}`;
   return application?.dateRange?.trim() || 'Lịch sự kiện đang cập nhật';
+}
+
+function normalizeEventSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLocaleLowerCase('vi-VN');
 }
 
 type RequestProgressState = 'complete' | 'current' | 'future' | 'terminal-danger' | 'terminal-neutral';
@@ -238,14 +250,17 @@ function holdStatusLabel(status: NonNullable<BoothRequest['hold']>['status']): s
   return 'Đang giữ chỗ';
 }
 
-export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests }) => {
+export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests, onRefreshData }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
     [applications],
   );
-  const approvedEventIds = useMemo(
-    () => new Set(approvedApplications.map(application => application.eventId)),
+  const boothEligibleApplications = useMemo(
+    () => approvedApplications.filter(application =>
+      application.eventAvailable !== false
+      && application.eventStatus !== 'COMPLETED'
+      && application.eventStatus !== 'CANCELLED'),
     [approvedApplications],
   );
   const requestCountsByEvent = useMemo(() => {
@@ -256,10 +271,6 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     }
     return counts;
   }, [allRequests]);
-  const preferredRequestEventId = useMemo(
-    () => (allRequests || []).find(request => approvedEventIds.has(String(request.eventId)))?.eventId.toString() || '',
-    [allRequests, approvedEventIds],
-  );
   const requestedEventId = searchParams.get('eventId') || '';
   const tab: 'browse' | 'requests' = searchParams.get('view') === 'requests' ? 'requests' : 'browse';
   const setTab = useCallback((nextTab: 'browse' | 'requests', replace = false) => {
@@ -279,15 +290,26 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
   const [now, setNow] = useState(0);
   useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
 
-  const eventId = approvedApplications.some(application => application.eventId === requestedEventId)
+  const eventId = boothEligibleApplications.some(application => application.eventId === requestedEventId)
     ? requestedEventId
-    : preferredRequestEventId || approvedApplications[0]?.eventId || '';
-  const selectedApplication = approvedApplications.find(application => application.eventId === eventId);
-  const alternativeRequestApplication = approvedApplications.find(application =>
+    : boothEligibleApplications[0]?.eventId || '';
+  const selectedApplication = boothEligibleApplications.find(application => application.eventId === eventId);
+  const alternativeRequestApplication = boothEligibleApplications.find(application =>
     application.eventId !== eventId && (requestCountsByEvent.get(application.eventId) || 0) > 0,
+  );
+  const filteredApplications = useMemo(() => {
+    const normalizedSearch = normalizeEventSearch(eventSearch);
+    if (!normalizedSearch) return boothEligibleApplications;
+    return boothEligibleApplications.filter(application =>
+      normalizeEventSearch(application.eventTitle).includes(normalizedSearch));
+  }, [boothEligibleApplications, eventSearch]);
+  const enabledBoothCount = useMemo(
+    () => booths.filter(booth => booth.enabled).length,
+    [booths],
   );
   const loadGenerationRef = useRef(0);
   const currentEventIdRef = useRef(eventId);
@@ -337,6 +359,9 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths(eventBooths);
       setRequests(ownRequests);
+      setSelectedBooth(current => current
+        ? eventBooths.find(item => item.booth.boothId === current.booth.boothId) || null
+        : null);
     } catch (caughtError) {
       if (generation !== loadGenerationRef.current || currentEventIdRef.current !== requestedEventId) return;
       setBooths([]);
@@ -480,7 +505,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     }
   };
 
-  if (!approvedApplications.length) {
+  if (!boothEligibleApplications.length) {
     return (
       <section className="partner-page">
         <div className="partner-page-header">
@@ -489,8 +514,8 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
         </div>
         <div className="s2-empty s2-panel">
           <Store size={34} />
-          <strong>Chưa có sự kiện đủ điều kiện</strong>
-          <span>Hãy theo dõi trạng thái tại mục Hồ sơ sự kiện của tôi.</span>
+          <strong>Chưa có sự kiện đang mở gian hàng</strong>
+          <span>Hồ sơ cần được duyệt và sự kiện phải đang công bố hoặc đang diễn ra.</span>
         </div>
       </section>
     );
@@ -504,7 +529,15 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
           <h1 id="partner-booth-title" className="workspace-page-title">Chọn và thuê gian hàng</h1>
           <p className="workspace-page-subtitle">Khám phá sơ đồ, chọn vị trí phù hợp và theo dõi yêu cầu thuê gian hàng theo từng sự kiện.</p>
         </div>
-        <button className="s2-booth-refresh" type="button" onClick={() => void loadData()} disabled={loading}>
+        <button
+          className="s2-booth-refresh"
+          type="button"
+          onClick={() => {
+            onRefreshData();
+            void loadData();
+          }}
+          disabled={loading}
+        >
           <RefreshCw size={15} className={loading ? 's2-spin' : ''} />
           {loading ? 'Đang cập nhật…' : 'Làm mới'}
         </button>
@@ -522,11 +555,20 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
           </div>
         </div>
         <div className="s2-event-context-control">
+          <label htmlFor="partner-booth-event-search">Tìm sự kiện</label>
+          <input
+            id="partner-booth-event-search"
+            type="search"
+            value={eventSearch}
+            placeholder="Nhập tên sự kiện..."
+            autoComplete="off"
+            onChange={event => setEventSearch(event.target.value)}
+          />
           <label htmlFor="partner-booth-event">Đổi sự kiện</label>
           <select
             id="partner-booth-event"
             aria-label="Sự kiện tham gia"
-            value={eventId}
+            value={filteredApplications.some(application => application.eventId === eventId) ? eventId : ''}
             onChange={event => {
               currentEventIdRef.current = event.target.value;
               const next = new URLSearchParams(searchParams);
@@ -535,19 +577,23 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
               setSearchParams(next);
             }}
           >
-            {approvedApplications.map(application => (
+            {filteredApplications.length === 0 && (
+              <option value="" disabled>Không tìm thấy sự kiện phù hợp</option>
+            )}
+            {filteredApplications.map(application => (
               <option key={application.id} value={application.eventId}>{application.eventTitle}</option>
             ))}
           </select>
+          <small>{filteredApplications.length}/{boothEligibleApplications.length} sự kiện có thể chọn</small>
         </div>
       </section>
 
       <section className="s2-booth-summary" aria-label="Thống kê gian hàng của sự kiện">
         <article>
-          <strong>{booths.length}</strong>
+          <strong>{enabledBoothCount}</strong>
           <div>
             <span>Gian hàng được mở</span>
-            <small>Toàn bộ danh mục gian của sự kiện</small>
+            <small>Đã cấu hình cho thuê trong sự kiện</small>
           </div>
         </article>
         <article>

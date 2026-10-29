@@ -15,6 +15,7 @@
 - Physical ERD: `docs/design/12_Physical_ERD_Report.md`
 - Backend and Frontend Work Assignment: `docs/sprints/SPRINT_07_BACKEND_WORK_ASSIGNMENT.md`
 - Sprint 6 regression reference: `docs/development/SPRINT_06_COMPLETION_REPORT.md`
+- Sprint 7 closure evidence: `docs/development/SPRINT_07_CLOSURE_REPORT.md`
 
 ## Sprint goal
 
@@ -64,13 +65,13 @@ entities or the backend `BADGE_UNLOCKED` writer.
 4. `S7-3A` — complete in PR #93 (merge commit `1b95584`): Organizer BoothVisit API and
    Event-scoped monitoring UI.
 5. `S7-3B` — complete in PR #93: Admin Badge/backfill API and management UI.
-6. `S7-3C` — implementation is already present in PR #92: Participant reward read API, Rewards UI
-   and Badge Notification support. Developer C must verify and close gaps rather than reimplement it.
-7. `S7-4` — remaining: Developer C coordinates cross-role verification, phone-on-LAN smoke,
-   Playwright and documentation closure.
+6. `S7-3C` — complete through PR #95 (merge commit `573f15a`): Participant reward read integration
+   coverage, Badge Notification integration and frontend consistency gaps are closed.
+7. `S7-4` — automated backend, OpenAPI, real-session and Playwright verification is recorded in the
+   closure report. The physical phone-on-LAN check remains before Sprint completion.
 
 Detailed historical ownership and merge gates remain in the approved work assignment. New work
-must start from the V12/PR #93 baseline and must not duplicate the shared award or Participant
+must start from the V12/PR #95 baseline and must not duplicate the shared award or Participant
 reward implementations.
 
 ## Non-negotiable implementation rules
@@ -104,5 +105,6 @@ reward implementations.
 The Project Owner approved and merged the Sprint 7 audit, baseline, 41-AC Use Case Specification,
 API Contract and three-developer vertical-slice work assignment through PR #86. PR #92 delivered
 V12, the reward write/scan foundation and Participant reward experience. PR #93 delivered
-Organizer BoothVisit monitoring and Admin Badge synchronization. Sprint 7 remains active until
-`S7-4` cross-role verification and closure evidence are complete.
+Organizer BoothVisit monitoring and Admin Badge synchronization. PR #95 completed Developer C's
+Participant integration coverage and frontend consistency pass. Sprint 7 remains active only until
+the phone-on-LAN result is added to the closure evidence.

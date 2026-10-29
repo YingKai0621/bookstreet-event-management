@@ -476,6 +476,15 @@ export const organizerApi = {
     const event = await apiClient.post<OrganizerEventResponse>('/organizer/events', data);
     return toOrganizerEvent(event);
   },
+  async uploadEventBanner(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.postForm<{ url: string }>(
+      '/organizer/event-banners',
+      formData,
+    );
+    return response.url;
+  },
   async updateEvent(id: string, data: OrganizerEventRequest): Promise<OrganizerEvent> {
     const event = await apiClient.patch<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}`, data);
     return toOrganizerEvent(event);

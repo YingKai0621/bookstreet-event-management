@@ -330,6 +330,8 @@ export interface PartnerEventApplication {
   dateRange: string;
   startAt?: string;
   endAt?: string;
+  eventStatus?: 'PUBLISHED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  eventAvailable?: boolean;
   location: string;
   imageUrl: string;
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn';

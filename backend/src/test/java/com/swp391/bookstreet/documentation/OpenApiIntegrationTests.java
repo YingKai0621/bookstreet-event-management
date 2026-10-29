@@ -172,6 +172,28 @@ class OpenApiIntegrationTests {
     }
 
     @Test
+    void openApiDocumentIncludesSprint7RewardEndpoints() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/participant/booth-visits/scan'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/participant/rewards/summary'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/participant/rewards/point-transactions'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/participant/rewards/badges'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/organizer/events/{eventId}/booth-visits/summary'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/organizer/events/{eventId}/booth-visit-groups'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/organizer/events/{eventId}/booth-visits'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/admin/badges'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/admin/badges/{badgeId}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/admin/badges'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/admin/badges/{badgeId}'].put").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/admin/badges/{badgeId}/synchronize-awards'].post")
+                        .exists());
+    }
+
+    @Test
     void unsafeRequestWithoutCsrfTokenIsRejected() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
