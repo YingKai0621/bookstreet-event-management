@@ -25,7 +25,12 @@
 
 /* Page wrappers must not add a second top inset before the heading. */
 :is(.organizer-main-viewport, .admin-main-viewport, .partner-main-viewport, .participant-main-viewport)
-  :where(div, section, header):has(.workspace-page-title) {
+  :where(div, section, header):has(.workspace-page-title):not(
+    .event-hub-hero,
+    .event-hub-hero-copy,
+    .partner-workspace-hero,
+    .partner-workspace-hero-copy
+  ) {
   margin-top: 0 !important;
   margin-inline: 0 !important;
   padding-top: 0 !important;
@@ -39,8 +44,17 @@
   padding-bottom: 0 !important;
 }
 
+/* Hero card copy needs comfortable interior padding so text does not collide with the card border. */
 .partner-app-shell :is(.event-hub-hero-copy, .partner-workspace-hero-copy) {
-  align-self: start;
+  align-self: center;
+  padding: 1.75rem 2.25rem !important;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .partner-app-shell :is(.event-hub-hero-copy, .partner-workspace-hero-copy) {
+    padding: 1.25rem 1.25rem !important;
+  }
 }
 
 :is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) h1.workspace-page-title {
@@ -81,4 +95,3 @@
   align-items: flex-start;
   justify-content: flex-start;
 }
-

@@ -11,8 +11,7 @@
 .calendar-modal-event-card.is-registered { background: #e8f5ef; border-color: #78b99d; }
 .participant-calendar-modal-backdrop button:disabled { opacity: .6; cursor: wait; }
 .participant-calendar-modal-backdrop button:disabled:not(.calendar-modal-close-btn) { cursor: not-allowed; box-shadow: none !important; background: #edf0ed !important; color: #596b62 !important; }
+.participant-calendar-mobile-dots { display: none; }
 @media (max-width: 640px) {
-  .participant-app-shell .participant-calendar-day.has-events::after { background: #b88a2d; }
-  .participant-app-shell .participant-calendar-day.has-registrations::after { background: #185e48; width: 12px; border-radius: 2px; }
   .participant-calendar-legend { margin-bottom: 8px; font-size: 11px; gap: 12px; }
 }

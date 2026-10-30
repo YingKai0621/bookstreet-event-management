@@ -12,6 +12,7 @@ import {
   Clock,
   MapPin,
   Star,
+  Sparkles,
   Tag,
   X
 } from 'lucide-react';
@@ -235,6 +236,31 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed')
       : (language === 'vi' ? 'Chưa đăng ký' : 'Not registered');
 
+  const upcomingEventsList: Array<CalendarEventItem & { cellDateStr: string; displayDate: string }> = (() => {
+    const list: Array<CalendarEventItem & { cellDateStr: string; displayDate: string }> = [];
+    const seen = new Set<string>();
+
+    for (const cell of calendarCells) {
+      for (const ev of cell.events) {
+        const key = `${ev.type}-${ev.id}`;
+        if (!seen.has(key) && cell.dateStr >= vietnamToday) {
+          seen.add(key);
+          const cellDate = new Date(`${cell.dateStr}T12:00:00`);
+          const formatted = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', {
+            day: 'numeric',
+            month: 'numeric',
+          }).format(cellDate);
+          list.push({
+            ...ev,
+            cellDateStr: cell.dateStr,
+            displayDate: formatted,
+          });
+        }
+      }
+    }
+    return list.sort((a, b) => a.cellDateStr.localeCompare(b.cellDateStr));
+  })();
+
   // Handler when clicking on an event chip
   const handleEventClick = (ev: CalendarEventItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -288,9 +314,9 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           floating
         >
           {registerSuccessToast}
-          <button 
-            type="button" 
-            onClick={() => setRegisterSuccessToast(null)} 
+          <button
+            type="button"
+            onClick={() => setRegisterSuccessToast(null)}
             style={{ background: 'none', border: 'none', color: 'currentColor', cursor: 'pointer', marginLeft: '0.5rem' }}
             aria-label={language === 'vi' ? 'Đóng thông báo' : 'Dismiss notification'}
           >
@@ -422,265 +448,380 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
             {/* 7-Column Days Grid */}
             <div className="dashboard-days-grid">
-          {calendarCells.map((cell, idx) => {
-            const hasEvents = cell.events.length > 0;
-            const isSelected = cell.dateStr === selectedDateStr;
-            const isToday = cell.dateStr === vietnamToday;
-            const maxVisible = 2;
-            const visibleEvents = cell.events.slice(0, maxVisible);
-            const extraCount = cell.events.length - maxVisible;
+              {calendarCells.map((cell, idx) => {
+                const hasEvents = cell.events.length > 0;
+                const isSelected = cell.dateStr === selectedDateStr;
+                const isToday = cell.dateStr === vietnamToday;
+                const maxVisible = 2;
+                const visibleEvents = cell.events.slice(0, maxVisible);
+                const extraCount = cell.events.length - maxVisible;
 
-            return (
-              <div
-                key={idx}
-                className={`participant-calendar-day ${hasEvents ? 'has-events' : ''} ${cell.events.some(item => item.isRegistered) ? 'has-registrations' : ''}`}
-                role="button"
-                tabIndex={0}
-                aria-label={`${cell.dateStr}, ${cell.events.length} ${language === 'vi' ? 'sự kiện' : 'events'}`}
-                aria-pressed={isSelected}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelectedDateStr(cell.dateStr);
-                  }
-                }}
-                onClick={() => {
-                  setSelectedDateStr(cell.dateStr);
-                  if (hasEvents) {
-                    if (cell.events.length > 1) {
-                      setSelectedDayEvents({
-                        day: cell.day,
-                        dateStr: `${cell.day} ${currentMonthName}, ${currentYear}`,
-                        events: cell.events
-                      });
-                    }
-                  }
-                }}
-                style={{
-                  minHeight: '148px',
-                  padding: '8px',
-                  borderRadius: '12px',
-                  background: isSelected 
-                    ? '#F0F7F4' 
-                    : hasEvents 
-                      ? '#FCFAF6' 
-                      : cell.isCurrentMonth 
-                        ? '#FFFFFF' 
-                        : '#FAFAFA',
-                  border: isSelected 
-                    ? '2px solid #17382E' 
-                    : hasEvents 
-                      ? '1px solid #EAE0CE' 
-                      : '1px solid #EEF2F0',
-                  cursor: hasEvents ? 'pointer' : 'default',
-                  opacity: cell.isCurrentMonth ? 1 : 0.35,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  transition: 'all 160ms cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: isSelected 
-                    ? '0 4px 16px rgba(23, 56, 46, 0.12)' 
-                    : hasEvents 
-                      ? '0 2px 8px rgba(0, 0, 0, 0.02)' 
-                      : 'none'
-                }}
-              >
-                {/* Header of Cell: Day Number + Event Badge / + Trống */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '6px'
-                }}>
-                  <span style={{
-                    fontSize: '0.88rem',
-                    fontWeight: isSelected || isToday ? 850 : 650,
-                    color: isToday ? '#FFFFFF' : isSelected ? '#17382E' : '#2C3E3A',
-                    width: isToday ? '26px' : 'auto',
-                    height: isToday ? '26px' : 'auto',
-                    borderRadius: isToday ? '50%' : 'none',
-                    background: isToday ? '#17382E' : 'transparent',
-                    display: 'grid',
-                    placeItems: 'center'
-                  }}>
-                    {cell.day}
-                  </span>
-
-                  {hasEvents ? (
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: cell.events.length > 2 ? '#FEF3C7' : '#E8F5EF',
-                      color: cell.events.length > 2 ? '#92400E' : '#065F46',
-                      padding: '1px 6px',
-                      borderRadius: '10px'
-                    }}>
-                      {cell.events.length} sự kiện
-                    </span>
-                  ) : (
-                    <span 
-                      style={{ fontSize: '0.7rem', color: '#B3BDB9', opacity: 0.6 }}
-                    >
-                      + Trống
-                    </span>
-                  )}
-                </div>
-
-                {/* Event Chips (Max 2) */}
-                {hasEvents && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                    {visibleEvents.map((ev) => {
-                      const isJoined = ev.isRegistered;
-                      const borderColor = isJoined ? '#78B99D' : '#DEC994';
-                      const leftBarColor = isJoined ? '#185E48' : '#976512';
-                      const bgCard = isJoined ? '#E8F5EF' : '#FFFAED';
-
-                      return (
-                        <div
-                          key={`${ev.type}-${ev.id}`}
-                          className={`participant-calendar-entry ${isJoined ? 'is-registered' : 'is-unregistered'}`}
-                          data-calendar-id={`${ev.type}-${ev.id}`}
-                          data-registered={Boolean(isJoined)}
-                          onClick={(e) => handleEventClick(ev, e)}
-                          style={{
-                            borderRadius: '8px',
-                            background: bgCard,
-                            border: `1.5px solid ${borderColor}`,
-                            borderLeft: `4px solid ${leftBarColor}`,
-                            padding: '6px 7px',
-                            boxShadow: isJoined ? '0 1px 4px rgba(16, 185, 129, 0.1)' : '0 1px 4px rgba(239, 68, 68, 0.1)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '3px',
-                            transition: 'all 140ms ease'
-                          }}
-                          title={ev.isRegistered ? `${ev.title} (Đã tham gia - Nhấn để xem chi tiết)` : `${ev.title} (Chưa tham gia - Nhấn để đăng ký)`}
-                        >
-                          {/* 1. Time on 1 clean straight line at top */}
-                          <div style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 750,
-                            color: isJoined ? '#185E48' : '#80570E',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3.5px',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            <Clock size={11} style={{ flexShrink: 0 }} />
-                            <span>{ev.time}</span>
-                          </div>
-
-                          {/* 2. Event Title in the middle */}
-                          <div style={{
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            lineHeight: 1.35,
-                            color: '#172421',
-                            whiteSpace: 'normal',
-                            wordBreak: 'break-word',
-                            overflowWrap: 'break-word',
-                            marginTop: '1px',
-                            marginBottom: '2px'
-                          }}>
-                            {ev.title}
-                          </div>
-
-                          {/* 3. Participation Status at the bottom */}
-                          <div style={{ display: 'flex', alignItems: 'center' }}>
-                            {ev.isRegistered ? (
-                              <span style={{
-                                fontSize: '0.63rem',
-                                fontWeight: 800,
-                                background: '#ECFDF5',
-                                color: '#059669',
-                                border: '1px solid #A7F3D0',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                <CheckCircle2 size={10} />
-                                <span>{registrationLabel(true)}</span>
-                              </span>
-                            ) : (
-                              <span style={{
-                                fontSize: '0.62rem',
-                                fontWeight: 750,
-                                background: '#FFF4D5',
-                                color: '#80570E',
-                                border: '1px solid #DEC994',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                <span>{registrationLabel(false, ev.registrationDeadlineAt)}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Button Xem Thêm if > 2 events */}
-                    {extraCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDateStr(cell.dateStr);
+                return (
+                  <div
+                    key={idx}
+                    className={`participant-calendar-day ${hasEvents ? 'has-events' : ''} ${cell.events.some(item => item.isRegistered) ? 'has-registrations' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${cell.dateStr}, ${cell.events.length} ${language === 'vi' ? 'sự kiện' : 'events'}`}
+                    aria-pressed={isSelected}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedDateStr(cell.dateStr);
+                      }
+                    }}
+                    onClick={() => {
+                      setSelectedDateStr(cell.dateStr);
+                      if (hasEvents) {
+                        if (cell.events.length > 1) {
                           setSelectedDayEvents({
                             day: cell.day,
                             dateStr: `${cell.day} ${currentMonthName}, ${currentYear}`,
                             events: cell.events
                           });
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          background: '#FFFBEB',
-                          border: '1px dashed #F59E0B',
-                          color: '#B45309',
-                          fontSize: '0.72rem',
+                        }
+                      }
+                    }}
+                    style={{
+                      minHeight: '148px',
+                      padding: '8px',
+                      borderRadius: '12px',
+                      background: isSelected
+                        ? '#F0F7F4'
+                        : hasEvents
+                          ? '#FCFAF6'
+                          : cell.isCurrentMonth
+                            ? '#FFFFFF'
+                            : '#FAFAFA',
+                      border: isSelected
+                        ? '2px solid #17382E'
+                        : hasEvents
+                          ? '1px solid #EAE0CE'
+                          : '1px solid #EEF2F0',
+                      cursor: hasEvents ? 'pointer' : 'default',
+                      opacity: cell.isCurrentMonth ? 1 : 0.35,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-start',
+                      transition: 'all 160ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isSelected
+                        ? '0 4px 16px rgba(23, 56, 46, 0.12)'
+                        : hasEvents
+                          ? '0 2px 8px rgba(0, 0, 0, 0.02)'
+                          : 'none'
+                    }}
+                  >
+                    {/* Header of Cell: Day Number + Event Badge / + Trống */}
+                    <div className="participant-calendar-day-header" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '6px'
+                    }}>
+                      <span className="participant-day-number" style={{
+                        fontSize: '0.88rem',
+                        fontWeight: isSelected || isToday ? 850 : 650,
+                        color: isToday ? '#FFFFFF' : isSelected ? '#17382E' : '#2C3E3A',
+                        width: isToday ? '26px' : 'auto',
+                        height: isToday ? '26px' : 'auto',
+                        borderRadius: isToday ? '50%' : 'none',
+                        background: isToday ? '#17382E' : 'transparent',
+                        display: 'grid',
+                        placeItems: 'center'
+                      }}>
+                        {cell.day}
+                      </span>
+
+                      {hasEvents ? (
+                        <span className="participant-day-count-badge" style={{
+                          fontSize: '0.7rem',
                           fontWeight: 800,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          marginTop: '2px',
-                          display: 'block',
-                          width: '100%',
-                          transition: 'all 140ms ease'
-                        }}
-                      >
-                        + Xem thêm {extraCount} sự kiện...
-                      </button>
+                          background: cell.events.length > 2 ? '#FEF3C7' : '#E8F5EF',
+                          color: cell.events.length > 2 ? '#92400E' : '#065F46',
+                          padding: '1px 6px',
+                          borderRadius: '10px'
+                        }}>
+                          {cell.events.length} sự kiện
+                        </span>
+                      ) : (
+                        <span className="participant-day-empty-badge"
+                          style={{ fontSize: '0.7rem', color: '#B3BDB9', opacity: 0.6 }}
+                        >
+                          + Trống
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mobile Dots Indicator (Inside cell at bottom on mobile) */}
+                    <div className="participant-calendar-mobile-dots" aria-hidden="true">
+                      {cell.events.slice(0, 3).map((ev, dotIdx) => (
+                        <span
+                          key={dotIdx}
+                          className={`calendar-day-dot ${ev.isRegistered ? 'dot-registered' : 'dot-unregistered'}`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Event Chips (Max 2) */}
+                    {hasEvents && (
+                      <div className="participant-calendar-chips-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
+                        {visibleEvents.map((ev) => {
+                          const isJoined = ev.isRegistered;
+                          const borderColor = isJoined ? '#78B99D' : '#DEC994';
+                          const leftBarColor = isJoined ? '#185E48' : '#976512';
+                          const bgCard = isJoined ? '#E8F5EF' : '#FFFAED';
+
+                          return (
+                            <div
+                              key={`${ev.type}-${ev.id}`}
+                              className={`participant-calendar-entry ${isJoined ? 'is-registered' : 'is-unregistered'}`}
+                              data-calendar-id={`${ev.type}-${ev.id}`}
+                              data-registered={Boolean(isJoined)}
+                              onClick={(e) => handleEventClick(ev, e)}
+                              style={{
+                                borderRadius: '8px',
+                                background: bgCard,
+                                border: `1.5px solid ${borderColor}`,
+                                borderLeft: `4px solid ${leftBarColor}`,
+                                padding: '6px 7px',
+                                boxShadow: isJoined ? '0 1px 4px rgba(16, 185, 129, 0.1)' : '0 1px 4px rgba(239, 68, 68, 0.1)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '3px',
+                                transition: 'all 140ms ease'
+                              }}
+                              title={ev.isRegistered ? `${ev.title} (Đã tham gia - Nhấn để xem chi tiết)` : `${ev.title} (Chưa tham gia - Nhấn để đăng ký)`}
+                            >
+                              {/* 1. Time on 1 clean straight line at top */}
+                              <div style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 750,
+                                color: isJoined ? '#185E48' : '#80570E',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3.5px',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                <Clock size={11} style={{ flexShrink: 0 }} />
+                                <span>{ev.time}</span>
+                              </div>
+
+                              {/* 2. Event Title in the middle */}
+                              <div style={{
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                lineHeight: 1.35,
+                                color: '#172421',
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
+                                marginTop: '1px',
+                                marginBottom: '2px'
+                              }}>
+                                {ev.title}
+                              </div>
+
+                              {/* 3. Participation Status at the bottom */}
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                {ev.isRegistered ? (
+                                  <span style={{
+                                    fontSize: '0.63rem',
+                                    fontWeight: 800,
+                                    background: '#ECFDF5',
+                                    color: '#059669',
+                                    border: '1px solid #A7F3D0',
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    <CheckCircle2 size={10} />
+                                    <span>{registrationLabel(true)}</span>
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    fontSize: '0.62rem',
+                                    fontWeight: 750,
+                                    background: '#FFF4D5',
+                                    color: '#80570E',
+                                    border: '1px solid #DEC994',
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    <span>{registrationLabel(false, ev.registrationDeadlineAt)}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Button Xem Thêm if > 2 events */}
+                        {extraCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDateStr(cell.dateStr);
+                              setSelectedDayEvents({
+                                day: cell.day,
+                                dateStr: `${cell.day} ${currentMonthName}, ${currentYear}`,
+                                events: cell.events
+                              });
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              background: '#FFFBEB',
+                              border: '1px dashed #F59E0B',
+                              color: '#B45309',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              marginTop: '2px',
+                              display: 'block',
+                              width: '100%',
+                              transition: 'all 140ms ease'
+                            }}
+                          >
+                            + Xem thêm {extraCount} sự kiện...
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
             </div>
           </div>
         </div>
         <section className="participant-mobile-agenda" aria-live="polite" aria-label={language === 'vi' ? 'Lịch trong ngày' : 'Daily schedule'}>
           <div className="participant-agenda-heading">
-            <h3>{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { day: 'numeric', month: 'long' }).format(new Date(`${selectedDateStr}T12:00:00`))}</h3>
-            <Link to="/participant/events">{language === 'vi' ? 'Sự kiện của tôi' : 'My events'}</Link>
+            <div className="agenda-heading-date">
+              <h3>{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${selectedDateStr}T12:00:00`))}</h3>
+              <span className="agenda-event-count">
+                {(calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events || []).length} {language === 'vi' ? 'hoạt động' : 'activities'}
+              </span>
+            </div>
+            <Link to="/participant/events" className="agenda-view-all-link">
+              {language === 'vi' ? 'Sự kiện của tôi' : 'My events'} →
+            </Link>
           </div>
-          {(calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events || []).map(item => (
-            <button key={`${item.type}-${item.id}`} type="button" className={`participant-agenda-item ${item.isRegistered ? 'is-registered' : 'is-unregistered'}`} data-calendar-id={`${item.type}-${item.id}`} data-registered={Boolean(item.isRegistered)} onClick={() => { setRegistrationError(''); setConfirmingEvent(item); }}>
-              <CalendarIcon size={20} aria-hidden="true" />
-              <span><strong>{item.title}</strong><small>{[item.time, item.location].filter(Boolean).join(' · ') || item.category}</small><span className="participant-calendar-status">{item.isRegistered && <CheckCircle2 size={12} />}{registrationLabel(item.isRegistered, item.registrationDeadlineAt)}</span></span>
-              <ChevronRight size={18} aria-hidden="true" />
-            </button>
-          ))}
+
+          <div className="participant-agenda-list">
+            {(calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events || []).map(item => (
+              <button
+                key={`${item.type}-${item.id}`}
+                type="button"
+                className={`participant-agenda-item ${item.isRegistered ? 'is-registered' : 'is-unregistered'}`}
+                data-calendar-id={`${item.type}-${item.id}`}
+                data-registered={Boolean(item.isRegistered)}
+                onClick={() => { setRegistrationError(''); setConfirmingEvent(item); }}
+              >
+                <div className="agenda-item-left-icon">
+                  <CalendarIcon size={18} aria-hidden="true" />
+                </div>
+                <div className="agenda-item-content">
+                  <div className="agenda-item-meta-top">
+                    <span className="agenda-item-time">
+                      <Clock size={11} aria-hidden="true" />
+                      <span>{item.time || (language === 'vi' ? 'Cả ngày' : 'All day')}</span>
+                    </span>
+                    <span className="participant-calendar-status">
+                      {item.isRegistered && <CheckCircle2 size={12} />}
+                      {registrationLabel(item.isRegistered, item.registrationDeadlineAt)}
+                    </span>
+                  </div>
+                  <strong className="agenda-item-title">{item.title}</strong>
+                  <div className="agenda-item-meta-bottom">
+                    <span className="agenda-item-location">
+                      <MapPin size={11} aria-hidden="true" />
+                      <span>{item.location || (language === 'vi' ? 'Đường Sách TP.HCM' : 'Book Street')}</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="agenda-item-arrow">
+                  <ChevronRight size={18} aria-hidden="true" />
+                </div>
+              </button>
+            ))}
+          </div>
+
           {!calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events.length && (
-            <p>{language === 'vi' ? 'Chưa có lịch trong ngày này. Chọn ngày có dấu chấm để xem hoạt động.' : 'No plans for this day. Select a marked date to view your schedule.'}</p>
+            <div className="participant-agenda-empty-box">
+              <div className="agenda-empty-icon-pill">
+                <CalendarIcon size={18} />
+              </div>
+              <p className="agenda-empty-msg">
+                {language === 'vi' ? 'Chưa có lịch trong ngày này. Chọn ngày có dấu chấm để xem hoạt động.' : 'No plans for this day. Select a marked date to view your schedule.'}
+              </p>
+            </div>
+          )}
+
+          {/* Sắp tới / Upcoming events list when database has upcoming events */}
+          {upcomingEventsList.length > 0 && (
+            <div className="participant-agenda-upcoming-section">
+              <div className="agenda-upcoming-section-header">
+                <div className="agenda-upcoming-title">
+                  <span>{language === 'vi' ? 'Sự kiện sắp diễn ra tại Đường Sách' : 'Upcoming events at Book Street'}</span>
+                </div>
+                <Link to="/participant/events" className="agenda-upcoming-link">
+                  {language === 'vi' ? 'Tất cả' : 'All'}
+                </Link>
+              </div>
+              <div className="agenda-upcoming-cards-wrap">
+                {upcomingEventsList.slice(0, 3).map(item => (
+                  <button
+                    key={`upcoming-${item.type}-${item.id}`}
+                    type="button"
+                    className={`participant-agenda-item is-upcoming-card ${item.isRegistered ? 'is-registered' : 'is-unregistered'}`}
+                    data-calendar-id={`${item.type}-${item.id}`}
+                    data-registered={Boolean(item.isRegistered)}
+                    onClick={() => {
+                      if (item.cellDateStr) setSelectedDateStr(item.cellDateStr);
+                      setRegistrationError('');
+                      setConfirmingEvent(item);
+                    }}
+                  >
+                    <div className="agenda-upcoming-date-box">
+                      <span className="upcoming-date-text">{item.displayDate}</span>
+                    </div>
+                    <div className="agenda-item-content">
+                      <div className="agenda-item-meta-top">
+                        {item.time && (
+                          <span className="agenda-item-time">
+                            <Clock size={11} aria-hidden="true" />
+                            <span>{item.time}</span>
+                          </span>
+                        )}
+                        <span className="participant-calendar-status">
+                          {item.isRegistered && <CheckCircle2 size={12} />}
+                          {registrationLabel(item.isRegistered, item.registrationDeadlineAt)}
+                        </span>
+                      </div>
+                      <strong className="agenda-item-title">{item.title}</strong>
+                      <div className="agenda-item-meta-bottom">
+                        <span className="agenda-item-location">
+                          <MapPin size={11} aria-hidden="true" />
+                          <span>{item.location || (language === 'vi' ? 'Đường Sách TP.HCM' : 'Book Street')}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="agenda-item-arrow">
+                      <ChevronRight size={18} aria-hidden="true" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </section>
       </div>
@@ -697,8 +838,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                 </div>
                 <h3>{language === 'vi' ? 'Danh sách Sự kiện & Hoạt động' : 'Day Events & Activities'}</h3>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="calendar-modal-close-btn"
                 onClick={() => setSelectedDayEvents(null)}
               >
@@ -769,8 +910,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                           <span>{registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia' : 'Register')}</span>
                         </button>
                       ) : (
-                        <Link 
-                          to={evt.link} 
+                        <Link
+                          to={evt.link}
                           className="modal-event-action-btn"
                           onClick={() => setSelectedDayEvents(null)}
                         >
@@ -789,16 +930,16 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
       {/* 5. Confirmation Modal: Xác nhận Đăng ký Tham gia */}
       {confirmingEvent && (
-        <div 
-          className="participant-calendar-modal-backdrop" 
+        <div
+          className="participant-calendar-modal-backdrop"
           role="dialog"
           aria-modal="true"
           aria-label={language === 'vi' ? 'Đăng ký trên lịch' : 'Calendar registration'}
           style={{ zIndex: 10000 }}
           onClick={() => { if (!isRegistering) setConfirmingEvent(null); }}
         >
-          <div 
-            className="participant-calendar-modal" 
+          <div
+            className="participant-calendar-modal"
             style={{ maxWidth: '480px' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -826,8 +967,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                   </span>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="calendar-modal-close-btn"
                 disabled={isRegistering}
                 aria-label={language === 'vi' ? 'Đóng đăng ký' : 'Close registration'}
