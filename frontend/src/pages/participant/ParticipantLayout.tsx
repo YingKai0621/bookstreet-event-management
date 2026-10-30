@@ -367,14 +367,6 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
           {children}
         </main>
       </div>
-      <nav className="participant-bottom-nav" aria-label={language === 'vi' ? 'Điều hướng chính' : 'Primary navigation'}>
-        {navItems.filter(item => ['dashboard', 'events', 'rewards', 'profile'].includes(item.id)).map(item => (
-          <Link key={item.id} to={item.path} aria-current={isNavActive(item.path, item.exact) ? 'page' : undefined}>
-            {item.icon}
-            <span>{item.id === 'events' ? (language === 'vi' ? 'Sự kiện' : 'Events') : item.id === 'rewards' ? (language === 'vi' ? 'Điểm & huy hiệu' : 'Rewards') : item.id === 'profile' ? (language === 'vi' ? 'Cá nhân' : 'Profile') : (language === 'vi' ? 'Tổng quan' : 'Overview')}</span>
-          </Link>
-        ))}
-      </nav>
     </div>
   );
 };

@@ -91,20 +91,37 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
       }
       await expect(title, `Missing workspace title at ${route}`).toBeVisible({ timeout: 20_000 });
       await expect(subtitle, `Missing workspace subtitle at ${route}`).toBeVisible({ timeout: 20_000 });
-      const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 18 : 36;
-      await expect.poll(async () => {
-        const topInset = await title.evaluate(element => {
-          const main = element.closest('main')!;
-          return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
+
+      const isPartnerHero = workspace.role === 'PARTNER' && ['/partner', '/partner/events', '/partner/events/apply'].includes(route);
+      if (isPartnerHero) {
+        // Hero headings inside cards must maintain comfortable padding so text does not collide with the card border
+        const heroCopy = page.locator('.event-hub-hero-copy, .partner-workspace-hero-copy').first();
+        const copyPadding = await heroCopy.evaluate(element => {
+          const style = getComputedStyle(element);
+          return {
+            top: parseFloat(style.paddingTop),
+            left: parseFloat(style.paddingLeft),
+          };
         });
-        return Math.abs(topInset - expectedTopInset);
-      }, { message: route }).toBeLessThanOrEqual(1);
-      const inlineInset = await title.evaluate(element => {
-        const main = element.closest('main')!;
-        return element.getBoundingClientRect().left - main.getBoundingClientRect().left;
-      });
-      const expectedInlineInset = workspace.role === 'PARTICIPANT' && width === 390 ? 16 : 48;
-      expect(Math.abs(inlineInset - expectedInlineInset), route).toBeLessThanOrEqual(1);
+        expect(copyPadding.top, `${route} hero copy top padding`).toBeGreaterThanOrEqual(16);
+        expect(copyPadding.left, `${route} hero copy left padding`).toBeGreaterThanOrEqual(20);
+      } else {
+        const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 18 : 36;
+        await expect.poll(async () => {
+          const topInset = await title.evaluate(element => {
+            const main = element.closest('main')!;
+            return element.getBoundingClientRect().top - main.getBoundingClientRect().top;
+          });
+          return Math.abs(topInset - expectedTopInset);
+        }, { message: route }).toBeLessThanOrEqual(1);
+        const inlineInset = await title.evaluate(element => {
+          const main = element.closest('main')!;
+          return element.getBoundingClientRect().left - main.getBoundingClientRect().left;
+        });
+        const expectedInlineInset = workspace.role === 'PARTICIPANT' && width === 390 ? 16 : 48;
+        expect(Math.abs(inlineInset - expectedInlineInset), route).toBeLessThanOrEqual(1);
+      }
+
       const styles = await title.evaluate(element => {
         const style = getComputedStyle(element);
         return { family: style.fontFamily, size: style.fontSize, weight: style.fontWeight, color: style.color, lineHeight: style.lineHeight, margin: style.margin, width: element.getBoundingClientRect().width };
