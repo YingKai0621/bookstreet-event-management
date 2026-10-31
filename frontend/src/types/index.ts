@@ -172,22 +172,6 @@ export interface ExtendedHeritageProfile {
   };
 }
 
-export type FeedbackStatus = 'new' | 'in_progress' | 'responded' | 'closed';
-
-export interface FeedbackRecord {
-  id: string;
-  targetScope: 'entire' | 'heritage' | 'booth' | 'facility';
-  targetName: string;
-  rating: number; // 1 - 5
-  comments: string;
-  contactEmail?: string;
-  createdAt: string;
-  source: 'qr_general' | 'qr_heritage' | 'web_landing';
-  status: FeedbackStatus;
-  assignedTo?: string;
-  internalNote?: string;
-}
-
 export interface ActivityAuditItem {
   id: string;
   actor: string;

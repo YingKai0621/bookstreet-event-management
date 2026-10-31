@@ -3,6 +3,7 @@ package com.swp391.bookstreet.feedback;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,6 +18,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -177,6 +180,192 @@ class Sprint08HibernateValidationTests {
                 "select count(*) from " + table("general_feedbacks"), Integer.class)).isEqualTo(before);
     }
 
+    @Test
+    void organizerQueueIsSharedPrivateAndUsesServerSideFilters() throws Exception {
+        long organizerA = insertUser("feedbackorga");
+        long organizerB = insertUser("feedbackorgb");
+        long eventA = insertEvent(organizerA, "PUBLISHED");
+        long eventB = insertEvent(organizerB, "PUBLISHED");
+        String marker = "shared" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        long feedbackA = insertEventFeedback(eventA, marker + " Alpha", "alpha@example.test");
+        long feedbackB = insertEventFeedback(eventB, marker + " Beta", "beta@example.test");
+
+        for (long organizerId : List.of(organizerA, organizerB)) {
+            mvc.perform(get("/api/v1/organizer/feedbacks")
+                            .queryParam("search", marker)
+                            .queryParam("sort", "submittedAt,asc")
+                            .with(role(organizerId, "ROLE_ORGANIZER")))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.content[0].feedbackId").value(feedbackA))
+                    .andExpect(jsonPath("$.content[1].feedbackId").value(feedbackB))
+                    .andExpect(jsonPath("$.content[0].contactEmail").doesNotExist())
+                    .andExpect(jsonPath("$.content[0].internalNote").doesNotExist());
+        }
+
+        mvc.perform(get("/api/v1/organizer/feedbacks")
+                        .queryParam("search", marker)
+                        .queryParam("targetType", "EVENT")
+                        .queryParam("status", "NEW")
+                        .with(role(organizerA, "ROLE_ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content.length()").value(2));
+        mvc.perform(get("/api/v1/organizer/feedbacks")
+                        .queryParam("eventId", String.valueOf(eventA))
+                        .queryParam("status", "NEW")
+                        .with(role(organizerB, "ROLE_ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content.length()").value(1));
+
+        Timestamp updatedBeforeRead = jdbc.queryForObject(
+                "select updated_at from " + table("general_feedbacks")
+                        + " where general_feedback_id = ?", Timestamp.class, feedbackA);
+        mvc.perform(get("/api/v1/organizer/feedbacks/" + feedbackA)
+                        .with(role(organizerB, "ROLE_ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contactEmail").value("alpha@example.test"))
+                .andExpect(jsonPath("$.message").value(marker + " Alpha"));
+        assertThat(jdbc.queryForObject(
+                "select updated_at from " + table("general_feedbacks")
+                        + " where general_feedback_id = ?", Timestamp.class, feedbackA))
+                .isEqualTo(updatedBeforeRead);
+
+        mvc.perform(get("/api/v1/organizer/feedbacks?targetType=BOOK_STREET&eventId=" + eventA)
+                        .with(role(organizerA, "ROLE_ORGANIZER")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FILTER"));
+        mvc.perform(get("/api/v1/organizer/feedbacks?eventId=999999999")
+                        .with(role(organizerA, "ROLE_ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        mvc.perform(get("/api/v1/organizer/feedbacks"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(get("/api/v1/organizer/feedbacks")
+                        .with(role(organizerA, "ROLE_PARTICIPANT")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/organizer/feedbacks")
+                        .with(role(organizerA, "ROLE_ADMIN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void organizerTransitionsAreCsrfProtectedAtomicAndSharedAcrossOrganizers() throws Exception {
+        long organizerA = insertUser("transitionorga");
+        long organizerB = insertUser("transitionorgb");
+        long feedbackId = insertBookStreetFeedback("Transition " + UUID.randomUUID());
+        String base = "/api/v1/organizer/feedbacks/" + feedbackId;
+
+        mvc.perform(post(base + "/start-handling").with(role(organizerA, "ROLE_ORGANIZER")))
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+
+        mvc.perform(post(base + "/start-handling")
+                        .with(role(organizerA, "ROLE_ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.lastHandledBy.userId").value(organizerA));
+
+        mvc.perform(post(base + "/resolve")
+                        .with(role(organizerB, "ROLE_ORGANIZER")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"internalNote\":\"  Đã   xử lý liên phòng ban.  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"))
+                .andExpect(jsonPath("$.internalNote").value("Đã xử lý liên phòng ban."))
+                .andExpect(jsonPath("$.lastHandledBy.userId").value(organizerB));
+
+        mvc.perform(post(base + "/resolve")
+                        .with(role(organizerA, "ROLE_ORGANIZER")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"internalNote\":\"Không được ghi đè.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("FEEDBACK_TRANSITION_CONFLICT"));
+
+        mvc.perform(post(base + "/reopen")
+                        .with(role(organizerA, "ROLE_ORGANIZER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.internalNote").value("Đã xử lý liên phòng ban."))
+                .andExpect(jsonPath("$.resolvedAt").doesNotExist());
+
+        var row = jdbc.queryForMap("""
+                select status, internal_note, last_handled_by_user_id,
+                       handling_started_at, resolved_at
+                from %s where general_feedback_id = ?
+                """.formatted(table("general_feedbacks")), feedbackId);
+        assertThat(row.get("status")).isEqualTo("IN_PROGRESS");
+        assertThat(row.get("internal_note")).isEqualTo("Đã xử lý liên phòng ban.");
+        assertThat(((Number) row.get("last_handled_by_user_id")).longValue()).isEqualTo(organizerA);
+        assertThat(row.get("handling_started_at")).isNotNull();
+        assertThat(row.get("resolved_at")).isNull();
+    }
+
+    @Test
+    void concurrentOrganizersProduceOneTransitionWinner() throws Exception {
+        long organizerA = insertUser("raceorganiza");
+        long organizerB = insertUser("raceorganizb");
+        long feedbackId = insertBookStreetFeedback("Race " + UUID.randomUUID());
+        String path = "/api/v1/organizer/feedbacks/" + feedbackId + "/start-handling";
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> transitionStatus(path, organizerA, ready, start));
+            var second = executor.submit(() -> transitionStatus(path, organizerB, ready, start));
+            ready.await();
+            start.countDown();
+            assertThat(List.of(first.get(), second.get())).containsExactlyInAnyOrder(200, 409);
+        }
+
+        assertThat(jdbc.queryForObject(
+                "select status from " + table("general_feedbacks")
+                        + " where general_feedback_id = ?", String.class, feedbackId))
+                .isEqualTo("IN_PROGRESS");
+    }
+
+    private int transitionStatus(
+            String path,
+            long organizerId,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) throws Exception {
+        ready.countDown();
+        start.await();
+        return mvc.perform(post(path).with(role(organizerId, "ROLE_ORGANIZER")).with(csrf()))
+                .andReturn().getResponse().getStatus();
+    }
+
+    private long insertEventFeedback(long eventId, String message, String email) {
+        return jdbc.queryForObject("""
+                insert into %s(
+                    target_type, event_id, contact_email, message, status, submitted_at, updated_at
+                ) values ('EVENT', ?, ?, ?, 'NEW', ?, ?) returning general_feedback_id
+                """.formatted(table("general_feedbacks")), Long.class,
+                eventId, email, message, Timestamp.from(NOW), Timestamp.from(NOW));
+    }
+
+    private long insertBookStreetFeedback(String message) {
+        return jdbc.queryForObject("""
+                insert into %s(target_type, message, status, submitted_at, updated_at)
+                values ('BOOK_STREET', ?, 'NEW', ?, ?) returning general_feedback_id
+                """.formatted(table("general_feedbacks")), Long.class,
+                message, Timestamp.from(NOW), Timestamp.from(NOW));
+    }
+
+    private static RequestPostProcessor role(long userId, String authority) {
+        return authentication(new UsernamePasswordAuthenticationToken(
+                new OrganizerIdentity(userId),
+                null,
+                List.of(new SimpleGrantedAuthority(authority))
+        ));
+    }
+
     private long insertUser(String prefix) {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         return jdbc.queryForObject("""
@@ -228,6 +417,10 @@ class Sprint08HibernateValidationTests {
 
     private record Identity(Long userId) implements AuthenticatedPrincipal {
         @Override public boolean emailVerified() { return false; }
+    }
+
+    private record OrganizerIdentity(Long userId) implements AuthenticatedPrincipal {
+        @Override public boolean emailVerified() { return true; }
     }
 
     private static String quotedSchema() {

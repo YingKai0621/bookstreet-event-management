@@ -132,3 +132,115 @@ test('feedback form remains usable without horizontal overflow on mobile', async
   await expect(page.getByLabel('Nội dung góp ý (*):')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+const organizerAccount = {
+  userId: 12,
+  username: 'organizer',
+  fullName: 'Ban Tổ chức Đường Sách',
+  email: 'organizer@example.test',
+  emailVerified: true,
+  status: 'ACTIVE',
+  roles: ['PARTICIPANT', 'ORGANIZER'],
+};
+
+function organizerListItem(status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED') {
+  return {
+    feedbackId: 501,
+    targetType: 'EVENT',
+    event: { eventId: 801, name: 'Ngày hội Văn hóa Đọc' },
+    messagePreview: 'Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.',
+    status,
+    submittedAt: '2026-10-31T08:20:00Z',
+    updatedAt: '2026-10-31T08:20:00Z',
+  };
+}
+
+function organizerDetail(status: 'NEW' | 'IN_PROGRESS' | 'RESOLVED', internalNote: string | null = null) {
+  return {
+    ...organizerListItem(status),
+    submitter: null,
+    guestName: 'Minh An',
+    contactEmail: 'minhan@example.test',
+    message: 'Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.',
+    internalNote,
+    lastHandledBy: status === 'NEW' ? null : { userId: 12, fullName: 'Ban Tổ chức Đường Sách' },
+    handlingStartedAt: status === 'NEW' ? null : '2026-10-31T08:25:00Z',
+    resolvedAt: status === 'RESOLVED' ? '2026-10-31T08:30:00Z' : null,
+  };
+}
+
+async function mockOrganizerFeedback(page: Page, conflictOnStart = false) {
+  let state: 'NEW' | 'IN_PROGRESS' | 'RESOLVED' = 'NEW';
+  let note: string | null = null;
+  let startAttempts = 0;
+
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    const method = route.request().method();
+
+    if (path.endsWith('/auth/me')) return json(route, organizerAccount);
+    if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'organizer-feedback-csrf' });
+    if (path === '/api/v1/organizer/feedbacks' && method === 'GET') {
+      return json(route, { content: [organizerListItem(state)], page: 0, size: 10, totalElements: 1, totalPages: 1 });
+    }
+    if (path === '/api/v1/organizer/feedbacks/501' && method === 'GET') {
+      return json(route, organizerDetail(state, note));
+    }
+    if (path.endsWith('/501/start-handling') && method === 'POST') {
+      startAttempts += 1;
+      state = 'IN_PROGRESS';
+      if (conflictOnStart && startAttempts === 1) {
+        return json(route, { code: 'FEEDBACK_TRANSITION_CONFLICT', message: 'Conflict.', fieldErrors: [] }, 409);
+      }
+      return json(route, organizerDetail(state, note));
+    }
+    if (path.endsWith('/501/resolve') && method === 'POST') {
+      note = (route.request().postDataJSON() as { internalNote: string }).internalNote;
+      state = 'RESOLVED';
+      return json(route, organizerDetail(state, note));
+    }
+    if (path.endsWith('/501/reopen') && method === 'POST') {
+      state = 'IN_PROGRESS';
+      return json(route, organizerDetail(state, note));
+    }
+    return json(route, pageResponse([]));
+  });
+
+  return { state: () => state, note: () => note };
+}
+
+test('organizer uses the real shared queue, detail and legal actions', async ({ page }) => {
+  const mock = await mockOrganizerFeedback(page);
+  await page.goto('/organizer/feedback');
+
+  await expect(page.getByRole('heading', { name: 'Góp ý trải nghiệm' })).toBeVisible();
+  await expect(page.getByText('Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.')).toBeVisible();
+  await expect(page.locator('.organizer-feedback-card svg.lucide-star')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await expect(page.getByText('minhan@example.test')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bắt đầu xử lý' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Bắt đầu xử lý' }).click();
+  await expect(page.getByText('Chỉ Ban Tổ chức xem được; nội dung này không gửi cho khách.')).toBeVisible();
+  await page.getByPlaceholder('Nhập kết quả hoặc hướng xử lý nội bộ...').fill('  Đã   chuyển cho nhóm vận hành.  ');
+  await page.getByRole('button', { name: 'Hoàn tất xử lý' }).click();
+
+  await expect(page.getByText('Ghi chú nội bộ')).toBeVisible();
+  await expect(page.getByText('Đã chuyển cho nhóm vận hành.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mở lại xử lý' })).toBeVisible();
+  expect(mock.state()).toBe('RESOLVED');
+  expect(mock.note()).toBe('Đã chuyển cho nhóm vận hành.');
+});
+
+test('organizer conflict reloads durable state and mobile layout remains usable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockOrganizerFeedback(page, true);
+  await page.goto('/organizer/feedback');
+  await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await page.getByRole('button', { name: 'Bắt đầu xử lý' }).click();
+
+  await expect(page.getByText('Góp ý vừa được Organizer khác cập nhật. Dữ liệu mới nhất đã được tải lại.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Hoàn tất xử lý' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

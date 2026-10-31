@@ -1,0 +1,22 @@
+package com.swp391.bookstreet.feedback.dto;
+
+import java.util.List;
+import org.springframework.data.domain.Page;
+
+public record OrganizerFeedbackPageResponse(
+        List<OrganizerFeedbackListItemResponse> content,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages
+) {
+    public static OrganizerFeedbackPageResponse from(Page<OrganizerFeedbackListItemResponse> result) {
+        return new OrganizerFeedbackPageResponse(
+                result.getContent(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
+    }
+}

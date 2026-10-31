@@ -35,9 +35,11 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
     ) throws IOException, ServletException {
         boolean csrfFailure = exception instanceof MissingCsrfTokenException
                 || exception instanceof InvalidCsrfTokenException;
+        boolean feedbackRequest = request.getRequestURI().startsWith("/api/v1/public/feedbacks")
+                || request.getRequestURI().startsWith("/api/v1/organizer/feedbacks");
         boolean contractCsrfFailure = csrfFailure
                 && (request.getRequestURI().startsWith("/api/v1/admin/badges")
-                    || request.getRequestURI().equals("/api/v1/public/feedbacks"));
+                    || feedbackRequest);
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 contractCsrfFailure ? "CSRF_INVALID" : "ACCESS_DENIED",
                 contractCsrfFailure ? "CSRF token is missing or invalid."
@@ -50,7 +52,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        if (request.getRequestURI().startsWith("/api/v1/public/feedbacks")) {
+        if (feedbackRequest) {
             response.setHeader("Cache-Control", "no-store");
         }
         objectMapper.writeValue(response.getOutputStream(), errorResponse);
