@@ -1,117 +1,125 @@
 # Current Sprint
 
-## Sprint 07 Booth Visit, Points and Badge Progression
+## Sprint 08 General Feedback Submission and Organizer Handling
 
-- Status: `COMPLETED`
-- Activation date: `2026-10-28`
-- Completion date: `2026-10-30`
-- Previous completed Sprint: `Sprint 06 Participant Activity Registration and Attendance`
+- Status: `ACTIVE`
+- Activation date: `2026-10-31`
+- Latest completed Sprint: `Sprint 07 Booth Visit, Points and Badge Progression`
 - Implemented schema baseline: immutable Flyway migrations `V1` through `V13`
-- Sprint 7 migration: `V12__create_sprint7_reward_schema.sql`, implemented by Developer A and
-  merged through PR #92 (merge commit `2178ba6`)
-- Post-baseline booth-image migration: `V13__add_booth_image_url.sql`, merged through PR #98;
-  it does not change the Sprint 7 reward contract or its V12 migration
-- Sprint baseline: `docs/sprints/sprint-07.md`
-- Current-state audit: `docs/development/SPRINT_07_CURRENT_STATE_AUDIT.md`
-- Use Case Specifications: `docs/use-cases/sprint-07-use-case-specifications.md`
-- API Contract: `docs/api/sprint-07-api-contract.md`
-- Physical ERD: `docs/design/12_Physical_ERD_Report.md`
-- Backend and Frontend Work Assignment: `docs/sprints/SPRINT_07_BACKEND_WORK_ASSIGNMENT.md`
-- Sprint 6 regression reference: `docs/development/SPRINT_06_COMPLETION_REPORT.md`
+- Expected Sprint 8 migration: `V14__create_sprint8_general_feedback_schema.sql` only if V14
+  remains free immediately before implementation; this document does not reserve the number
+- Sprint baseline: `docs/sprints/sprint-08.md`
+- Current-state audit: `docs/development/SPRINT_08_CURRENT_STATE_AUDIT.md`
+- Documentation audit: `docs/development/SPRINT_08_DOCUMENTATION_AUDIT.md`
+- Use Case Specifications: `docs/use-cases/sprint-08-use-case-specifications.md`
+- API Contract: `docs/api/sprint-08-api-contract.md`
+- Physical ERD source: `docs/design/12_Physical_ERD_Report.md` plus
+  `docs/design/SPRINT_08_GENERAL_FEEDBACK_PHYSICAL_ERD_OVERLAY.md`
+- Implementation and ownership plan: `docs/sprints/SPRINT_08_IMPLEMENTATION_PLAN.md`
 - Sprint 7 closure evidence: `docs/development/SPRINT_07_CLOSURE_REPORT.md`
 
 ## Sprint goal
 
-Deliver the Booth visit reward journey as one coherent vertical slice:
+Deliver General Feedback as one coherent PostgreSQL-backed vertical slice:
 
-1. Partner displays the existing authorized BoothAssignment QR through a secure frontend route.
-2. An authenticated Participant scans during the exact ongoing Event window.
-3. The first valid visit atomically creates one BoothVisit and one immutable 10-Point transaction.
-4. Cumulative Points unlock eligible Badges and one durable Notification per new UserBadge.
-5. Participant views real reward totals, Point history, Badge progress and unlock notifications.
-6. Organizer monitors Event-owned Booth visits by summary, Booth group and paginated records.
-7. Admin manages Badge definitions and bounded, retry-safe award synchronization.
+1. A Guest submits one-way Feedback for the whole Book Street or an eligible public Event.
+2. Optional Guest name/email and the required message are normalized without collecting a phone
+   number or satisfaction score.
+3. A valid authenticated Session may associate the current User without accepting caller-selected
+   identity.
+4. Every verified Organizer sees the same Management Board queue across the Book Street and all
+   Events.
+5. Organizer handling uses explicit `NEW -> IN_PROGRESS -> RESOLVED` transitions with the approved
+   reopen path and internal note behavior.
+6. The existing Landing Page and Organizer Feedback surfaces use the real API without mock success,
+   placeholder rows or Guest-reply wording.
+7. Existing Event ownership, Activity Rating, Session/CSRF and Sprint 7 reward behavior remain
+   unchanged.
 
 ## Scope and acceptance baseline
 
-Implementation is limited to these approved slices:
+Implementation is limited to:
 
-- `UC-P01` Booth-scan EventRegistration create/reactivate/reuse extension
-- `UC-P03` BoothVisit, PointTransaction, Badge/UserBadge and reward Notification progression
-- `UC-O07` Event-owned BoothVisit monitoring
-- `UC-A03` Badge catalog and bounded synchronization
+- the `BOOK_STREET` and `EVENT` branches of `UC-G04 Submit General Feedback`;
+- the bounded Organizer handling extension for the same General Feedback workflow;
+- one `general_feedbacks` table and its exact constraints/indexes;
+- public CSRF-protected submission with a bounded process-local abuse throttle;
+- one shared Organizer queue, detail and three explicit workflow actions;
+- real Landing Page and Organizer portal integration;
+- focused migration, backend, frontend and browser verification.
 
-The completed baseline contains **41 Acceptance Criteria**, **12 new endpoint headings** and extensions
-to **4 existing Participant Notification operations**. Every implementation PR must identify its
-owned AC IDs and follow the exact route, DTO, error-code, transaction, locking, privacy and
-idempotency behavior in the approved API Contract.
+The active baseline contains **28 Acceptance Criteria**:
+
+- 12 Guest/Public criteria: `AC-G04-S8-01` through `AC-G04-S8-12`;
+- 12 Organizer criteria: `AC-O-S8-01` through `AC-O-S8-12`;
+- 4 schema/regression criteria: `AC-X-S8-01` through `AC-X-S8-04`.
+
+The API Contract defines exactly six operations: one public create, two Organizer reads and three
+Organizer transitions. Every implementation PR must identify its owned AC IDs and preserve the
+approved route, DTO, error, authorization, transaction, privacy and throttle contract.
 
 ## Ownership
 
-- **Developer A:** sole V12/reward-write owner; shared Badge award boundary; Booth scan command;
-  Partner QR surfaces and Participant scan route/page. Primary owner of 20 AC.
-- **Developer B:** Organizer BoothVisit APIs and Event-scoped UI; Admin Badge CRUD, bounded
-  synchronization APIs and UI. Primary owner of 18 AC.
-- **Developer C:** Participant reward read APIs and Rewards/Badge Notification UI; frontend
-  consistency review and cross-role end-to-end closure. Primary owner of 3 AC.
+One assigned **Sprint 08 General Feedback Owner** owns the complete vertical slice, including:
 
-Frontend ownership follows the vertical feature slice. Only one declared owner may edit a shared
-frontend file in one PR. Only Developer A may create or edit Sprint 7 migration V12, reward command
-entities or the backend `BADGE_UNLOCKED` writer.
+- the single Sprint 8 migration and General Feedback persistence model;
+- backend Feedback service, security/CSRF and process-local throttle integration;
+- public submission and Organizer query/transition APIs;
+- Landing Page and Organizer Feedback UI integration;
+- focused tests and closure evidence.
+
+Reviewers may review and request changes but must not create a competing migration, throttle,
+entity or transition implementation. The owner must start implementation later from an updated
+`main` on a dedicated feature branch.
 
 ## Mandatory delivery order
 
-1. `S7-1` — complete in PR #92: V12, reward entities/repositories, configuration, Notification
-   extension and shared Badge award boundary.
-2. `S7-2A` — complete in PR #92: Participant Booth scan write flow and concurrency tests.
-3. `S7-2B` — complete in PR #92: Partner QR integration and mobile-first Participant scan UI.
-4. `S7-3A` — complete in PR #93 (merge commit `1b95584`): Organizer BoothVisit API and
-   Event-scoped monitoring UI.
-5. `S7-3B` — complete in PR #93: Admin Badge/backfill API and management UI.
-6. `S7-3C` — complete through PR #95 (merge commit `573f15a`): Participant reward read integration
-   coverage, Badge Notification integration and frontend consistency gaps are closed.
-7. `S7-4` — complete: automated backend, OpenAPI, real-session and Playwright verification is
-   recorded in the closure report, and the physical phone-on-LAN flow passed during the
-   `2026-10-30` classroom demo.
+1. `S8-1 Public vertical slice and foundation` — recheck migration availability, create the
+   migration/persistence model, implement the public CSRF/throttle boundary, public create API,
+   Landing Page integration and focused public/schema tests.
+2. `S8-2 Organizer vertical slice` — implement the shared queue/detail/transitions, wire the
+   existing Organizer Feedback screen and add focused authorization/concurrency tests.
+3. `S8-3 Verification and closure` — run focused browser and affected regression checks, perform
+   real-API smoke, then update the applied Physical ERD/context and closure evidence.
 
-Detailed historical ownership and merge gates remain in the approved work assignment. New work
-must preserve the V12/PR #95 reward baseline and must not duplicate the shared award or Participant
-reward implementations.
+These units are sequential. No migration or application implementation belongs on the Sprint
+activation branch.
 
 ## Non-negotiable implementation rules
 
-- PostgreSQL is durable truth; Redis stores Session only; do not introduce JWT.
+- PostgreSQL is durable truth; Redis stores server-side Session only.
+- Authentication remains Spring Security Session with HttpOnly cookie; do not introduce JWT.
 - Hibernate remains `ddl-auto: validate`; V1 through V13 are immutable.
-- Backend `Clock` decides Event lifecycle and the exact `[startAt, endAt)` scan window.
-- Participant identity comes from Session; no command accepts caller-selected User or reward data.
-- One first visit awards exactly `10` Points from `rewards.booth-visit-points=10`.
-- Point total is ledger-derived; do not add a duplicated User balance.
-- UserBadge and its `BADGE_UNLOCKED` Notification commit atomically and remain historical.
-- Badge backfill processes at most 100 Users per transaction and uses the shared award boundary.
-- Raw Booth QR token stays in client-only fragment state and the HTTPS request body; it must not
-  appear in backend paths, queries, responses, logs, notifications or committed evidence.
-- Keep Activity Attendance QR and every completed Sprint 1-6 behavior backward compatible.
-- Each backend feature connects its smallest usable UI before the vertical slice closes, except the
-  documented shared foundation and scan-API dependency PRs.
+- Recheck every migration filename immediately before creating the expected V14 migration.
+- General Feedback targets are only `BOOK_STREET` and `EVENT`; `HERITAGE` is deferred.
+- General Feedback has no score/rating and does not change completed Activity Rating behavior.
+- Public submission is `permitAll` but remains CSRF-protected.
+- The abuse throttle is bounded process-local volatile state: 10 counted attempts per client key
+  in 600 seconds and at most 5,000 active windows; Redis is not used for throttle counters.
+- Every verified Organizer shares the Feedback queue, but Feedback access never widens Event
+  mutation ownership.
+- Statuses are exactly `NEW`, `IN_PROGRESS` and `RESOLVED`; viewing never changes status.
+- Resolve requires an internal note; no processing result is sent to the Guest.
+- Do not commit `.env`, credentials, HMAC secrets, local IPs, contact data or demo Feedback.
 
 ## Explicitly out of scope
 
-- Event entrance QR, Participant-specific QR or changes to Activity Attendance QR
-- Point spending, transfer, expiry, redemption or manual adjustment
-- manual Badge award/revoke, Badge hard delete or removal of earned history
-- generic settings, roles/permissions, notification composer or preference system
-- email, SMS or push delivery for Badge unlocks
-- unbounded reporting beyond the approved Organizer BoothVisit monitoring slice
-- rewriting V1 through V13 or introducing a persistent backfill-job table
+- `HERITAGE`, Location, Booth, Facility or Activity General Feedback targets
+- General Feedback rating, phone number, attachment or arbitrary custom fields
+- Guest reply, status lookup, email, SMS, push or Notification delivery
+- Feedback hard delete, edit-after-submit or public list/detail
+- transition-history table
+- reports, statistics, dashboards or Admin Feedback API/UI
+- CAPTCHA, third-party moderation or distributed throttling
+- unrelated frontend refactors or changes to completed Sprint 1–7 behavior
 
-## Completion result
+## Activation result
 
-The Project Owner approved and merged the Sprint 7 audit, baseline, 41-AC Use Case Specification,
-API Contract and three-developer vertical-slice work assignment through PR #86. PR #92 delivered
-V12, the reward write/scan foundation and Participant reward experience. PR #93 delivered
-Organizer BoothVisit monitoring and Admin Badge synchronization. PR #95 completed Developer C's
-Participant integration coverage and frontend consistency pass. The physical phone-on-LAN flow
-passed during the `2026-10-30` classroom demo, covering first scan, duplicate-scan idempotency,
-Participant reward and Notification refresh, and Organizer BoothVisit monitoring. Sprint 7 is
-therefore completed; PR #98 subsequently added demo/public-experience improvements without changing
-the approved Sprint 7 reward behavior.
+The Project Owner approved and merged the Sprint 8 current-state audit, baseline, Physical ERD
+overlay, 28-AC Use Case Specification, six-operation API Contract, one-developer Implementation
+Plan and clean documentation audit through PR #100 (merge commit `a6f070c`). The activation check
+on `2026-10-31` confirmed that the repository contains immutable migrations V1 through V13 and no
+V14 file yet.
+
+Sprint 8 is active for implementation planning and branch creation. No Sprint 8 migration or
+application code has been implemented at activation time.

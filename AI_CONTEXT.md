@@ -1,19 +1,20 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-29`
+Last updated: `2026-10-31`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V12. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V13. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
   Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
   schema; V11 adds the configurable Activity Attendance early-scan window; V12 owns the Sprint 7
-  BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay.
+  BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay; V13
+  adds the Booth image URL used by the demo/public experience.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover the immutable migration chain through V12 and the relevant prior
+- Flyway migration tests cover the immutable migration chain through V13 and the relevant prior
   Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
@@ -79,7 +80,7 @@ Last updated: `2026-10-29`
 - Sprint 6 closure evidence is recorded in `docs/development/SPRINT_06_COMPLETION_REPORT.md`: all
   65 AC are traceably mapped, the PostgreSQL-backed backend run passed 566/566 with no skips, the
   focused Sprint 6 browser run passed 44/44, and lint/build plus migration paths are green.
-- Sprint 7 Booth Visit, Points and Badge Progression is active from 2026-10-28. PR #86 (merge
+- Sprint 7 Booth Visit, Points and Badge Progression was activated on 2026-10-28. PR #86 (merge
   commit `27a88e8`) approved and merged its current-state audit, product baseline, 41-AC Use Case
   Specification, 12-endpoint API Contract plus four Notification extensions, and vertical-slice
   three-developer work assignment. PR #92 (merge commit `2178ba6`) implemented V12, the shared
@@ -87,10 +88,21 @@ Last updated: `2026-10-29`
   reads/UI and Badge Notification support. PR #93 (merge commit `1b95584`) implemented Organizer
   BoothVisit monitoring plus Admin Badge CRUD and bounded award synchronization. PR #95 (merge
   commit `573f15a`) added Participant reward/Badge Notification integration coverage, Certificate
-  PDF font hardening and the final frontend consistency fixes.
+  PDF font hardening and the final frontend consistency fixes. The physical phone-on-LAN flow
+  passed during the 2026-10-30 classroom demo, Sprint 7 is completed, and PR #98 subsequently
+  added V13/demo public-experience improvements without changing the reward contract.
 - Sprint 7 implementation ownership is vertical: Developer A owns V12/reward writes plus Booth
   scan/Partner QR UI; Developer B owns Organizer monitoring and Admin Badge/backfill APIs plus UI;
   Developer C owns Participant reward reads/UI and integration closure.
+- Sprint 8 General Feedback Submission and Organizer Handling is active from 2026-10-31. PR #100
+  (merge commit `a6f070c`) approved and merged the current-state audit, product baseline, Physical
+  ERD overlay, 28-AC Use Case Specification, six-operation API Contract, one-developer
+  Implementation Plan and clean documentation audit. No Sprint 8 migration or application code is
+  implemented at activation time.
+- Sprint 8 delivers only `BOOK_STREET` and `EVENT` General Feedback. It uses one shared Organizer
+  queue, the `NEW -> IN_PROGRESS -> RESOLVED` lifecycle with reopen, one-way Guest communication
+  and a bounded process-local public-submission throttle. Redis remains dedicated to Session
+  storage and General Feedback has no rating/score.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -200,7 +212,10 @@ Last updated: `2026-10-29`
 
 `V12__create_sprint7_reward_schema.sql` is the implemented Sprint 7 migration. It creates
 BoothVisit, PointTransaction, Badge and UserBadge persistence and adds the smallest compatible
-`BADGE_UNLOCKED` Notification extension. V1 through V12 are now immutable.
+`BADGE_UNLOCKED` Notification extension.
+
+`V13__add_booth_image_url.sql` adds the optional Booth image URL used by the current public/demo
+experience. V1 through V13 are now immutable.
 
 ## Not yet implemented
 
@@ -209,53 +224,56 @@ BoothVisit, PointTransaction, Badge and UserBadge persistence and adds the small
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Sprint 7 physical phone-on-LAN smoke and final completion status update
-- General feedback/reporting, persisted heritage/map data and broad Organizer/Partner/Admin
-  notifications outside the approved Sprint 7 slice
+- Sprint 8 General Feedback migration, backend APIs and real Landing Page/Organizer integration
+- General Feedback reporting, persisted heritage/map data and broad Organizer/Partner/Admin
+  notifications outside the approved Sprint 8 slice
 
 ## Next implementation task
 
-- Perform the physical phone-on-LAN Booth scan checklist in
-  `docs/development/SPRINT_07_CLOSURE_REPORT.md` and record its result without committing LAN values,
-  credentials or QR tokens.
-- Mark Sprint 7 complete only after that evidence is reviewed; automated backend, OpenAPI,
-  real-session and Playwright closure checks are already recorded as green.
+- Assign the single Sprint 8 General Feedback owner and start from updated `main` on a dedicated
+  feature branch.
+- Recheck all Flyway filenames immediately before creating the expected V14 migration; the version
+  remains conditional until that check.
+- Deliver `S8-1 Public vertical slice and foundation`: General Feedback migration/persistence,
+  process-local throttle and CSRF boundary, public create API, Landing Page integration and focused
+  schema/public tests.
 
 ## Latest completed Sprint
 
-Sprint 06 Participant Activity Registration and Attendance is the latest completed Sprint as of
-2026-10-29. Sprint 7 is active but not yet completed.
+Sprint 07 Booth Visit, Points and Badge Progression is the latest completed Sprint as of
+2026-10-31. Sprint 8 is active and not yet implemented.
 
-Sprint 6 includes these approved Use Case slices:
+Sprint 7 includes these approved Use Case slices:
 
-- UC-G01 public Activity discovery debt
-- UC-P01 Event participation
-- UC-P02 Activity registration
-- UC-P03 participation tracking, notification and Certificate slice
-- UC-P04 Activity Rating
-- UC-O01 Sprint 6 Event update/cancellation slice
-- UC-O06 Sprint 6 Activity lifecycle/cascade slice
-- UC-O07 participation monitoring and audited correction
+- `UC-P01` Booth-scan EventRegistration create/reactivate/reuse extension
+- `UC-P03` BoothVisit, PointTransaction, Badge/UserBadge and reward Notification progression
+- `UC-O07` Event-owned BoothVisit monitoring
+- `UC-A03` Badge catalog and bounded synchronization
 
 ## Current approved baselines
 
-- Requirement baseline: active MVP rules plus approved Sprint 6 Participant and Sprint 7 reward
-  refinements
+- Requirement baseline: active MVP rules plus approved Sprint 7 reward and Sprint 8 General
+  Feedback refinements
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v8 plus approved Sprint 6 Participant and Sprint 7 reward interpretations
-- Physical implementation source: immutable Flyway V1–V12. V10 implements the Sprint 6
+- Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
+  interpretations
+- Physical implementation source: immutable Flyway V1–V13. V10 implements the Sprint 6
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
-  approved Sprint 7 reward/Notification overlay.
-- Active Sprint baseline: `docs/sprints/sprint-07.md`
-- Active Sprint Use Cases: `docs/use-cases/sprint-07-use-case-specifications.md`
-- Active Sprint API Contract: `docs/api/sprint-07-api-contract.md`
-- Active Sprint work assignment: `docs/sprints/SPRINT_07_BACKEND_WORK_ASSIGNMENT.md`
+  approved Sprint 7 reward/Notification overlay; V13 adds the Booth image URL. The approved Sprint
+  8 Physical ERD overlay is a pre-migration design source and is not yet an applied schema.
+- Active Sprint baseline: `docs/sprints/sprint-08.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-08-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-08-api-contract.md`
+- Active Sprint Physical ERD overlay:
+  `docs/design/SPRINT_08_GENERAL_FEEDBACK_PHYSICAL_ERD_OVERLAY.md`
+- Active Sprint implementation/ownership plan: `docs/sprints/SPRINT_08_IMPLEMENTATION_PLAN.md`
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
-source. Use the current Physical ERD report/drawio together with the approved Sprint 7 V12 overlay
-in the active API Contract.
+source. Use the current Physical ERD report/drawio together with the approved Sprint 8 Physical ERD
+overlay and active API Contract. Until the Sprint 8 migration is applied, immutable V1–V13 remain
+the physical implementation truth.
 
 ## Authentication baseline
 
