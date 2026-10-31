@@ -28,7 +28,7 @@ const PAGE_SIZE = 10;
 const COPY = {
   vi: {
     heading: 'Góp ý trải nghiệm',
-    subtitle: 'Hàng đợi dùng chung cho toàn bộ Ban Tổ chức; ghi chú xử lý chỉ dùng nội bộ.',
+    subtitle: 'Hàng đợi dùng chung cho toàn bộ Ban Tổ chức. Ghi chú xử lý chỉ dùng nội bộ.',
     total: 'Tổng góp ý', search: 'Tìm góp ý', searchPlaceholder: 'Tìm nội dung, người gửi, email, sự kiện...',
     allStatuses: 'Tất cả trạng thái', newStatus: 'Mới tiếp nhận', inProgressStatus: 'Đang xử lý', resolvedStatus: 'Đã giải quyết',
     allTargets: 'Tất cả phạm vi', bookStreetTarget: 'Toàn Đường Sách', eventTarget: 'Sự kiện', bookStreetName: 'Đường Sách TP.HCM',
@@ -37,7 +37,7 @@ const COPY = {
     empty: 'Chưa có góp ý phù hợp với bộ lọc.', viewDetail: 'Xem chi tiết', previousPage: 'Trang trước', nextPage: 'Trang sau', page: 'Trang',
     detailTitle: 'Chi tiết góp ý', close: 'Đóng', loadingDetail: 'Đang tải chi tiết…', detailFailure: 'Không tải được chi tiết góp ý.',
     sentAt: 'Gửi lúc', anonymous: 'Khách ẩn danh', noEmail: 'Không cung cấp email', messageTitle: 'Nội dung góp ý', handledBy: 'Xử lý gần nhất:',
-    noteLabel: 'Ghi chú nội bộ', noteHelp: 'Chỉ Ban Tổ chức xem được; nội dung này không gửi cho khách.',
+    noteLabel: 'Ghi chú nội bộ', noteHelp: 'Chỉ Ban Tổ chức xem được. Nội dung này không gửi cho khách.',
     notePlaceholder: 'Nhập kết quả hoặc hướng xử lý nội bộ...', notSent: 'Không gửi cho khách',
     start: 'Xử lý góp ý', resolve: 'Đánh dấu đã giải quyết', reopen: 'Mở lại xử lý', updating: 'Đang cập nhật…',
     noteValidation: 'Ghi chú nội bộ phải có từ 1 đến 1.000 ký tự.',
@@ -48,7 +48,7 @@ const COPY = {
   },
   en: {
     heading: 'Experience feedback',
-    subtitle: 'A shared queue for the Management Board; handling notes are for internal use only.',
+    subtitle: 'A shared queue for the Management Board. Handling notes are for internal use only.',
     total: 'Total feedback', search: 'Search feedback', searchPlaceholder: 'Search message, sender, email, or event...',
     allStatuses: 'All statuses', newStatus: 'New', inProgressStatus: 'In progress', resolvedStatus: 'Resolved',
     allTargets: 'All scopes', bookStreetTarget: 'Whole Book Street', eventTarget: 'Event', bookStreetName: 'HCMC Book Street',
@@ -57,7 +57,7 @@ const COPY = {
     empty: 'No feedback matches the current filters.', viewDetail: 'View details', previousPage: 'Previous', nextPage: 'Next', page: 'Page',
     detailTitle: 'Feedback details', close: 'Close', loadingDetail: 'Loading details…', detailFailure: 'Unable to load feedback details.',
     sentAt: 'Submitted', anonymous: 'Anonymous guest', noEmail: 'No contact email', messageTitle: 'Feedback message', handledBy: 'Last handled by:',
-    noteLabel: 'Internal note', noteHelp: 'Visible only to the Management Board; this is not sent to the guest.',
+    noteLabel: 'Internal note', noteHelp: 'Visible only to the Management Board. This is not sent to the guest.',
     notePlaceholder: 'Enter the internal outcome or handling direction...', notSent: 'Not sent to the guest',
     start: 'Handle feedback', resolve: 'Mark as resolved', reopen: 'Reopen handling', updating: 'Updating…',
     noteValidation: 'The internal note must contain between 1 and 1,000 characters.',

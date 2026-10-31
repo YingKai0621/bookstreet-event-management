@@ -219,6 +219,7 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
   await page.goto('/organizer/feedback');
 
   await expect(page.getByRole('heading', { name: 'Góp ý trải nghiệm' })).toBeVisible();
+  await expect(page.locator('.organizer-feedback-heading')).not.toContainText(';');
   await expect(page.getByRole('textbox', { name: 'Tìm góp ý' })).toBeVisible();
   await expect(page.getByText('Tìm góp ý', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.')).toBeVisible();
@@ -237,7 +238,7 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
   await expect(page.getByRole('button', { name: 'Xử lý góp ý' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Xử lý góp ý' }).click();
-  await expect(page.getByText('Chỉ Ban Tổ chức xem được; nội dung này không gửi cho khách.')).toBeVisible();
+  await expect(page.getByText('Chỉ Ban Tổ chức xem được. Nội dung này không gửi cho khách.')).toBeVisible();
   await page.getByPlaceholder('Nhập kết quả hoặc hướng xử lý nội bộ...').fill('  Đã   chuyển cho nhóm vận hành.  ');
   await page.getByRole('button', { name: 'Đánh dấu đã giải quyết' }).click();
 
