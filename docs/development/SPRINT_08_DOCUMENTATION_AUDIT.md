@@ -222,7 +222,8 @@ Frozen normalized bounds are consistent:
 - contact email: optional, valid syntax, lowercase, `3..255`;
 - message: required, `10..2000`;
 - resolve internal note: required, `1..1000`;
-- Organizer search: optional, `1..100` when present.
+- Organizer message, sender/email and Event-name searches: independently optional, each `1..100`
+  when present.
 
 The API uses the current `ApiErrorResponse` body shape and keeps HTTP status outside the body.
 Unknown/legacy fields are rejected instead of silently accepted. Public responses omit contact,

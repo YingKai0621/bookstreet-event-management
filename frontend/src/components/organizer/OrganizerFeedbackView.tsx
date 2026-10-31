@@ -29,10 +29,12 @@ const COPY = {
   vi: {
     heading: 'Góp ý trải nghiệm',
     subtitle: 'Hàng đợi dùng chung cho toàn bộ Ban Tổ chức. Ghi chú xử lý chỉ dùng nội bộ.',
-    total: 'Tổng góp ý', search: 'Tìm góp ý', searchPlaceholder: 'Tìm nội dung, người gửi, email, sự kiện...',
+    total: 'Tổng góp ý', search: 'Tìm theo nội dung góp ý', searchPlaceholder: 'Nhập nội dung cần tìm...',
+    senderSearch: 'Người gửi hoặc email', senderPlaceholder: 'Nhập tên người gửi hoặc email...',
+    eventNameSearch: 'Tên sự kiện', eventNamePlaceholder: 'Nhập tên sự kiện...',
     allStatuses: 'Tất cả trạng thái', newStatus: 'Mới tiếp nhận', inProgressStatus: 'Đang xử lý', resolvedStatus: 'Đã giải quyết',
     allTargets: 'Tất cả phạm vi', bookStreetTarget: 'Toàn Đường Sách', eventTarget: 'Sự kiện', bookStreetName: 'Đường Sách TP.HCM',
-    statusFilter: 'Lọc trạng thái', targetFilter: 'Lọc phạm vi', eventFilter: 'Lọc theo mã sự kiện', eventPlaceholder: 'Mã sự kiện',
+    statusFilter: 'Trạng thái', targetFilter: 'Phạm vi',
     sort: 'Sắp xếp', newest: 'Mới nhất trước', oldest: 'Cũ nhất trước', loadingQueue: 'Đang tải góp ý…', retry: 'Thử lại',
     empty: 'Chưa có góp ý phù hợp với bộ lọc.', viewDetail: 'Xem chi tiết', previousPage: 'Trang trước', nextPage: 'Trang sau', page: 'Trang',
     detailTitle: 'Chi tiết góp ý', close: 'Đóng', loadingDetail: 'Đang tải chi tiết…', detailFailure: 'Không tải được chi tiết góp ý.',
@@ -49,10 +51,12 @@ const COPY = {
   en: {
     heading: 'Experience feedback',
     subtitle: 'A shared queue for the Management Board. Handling notes are for internal use only.',
-    total: 'Total feedback', search: 'Search feedback', searchPlaceholder: 'Search message, sender, email, or event...',
+    total: 'Total feedback', search: 'Search feedback content', searchPlaceholder: 'Enter feedback content...',
+    senderSearch: 'Sender or email', senderPlaceholder: 'Enter sender name or email...',
+    eventNameSearch: 'Event name', eventNamePlaceholder: 'Enter event name...',
     allStatuses: 'All statuses', newStatus: 'New', inProgressStatus: 'In progress', resolvedStatus: 'Resolved',
     allTargets: 'All scopes', bookStreetTarget: 'Whole Book Street', eventTarget: 'Event', bookStreetName: 'HCMC Book Street',
-    statusFilter: 'Filter by status', targetFilter: 'Filter by scope', eventFilter: 'Filter by event ID', eventPlaceholder: 'Event ID',
+    statusFilter: 'Status', targetFilter: 'Scope',
     sort: 'Sort', newest: 'Newest first', oldest: 'Oldest first', loadingQueue: 'Loading feedback…', retry: 'Retry',
     empty: 'No feedback matches the current filters.', viewDetail: 'View details', previousPage: 'Previous', nextPage: 'Next', page: 'Page',
     detailTitle: 'Feedback details', close: 'Close', loadingDetail: 'Loading details…', detailFailure: 'Unable to load feedback details.',
@@ -109,10 +113,13 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
   const [totalPages, setTotalPages] = useState(0);
   const [status, setStatus] = useState<OrganizerFeedbackStatus | ''>('');
   const [targetType, setTargetType] = useState<OrganizerFeedbackTargetType | ''>('');
-  const [eventId, setEventId] = useState('');
   const [sort, setSort] = useState<'submittedAt,desc' | 'submittedAt,asc'>('submittedAt,desc');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [senderSearchInput, setSenderSearchInput] = useState('');
+  const [senderSearch, setSenderSearch] = useState('');
+  const [eventNameSearchInput, setEventNameSearchInput] = useState('');
+  const [eventNameSearch, setEventNameSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [queueError, setQueueError] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -141,9 +148,11 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     const timeout = window.setTimeout(() => {
       setPage(0);
       setSearch(searchInput.trim());
+      setSenderSearch(senderSearchInput.trim());
+      setEventNameSearch(eventNameSearchInput.trim());
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [searchInput]);
+  }, [eventNameSearchInput, searchInput, senderSearchInput]);
 
   const loadQueue = useCallback(async () => {
     const requestSequence = ++queueRequestSequence.current;
@@ -154,9 +163,10 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
         size: PAGE_SIZE,
         sort,
         search: search || undefined,
+        senderSearch: senderSearch || undefined,
+        eventNameSearch: eventNameSearch || undefined,
         status: status || undefined,
         targetType: targetType || undefined,
-        eventId: eventId ? Number(eventId) : undefined,
       });
       if (requestSequence !== queueRequestSequence.current) return;
 
@@ -180,7 +190,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     } finally {
       if (requestSequence === queueRequestSequence.current) setLoading(false);
     }
-  }, [eventId, language, page, search, sort, status, targetType]);
+  }, [eventNameSearch, language, page, search, senderSearch, sort, status, targetType]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void loadQueue());
@@ -277,31 +287,53 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     </header>
 
     <div className="organizer-feedback-toolbar">
-      <label className="organizer-feedback-search">
-        <Search size={17} aria-hidden="true" />
-        <input aria-label={copy.search} value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder={copy.searchPlaceholder} />
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.search}</span>
+        <span className="organizer-feedback-search-control">
+          <Search size={17} aria-hidden="true" />
+          <input aria-label={copy.search} value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder={copy.searchPlaceholder} />
+        </span>
       </label>
-      <select value={status} onChange={event => { setPage(0); setStatus(event.target.value as OrganizerFeedbackStatus | ''); }} aria-label={copy.statusFilter}>
-        <option value="">{copy.allStatuses}</option>
-        <option value="NEW">{copy.newStatus}</option>
-        <option value="IN_PROGRESS">{copy.inProgressStatus}</option>
-        <option value="RESOLVED">{copy.resolvedStatus}</option>
-      </select>
-      <select value={targetType} onChange={event => {
-        const value = event.target.value as OrganizerFeedbackTargetType | '';
-        setPage(0);
-        setTargetType(value);
-        if (value === 'BOOK_STREET') setEventId('');
-      }} aria-label={copy.targetFilter}>
-        <option value="">{copy.allTargets}</option>
-        <option value="BOOK_STREET">{copy.bookStreetTarget}</option>
-        <option value="EVENT">{copy.eventTarget}</option>
-      </select>
-      <input className="organizer-feedback-event-filter" type="number" min="1" step="1" value={eventId} disabled={targetType === 'BOOK_STREET'} onChange={event => { setPage(0); setEventId(event.target.value); }} placeholder={copy.eventPlaceholder} aria-label={copy.eventFilter} />
-      <select value={sort} onChange={event => { setPage(0); setSort(event.target.value as typeof sort); }} aria-label={copy.sort}>
-        <option value="submittedAt,desc">{copy.newest}</option>
-        <option value="submittedAt,asc">{copy.oldest}</option>
-      </select>
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.senderSearch}</span>
+        <input aria-label={copy.senderSearch} value={senderSearchInput} maxLength={100} onChange={event => setSenderSearchInput(event.target.value)} placeholder={copy.senderPlaceholder} />
+      </label>
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.eventNameSearch}</span>
+        <input aria-label={copy.eventNameSearch} value={eventNameSearchInput} maxLength={100} disabled={targetType === 'BOOK_STREET'} onChange={event => setEventNameSearchInput(event.target.value)} placeholder={copy.eventNamePlaceholder} />
+      </label>
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.statusFilter}</span>
+        <select value={status} onChange={event => { setPage(0); setStatus(event.target.value as OrganizerFeedbackStatus | ''); }} aria-label={copy.statusFilter}>
+          <option value="">{copy.allStatuses}</option>
+          <option value="NEW">{copy.newStatus}</option>
+          <option value="IN_PROGRESS">{copy.inProgressStatus}</option>
+          <option value="RESOLVED">{copy.resolvedStatus}</option>
+        </select>
+      </label>
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.targetFilter}</span>
+        <select value={targetType} onChange={event => {
+          const value = event.target.value as OrganizerFeedbackTargetType | '';
+          setPage(0);
+          setTargetType(value);
+          if (value === 'BOOK_STREET') {
+            setEventNameSearchInput('');
+            setEventNameSearch('');
+          }
+        }} aria-label={copy.targetFilter}>
+          <option value="">{copy.allTargets}</option>
+          <option value="BOOK_STREET">{copy.bookStreetTarget}</option>
+          <option value="EVENT">{copy.eventTarget}</option>
+        </select>
+      </label>
+      <label className="organizer-feedback-filter-field">
+        <span>{copy.sort}</span>
+        <select value={sort} onChange={event => { setPage(0); setSort(event.target.value as typeof sort); }} aria-label={copy.sort}>
+          <option value="submittedAt,desc">{copy.newest}</option>
+          <option value="submittedAt,asc">{copy.oldest}</option>
+        </select>
+      </label>
     </div>
 
     {loading && <div className="organizer-feedback-state"><LoaderCircle className="is-spinning" /><p>{copy.loadingQueue}</p></div>}

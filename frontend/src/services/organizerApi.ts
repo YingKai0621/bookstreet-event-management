@@ -86,6 +86,8 @@ export interface OrganizerFeedbackQuery {
   size?: number;
   sort?: 'submittedAt,desc' | 'submittedAt,asc';
   search?: string;
+  senderSearch?: string;
+  eventNameSearch?: string;
   targetType?: OrganizerFeedbackTargetType;
   eventId?: number;
   status?: OrganizerFeedbackStatus;
@@ -784,6 +786,8 @@ export const organizerApi = {
         size: query.size ?? 20,
         sort: query.sort ?? 'submittedAt,desc',
         search: query.search,
+        senderSearch: query.senderSearch,
+        eventNameSearch: query.eventNameSearch,
         targetType: query.targetType,
         eventId: query.eventId,
         status: query.status,

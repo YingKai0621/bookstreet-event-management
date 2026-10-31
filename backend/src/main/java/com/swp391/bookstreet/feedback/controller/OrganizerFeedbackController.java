@@ -36,11 +36,23 @@ public class OrganizerFeedbackController {
             @RequestParam(defaultValue = "20") String size,
             @RequestParam(defaultValue = "submittedAt,desc") String sort,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String senderSearch,
+            @RequestParam(required = false) String eventNameSearch,
             @RequestParam(required = false) String targetType,
             @RequestParam(required = false) String eventId,
             @RequestParam(required = false) String status
     ) {
-        return noStore(service.list(page, size, sort, search, targetType, eventId, status));
+        return noStore(service.list(
+                page,
+                size,
+                sort,
+                search,
+                senderSearch,
+                eventNameSearch,
+                targetType,
+                eventId,
+                status
+        ));
     }
 
     @GetMapping("/{feedbackId}")

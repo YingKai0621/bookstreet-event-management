@@ -206,12 +206,14 @@ class Sprint08HibernateValidationTests {
 
         mvc.perform(get("/api/v1/organizer/feedbacks")
                         .queryParam("search", marker)
+                        .queryParam("senderSearch", "beta@example.test")
+                        .queryParam("eventNameSearch", "Feedback PUBLISHED")
                         .queryParam("targetType", "EVENT")
                         .queryParam("status", "NEW")
                         .with(role(organizerA, "ROLE_ORGANIZER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.content.length()").value(2));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].feedbackId").value(feedbackB));
         mvc.perform(get("/api/v1/organizer/feedbacks")
                         .queryParam("eventId", String.valueOf(eventA))
                         .queryParam("status", "NEW")
@@ -234,6 +236,12 @@ class Sprint08HibernateValidationTests {
                 .isEqualTo(updatedBeforeRead);
 
         mvc.perform(get("/api/v1/organizer/feedbacks?targetType=BOOK_STREET&eventId=" + eventA)
+                        .with(role(organizerA, "ROLE_ORGANIZER")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FILTER"));
+        mvc.perform(get("/api/v1/organizer/feedbacks")
+                        .queryParam("targetType", "BOOK_STREET")
+                        .queryParam("eventNameSearch", "Feedback")
                         .with(role(organizerA, "ROLE_ORGANIZER")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_FILTER"));

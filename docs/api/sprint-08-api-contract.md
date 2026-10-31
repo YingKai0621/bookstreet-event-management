@@ -201,13 +201,18 @@ No other source/action pair is valid. Listing/detail never performs an implicit 
 - Organizer-only and never sent to the Guest.
 - Reopen retains the stored note. A later resolve replaces it with the newly supplied note.
 
-### 3.5 Search input
+### 3.5 Organizer search inputs
 
-- Optional; null/blank-to-null.
-- Trim surrounding whitespace and collapse repeated whitespace.
-- Normalized length: `1..100` characters.
-- Case-insensitive contains search over normalized `message`, `guestName`, `contactEmail` and the
-  current Event name.
+- `search`, `senderSearch` and `eventNameSearch` are independent and optional; each uses
+  null/blank-to-null.
+- Each value trims surrounding whitespace, collapses repeated whitespace and has normalized length
+  `1..100` characters.
+- `search` performs case-insensitive contains search only over normalized Feedback `message`.
+- `senderSearch` performs case-insensitive contains search over `guestName`, `contactEmail` and the
+  authenticated submitter's current full name.
+- `eventNameSearch` performs case-insensitive contains search only over the current Event name and
+  implies the `EVENT` target.
+- When multiple search inputs are supplied, all supplied criteria must match the same Feedback.
 - Search is Organizer-only. Public search/list endpoints do not exist.
 
 ## 4. Shared representations
@@ -487,7 +492,9 @@ Query parameters:
 | `page` | `0` | Integer, minimum 0. |
 | `size` | `20` | Integer, `1..100`. |
 | `sort` | `submittedAt,desc` | Closed allowlist below. |
-| `search` | absent | Section 3.5. |
+| `search` | absent | Feedback message search from Section 3.5. |
+| `senderSearch` | absent | Guest/account name or contact email search from Section 3.5. |
+| `eventNameSearch` | absent | Event name search from Section 3.5; implies `EVENT`. |
 | `targetType` | absent | `BOOK_STREET` or `EVENT`. |
 | `eventId` | absent | Positive 64-bit integer; implies `EVENT`. |
 | `status` | absent | `NEW`, `IN_PROGRESS` or `RESOLVED`. |
@@ -501,9 +508,9 @@ submittedAt,asc  -> submittedAt ASC,  generalFeedbackId ASC
 
 Rules:
 
-- `eventId` plus `targetType=BOOK_STREET` returns `400 INVALID_FILTER`.
+- `eventId` or `eventNameSearch` plus `targetType=BOOK_STREET` returns `400 INVALID_FILTER`.
 - An unknown positive `eventId` filter returns a successful empty page, not `404`.
-- Blank `search` normalizes to no search filter.
+- A blank search input normalizes to no filter for that field.
 - Invalid enum, page, size, sort or filter returns its stable `400` error.
 - Query does not mutate lifecycle state or timestamps.
 
@@ -663,6 +670,8 @@ contactEmail
 message
 internalNote
 search
+senderSearch
+eventNameSearch
 ```
 
 No error response includes contact values, internal notes, private Event facts, User account data,
@@ -776,7 +785,8 @@ schema migration.
   contract operations as applicable.
 - Replace legacy lowercase statuses `new/in_progress/responded/closed` with the closed API enum.
 - Remove star rendering, Heritage/Booth target assumptions and “reply sent to reader” wording.
-- Use server-side page/search/filter/sort instead of filtering and paginating a full local array.
+- Present separate message, sender/email and Event-name search controls and apply their predicates
+  server-side together with page/filter/sort instead of filtering a full local array.
 - Fetch detail before showing contact/internal handling data.
 - Show exactly one legal action for the current state: start, resolve or reopen.
 - Clearly label resolve note as internal and not sent to the Guest.

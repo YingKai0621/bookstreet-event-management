@@ -47,7 +47,9 @@ class OrganizerFeedbackControllerTests {
 
     @Test
     void listForwardsServerQueryAndReturnsNoStore() throws Exception {
-        when(service.list("2", "10", "submittedAt,asc", "sách", "EVENT", "7", "NEW"))
+        when(service.list(
+                "2", "10", "submittedAt,asc", "sách", "Minh An", "Ngày hội", "EVENT", "7", "NEW"
+        ))
                 .thenReturn(new OrganizerFeedbackPageResponse(List.of(), 2, 10, 0, 0));
 
         mvc.perform(get(PATH)
@@ -55,6 +57,8 @@ class OrganizerFeedbackControllerTests {
                         .queryParam("size", "10")
                         .queryParam("sort", "submittedAt,asc")
                         .queryParam("search", "sách")
+                        .queryParam("senderSearch", "Minh An")
+                        .queryParam("eventNameSearch", "Ngày hội")
                         .queryParam("targetType", "EVENT")
                         .queryParam("eventId", "7")
                         .queryParam("status", "NEW"))
@@ -107,7 +111,7 @@ class OrganizerFeedbackControllerTests {
 
     @Test
     void databaseFailureReturnsCanonicalPrivateError() throws Exception {
-        when(service.list("0", "20", "submittedAt,desc", null, null, null, null))
+        when(service.list("0", "20", "submittedAt,desc", null, null, null, null, null, null))
                 .thenThrow(new DataAccessResourceFailureException(
                         "select contact_email, internal_note from private_table"
                 ));

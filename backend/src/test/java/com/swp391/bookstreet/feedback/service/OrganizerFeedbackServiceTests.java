@@ -61,7 +61,7 @@ class OrganizerFeedbackServiceTests {
                 .thenAnswer(invocation -> new PageImpl<>(List.of(feedback), invocation.getArgument(1), 1));
 
         OrganizerFeedbackPageResponse response = service.list(
-                "0", "20", "submittedAt,desc", "   ", null, null, "NEW");
+                "0", "20", "submittedAt,desc", "   ", "  ", null, null, null, "NEW");
 
         assertThat(response.totalElements()).isEqualTo(1);
         assertThat(response.content().getFirst().messagePreview()).hasSize(160).endsWith("…");
@@ -74,17 +74,23 @@ class OrganizerFeedbackServiceTests {
 
     @Test
     void rejectsEveryInvalidQueryFamilyWithStableCodes() {
-        assertCode(() -> service.list("-1", "20", "submittedAt,desc", null, null, null, null),
+        assertCode(() -> service.list("-1", "20", "submittedAt,desc", null, null, null, null, null, null),
                 "INVALID_PAGE");
-        assertCode(() -> service.list("0", "101", "submittedAt,desc", null, null, null, null),
+        assertCode(() -> service.list("0", "101", "submittedAt,desc", null, null, null, null, null, null),
                 "INVALID_SIZE");
-        assertCode(() -> service.list("0", "20", "status,asc", null, null, null, null),
+        assertCode(() -> service.list("0", "20", "status,asc", null, null, null, null, null, null),
                 "INVALID_SORT");
-        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, "HERITAGE", null, null),
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, null, null, "HERITAGE", null, null),
                 "INVALID_ENUM_VALUE");
-        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, "BOOK_STREET", "7", null),
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, null, null, "BOOK_STREET", "7", null),
                 "INVALID_FILTER");
-        assertCode(() -> service.list("0", "20", "submittedAt,desc", "x".repeat(101), null, null, null),
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, null, "Ngày hội", "BOOK_STREET", null, null),
+                "INVALID_FILTER");
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", "x".repeat(101), null, null, null, null, null),
+                "INVALID_FILTER");
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, "x".repeat(101), null, null, null, null),
+                "INVALID_FILTER");
+        assertCode(() -> service.list("0", "20", "submittedAt,desc", null, null, "x".repeat(101), null, null, null),
                 "INVALID_FILTER");
         assertCode(() -> service.detail("0"), "MALFORMED_REQUEST");
     }

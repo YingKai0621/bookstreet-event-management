@@ -399,7 +399,8 @@ Authenticated Organizer with effective verified `ORGANIZER` authority.
 2. Client requests the first server-side page using the default stable ordering.
 3. System authorizes the Organizer without applying Event ownership.
 4. System returns real Feedback rows and total count under one identical predicate.
-5. Organizer may search or filter by target, Event and status.
+5. Organizer may independently search by Feedback content, sender/email or Event name and may
+   filter by target, exact Event and status.
 6. Organizer opens one Feedback detail.
 7. System returns message, optional contact values and current handling metadata.
 8. The read leaves status, actor, note and timestamps unchanged.

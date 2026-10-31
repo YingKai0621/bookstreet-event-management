@@ -220,8 +220,10 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
 
   await expect(page.getByRole('heading', { name: 'Góp ý trải nghiệm' })).toBeVisible();
   await expect(page.locator('.organizer-feedback-heading')).not.toContainText(';');
-  await expect(page.getByRole('textbox', { name: 'Tìm góp ý' })).toBeVisible();
-  await expect(page.getByText('Tìm góp ý', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Tìm theo nội dung góp ý' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Người gửi hoặc email' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Tên sự kiện' })).toBeVisible();
+  await expect(page.getByRole('spinbutton')).toHaveCount(0);
   await expect(page.getByText('Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.')).toBeVisible();
   await expect(page.locator('.organizer-feedback-card svg.lucide-star')).toHaveCount(0);
   await page.getByRole('button', { name: 'Xem chi tiết' }).click();
@@ -293,7 +295,7 @@ test('older queue responses cannot overwrite newer search results', async ({ pag
   });
 
   await page.goto('/organizer/feedback');
-  const search = page.getByPlaceholder('Tìm nội dung, người gửi, email, sự kiện...');
+  const search = page.getByPlaceholder('Nhập nội dung cần tìm...');
   await search.fill('old');
   await page.waitForTimeout(350);
   await search.fill('new');
@@ -302,6 +304,39 @@ test('older queue responses cannot overwrite newer search results', async ({ pag
   await page.waitForTimeout(550);
   await expect(page.getByText('Kết quả mới nhất phải được giữ lại.')).toBeVisible();
   await expect(page.getByText('Kết quả cũ không được phép ghi đè.')).toHaveCount(0);
+});
+
+test('organizer filters content, sender and event name independently', async ({ page }) => {
+  await mockOrganizerFeedback(page);
+  let latestQuery = new URLSearchParams();
+  await page.route('**/api/v1/organizer/feedbacks?*', route => {
+    latestQuery = new URL(route.request().url()).searchParams;
+    return json(route, {
+      content: [organizerListItem('NEW')], page: 0, size: 10, totalElements: 1, totalPages: 1,
+    });
+  });
+
+  await page.goto('/organizer/feedback');
+  await page.getByRole('textbox', { name: 'Tìm theo nội dung góp ý' }).fill('sân khấu');
+  await page.getByRole('textbox', { name: 'Người gửi hoặc email' }).fill('minhan@example.test');
+  await page.getByRole('textbox', { name: 'Tên sự kiện' }).fill('Ngày hội Văn hóa Đọc');
+
+  await expect.poll(() => ({
+    search: latestQuery.get('search'),
+    senderSearch: latestQuery.get('senderSearch'),
+    eventNameSearch: latestQuery.get('eventNameSearch'),
+    eventId: latestQuery.get('eventId'),
+  })).toEqual({
+    search: 'sân khấu',
+    senderSearch: 'minhan@example.test',
+    eventNameSearch: 'Ngày hội Văn hóa Đọc',
+    eventId: null,
+  });
+
+  await page.getByRole('combobox', { name: 'Phạm vi' }).selectOption('BOOK_STREET');
+  await expect(page.getByRole('textbox', { name: 'Tên sự kiện' })).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'Tên sự kiện' })).toHaveValue('');
+  await expect.poll(() => latestQuery.get('eventNameSearch')).toBeNull();
 });
 
 test('closing one detail prevents its late response from replacing the next detail', async ({ page }) => {

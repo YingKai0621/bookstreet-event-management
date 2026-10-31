@@ -59,6 +59,8 @@ public class OrganizerFeedbackService {
             String sizeValue,
             String sortValue,
             String searchValue,
+            String senderSearchValue,
+            String eventNameSearchValue,
             String targetTypeValue,
             String eventIdValue,
             String statusValue
@@ -66,17 +68,20 @@ public class OrganizerFeedbackService {
         int page = parsePage(pageValue);
         int size = parseSize(sizeValue);
         Sort sort = parseSort(sortValue);
-        String search = normalizeSearch(searchValue);
+        String messageSearch = normalizeSearch(searchValue, "Từ khóa nội dung");
+        String senderSearch = normalizeSearch(senderSearchValue, "Từ khóa người gửi");
+        String eventNameSearch = normalizeSearch(eventNameSearchValue, "Tên sự kiện");
         GeneralFeedbackTargetType targetType = parseTargetType(targetTypeValue);
         Long eventId = parseOptionalEventId(eventIdValue);
         GeneralFeedbackStatus status = parseStatus(statusValue);
 
-        if (eventId != null && targetType == GeneralFeedbackTargetType.BOOK_STREET) {
+        if ((eventId != null || eventNameSearch != null)
+                && targetType == GeneralFeedbackTargetType.BOOK_STREET) {
             throw badRequest("INVALID_FILTER", "Bộ lọc sự kiện không phù hợp với phạm vi Đường Sách.");
         }
 
         Page<OrganizerFeedbackListItemResponse> result = feedbackRepository.findAll(
-                specification(search, targetType, eventId, status),
+                specification(messageSearch, senderSearch, eventNameSearch, targetType, eventId, status),
                 PageRequest.of(page, size, sort)
         ).map(this::toListItem);
         return OrganizerFeedbackPageResponse.from(result);
@@ -120,21 +125,37 @@ public class OrganizerFeedbackService {
     }
 
     private Specification<GeneralFeedback> specification(
-            String search,
+            String messageSearch,
+            String senderSearch,
+            String eventNameSearch,
             GeneralFeedbackTargetType targetType,
             Long eventId,
             GeneralFeedbackStatus status
     ) {
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (search != null) {
-                String pattern = "%" + escapeLike(search.toLowerCase(Locale.ROOT)) + "%";
-                var eventJoin = root.join("event", JoinType.LEFT);
+            if (messageSearch != null) {
+                predicates.add(builder.like(
+                        builder.lower(root.get("message")),
+                        containsPattern(messageSearch),
+                        '\\'
+                ));
+            }
+            if (senderSearch != null) {
+                String pattern = containsPattern(senderSearch);
+                var submitterJoin = root.join("submittedBy", JoinType.LEFT);
                 predicates.add(builder.or(
-                        builder.like(builder.lower(root.get("message")), pattern, '\\'),
                         builder.like(builder.lower(root.get("guestName")), pattern, '\\'),
                         builder.like(builder.lower(root.get("contactEmail")), pattern, '\\'),
-                        builder.like(builder.lower(eventJoin.get("name")), pattern, '\\')
+                        builder.like(builder.lower(submitterJoin.get("fullName")), pattern, '\\')
+                ));
+            }
+            if (eventNameSearch != null) {
+                var eventJoin = root.join("event", JoinType.LEFT);
+                predicates.add(builder.like(
+                        builder.lower(eventJoin.get("name")),
+                        containsPattern(eventNameSearch),
+                        '\\'
                 ));
             }
             if (targetType != null) {
@@ -277,12 +298,12 @@ public class OrganizerFeedbackService {
         };
     }
 
-    private String normalizeSearch(String value) {
+    private String normalizeSearch(String value, String fieldLabel) {
         if (value == null) return null;
         String normalized = WHITESPACE_RUN.matcher(value.strip()).replaceAll(" ");
         if (normalized.isEmpty()) return null;
         if (normalized.codePointCount(0, normalized.length()) > 100) {
-            throw badRequest("INVALID_FILTER", "Từ khóa tìm kiếm không được vượt quá 100 ký tự.");
+            throw badRequest("INVALID_FILTER", fieldLabel + " không được vượt quá 100 ký tự.");
         }
         return normalized;
     }
@@ -336,6 +357,10 @@ public class OrganizerFeedbackService {
 
     private String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    private String containsPattern(String value) {
+        return "%" + escapeLike(value.toLowerCase(Locale.ROOT)) + "%";
     }
 
     private Instant now() {
