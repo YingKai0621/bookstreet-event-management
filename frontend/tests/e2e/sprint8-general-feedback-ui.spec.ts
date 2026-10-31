@@ -219,6 +219,8 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
   await page.goto('/organizer/feedback');
 
   await expect(page.getByRole('heading', { name: 'Góp ý trải nghiệm' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Tìm góp ý' })).toBeVisible();
+  await expect(page.getByText('Tìm góp ý', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.')).toBeVisible();
   await expect(page.locator('.organizer-feedback-card svg.lucide-star')).toHaveCount(0);
   await page.getByRole('button', { name: 'Xem chi tiết' }).click();

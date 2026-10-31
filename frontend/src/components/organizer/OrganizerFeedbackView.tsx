@@ -279,8 +279,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     <div className="organizer-feedback-toolbar">
       <label className="organizer-feedback-search">
         <Search size={17} aria-hidden="true" />
-        <span className="sr-only">{copy.search}</span>
-        <input value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder={copy.searchPlaceholder} />
+        <input aria-label={copy.search} value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder={copy.searchPlaceholder} />
       </label>
       <select value={status} onChange={event => { setPage(0); setStatus(event.target.value as OrganizerFeedbackStatus | ''); }} aria-label={copy.statusFilter}>
         <option value="">{copy.allStatuses}</option>
