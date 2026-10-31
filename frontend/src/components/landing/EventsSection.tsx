@@ -1,6 +1,6 @@
 import '../participant/EventFeedback.css';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
@@ -326,10 +326,12 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                         <Clock size={14} />
                         {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${showRegisterModal.dateStr} • ${showRegisterModal.timeStr}`}
                       </span>
-                      <span className="reg-meta-item">
-                        <MapPin size={14} />
-                        {language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn}
-                      </span>
+                      {(language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn) && (
+                        <span className="reg-meta-item">
+                          <MapPin size={14} />
+                          {language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn}
+                        </span>
+                      )}
                       {showRegisterModal.registrationDeadlineAt && (
                         <span className="reg-meta-item">
                           <Clock size={14} />
@@ -344,15 +346,6 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                       )}
                     </div>
                   </div>
-                </div>
-
-                <div className="alert-figma-notice">
-                  <AlertTriangle size={18} />
-                  <span>
-                    {language === 'vi' 
-                      ? 'Mỗi tài khoản ghi danh cho chính mình. Sau khi đăng ký hoạt động, bạn sẽ quét mã QR do Ban tổ chức hiển thị tại nơi diễn ra để điểm danh.'
-                      : 'Each account joins for itself. After registering for an activity, scan the QR displayed by the Organizer at the venue to check in.'}
-                  </span>
                 </div>
 
                 {!isParticipantAuthenticated && (

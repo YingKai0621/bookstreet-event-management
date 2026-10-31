@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice(basePackages = {
         "com.swp391.bookstreet.booth.controller",
@@ -41,6 +42,16 @@ public class BoothApiExceptionHandler {
     ResponseEntity<ApiErrorResponse> handleMalformed(Exception error, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(new ApiErrorResponse(
                 "MALFORMED_REQUEST", "Invalid JSON, field type, or identifier.", List.of(),
+                Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiErrorResponse> handleOversizedUpload(
+            MaxUploadSizeExceededException error, HttpServletRequest request) {
+        String message = "Ảnh gian hàng không được vượt quá 5 MB.";
+        return ResponseEntity.unprocessableContent().body(new ApiErrorResponse(
+                "BOOTH_IMAGE_INVALID", message,
+                List.of(new FieldValidationError("file", message)),
                 Instant.now(), request.getRequestURI()));
     }
 }

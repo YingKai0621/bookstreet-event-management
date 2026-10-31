@@ -31,6 +31,7 @@ export interface PhysicalBooth {
   active: boolean;
   categoryCode: string | null;
   note: string | null;
+  imageUrl: string | null;
 }
 
 export interface EventBooth {
@@ -80,6 +81,7 @@ export interface CreatePhysicalBoothInput {
   mapY: number | null;
   categoryCode: string | null;
   note: string | null;
+  imageUrl: string | null;
 }
 
 export type UpdatePhysicalBoothInput = Partial<CreatePhysicalBoothInput> & {

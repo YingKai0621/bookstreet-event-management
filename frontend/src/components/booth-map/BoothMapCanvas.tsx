@@ -14,11 +14,14 @@ import type { BoothMapMarker, BoothMapMarkerStatus } from './boothMapModel';
 import { markerStatusLabel } from './boothMapModel';
 import './BoothMapCanvas.css';
 
-export interface PopoverBoothData {
-  boothId: number;
+export interface MapPopoverData {
+  markerId: string;
+  resourceId: number;
+  resourceType: 'booth' | 'location';
   code: string;
   name: string;
   status: BoothMapMarkerStatus;
+  resourceLabel?: string;
   partnerName?: string;
   x: number;
   y: number;
@@ -28,10 +31,10 @@ interface BoothMapCanvasProps {
   markers: BoothMapMarker[];
   selectedMarkerId?: string | null;
   onSelectMarker?: (marker: BoothMapMarker) => void;
-  activePopoverData?: PopoverBoothData | null;
+  activePopoverData?: MapPopoverData | null;
   onOpenPopover?: (marker: BoothMapMarker) => void;
   onClosePopover?: () => void;
-  onSavePopover?: (data: PopoverBoothData) => Promise<void> | void;
+  onSavePopover?: (data: MapPopoverData) => Promise<void> | void;
   onDeleteBooth?: (boothId: number) => Promise<void> | void;
   onPositionChange?: (markerId: string, x: number, y: number) => void;
   onSaveAllMap?: () => Promise<void> | void;
@@ -119,8 +122,13 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   const assignedCount = visibleMarkers.filter(m => m.status === 'ASSIGNED').length;
   const ownedCount = visibleMarkers.filter(m => m.status === 'OWNED').length;
   const onHoldCount = visibleMarkers.filter(m => m.status === 'ON_HOLD').length;
-  const physicalActiveCount = visibleMarkers.filter(m => m.status === 'PHYSICAL').length;
   const physicalInactiveCount = visibleMarkers.filter(m => m.status === 'PHYSICAL_INACTIVE').length;
+  const physicalKindCounts = useMemo(() => ({
+    BOOTH: visibleMarkers.filter(marker => (marker.kind || 'BOOTH') === 'BOOTH').length,
+    STAGE: visibleMarkers.filter(marker => marker.kind === 'STAGE').length,
+    WORKSHOP: visibleMarkers.filter(marker => marker.kind === 'WORKSHOP').length,
+    AREA: visibleMarkers.filter(marker => marker.kind === 'AREA').length,
+  }), [visibleMarkers]);
 
   const reset = () => {
     setZoom(1);
@@ -200,7 +208,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
       return;
     }
     onSelectMarker?.(marker);
-    if (activePopoverData?.boothId === marker.boothId) {
+    if (activePopoverData?.markerId === marker.id) {
       onClosePopover?.();
     } else {
       onOpenPopover?.(marker);
@@ -257,8 +265,11 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
         <div className="booth-map-legend">
           {statusScope === 'physical' ? (
             <>
-              <div className="booth-map-legend-item"><span className="booth-map-legend-dot physical"></span><span>Đang hoạt động ({physicalActiveCount})</span></div>
-              <div className="booth-map-legend-item"><span className="booth-map-legend-dot physical-inactive"></span><span>Tạm ngưng ({physicalInactiveCount})</span></div>
+              <div className="booth-map-legend-item"><span className="booth-map-legend-dot kind-booth"></span><span>Gian hàng ({physicalKindCounts.BOOTH})</span></div>
+              {physicalKindCounts.STAGE > 0 && <div className="booth-map-legend-item"><span className="booth-map-legend-dot kind-stage"></span><span>Sân khấu ({physicalKindCounts.STAGE})</span></div>}
+              {physicalKindCounts.WORKSHOP > 0 && <div className="booth-map-legend-item"><span className="booth-map-legend-dot kind-workshop"></span><span>Workshop ({physicalKindCounts.WORKSHOP})</span></div>}
+              {physicalKindCounts.AREA > 0 && <div className="booth-map-legend-item"><span className="booth-map-legend-dot kind-area"></span><span>Khu vực ({physicalKindCounts.AREA})</span></div>}
+              {physicalInactiveCount > 0 && <div className="booth-map-legend-item"><span className="booth-map-legend-dot physical-inactive"></span><span>Tạm ngưng ({physicalInactiveCount})</span></div>}
             </>
           ) : (
             <>
@@ -361,14 +372,15 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
           {visibleMarkers.map(marker => {
             const statusClass = `status-${marker.status.toLowerCase()}`;
 
-            const isSelected = activePopoverData?.boothId === marker.boothId || selectedMarkerId === marker.id;
+            const isSelected = activePopoverData?.markerId === marker.id || selectedMarkerId === marker.id;
             const isDraggingThis = draggingMarkerId === marker.id;
+            const kindClass = `kind-${(marker.kind || 'BOOTH').toLowerCase()}`;
 
             return (
               <button
                 type="button"
                 key={marker.id}
-                className={`booth-map-marker ${statusClass} ${isSelected ? 'is-selected' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
+                className={`booth-map-marker ${statusClass} ${kindClass} ${marker.status === 'PHYSICAL_INACTIVE' ? 'is-inactive' : ''} ${isSelected ? 'is-selected' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
                 style={{
                   left: `${marker.x}%`,
                   top: `${marker.y}%`,
@@ -438,8 +450,8 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
 
                   {statusScope === 'physical' ? (
                     <div className="popover-field">
-                      <label>Phạm vi sử dụng</label>
-                      <strong>Dùng chung cho mọi sự kiện</strong>
+                      <label>Loại không gian</label>
+                      <strong>{activePopoverData.resourceLabel || 'Gian hàng'}</strong>
                     </div>
                   ) : (
                     <div className="popover-field">
@@ -455,7 +467,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                     <button
                       type="button"
                       className="btn-popover-delete"
-                      onClick={() => onDeleteBooth(activePopoverData.boothId)}
+                      onClick={() => onDeleteBooth(activePopoverData.resourceId)}
                       title="Xóa gian hàng này"
                     >
                       <Trash2 size={14} />
@@ -469,7 +481,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                     disabled={popoverSaving}
                   >
                     <Check size={15} />
-                    <span>{popoverSaving ? 'Đang lưu...' : 'Hoàn tất & Đồng bộ'}</span>
+                    <span>{popoverSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                   </button>
                 </div>
               </form>

@@ -155,6 +155,7 @@ public class SecurityConfiguration {
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/media/event-banners/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/media/booth-images/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/activities", "/api/v1/activities/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/chat/messages").permitAll()

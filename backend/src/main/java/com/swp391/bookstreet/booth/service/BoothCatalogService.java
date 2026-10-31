@@ -13,6 +13,8 @@ import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.EventBoothConfigRepository;
 import com.swp391.bookstreet.booth.repository.LocationRepository;
 import com.swp391.bookstreet.booth.security.BoothCurrentUser;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;
@@ -59,7 +61,8 @@ public class BoothCatalogService {
         Instant now = clock.instant();
         Location location = Location.createBooth(code, required(request.name(), "name", 100),
                 optional(request.description()), request.maxCapacity(), request.mapX(), request.mapY(), now);
-        Booth booth = Booth.create(location, optional(request.categoryCode()), optional(request.note()));
+        Booth booth = Booth.create(location, optional(request.categoryCode()),
+                optional(request.note()), optionalImageUrl(request.imageUrl()));
         try {
             return BoothResponse.from(boothRepository.saveAndFlush(booth));
         } catch (DataIntegrityViolationException exception) {
@@ -120,6 +123,8 @@ public class BoothCatalogService {
                 ? optional(request.getCategoryCode()) : booth.getCategoryCode();
         String note = request.contains("note")
                 ? optional(request.getNote()) : booth.getNote();
+        String imageUrl = request.contains("imageUrl")
+                ? optionalImageUrl(request.getImageUrl()) : booth.getImageUrl();
         if (request.contains("code")) {
             String newCode = requiredLocationCode(request.getCode());
             location.setCode(newCode);
@@ -142,7 +147,7 @@ public class BoothCatalogService {
         }
 
         location.update(name, description, capacity, mapX, mapY, active, now);
-        booth.updateDetails(category, note);
+        booth.updateDetails(category, note, imageUrl);
         try {
             boothRepository.flush();
         } catch (DataIntegrityViolationException exception) {
@@ -190,6 +195,32 @@ public class BoothCatalogService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String optionalImageUrl(String value) {
+        String normalized = optional(value);
+        if (normalized == null) return null;
+        if (normalized.length() > 2048) {
+            throw validation("imageUrl must not exceed 2048 characters.", "imageUrl");
+        }
+        try {
+            URI uri = new URI(normalized);
+            boolean localPath = uri.getScheme() == null && uri.getHost() == null
+                    && uri.getQuery() == null && uri.getFragment() == null
+                    && normalized.startsWith("/") && !normalized.startsWith("//")
+                    && !normalized.contains("\\");
+            boolean remoteUrl = uri.isAbsolute()
+                    && ("http".equalsIgnoreCase(uri.getScheme())
+                        || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null;
+            if (!localPath && !remoteUrl) {
+                throw validation("imageUrl must be an HTTP(S) URL or a local public path.",
+                        "imageUrl");
+            }
+            return normalized;
+        } catch (URISyntaxException error) {
+            throw validation("imageUrl must be a valid URL.", "imageUrl");
+        }
     }
 
     private static BoothApiException validation(String message, String field) {

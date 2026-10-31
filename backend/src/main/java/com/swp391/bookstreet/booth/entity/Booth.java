@@ -29,20 +29,26 @@ public class Booth {
     @Column(columnDefinition = "text")
     private String note;
 
+    @Column(name = "image_url", columnDefinition = "text")
+    private String imageUrl;
+
     protected Booth() {
     }
 
-    public static Booth create(Location location, String categoryCode, String note) {
+    public static Booth create(Location location, String categoryCode, String note,
+            String imageUrl) {
         Booth booth = new Booth();
         booth.location = location;
         booth.categoryCode = categoryCode;
         booth.note = note;
+        booth.imageUrl = imageUrl;
         return booth;
     }
 
-    public void updateDetails(String categoryCode, String note) {
+    public void updateDetails(String categoryCode, String note, String imageUrl) {
         this.categoryCode = categoryCode;
         this.note = note;
+        this.imageUrl = imageUrl;
     }
 
     public Long getBoothId() {
@@ -59,5 +65,9 @@ public class Booth {
 
     public String getNote() {
         return note;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
     }
 }

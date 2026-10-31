@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
@@ -8,6 +8,7 @@ import {
   Edit3,
   Eye,
   Grid,
+  ImagePlus,
   List,
   Loader2,
   MapPin,
@@ -15,14 +16,18 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
-    Store,
+  Store,
+  Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
+import { organizerApi } from '../../services/organizerApi';
 import type { Language } from '../../types';
+import type { OrganizerLocationResponse } from '../../types/activity';
 import type { CreatePhysicalBoothInput, PhysicalBooth, UpdatePhysicalBoothInput } from '../../types/booth';
-import { BoothMapCanvas, type PopoverBoothData } from '../booth-map/BoothMapCanvas';
+import { BoothMapCanvas, type MapPopoverData } from '../booth-map/BoothMapCanvas';
 import type { BoothMapMarker } from '../booth-map/boothMapModel';
 import './OrganizerBoothManagementView.css';
 
@@ -39,6 +44,7 @@ interface BoothFormData {
   mapY: string;
   description: string;
   note: string;
+  imageUrl: string;
   active: boolean;
 }
 
@@ -61,8 +67,15 @@ const INITIAL_FORM: BoothFormData = {
   mapY: '',
   description: '',
   note: '',
+  imageUrl: '',
   active: true,
 };
+
+const LOCATION_TYPE_LABELS = {
+  STAGE: 'Sân khấu',
+  WORKSHOP: 'Phòng workshop',
+  AREA: 'Khu vực',
+} as const;
 
 function getCategoryLabel(categoryCode: string | null | undefined, language: Language): string {
   if (!categoryCode) return language === 'vi' ? 'Chưa phân loại' : 'Uncategorized';
@@ -73,9 +86,9 @@ function getCategoryLabel(categoryCode: string | null | undefined, language: Lan
 
 export const OrganizerBoothManagementView: React.FC<Props> = ({
   language,
-  onOpenRequests,
 }) => {
   const [booths, setBooths] = useState<PhysicalBooth[]>([]);
+  const [locations, setLocations] = useState<OrganizerLocationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyBoothId, setBusyBoothId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -92,7 +105,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
   // Physical map state. Event availability and pricing deliberately do not live here.
   const [draftCoords, setDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
-  const [activePopover, setActivePopover] = useState<PopoverBoothData | null>(null);
+  const [locationDraftCoords, setLocationDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
+  const [activePopover, setActivePopover] = useState<MapPopoverData | null>(null);
   const [isSavingMap, setIsSavingMap] = useState(false);
   const [customMapUrl, setCustomMapUrl] = useState<string | undefined>();
 
@@ -101,10 +115,40 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   const [editingBooth, setEditingBooth] = useState<PhysicalBooth | null>(null);
   const [formData, setFormData] = useState<BoothFormData>(INITIAL_FORM);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const temporaryImageUrlRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
+
+  const deleteUploadedImageQuietly = useCallback(async (imageUrl: string | null) => {
+    if (!imageUrl) return;
+    try {
+      await boothApi.deleteUploadedBoothImage(imageUrl);
+    } catch (error) {
+      console.warn('Could not clean up an unused booth image', error);
+    }
+  }, []);
+
+  const closeFormModal = useCallback(() => {
+    if (formSubmitting || imageUploading) return;
+    const temporaryImageUrl = temporaryImageUrlRef.current;
+    temporaryImageUrlRef.current = null;
+    setIsFormModalOpen(false);
+    void deleteUploadedImageQuietly(temporaryImageUrl);
+  }, [deleteUploadedImageQuietly, formSubmitting, imageUploading]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      const temporaryImageUrl = temporaryImageUrlRef.current;
+      temporaryImageUrlRef.current = null;
+      void deleteUploadedImageQuietly(temporaryImageUrl);
+    };
+  }, [deleteUploadedImageQuietly]);
 
   // Detail Modal
   const [viewingBooth, setViewingBooth] = useState<PhysicalBooth | null>(null);
-  useModalDismiss(isFormModalOpen, () => { if (!formSubmitting) setIsFormModalOpen(false); });
+  useModalDismiss(isFormModalOpen, closeFormModal);
   useModalDismiss(Boolean(viewingBooth), () => setViewingBooth(null));
 
   const loadBoothData = useCallback(async () => {
@@ -113,9 +157,14 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     setLoadError('');
     setAccessDenied(false);
     try {
-      const physicalBooths = await boothApi.listAllPhysicalBooths();
+      const [physicalBooths, locationPage] = await Promise.all([
+        boothApi.listAllPhysicalBooths(),
+        organizerApi.listActivityLocations({ page: 0, size: 100, sort: 'code,asc' }),
+      ]);
       setBooths(physicalBooths);
+      setLocations(locationPage.content);
       setDraftCoords({});
+      setLocationDraftCoords({});
       setActivePopover(null);
     } catch (err) {
       console.warn('Could not load booth catalog data', err);
@@ -159,28 +208,53 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   }, [booths, searchKeyword, filterStatus]);
   const pagination = useListPagination(filteredBooths);
 
-  const mapMarkers = useMemo<BoothMapMarker[]>(() => filteredBooths.flatMap(booth => {
-    const draft = draftCoords[booth.boothId];
-    const x = draft?.x ?? booth.mapX;
-    const y = draft?.y ?? booth.mapY;
-    if (
-      x === null || y === null || !Number.isFinite(x) || !Number.isFinite(y)
-      || x < 0 || x > 100 || y < 0 || y > 100
-    ) return [];
-    return [{
-      id: `booth-${booth.boothId}`,
-      boothId: booth.boothId,
-      code: booth.code,
-      name: booth.name,
-      x,
-      y,
-      status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
-    }];
-  }), [draftCoords, filteredBooths]);
+  const mapMarkers = useMemo<BoothMapMarker[]>(() => {
+    const boothMarkers: BoothMapMarker[] = booths.flatMap(booth => {
+      const draft = draftCoords[booth.boothId];
+      const x = draft?.x ?? booth.mapX;
+      const y = draft?.y ?? booth.mapY;
+      if (
+        x === null || y === null || !Number.isFinite(x) || !Number.isFinite(y)
+        || x < 0 || x > 100 || y < 0 || y > 100
+      ) return [];
+      return [{
+        id: `booth-${booth.boothId}`,
+        boothId: booth.boothId,
+        code: booth.code,
+        name: booth.name,
+        x,
+        y,
+        status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+        kind: 'BOOTH',
+      }];
+    });
+    const locationMarkers: BoothMapMarker[] = locations.flatMap(location => {
+      const draft = locationDraftCoords[location.locationId];
+      const x = draft?.x ?? location.mapX;
+      const y = draft?.y ?? location.mapY;
+      if (
+        x === null || y === null || !Number.isFinite(x) || !Number.isFinite(y)
+        || x < 0 || x > 100 || y < 0 || y > 100
+      ) return [];
+      return [{
+        id: `location-${location.locationId}`,
+        boothId: -location.locationId,
+        locationId: location.locationId,
+        code: location.code,
+        name: location.name,
+        x,
+        y,
+        status: location.active ? 'PHYSICAL' as const : 'PHYSICAL_INACTIVE' as const,
+        kind: location.locationType,
+      }];
+    });
+    return [...boothMarkers, ...locationMarkers];
+  }, [booths, draftCoords, locationDraftCoords, locations]);
 
   const handleSwitchToListView = () => {
     if (activeMode === 'list') return;
-    const hasUnsavedChanges = Object.keys(draftCoords).length > 0;
+    const hasUnsavedChanges = Object.keys(draftCoords).length > 0
+      || Object.keys(locationDraftCoords).length > 0;
     if (hasUnsavedChanges) {
       const confirmLeave = window.confirm(
         language === 'vi'
@@ -199,6 +273,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
+    temporaryImageUrlRef.current = null;
     setEditingBooth(null);
     setFormData(INITIAL_FORM);
     setErrorMessage('');
@@ -207,6 +282,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
   // Open Edit Modal
   const handleOpenEditModal = (booth: PhysicalBooth) => {
+    temporaryImageUrlRef.current = null;
     setEditingBooth(booth);
     setFormData({
       code: booth.code,
@@ -216,10 +292,54 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       mapY: booth.mapY !== null && booth.mapY !== undefined ? String(booth.mapY) : '',
       description: booth.description || '',
       note: booth.note || '',
+      imageUrl: booth.imageUrl || '',
       active: booth.active,
     });
     setErrorMessage('');
     setIsFormModalOpen(true);
+  };
+
+  const handleBoothImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErrorMessage('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Ảnh gian hàng không được vượt quá 5 MB.');
+      return;
+    }
+
+    setErrorMessage('');
+    setImageUploading(true);
+    try {
+      const imageUrl = await boothApi.uploadBoothImage(file);
+      if (!mountedRef.current) {
+        void deleteUploadedImageQuietly(imageUrl);
+        return;
+      }
+      const previousTemporaryImageUrl = temporaryImageUrlRef.current;
+      temporaryImageUrlRef.current = imageUrl;
+      setFormData(current => ({ ...current, imageUrl }));
+      void deleteUploadedImageQuietly(previousTemporaryImageUrl);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrorMessage(err.fieldErrors.map(field => field.message).join(' ') || err.message);
+      } else {
+        setErrorMessage(err instanceof Error ? err.message : 'Không thể tải ảnh gian hàng.');
+      }
+    } finally {
+      if (mountedRef.current) setImageUploading(false);
+    }
+  };
+
+  const handleRemoveBoothImage = () => {
+    const temporaryImageUrl = temporaryImageUrlRef.current;
+    temporaryImageUrlRef.current = null;
+    setFormData(current => ({ ...current, imageUrl: '' }));
+    void deleteUploadedImageQuietly(temporaryImageUrl);
   };
 
   // Submit Create or Edit Form
@@ -260,6 +380,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           categoryCode: formData.categoryCode,
           description: formData.description.trim() || null,
           note: formData.note.trim() || null,
+          imageUrl: formData.imageUrl.trim() || null,
           maxCapacity: editingBooth.maxCapacity || 1,
           mapX: mapXVal,
           mapY: mapYVal,
@@ -275,6 +396,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           categoryCode: formData.categoryCode,
           description: formData.description.trim() || null,
           note: formData.note.trim() || null,
+          imageUrl: formData.imageUrl.trim() || null,
           maxCapacity: 1,
           mapX: mapXVal,
           mapY: mapYVal,
@@ -283,7 +405,16 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
         setSuccessMessage(`Đã thêm mới thành công gian hàng "${createPayload.code}".`);
       }
 
+      const nowPersistedImageUrl = temporaryImageUrlRef.current;
+      temporaryImageUrlRef.current = null;
+      const replacedImageUrl = editingBooth?.imageUrl
+        && editingBooth.imageUrl !== formData.imageUrl.trim()
+        ? editingBooth.imageUrl
+        : null;
       setIsFormModalOpen(false);
+      if (replacedImageUrl && replacedImageUrl !== nowPersistedImageUrl) {
+        void deleteUploadedImageQuietly(replacedImageUrl);
+      }
       await loadBoothData();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -317,55 +448,98 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   };
 
   const handleMapPositionChange = (markerId: string, x: number, y: number) => {
+    if (markerId.startsWith('location-')) {
+      const locationId = Number(markerId.replace('location-', ''));
+      if (!Number.isFinite(locationId)) return;
+      setLocationDraftCoords(current => ({ ...current, [locationId]: { x, y } }));
+      setActivePopover(current => current?.markerId === markerId ? { ...current, x, y } : current);
+      return;
+    }
     const boothId = Number(markerId.replace('booth-', ''));
     if (!Number.isFinite(boothId)) return;
     setDraftCoords(current => ({ ...current, [boothId]: { x, y } }));
-    setActivePopover(current => current?.boothId === boothId ? { ...current, x, y } : current);
+    setActivePopover(current => current?.markerId === markerId ? { ...current, x, y } : current);
   };
 
   const handleOpenMapPopover = (marker: BoothMapMarker) => {
+    if (marker.locationId !== undefined) {
+      const location = locations.find(item => item.locationId === marker.locationId);
+      if (!location) return;
+      setActivePopover({
+        markerId: marker.id,
+        resourceId: location.locationId,
+        resourceType: 'location',
+        code: location.code,
+        name: location.name,
+        status: location.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+        resourceLabel: LOCATION_TYPE_LABELS[location.locationType as keyof typeof LOCATION_TYPE_LABELS],
+        x: marker.x,
+        y: marker.y,
+      });
+      return;
+    }
     const booth = booths.find(item => item.boothId === marker.boothId);
     if (!booth) return;
     setActivePopover({
-      boothId: booth.boothId,
+      markerId: marker.id,
+      resourceId: booth.boothId,
+      resourceType: 'booth',
       code: booth.code,
       name: booth.name,
       status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+      resourceLabel: 'Gian hàng',
       x: marker.x,
       y: marker.y,
     });
   };
 
-  const handleSaveMapPopover = async (data: PopoverBoothData) => {
+  const handleSaveMapPopover = async (data: MapPopoverData) => {
     setErrorMessage('');
     try {
-      await boothApi.updatePhysicalBooth(data.boothId, {
-        code: data.code,
-        name: data.name,
-        mapX: data.x,
-        mapY: data.y,
-      });
-      setSuccessMessage(`Đã cập nhật thông tin vật lý của gian "${data.code}".`);
+      if (data.resourceType === 'location') {
+        await organizerApi.updateActivityLocation(data.resourceId, {
+          code: data.code,
+          name: data.name,
+          mapX: data.x,
+          mapY: data.y,
+        });
+        setSuccessMessage(`Đã cập nhật địa điểm "${data.name}" trên sơ đồ.`);
+      } else {
+        await boothApi.updatePhysicalBooth(data.resourceId, {
+          code: data.code,
+          name: data.name,
+          mapX: data.x,
+          mapY: data.y,
+        });
+        setSuccessMessage(`Đã cập nhật thông tin vật lý của gian "${data.code}".`);
+      }
       await loadBoothData();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Không thể cập nhật gian hàng trên sơ đồ.');
+      setErrorMessage(err instanceof Error ? err.message : 'Không thể cập nhật không gian trên sơ đồ.');
     }
   };
 
   const handleSaveAllMap = async () => {
     const boothIds = Object.keys(draftCoords).map(Number);
-    if (!boothIds.length) {
-      setSuccessMessage('Tất cả vị trí gian hàng đã được đồng bộ.');
+    const locationIds = Object.keys(locationDraftCoords).map(Number);
+    if (!boothIds.length && !locationIds.length) {
+      setSuccessMessage('Tất cả vị trí trên sơ đồ đã được đồng bộ.');
       return;
     }
     setIsSavingMap(true);
     setErrorMessage('');
     try {
-      await Promise.all(boothIds.map(boothId => boothApi.updatePhysicalBooth(boothId, {
-        mapX: draftCoords[boothId].x,
-        mapY: draftCoords[boothId].y,
-      })));
-      setSuccessMessage(`Đã lưu tọa độ của ${boothIds.length} gian hàng.`);
+      await Promise.all([
+        ...boothIds.map(boothId => boothApi.updatePhysicalBooth(boothId, {
+          mapX: draftCoords[boothId].x,
+          mapY: draftCoords[boothId].y,
+        })),
+        ...locationIds.map(locationId => organizerApi.updateActivityLocation(locationId, {
+          mapX: locationDraftCoords[locationId].x,
+          mapY: locationDraftCoords[locationId].y,
+        })),
+      ]);
+      setSuccessMessage(`Đã lưu tọa độ của ${boothIds.length + locationIds.length} vị trí.`);
       await loadBoothData();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Không thể lưu tọa độ sơ đồ.');
@@ -395,7 +569,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               : 'Manage booth catalog and physical locations across the Book Street.'}
           </p>
 
-          {/* Mode Switcher: Danh sách gian hàng | Sơ đồ gian hàng */}
+          {/* Mode Switcher: Danh sách gian hàng | Sơ đồ không gian */}
           <div className="booth-mode-switcher" aria-label={language === 'vi' ? 'Chế độ xem gian hàng' : 'Booth view modes'}>
             <button
               type="button"
@@ -413,7 +587,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               aria-pressed={activeMode === 'map'}
             >
               <MapPin size={16} />
-              <span>{language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth Map'}</span>
+              <span>{language === 'vi' ? 'Sơ đồ không gian Đường Sách' : 'Book Street Map'}</span>
             </button>
           </div>
         </div>
@@ -482,10 +656,10 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
         <div className="booth-physical-map-panel">
           <div className="booth-physical-map-heading">
             <div>
-              <h2>Sơ đồ gian hàng vật lý</h2>
-              <p>Kéo để cập nhật tọa độ. Trạng thái thuê và giá được cấu hình riêng trong từng sự kiện.</p>
+              <h2>Sơ đồ không gian Đường Sách</h2>
+              <p>Kéo gian hàng hoặc địa điểm tổ chức để cập nhật tọa độ, bấm vào điểm để chỉnh sửa nhanh.</p>
             </div>
-            <span>{mapMarkers.length}/{filteredBooths.length} gian đã có tọa độ</span>
+            <span>{mapMarkers.length}/{booths.length + locations.length} vị trí đã có tọa độ</span>
           </div>
           <BoothMapCanvas
             markers={mapMarkers}
@@ -497,12 +671,12 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             onSaveAllMap={handleSaveAllMap}
             onUploadMapImage={handleUploadMapImage}
             isSavingAll={isSavingMap}
-            hasUnsavedChanges={Object.keys(draftCoords).length > 0}
+            hasUnsavedChanges={Object.keys(draftCoords).length > 0 || Object.keys(locationDraftCoords).length > 0}
             editable
             customMapUrl={customMapUrl}
             statusScope="physical"
-            ariaLabel="Sơ đồ danh mục gian hàng vật lý"
-            emptyMessage="Chưa có gian hàng nào với tọa độ hợp lệ để hiển thị trên sơ đồ."
+            ariaLabel="Sơ đồ không gian Đường Sách"
+            emptyMessage="Chưa có gian hàng hoặc địa điểm tổ chức nào với tọa độ hợp lệ."
           />
         </div>
       ) : (
@@ -774,7 +948,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
       {/* 5. CREATE / EDIT BOOTH MODAL */}
       {isFormModalOpen && (
-        <div className="booth-modal-backdrop" onClick={() => !formSubmitting && setIsFormModalOpen(false)}>
+        <div className="booth-modal-backdrop" onClick={closeFormModal}>
           <div className="booth-modal-box" onClick={e => e.stopPropagation()}>
             <div className="booth-modal-header">
               <h2>
@@ -785,7 +959,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               <button
                 type="button"
                 className="booth-modal-close-btn"
-                onClick={() => !formSubmitting && setIsFormModalOpen(false)}
+                onClick={closeFormModal}
+                disabled={formSubmitting || imageUploading}
               >
                 <X size={20} />
               </button>
@@ -849,6 +1024,45 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                 />
               </div>
 
+              <div className="booth-form-group full-width booth-image-upload-field">
+                <label>{language === 'vi' ? 'Ảnh gian hàng' : 'Booth Image'}</label>
+                <div className="booth-image-upload-layout">
+                  <div className={`booth-image-preview ${formData.imageUrl ? 'has-image' : ''}`}>
+                    {formData.imageUrl ? (
+                      <img src={formData.imageUrl} alt={language === 'vi' ? 'Ảnh xem trước gian hàng' : 'Booth preview'} />
+                    ) : (
+                      <span><ImagePlus size={28} />{language === 'vi' ? 'Chưa chọn ảnh' : 'No image selected'}</span>
+                    )}
+                  </div>
+                  <div className="booth-image-upload-actions">
+                    <label className="btn-org-secondary booth-image-file-button">
+                      {imageUploading ? <Loader2 size={16} className="s2-spin" /> : <Upload size={16} />}
+                      <span>{imageUploading
+                        ? (language === 'vi' ? 'Đang tải ảnh...' : 'Uploading...')
+                        : (language === 'vi' ? 'Chọn ảnh từ máy' : 'Choose from device')}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleBoothImageUpload}
+                        disabled={formSubmitting || imageUploading}
+                      />
+                    </label>
+                    {formData.imageUrl && (
+                      <button
+                        type="button"
+                        className="btn-org-secondary booth-image-remove-button"
+                        onClick={handleRemoveBoothImage}
+                        disabled={formSubmitting || imageUploading}
+                      >
+                        <Trash2 size={15} />
+                        {language === 'vi' ? 'Gỡ ảnh' : 'Remove'}
+                      </button>
+                    )}
+                    <small>{language === 'vi' ? 'JPG, PNG hoặc WebP · tối đa 5 MB' : 'JPG, PNG or WebP · up to 5 MB'}</small>
+                  </div>
+                </div>
+              </div>
+
               <div className="booth-form-group">
                 <label htmlFor="physical-booth-map-x">Tọa độ X trên sơ đồ (%)</label>
                 <input
@@ -860,7 +1074,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                   placeholder="0–100"
                   value={formData.mapX}
                   onChange={e => setFormData({ ...formData, mapX: e.target.value })}
-                  disabled={formSubmitting}
+                  disabled={formSubmitting || imageUploading}
                 />
               </div>
 
@@ -887,7 +1101,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                     type="checkbox"
                     checked={formData.active}
                     onChange={e => setFormData({ ...formData, active: e.target.checked })}
-                    disabled={formSubmitting}
+                    disabled={formSubmitting || imageUploading}
                   />
                   <div className="booth-status-slider"></div>
                   <span className={`booth-status-label ${formData.active ? 'active' : 'inactive'}`}>
@@ -905,7 +1119,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                   placeholder={language === 'vi' ? 'Mô tả diện tích gian, lối đi, mái che, khu vực xung quanh...' : 'Location description, amenities...'}
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  disabled={formSubmitting}
+                  disabled={formSubmitting || imageUploading}
                   rows={3}
                 />
               </div>
@@ -927,15 +1141,15 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                 <button
                   type="button"
                   className="btn-org-secondary"
-                  onClick={() => setIsFormModalOpen(false)}
-                  disabled={formSubmitting}
+                  onClick={closeFormModal}
+                  disabled={formSubmitting || imageUploading}
                 >
                   {language === 'vi' ? 'Hủy bỏ' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="btn-org-primary"
-                  disabled={formSubmitting}
+                  disabled={formSubmitting || imageUploading}
                 >
                   {formSubmitting ? (
                     <>
@@ -976,6 +1190,13 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              {viewingBooth.imageUrl && (
+                <img
+                  className="booth-detail-image"
+                  src={viewingBooth.imageUrl}
+                  alt={viewingBooth.name}
+                />
+              )}
               <div className="booth-card-specs" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                 <div className="booth-spec-item">
                   <span className="booth-spec-label">{language === 'vi' ? 'Thể loại' : 'Category'}</span>

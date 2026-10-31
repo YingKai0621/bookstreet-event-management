@@ -40,12 +40,12 @@ class Sprint07SchemaMigrationTests {
     }
 
     @Test
-    void cleanDatabaseMigratesThroughV12WithRewardSchema() throws SQLException {
+    void cleanDatabaseMigratesThroughLatestSchemaWithRewardSchema() throws SQLException {
         Flyway flyway = flyway(null);
 
         flyway.migrate();
 
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
         try (Connection connection = connectToSchema()) {
             for (String table : List.of(
                     "booth_visits", "point_transactions", "badges", "user_badges")) {
@@ -54,6 +54,7 @@ class Sprint07SchemaMigrationTests {
             assertThat(columnExists(connection, "notifications", "badge_id")).isTrue();
             assertThat(indexExists(connection, "uk_badges_name_case_insensitive")).isTrue();
             assertThat(indexExists(connection, "idx_notifications_badge")).isTrue();
+            assertThat(columnExists(connection, "booths", "image_url")).isTrue();
         }
     }
 
@@ -72,7 +73,7 @@ class Sprint07SchemaMigrationTests {
         Flyway upgraded = flyway(null);
         upgraded.migrate();
 
-        assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("12");
+        assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("13");
         try (Connection connection = connectToSchema(); Statement statement =
                 connection.createStatement(); ResultSet result = statement.executeQuery(
                         "SELECT COUNT(*) FROM users")) {

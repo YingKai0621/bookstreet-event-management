@@ -18,7 +18,8 @@ public record CreateBoothRequest(
         @Digits(integer = 3, fraction = 2) @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal mapX,
         @Digits(integer = 3, fraction = 2) @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal mapY,
         @Size(max = 50) String categoryCode,
-        String note
+        String note,
+        @Size(max = 2048) String imageUrl
 ) {
     @JsonAnySetter
     public void rejectUnknownField(String field, Object value) {

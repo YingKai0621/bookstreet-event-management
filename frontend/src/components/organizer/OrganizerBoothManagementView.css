@@ -894,3 +894,81 @@
   .booth-mode-btn { flex: 1; justify-content: center; }
   .booth-primary-cta { width: 100%; justify-content: center; }
 }
+.booth-image-upload-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.booth-image-preview {
+  min-height: 145px;
+  border: 1px dashed #b9c8c2;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #eef2ef, #dfe7e3);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.booth-image-preview img,
+.booth-detail-image {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+}
+
+.booth-image-preview img {
+  height: 145px;
+}
+
+.booth-image-preview span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  color: #64756f;
+  font-size: 0.82rem;
+}
+
+.booth-image-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.booth-image-upload-actions small {
+  flex-basis: 100%;
+  color: #6b7280;
+}
+
+.booth-image-file-button {
+  cursor: pointer;
+}
+
+.booth-image-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.booth-image-remove-button {
+  color: #a13f32;
+}
+
+.booth-detail-image {
+  height: 230px;
+  border-radius: 12px;
+  border: 1px solid #dbe4e0;
+}
+
+@media (max-width: 640px) {
+  .booth-image-upload-layout {
+    grid-template-columns: 1fr;
+  }
+}

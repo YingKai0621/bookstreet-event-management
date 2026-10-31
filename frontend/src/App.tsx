@@ -58,6 +58,7 @@ import {
   PARTICIPANT_BOOTH_SCAN_PATH,
 } from './security/boothScanToken';
 import { participantApi } from './services/participantApi';
+import { rewardApi } from './services/rewardApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
 import { boothApi } from './services/boothApi';
@@ -115,6 +116,7 @@ export function App() {
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
   const isParticipantBoothScanRoute = location.pathname === PARTICIPANT_BOOTH_SCAN_PATH;
+  const isParticipantDashboardRoute = /^\/participant\/?$/.test(location.pathname);
   const isParticipantCertificatesRoute = location.pathname === '/participant/certificates';
   const isVnPayReturn = location.pathname === '/payment/vnpay/return';
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
@@ -309,6 +311,7 @@ export function App() {
   const [participantParticipationError, setParticipantParticipationError] = useState('');
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
   const participationRefresh = useParticipationRefresh((isParticipantRoute || isPublicRoute) && isParticipantAuthenticated && !isParticipantAttendanceScanRoute);
+  const [participantRewardPoints, setParticipantRewardPoints] = useState(0);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
   const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
   const [participantCertificatesError, setParticipantCertificatesError] = useState('');
@@ -334,6 +337,7 @@ export function App() {
     setParticipantActivities([]);
     setParticipantParticipationLoading(true);
     setParticipantParticipationError('');
+    setParticipantRewardPoints(0);
     setParticipantCertificates([]);
     setParticipantCertificatesLoading(false);
     setParticipantCertificatesError('');
@@ -360,6 +364,26 @@ export function App() {
       window.removeEventListener('email:verified', refreshProfile);
     };
   }, [isParticipantRoute, isPublicRoute, participantUserId]);
+
+  useEffect(() => {
+    if (participantUserId === undefined || !isParticipantDashboardRoute) return;
+    let active = true;
+    const refreshRewardPoints = () => {
+      void rewardApi.getSummary()
+        .then(summary => {
+          if (active && Number.isFinite(summary.totalPoints)) {
+            setParticipantRewardPoints(summary.totalPoints);
+          }
+        })
+        .catch(error => console.warn('Không thể tải tổng điểm độc giả', error));
+    };
+    refreshRewardPoints();
+    window.addEventListener('participant:data-changed', refreshRewardPoints);
+    return () => {
+      active = false;
+      window.removeEventListener('participant:data-changed', refreshRewardPoints);
+    };
+  }, [isParticipantDashboardRoute, participantUserId]);
 
   useEffect(() => {
     if (participantUserId === undefined || !isParticipantRoute
@@ -748,6 +772,7 @@ export function App() {
             <ParticipantDashboard
               language={language}
               profile={participantProfile}
+              totalPoints={participantRewardPoints}
               events={participantEvents}
               activities={participantActivities}
               totalCertificatesCount={participantProfile.certificatesCount ?? participantCertificates.length}

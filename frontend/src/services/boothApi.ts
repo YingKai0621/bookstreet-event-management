@@ -10,6 +10,8 @@ import type {
 } from '../types/booth';
 import { apiClient } from './apiClient';
 
+const UPLOADED_BOOTH_IMAGE_PREFIX = '/api/v1/media/booth-images/';
+
 function withQuery(path: string, values: Record<string, string | number | boolean | undefined>): string {
   const query = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => {
@@ -49,6 +51,25 @@ export const boothApi = {
 
   updatePhysicalBooth: (boothId: number, input: UpdatePhysicalBoothInput) =>
     apiClient.patch<PhysicalBooth>(`/organizer/booths/${boothId}`, input),
+
+  async uploadBoothImage(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.postForm<{ url: string }>(
+      '/organizer/booth-images',
+      formData,
+    );
+    return response.url;
+  },
+
+  deleteUploadedBoothImage(imageUrl: string): Promise<void> {
+    if (!imageUrl.startsWith(UPLOADED_BOOTH_IMAGE_PREFIX)) return Promise.resolve();
+    const fileName = imageUrl.slice(UPLOADED_BOOTH_IMAGE_PREFIX.length);
+    if (!fileName || fileName.includes('/')) return Promise.resolve();
+    return apiClient.delete<void>(
+      `/organizer/booth-images/${encodeURIComponent(fileName)}`,
+    );
+  },
 
   listEventBoothConfigurations: (eventId: string) =>
     apiClient.get<EventBooth[]>(`/organizer/events/${encodeURIComponent(eventId)}/booth-configs`),

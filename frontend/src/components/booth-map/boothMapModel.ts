@@ -1,6 +1,7 @@
 import type { BoothAvailability, EventBooth, PhysicalBooth } from '../../types/booth';
 
 export type BoothMapMarkerStatus = BoothAvailability | 'OWNED' | 'PHYSICAL' | 'PHYSICAL_INACTIVE';
+export type BoothMapMarkerKind = 'BOOTH' | 'STAGE' | 'WORKSHOP' | 'AREA';
 
 export interface BoothMapMarker {
   id: string;
@@ -10,6 +11,8 @@ export interface BoothMapMarker {
   x: number;
   y: number;
   status: BoothMapMarkerStatus;
+  kind?: BoothMapMarkerKind;
+  locationId?: number;
 }
 
 export const BOOTH_MAP_COORDINATE_HELP =
@@ -35,6 +38,7 @@ export function physicalBoothToMarker(booth: PhysicalBooth): BoothMapMarker | nu
     x: booth.mapX,
     y: booth.mapY,
     status: booth.active ? 'PHYSICAL' : 'PHYSICAL_INACTIVE',
+    kind: 'BOOTH',
   };
 }
 

@@ -105,6 +105,17 @@ function toDateTimeLocal(value: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function nextLocalMinute(): string {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  now.setMinutes(now.getMinutes() + 1);
+  return toDateTimeLocal(now.toISOString());
+}
+
+function laterLocalDateTime(first: string, second: string): string {
+  return first > second ? first : second;
+}
+
 function formFromEvent(event?: OrganizerEvent | null): EventFormState {
   if (!event) return { ...EMPTY_FORM };
   const useDays = event.boothPaymentWindowMinutes > 1440 && event.boothPaymentWindowMinutes % 1440 === 0;
@@ -132,6 +143,19 @@ function optionalInstant(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
+function isValidBannerUrl(value: string): boolean {
+  const normalized = value.trim();
+  if (!normalized) return true;
+  if (/^\/api\/v1\/media\/event-banners\/[^/?#]+$/.test(normalized)) return true;
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps> = ({
   language,
   isOpen,
@@ -139,7 +163,9 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   onClose,
   onSave,
 }) => {
-  const [form, setForm] = useState<EventFormState>(() => formFromEvent(event));
+  const [initialForm] = useState<EventFormState>(() => formFromEvent(event));
+  const [form, setForm] = useState<EventFormState>(() => ({ ...initialForm }));
+  const [minimumFutureAt] = useState(nextLocalMinute);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FormField, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -220,6 +246,18 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     });
   };
 
+  const dateFieldChanged = (field: FormField) => !event || form[field] !== initialForm[field];
+  const dateFieldMinimum = (field: FormField, minimum: string) => {
+    const originalValue = initialForm[field];
+    const keepsExistingPastValue = Boolean(
+      event
+      && form[field] === originalValue
+      && originalValue
+      && originalValue < minimumFutureAt,
+    );
+    return keepsExistingPastValue ? undefined : minimum;
+  };
+
   const validate = (): ValidationIssue | null => {
     if (!form.name.trim()) return { field: 'name', message: language === 'vi' ? 'Vui lòng nhập tên sự kiện.' : 'Event name is required.' };
     if (Array.from(form.name.trim()).length > 150) return { field: 'name', message: language === 'vi' ? 'Tên sự kiện không được vượt quá 150 ký tự.' : 'Event name must not exceed 150 characters.' };
@@ -230,11 +268,22 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     const endTime = new Date(form.endAt).getTime();
     if (!Number.isFinite(startTime)) return { field: 'startAt', message: language === 'vi' ? 'Thời gian bắt đầu không hợp lệ.' : 'Start time is invalid.' };
     if (!Number.isFinite(endTime)) return { field: 'endAt', message: language === 'vi' ? 'Thời gian kết thúc không hợp lệ.' : 'End time is invalid.' };
+    const now = Date.now();
+    if (dateFieldChanged('startAt') && startTime <= now) return { field: 'startAt', message: language === 'vi' ? 'Thời gian bắt đầu phải ở tương lai.' : 'Start time must be in the future.' };
+    if (dateFieldChanged('endAt') && endTime <= now) return { field: 'endAt', message: language === 'vi' ? 'Thời gian kết thúc phải ở tương lai.' : 'End time must be in the future.' };
     if (endTime <= startTime) return { field: 'endAt', message: language === 'vi' ? 'Thời gian kết thúc phải sau thời gian bắt đầu.' : 'End time must be after start time.' };
 
     for (const field of DATE_FIELDS) {
       const value = form[field.key];
-      if (value && new Date(value).getTime() > startTime) {
+      if (!value) continue;
+      const deadlineTime = new Date(value).getTime();
+      if (!Number.isFinite(deadlineTime)) {
+        return { field: field.key, message: language === 'vi' ? `${field.vi} không hợp lệ.` : `${field.en} is invalid.` };
+      }
+      if (dateFieldChanged(field.key) && deadlineTime <= now) {
+        return { field: field.key, message: language === 'vi' ? `${field.vi} phải ở tương lai.` : `${field.en} must be in the future.` };
+      }
+      if (deadlineTime > startTime) {
         return { field: field.key, message: language === 'vi' ? `${field.vi} không được sau thời gian bắt đầu sự kiện.` : `${field.en} must not be after the event start time.` };
       }
     }
@@ -260,6 +309,14 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     const maxActivities = Number(form.maxActivitiesPerPartner);
     if (!Number.isInteger(maxActivities) || maxActivities < 0) {
       return { field: 'maxActivitiesPerPartner', message: language === 'vi' ? 'Số hoạt động tối đa phải là số nguyên không âm.' : 'Maximum activities must be a non-negative integer.' };
+    }
+    if (!bannerFile && !isValidBannerUrl(form.bannerUrl)) {
+      return {
+        field: 'bannerUrl',
+        message: language === 'vi'
+          ? 'Liên kết ảnh phải bắt đầu bằng http:// hoặc https://.'
+          : 'The image link must start with http:// or https://.',
+      };
     }
     return null;
   };
@@ -378,12 +435,12 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
 
                 <div className="org-event-form-field">
                   <label htmlFor="event-start-at">Bắt đầu <span aria-hidden="true">*</span></label>
-                  <input id="event-start-at" type="datetime-local" value={form.startAt} aria-invalid={Boolean(fieldErrors.startAt)} aria-describedby={describedBy('startAt')} onChange={changeEvent => updateField('startAt', changeEvent.target.value)} required />
+                  <input id="event-start-at" type="datetime-local" value={form.startAt} min={dateFieldMinimum('startAt', minimumFutureAt)} aria-invalid={Boolean(fieldErrors.startAt)} aria-describedby={describedBy('startAt')} onChange={changeEvent => updateField('startAt', changeEvent.target.value)} required />
                   {renderFieldError('startAt')}
                 </div>
                 <div className="org-event-form-field">
                   <label htmlFor="event-end-at">Kết thúc <span aria-hidden="true">*</span></label>
-                  <input id="event-end-at" type="datetime-local" value={form.endAt} aria-invalid={Boolean(fieldErrors.endAt)} aria-describedby={describedBy('endAt')} onChange={changeEvent => updateField('endAt', changeEvent.target.value)} required />
+                  <input id="event-end-at" type="datetime-local" value={form.endAt} min={dateFieldMinimum('endAt', laterLocalDateTime(minimumFutureAt, form.startAt || minimumFutureAt))} aria-invalid={Boolean(fieldErrors.endAt)} aria-describedby={describedBy('endAt')} onChange={changeEvent => updateField('endAt', changeEvent.target.value)} required />
                   {renderFieldError('endAt')}
                 </div>
 
@@ -419,7 +476,17 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                       <span className="org-event-banner-separator">hoặc dùng liên kết ảnh</span>
                       <div className="org-event-banner-input">
                         <ImageIcon size={17} aria-hidden="true" />
-                        <input id="event-banner-url" type="url" value={form.bannerUrl} onChange={changeEvent => updateField('bannerUrl', changeEvent.target.value)} placeholder="https://..." />
+                        <input
+                          id="event-banner-url"
+                          type="text"
+                          inputMode="url"
+                          autoComplete="url"
+                          value={form.bannerUrl}
+                          aria-invalid={Boolean(fieldErrors.bannerUrl)}
+                          aria-describedby={describedBy('bannerUrl')}
+                          onChange={changeEvent => updateField('bannerUrl', changeEvent.target.value)}
+                          placeholder="https://..."
+                        />
                       </div>
                     </div>
                     {(bannerObjectUrl || form.bannerUrl) && !bannerPreviewFailed && <img src={bannerObjectUrl || form.bannerUrl} alt="Xem trước banner sự kiện" onError={() => setBannerPreviewFailed(true)} />}
@@ -447,7 +514,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                       {DATE_FIELDS.slice(0, 4).map(field => (
                         <div className="org-event-form-field" key={field.key}>
                           <label htmlFor={FIELD_IDS[field.key]}>{language === 'vi' ? field.vi : field.en}</label>
-                          <input id={FIELD_IDS[field.key]} type="datetime-local" value={form[field.key]} aria-invalid={Boolean(fieldErrors[field.key])} aria-describedby={describedBy(field.key)} onChange={changeEvent => updateField(field.key, changeEvent.target.value)} />
+                          <input id={FIELD_IDS[field.key]} type="datetime-local" value={form[field.key]} min={dateFieldMinimum(field.key, minimumFutureAt)} max={form.startAt || undefined} aria-invalid={Boolean(fieldErrors[field.key])} aria-describedby={describedBy(field.key)} onChange={changeEvent => updateField(field.key, changeEvent.target.value)} />
                           {renderFieldError(field.key)}
                         </div>
                       ))}
@@ -459,7 +526,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                       {DATE_FIELDS.slice(4).map(field => (
                         <div className="org-event-form-field" key={field.key}>
                           <label htmlFor={FIELD_IDS[field.key]}>{language === 'vi' ? field.vi : field.en}</label>
-                          <input id={FIELD_IDS[field.key]} type="datetime-local" value={form[field.key]} aria-invalid={Boolean(fieldErrors[field.key])} aria-describedby={describedBy(field.key)} onChange={changeEvent => updateField(field.key, changeEvent.target.value)} />
+                          <input id={FIELD_IDS[field.key]} type="datetime-local" value={form[field.key]} min={dateFieldMinimum(field.key, minimumFutureAt)} max={form.startAt || undefined} aria-invalid={Boolean(fieldErrors[field.key])} aria-describedby={describedBy(field.key)} onChange={changeEvent => updateField(field.key, changeEvent.target.value)} />
                           {renderFieldError(field.key)}
                         </div>
                       ))}
