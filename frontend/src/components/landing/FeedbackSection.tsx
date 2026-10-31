@@ -1,93 +1,166 @@
-import { AlertCircle, CheckCircle2, QrCode, RefreshCw, Star } from 'lucide-react';
+import { AlertCircle, CheckCircle2, QrCode, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { ApiError } from '../../services/apiClient';
 import { publicApi } from '../../services/publicApi';
-import { ExtendedHeritageProfile, Language } from '../../types';
+import { EventItem, Language } from '../../types';
 import './FeedbackSection.css';
 
 interface FeedbackSectionProps {
   language: Language;
-  onScrollToTop: () => void;
+  events: EventItem[];
 }
 
-export const FeedbackSection: React.FC<FeedbackSectionProps> = ({
-  language,
-}) => {
-  const [targetType, setTargetType] = useState<string>('all');
-  const [rating, setRating] = useState<number>(5);
-  const [comments, setComments] = useState('');
-  const [contact, setContact] = useState('');
+interface FeedbackFieldErrors {
+  contactEmail?: string;
+  message?: string;
+}
+
+export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ language, events }) => {
+  const [target, setTarget] = useState('BOOK_STREET');
+  const [guestName, setGuestName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [message, setMessage] = useState('');
   const [submissionState, setSubmissionState] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FeedbackFieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [heritages, setHeritages] = useState<ExtendedHeritageProfile[]>([]);
+  const submissionInFlight = useRef(false);
 
-  useEffect(() => {
-    publicApi.getHeritages().then(items => setHeritages(items as ExtendedHeritageProfile[])).catch(() => setHeritages([]));
-  }, []);
+  const isVi = language === 'vi';
+  const selectedEvent = events.find(event => event.id === target);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comments.trim()) return;
+  const emailValidationMessage = isVi
+    ? 'Email liên hệ không đúng định dạng.'
+    : 'Please enter a valid contact email.';
+  const messageValidationMessage = isVi
+    ? 'Nội dung góp ý phải có từ 10 đến 2.000 ký tự.'
+    : 'Feedback content must contain between 10 and 2,000 characters.';
+
+  const validateContactEmail = (value: string) => {
+    const normalized = value.trim();
+    if (!normalized) return true;
+    const length = Array.from(normalized).length;
+    return length >= 3 && length <= 255 && /^[^\s@]+@[^\s@]+$/u.test(normalized);
+  };
+
+  const validateMessage = (value: string) => {
+    const length = Array.from(value.trim()).length;
+    return length >= 10 && length <= 2000;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (submissionInFlight.current) return;
+
+    const nextErrors: FeedbackFieldErrors = {};
+    if (!validateContactEmail(contactEmail)) nextErrors.contactEmail = emailValidationMessage;
+    if (!validateMessage(message)) nextErrors.message = messageValidationMessage;
+    if (nextErrors.contactEmail || nextErrors.message) {
+      setFieldErrors(nextErrors);
+      return;
+    }
+
+    submissionInFlight.current = true;
     setIsSubmitting(true);
+    setErrorMessage('');
+    setFieldErrors({});
     try {
       await publicApi.submitFeedback({
-        rating,
-        comments,
-        contactEmail: contact || undefined,
-        targetName: targetType === 'all' ? 'Toàn Đường Sách' : targetType,
-        source: 'web_landing',
+        targetType: target === 'BOOK_STREET' ? 'BOOK_STREET' : 'EVENT',
+        eventId: target === 'BOOK_STREET' ? undefined : Number(target),
+        guestName: guestName.trim() || undefined,
+        contactEmail: contactEmail.trim() || undefined,
+        message,
       });
       setSubmissionState('success');
-    } catch (err) {
-      console.warn('Feedback API submit error', err);
+    } catch (error) {
+      const apiError = error instanceof ApiError ? error : null;
+      if (apiError?.code === 'VALIDATION_FAILED') {
+        const nextErrors: FeedbackFieldErrors = {};
+        for (const fieldError of apiError.fieldErrors) {
+          if (fieldError.field === 'contactEmail') nextErrors.contactEmail = emailValidationMessage;
+          if (fieldError.field === 'message') nextErrors.message = messageValidationMessage;
+        }
+        if (nextErrors.contactEmail || nextErrors.message) {
+          setFieldErrors(nextErrors);
+          setSubmissionState('idle');
+          return;
+        }
+        setErrorMessage(apiError.fieldErrors.map(item => item.message).join(' '));
+      } else if (apiError?.code === 'EVENT_NOT_FOUND') {
+        setErrorMessage(isVi
+          ? 'Sự kiện này không còn khả dụng. Vui lòng chọn lại phạm vi góp ý.'
+          : 'This event is no longer available. Please choose another feedback scope.');
+      } else if (apiError?.code === 'FEEDBACK_RATE_LIMITED') {
+        setErrorMessage(isVi
+          ? 'Bạn đã gửi quá nhiều góp ý. Vui lòng thử lại sau.'
+          : 'You have submitted too many feedback attempts. Please try again later.');
+      } else if (apiError?.code === 'FEEDBACK_THROTTLE_UNAVAILABLE') {
+        setErrorMessage(isVi
+          ? 'Hệ thống tiếp nhận góp ý đang tạm bận. Vui lòng thử lại sau.'
+          : 'The feedback service is temporarily unavailable. Please try again later.');
+      } else if (apiError?.code === 'CSRF_INVALID') {
+        setErrorMessage(isVi
+          ? 'Phiên gửi biểu mẫu đã hết hạn. Vui lòng tải lại trang và thử lại.'
+          : 'The form session has expired. Please reload the page and try again.');
+      } else if (apiError?.code === 'NETWORK_ERROR' || apiError?.status === 0) {
+        setErrorMessage(isVi
+          ? 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.'
+          : 'The server could not be reached. Please check your network connection and retry.');
+      } else if (apiError?.code === 'INTERNAL_ERROR' || (apiError && apiError.status >= 500)) {
+        setErrorMessage(isVi
+          ? 'Máy chủ đang gặp sự cố khi tiếp nhận góp ý. Vui lòng thử lại sau.'
+          : 'The server encountered a problem while receiving feedback. Please try again later.');
+      } else {
+        setErrorMessage(isVi
+          ? 'Không thể xử lý phản hồi từ máy chủ. Vui lòng thử lại.'
+          : 'The server response could not be processed. Please try again.');
+      }
       setSubmissionState('error');
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const feedbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/#gop-y` : 'https://duongsach.tphcm.gov.vn/#gop-y';
+  const resetForm = () => {
+    setSubmissionState('idle');
+    setErrorMessage('');
+    setFieldErrors({});
+    setMessage('');
+  };
+
+  const feedbackUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/#gop-y`
+    : 'https://duongsach.tphcm.gov.vn/#gop-y';
 
   return (
     <section className="sk05-feedback-section" id="gop-y">
       <div className="sk05-feedback-screen-wrapper">
         <div className="sk05-feedback-board">
-          {/* Header Bar: SK05 FEEDBACK DÙNG CHUNG */}
           <div className="sk05-top-header">
             <div className="sk05-header-title-wrap">
               <span className="sk05-tag-code">GÓP Ý</span>
-              <h2 className="sk05-main-title">
-                {language === 'vi' ? 'FEEDBACK TRẢI NGHIỆM' : 'VISITOR FEEDBACK'}
-              </h2>
+              <h2 className="sk05-main-title">{isVi ? 'GÓP Ý TRẢI NGHIỆM' : 'VISITOR FEEDBACK'}</h2>
             </div>
             <span className="sk05-header-badge">
-              {language === 'vi' ? 'ĐƯỜNG SÁCH TP.HCM (NGUYỄN VĂN BÌNH)' : 'HCMC BOOK STREET (NGUYEN VAN BINH)'}
+              {isVi ? 'ĐƯỜNG SÁCH TP.HCM (NGUYỄN VĂN BÌNH)' : 'HCMC BOOK STREET (NGUYEN VAN BINH)'}
             </span>
           </div>
 
-          {/* Body: 2-Column Table Grid matching wireframe */}
           <div className="sk05-board-body">
-            {/* Left Column: QR Code & Common Description */}
             <aside className="sk05-left-col">
               <div className="sk05-qr-box">
                 <div className="sk05-qr-tag">[QR FEEDBACK]</div>
-                <h3 className="sk05-qr-heading">
-                  {language === 'vi' ? 'Dùng chung toàn Đường Sách' : 'Universal for All Street'}
-                </h3>
+                <h3 className="sk05-qr-heading">{isVi ? 'Dùng chung toàn Đường Sách' : 'One QR for Book Street'}</h3>
                 <div className="sk05-qr-visual">
                   <div className="sk05-qr-code-frame">
-                    <QRCodeSVG
-                      value={feedbackUrl}
-                      size={140}
-                      level="H"
-                      includeMargin={false}
-                      fgColor="#152B24"
-                      bgColor="#FFFFFF"
-                    />
+                    <QRCodeSVG value={feedbackUrl} size={140} level="H" includeMargin={false} fgColor="#152B24" bgColor="#FFFFFF" />
                   </div>
                   <span className="sk05-qr-hint">
                     <QrCode size={13} />
-                    <span>Quét mã QR để mở form trên di động</span>
+                    <span>{isVi ? 'Quét mã QR để mở form trên di động' : 'Scan to open this form on mobile'}</span>
                   </span>
                 </div>
               </div>
@@ -95,229 +168,144 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({
               <div className="sk05-qr-info-box">
                 <div className="sk05-qr-count-badge">01 QR chung</div>
                 <p className="sk05-qr-note">
-                  {language === 'vi'
-                    ? 'Không tự nhận biết di sản khách vừa tham quan. Khách có thể tùy chọn di sản hoặc đóng góp chung toàn tuyến phố.'
-                    : 'Universal QR code for the entire street. Visitors can choose a specific heritage site or evaluate the general promenade.'}
+                  {isVi
+                    ? 'Bạn có thể góp ý chung cho toàn Đường Sách hoặc chọn một sự kiện đang công khai.'
+                    : 'Send general Book Street feedback or choose a currently public event.'}
                 </p>
               </div>
             </aside>
 
-            {/* Right Column: Form fields */}
             <main className="sk05-right-col">
               <div className="sk05-form-header-row">
-                <h3 className="sk05-form-heading">
-                  {language === 'vi' ? 'GÓP Ý TRẢI NGHIỆM' : 'EXPERIENCE FEEDBACK'}
-                </h3>
+                <h3 className="sk05-form-heading">{isVi ? 'GÓP Ý TRẢI NGHIỆM' : 'EXPERIENCE FEEDBACK'}</h3>
                 <span className="sk05-form-subtext">
-                  {language === 'vi' ? 'Lắng nghe ý kiến xây dựng không gian văn hóa' : 'Listening to your community voice'}
+                  {isVi ? 'Lắng nghe ý kiến xây dựng không gian văn hóa' : 'Listening to your community voice'}
                 </span>
               </div>
 
               {submissionState === 'idle' && (
-                <form onSubmit={handleSubmit} className="sk05-feedback-form">
-                  {/* Row 1: Target Selector */}
+                <form onSubmit={handleSubmit} className="sk05-feedback-form" noValidate>
                   <div className="sk05-field-row">
-                    <label className="sk05-field-label" htmlFor="feedback-target-select">
-                      {language === 'vi' ? 'Phạm vi đánh giá:' : 'Evaluation scope:'}
-                    </label>
+                    <label className="sk05-field-label" htmlFor="feedback-target-select">{isVi ? 'Phạm vi góp ý:' : 'Feedback scope:'}</label>
                     <div className="sk05-select-wrapper">
-                      <select
-                        id="feedback-target-select"
-                        value={targetType}
-                        onChange={(e) => setTargetType(e.target.value)}
-                        className="sk05-select-input"
-                      >
-                        <option value="all">
-                          {language === 'vi' ? 'Toàn Đường Sách TP.HCM (Chung)' : 'Entire HCMC Book Street (General)'}
-                        </option>
-                        <optgroup label={language === 'vi' ? 'Chọn Di sản cụ thể' : 'Select Heritage Site'}>
-                          {heritages.map((h) => (
-                            <option key={h.id} value={h.id}>
-                              {h.code} — {language === 'vi' ? h.name : h.nameEn}
-                            </option>
-                          ))}
-                        </optgroup>
+                      <select id="feedback-target-select" value={target} onChange={event => setTarget(event.target.value)} className="sk05-select-input">
+                        <option value="BOOK_STREET">{isVi ? 'Toàn Đường Sách TP.HCM' : 'Entire HCMC Book Street'}</option>
+                        {events.length > 0 && (
+                          <optgroup label={isVi ? 'Sự kiện công khai' : 'Public events'}>
+                            {events.map(event => (
+                              <option key={event.id} value={event.id}>{isVi ? event.title : event.titleEn || event.title}</option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
                   </div>
 
-                  {/* Row 2: Hài lòng 1 2 3 4 5 */}
                   <div className="sk05-field-row">
-                    <label className="sk05-field-label">
-                      {language === 'vi' ? 'Hài lòng:' : 'Satisfaction:'}
-                    </label>
-                    <div className="emoji-experience-rating" role="radiogroup" aria-label={language === 'vi' ? 'Mức độ hài lòng' : 'Experience rating'}>
-                      <div className="emoji-experience-row">
-                        {[
-                          { value: 1, icon: '😔', labelVi: 'Cần cải thiện', labelEn: 'Poor' },
-                          { value: 2, icon: '😟', labelVi: 'Chưa hài lòng', labelEn: 'Unsatisfied' },
-                          { value: 3, icon: '😐', labelVi: 'Bình thường', labelEn: 'Neutral' },
-                          { value: 4, icon: '🙂', labelVi: 'Hài lòng', labelEn: 'Satisfied' },
-                          { value: 5, icon: '😍', labelVi: 'Rất hài lòng', labelEn: 'Amazing' }
-                        ].map((item) => (
-                          <button
-                            key={item.value}
-                            type="button"
-                            className={`emoji-experience-btn ${rating === item.value ? 'active' : ''} ${item.value <= rating ? 'is-lit' : ''}`}
-                            onClick={() => setRating(item.value)}
-                            role="radio"
-                            aria-checked={rating === item.value}
-                            aria-label={language === 'vi' ? item.labelVi : item.labelEn}
-                          >
-                            <span aria-hidden="true">{item.icon}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <span className="emoji-experience-caption">
-                        {rating === 5 && (language === 'vi' ? 'Rất hài lòng' : 'Amazing')}
-                        {rating === 4 && (language === 'vi' ? 'Hài lòng' : 'Satisfied')}
-                        {rating === 3 && (language === 'vi' ? 'Bình thường' : 'Neutral')}
-                        {rating === 2 && (language === 'vi' ? 'Chưa hài lòng' : 'Unsatisfied')}
-                        {rating === 1 && (language === 'vi' ? 'Cần cải thiện' : 'Poor')}
-                      </span>
-                    </div>
-                    <div className="sk05-rating-options">
-                      {[1, 2, 3, 4, 5].map((val) => (
-                        <button
-                          key={val}
-                          type="button"
-                          className={`sk05-rating-num-btn ${rating === val ? 'active' : ''} ${rating >= val ? 'highlight' : ''}`}
-                          onClick={() => setRating(val)}
-                          aria-label={`Rating ${val}`}
-                        >
-                          <span className="num-digit">{val}</span>
-                          <Star size={13} className="num-star" />
-                        </button>
-                      ))}
-                      <span className="sk05-rating-caption">
-                        {rating === 5 && (language === 'vi' ? 'Rất hài lòng ★★★★★' : 'Very satisfied ★★★★★')}
-                        {rating === 4 && (language === 'vi' ? 'Hài lòng ★★★★' : 'Satisfied ★★★★')}
-                        {rating === 3 && (language === 'vi' ? 'Bình thường ★★★' : 'Neutral ★★★')}
-                        {rating === 2 && (language === 'vi' ? 'Chưa hài lòng ★★' : 'Unsatisfied ★★')}
-                        {rating === 1 && (language === 'vi' ? 'Cần cải thiện ★' : 'Needs improvement ★')}
-                      </span>
-                      <span className="sk05-rating-caption sk05-rating-caption-legacy">
-                        {rating === 5 && (language === 'vi' ? 'Rất hài lòng ★★★★★' : 'Very Satisfied')}
-                        {rating === 4 && (language === 'vi' ? 'Hài lòng ★★★★' : 'Satisfied')}
-                        {rating === 3 && (language === 'vi' ? 'Bình thường ★★★' : 'Neutral')}
-                        {rating === 2 && (language === 'vi' ? 'Chưa hài lòng ★★' : 'Unsatisfied')}
-                        {rating === 1 && (language === 'vi' ? 'Cần cải thiện ★' : 'Poor')}
-                      </span>
-                    </div>
+                    <label className="sk05-field-label" htmlFor="feedback-guest-name">{isVi ? 'Tên của bạn (Không bắt buộc):' : 'Your name (Optional):'}</label>
+                    <input id="feedback-guest-name" type="text" maxLength={100} value={guestName} onChange={event => setGuestName(event.target.value)} placeholder={isVi ? 'Tên người gửi góp ý' : 'Feedback sender name'} className="sk05-text-input" />
                   </div>
 
-                  {/* Row 3: Nội dung góp ý... */}
                   <div className="sk05-field-row">
-                    <label className="sk05-field-label" htmlFor="feedback-comment-textarea">
-                      {language === 'vi' ? 'Nội dung góp ý (*):' : 'Feedback content (*):'}
-                    </label>
-                    <textarea
-                      id="feedback-comment-textarea"
-                      rows={4}
-                      required
-                      value={comments}
-                      onChange={(e) => setComments(e.target.value)}
-                      placeholder={
-                        language === 'vi'
-                          ? 'Nội dung góp ý về trải nghiệm, thái độ phục vụ, không gian, vệ sinh, sách...'
-                          : 'Your constructive comments on experience, services, facilities, cleanliness...'
-                      }
-                      className="sk05-textarea-input"
-                    ></textarea>
-                  </div>
-
-                  {/* Row 4: Liên hệ: không bắt buộc */}
-                  <div className="sk05-field-row">
-                    <label className="sk05-field-label" htmlFor="feedback-contact-input">
-                      {language === 'vi' ? 'Liên hệ (Không bắt buộc):' : 'Contact (Optional):'}
-                    </label>
+                    <label className="sk05-field-label" htmlFor="feedback-contact-email">{isVi ? 'Email liên hệ (Không bắt buộc):' : 'Contact email (Optional):'}</label>
                     <input
-                      id="feedback-contact-input"
-                      type="text"
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      placeholder={
-                        language === 'vi'
-                          ? 'Số điện thoại hoặc Email để Ban Quản Lý phản hồi'
-                          : 'Phone number or Email for follow-up'
-                      }
-                      className="sk05-text-input"
+                      id="feedback-contact-email"
+                      type="email"
+                      value={contactEmail}
+                      onChange={event => {
+                        setContactEmail(event.target.value);
+                        if (fieldErrors.contactEmail) {
+                          setFieldErrors(previous => ({ ...previous, contactEmail: undefined }));
+                        }
+                      }}
+                      onBlur={event => {
+                        const isValid = validateContactEmail(event.currentTarget.value);
+                        setFieldErrors(previous => ({
+                          ...previous,
+                          contactEmail: isValid ? undefined : emailValidationMessage,
+                        }));
+                      }}
+                      placeholder={isVi ? 'vidu@email.com' : 'example@email.com'}
+                      className={`sk05-text-input ${fieldErrors.contactEmail ? 'sk05-input-error' : ''}`}
+                      aria-invalid={Boolean(fieldErrors.contactEmail)}
+                      aria-describedby={fieldErrors.contactEmail ? 'feedback-contact-email-error' : undefined}
                     />
+                    {fieldErrors.contactEmail && (
+                      <p className="sk05-field-error" id="feedback-contact-email-error" role="alert">
+                        <AlertCircle size={15} aria-hidden="true" />
+                        {fieldErrors.contactEmail}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Row 5: Action Submit Button */}
-                  <div className="sk05-action-row">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="sk05-submit-btn"
-                    >
-                      <span>{isSubmitting ? (language === 'vi' ? 'Đang gửi...' : 'Sending...') : (language === 'vi' ? '[Gửi góp ý]' : '[Submit Feedback]')}</span>
-                    </button>
+                  <div className="sk05-field-row">
+                    <label className="sk05-field-label" htmlFor="feedback-message">{isVi ? 'Nội dung góp ý (*):' : 'Feedback content (*):'}</label>
+                    <textarea
+                      id="feedback-message"
+                      rows={5}
+                      required
+                      minLength={10}
+                      maxLength={2000}
+                      value={message}
+                      onChange={event => {
+                        setMessage(event.target.value);
+                        if (fieldErrors.message) {
+                          setFieldErrors(previous => ({ ...previous, message: undefined }));
+                        }
+                      }}
+                      onBlur={event => {
+                        const isValid = validateMessage(event.currentTarget.value);
+                        setFieldErrors(previous => ({
+                          ...previous,
+                          message: isValid ? undefined : messageValidationMessage,
+                        }));
+                      }}
+                      placeholder={isVi ? 'Chia sẻ góp ý của bạn về trải nghiệm tại Đường Sách...' : 'Share your feedback about your Book Street experience...'}
+                      className={`sk05-textarea-input ${fieldErrors.message ? 'sk05-input-error' : ''}`}
+                      aria-invalid={Boolean(fieldErrors.message)}
+                      aria-describedby={fieldErrors.message ? 'feedback-message-error' : undefined}
+                    />
+                    {fieldErrors.message && (
+                      <p className="sk05-field-error" id="feedback-message-error" role="alert">
+                        <AlertCircle size={15} aria-hidden="true" />
+                        {fieldErrors.message}
+                      </p>
+                    )}
+                  </div>
 
+                  <div className="sk05-action-row">
+                    <button type="submit" disabled={isSubmitting} className="sk05-submit-btn">
+                      <span>{isSubmitting ? (isVi ? 'Đang gửi...' : 'Sending...') : (isVi ? '[Gửi góp ý]' : '[Submit feedback]')}</span>
+                    </button>
                   </div>
                 </form>
               )}
 
-              {/* Success Result State */}
               {submissionState === 'success' && (
                 <div className="sk05-result-state sk05-result-success">
-                  <div className="sk05-result-icon">
-                    <CheckCircle2 size={44} color="#1E7B48" />
-                  </div>
+                  <div className="sk05-result-icon"><CheckCircle2 size={44} color="#1E7B48" /></div>
                   <div className="sk05-result-content">
-                    <h4 className="sk05-result-title">
-                      {language === 'vi' ? 'Gửi góp ý thành công!' : 'Feedback Submitted Successfully!'}
-                    </h4>
-                    <p className="sk05-result-desc">
-                      {language === 'vi'
-                        ? 'Cảm ơn bạn đã gửi ý kiến đóng góp. Ban Quản Lý Đường Sách TP.HCM trân trọng ghi nhận để tiếp tục nâng cấp chất lượng.'
-                        : 'Thank you for your valuable input. The Management Board of HCMC Book Street has received your response.'}
-                    </p>
+                    <h4 className="sk05-result-title">{isVi ? 'Gửi góp ý thành công!' : 'Feedback submitted successfully!'}</h4>
+                    <p className="sk05-result-desc">{isVi ? 'Cảm ơn bạn. Ban Quản lý Đường Sách TP.HCM đã ghi nhận góp ý này.' : 'Thank you. The HCMC Book Street Management Board has received your feedback.'}</p>
                     <div className="sk05-result-summary">
-                      <span><strong>Phạm vi:</strong> {targetType === 'all' ? 'Toàn Đường Sách' : targetType}</span>
-                      <span><strong>Đánh giá:</strong> {rating}/5 sao</span>
+                      <span><strong>{isVi ? 'Phạm vi:' : 'Scope:'}</strong>{' '}{selectedEvent ? (isVi ? selectedEvent.title : selectedEvent.titleEn || selectedEvent.title) : (isVi ? 'Toàn Đường Sách' : 'Book Street')}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="sk05-btn-reset"
-                      onClick={() => {
-                        setSubmissionState('idle');
-                        setComments('');
-                      }}
-                    >
-                      <RefreshCw size={14} />
-                      <span>{language === 'vi' ? 'Gửi thêm góp ý khác' : 'Submit Another Feedback'}</span>
+                    <button type="button" className="sk05-btn-reset" onClick={resetForm}>
+                      <RefreshCw size={14} /><span>{isVi ? 'Gửi thêm góp ý khác' : 'Submit another feedback'}</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Error Result State */}
               {submissionState === 'error' && (
-                <div className="sk05-result-state sk05-result-error">
-                  <div className="sk05-result-icon">
-                    <AlertCircle size={44} color="#C84C32" />
-                  </div>
+                <div className="sk05-result-state sk05-result-error" role="alert">
+                  <div className="sk05-result-icon"><AlertCircle size={44} color="#C84C32" /></div>
                   <div className="sk05-result-content">
-                    <h4 className="sk05-result-title error-title">
-                      {language === 'vi' ? 'Báo lỗi — Vui lòng thử lại' : 'Submission Failed — Please Retry'}
-                    </h4>
-                    <p className="sk05-result-desc">
-                      {language === 'vi'
-                        ? 'Kết nối mạng tạm thời gián đoạn hoặc máy chủ phản hồi chậm. Vui lòng kiểm tra lại đường truyền và gửi lại.'
-                        : 'Network issue or temporary server delay. Please check your connection and try again.'}
-                    </p>
+                    <h4 className="sk05-result-title error-title">{isVi ? 'Chưa gửi được góp ý' : 'Feedback was not submitted'}</h4>
+                    <p className="sk05-result-desc">{errorMessage}</p>
                     <div className="sk05-error-actions">
-                      <button
-                        type="button"
-                        className="sk05-submit-btn sk05-btn-retry"
-                        onClick={() => {
-                          setSubmissionState('idle');
-                        }}
-                      >
-                        <RefreshCw size={14} />
-                        <span>{language === 'vi' ? 'Thử lại ngay' : 'Retry Now'}</span>
+                      <button type="button" className="sk05-submit-btn sk05-btn-retry" onClick={() => setSubmissionState('idle')}>
+                        <RefreshCw size={14} /><span>{isVi ? 'Quay lại và thử lại' : 'Return and retry'}</span>
                       </button>
                     </div>
                   </div>
@@ -330,4 +318,3 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({
     </section>
   );
 };
-

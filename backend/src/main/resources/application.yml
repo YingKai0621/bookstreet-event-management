@@ -78,6 +78,8 @@ bookstreet:
   chatbot:
     api-key: ${GEMINI_API_KEY:${CHATBOT_API_KEY:}}
     model: ${CHATBOT_MODEL:gemini-3.5-flash-lite}
+  feedback:
+    throttle-hmac-secret: ${FEEDBACK_THROTTLE_HMAC_SECRET:}
   browser-security:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     session-cookie-secure: ${SESSION_COOKIE_SECURE:false}

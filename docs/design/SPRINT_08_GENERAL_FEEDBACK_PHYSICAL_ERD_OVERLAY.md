@@ -1,6 +1,6 @@
 # Sprint 08 General Feedback - Physical ERD Overlay
 
-> Status: **DRAFT - REVIEW REQUIRED**
+> Status: **APPROVED FOR SPRINT 08 IMPLEMENTATION**
 >
 > Scope: Sprint 08 General Feedback only
 >
@@ -14,16 +14,16 @@
 
 ## 1. Purpose
 
-This document defines the proposed physical database overlay for the Sprint 08 General Feedback vertical slice.
+This document defines the approved physical database overlay for the Sprint 08 General Feedback vertical slice.
 
 It is intentionally an overlay instead of an immediate edit to the current Physical ERD because:
 
-- Sprint 08 is still in review and is not yet the active Sprint.
+- Sprint 08 is active and this overlay is approved for implementation.
 - The current database has no `general_feedbacks` table.
 - The current target ERD includes `HERITAGE`, while Sprint 08 supports only `BOOK_STREET` and `EVENT`.
-- No Flyway migration should be created until this overlay, the Use Case Specifications and the API Contract are approved.
+- The overlay, Use Case Specifications and API Contract are approved; the implementation migration must follow them exactly.
 
-After approval and implementation, the main Physical ERD and its report must be updated to reflect the applied schema.
+After implementation, the main Physical ERD and its report must be updated to reflect the applied schema.
 
 ## 2. Source-of-truth alignment
 
@@ -266,7 +266,7 @@ Because Sprint 08 deliberately has no transition-history table, reopening replac
 
 ## 7. Index plan
 
-The minimum proposed indexes are:
+The minimum approved indexes are:
 
 ```sql
 CREATE INDEX idx_general_feedbacks_queue
@@ -343,15 +343,16 @@ The migration and persistence tests derived from this overlay must cover at leas
 
 ## 11. Review gate
 
-Before implementation begins, reviewers must confirm:
+The implementation review confirmed:
 
 - the two supported Sprint 08 target types;
 - the exclusion of `subject` and Heritage persistence;
-- the proposed message and note limits;
+- the approved message and note limits;
 - the workflow metadata and state invariants;
 - the absence of a separate history table;
 - the three-index minimum plan;
 - the shared Organizer access model;
 - the migration version after checking the latest `main`.
 
-Approval of this overlay authorizes detailed Use Case and API Contract alignment. It does not by itself authorize changing the database or application code.
+This overlay, the Use Case Specifications and the API Contract were approved together. Sprint 08
+activation authorizes the database and application implementation described by those documents.

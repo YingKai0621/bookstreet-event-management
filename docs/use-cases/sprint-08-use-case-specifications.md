@@ -1,8 +1,8 @@
 # Sprint 08 Use Case Specifications
 
-> Baseline status: `DRAFT - REVIEW REQUIRED`.
+> Baseline status: `APPROVED - ACTIVE`.
 >
-> This document refines the proposed decisions in `docs/sprints/sprint-08.md` into observable
+> This document refines the approved decisions in `docs/sprints/sprint-08.md` into observable
 > General Feedback behavior and 28 Acceptance Criteria. Endpoint paths, DTO fields, exact error
 > codes, pagination bounds and throttle values remain governed by the Sprint 08 API Contract.
 
