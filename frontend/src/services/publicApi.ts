@@ -50,6 +50,19 @@ export interface PublicActivityLocation {
   mapY: number | null;
 }
 
+export interface CreatePublicFeedbackRequest {
+  targetType: 'BOOK_STREET' | 'EVENT';
+  eventId?: number;
+  guestName?: string;
+  contactEmail?: string;
+  message: string;
+}
+
+export interface PublicFeedbackReceipt {
+  feedbackId: number;
+  receivedAt: string;
+}
+
 interface PublicActivityResponse {
   activityId: number;
   eventId: number;
@@ -303,14 +316,6 @@ export const publicApi = {
       .map(toPublicActivity);
   },
   getHeritageBySlug: (slug: string) => apiClient.get(`/public/heritages/${slug}`),
-  submitFeedback: (payload: {
-    rating: number;
-    comments?: string;
-    contactEmail?: string;
-    targetScope?: string;
-    heritageId?: string;
-    boothId?: string;
-    targetName?: string;
-    source?: string;
-  }) => apiClient.post('/public/feedbacks', payload),
+  submitFeedback: (payload: CreatePublicFeedbackRequest) =>
+    apiClient.post<PublicFeedbackReceipt>('/public/feedbacks', payload),
 };

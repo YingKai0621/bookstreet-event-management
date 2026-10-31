@@ -1,18 +1,20 @@
 # Sprint 08 General Feedback Submission and Organizer Handling
 
-- Status: `DRAFT - REVIEW REQUIRED`
+- Status: `ACTIVE - APPROVED FOR IMPLEMENTATION`
 - Prepared date: `2026-10-31`
-- Candidate activation date: not set
-- Audited baseline: `main` at merge commit `61d4b45` (PR #99)
+- Activation date: `2026-10-31`
+- Approved documentation merge: `a6f070c` (PR #100)
+- Activation merge: `b6c8297` (PR #101)
 - Latest completed sprint: Sprint 07 Booth Visit, Points and Badge Progression
 - Implemented schema baseline: immutable Flyway migrations `V1` through `V13`
 - Current-state audit: `docs/development/SPRINT_08_CURRENT_STATE_AUDIT.md`
 - Proposed implementation owner: one developer for the complete vertical slice
 - Migration owner: the same developer, after the next available Flyway version is reserved
 
-This document is a proposed Sprint baseline. It does not activate Sprint 8, reserve a migration
-version or authorize coding until the Physical ERD overlay, Use Case Specification and API Contract
-are reviewed together and `CURRENT_SPRINT.md` is updated.
+This is the approved active Sprint baseline. PR #100 approved the Physical ERD overlay, Use Case
+Specification, API Contract, Implementation Plan and documentation audit together; PR #101 updated
+`CURRENT_SPRINT.md` and `AI_CONTEXT.md` to authorize implementation. The migration version remains
+conditional until it is rechecked immediately before creation.
 
 ## 1. Purpose
 
@@ -301,7 +303,7 @@ V1-V13 remain immutable.
 4. `AC-X-S8-04`: focused backend integration and browser scenarios cover public success/errors,
    Organizer shared access, filters, transitions, conflict and mobile form behavior.
 
-The proposed baseline therefore contains **28 Acceptance Criteria**: 12 Guest/Public, 12 Organizer
+The approved baseline therefore contains **28 Acceptance Criteria**: 12 Guest/Public, 12 Organizer
 and 4 schema/regression criteria.
 
 ## 10. Required scenario coverage
@@ -369,8 +371,8 @@ The following must be reviewed together before implementation begins:
 4. `docs/api/sprint-08-api-contract.md`;
 5. the compact one-developer delivery plan and migration ownership declaration.
 
-`docs/sprints/CURRENT_SPRINT.md` is updated only after those documents are approved. Until then,
-Sprint 7 remains the latest completed Sprint and Sprint 8 remains a candidate.
+These documents were approved through PR #100 and `docs/sprints/CURRENT_SPRINT.md` activated Sprint
+8 through PR #101. Sprint 7 remains the latest completed Sprint while Sprint 8 is active.
 
 ## 14. Approved product decisions
 

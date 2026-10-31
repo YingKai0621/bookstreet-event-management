@@ -1098,8 +1098,8 @@ export function App() {
 
           {/* 9. Feedback Section in Figma Dark Teal Container */}
           <FeedbackSection 
-            language={language} 
-            onScrollToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            language={language}
+            events={events}
           />
         </main>
 

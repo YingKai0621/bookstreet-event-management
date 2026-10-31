@@ -33,12 +33,14 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException exception
     ) throws IOException, ServletException {
-        boolean badgeCsrfFailure = request.getRequestURI().startsWith("/api/v1/admin/badges")
-                && (exception instanceof MissingCsrfTokenException
-                    || exception instanceof InvalidCsrfTokenException);
+        boolean csrfFailure = exception instanceof MissingCsrfTokenException
+                || exception instanceof InvalidCsrfTokenException;
+        boolean contractCsrfFailure = csrfFailure
+                && (request.getRequestURI().startsWith("/api/v1/admin/badges")
+                    || request.getRequestURI().equals("/api/v1/public/feedbacks"));
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-                badgeCsrfFailure ? "CSRF_INVALID" : "ACCESS_DENIED",
-                badgeCsrfFailure ? "CSRF token is missing or invalid."
+                contractCsrfFailure ? "CSRF_INVALID" : "ACCESS_DENIED",
+                contractCsrfFailure ? "CSRF token is missing or invalid."
                         : "You do not have permission to access this resource.",
                 List.of(),
                 Instant.now(),
@@ -48,6 +50,9 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        if (request.getRequestURI().startsWith("/api/v1/public/feedbacks")) {
+            response.setHeader("Cache-Control", "no-store");
+        }
         objectMapper.writeValue(response.getOutputStream(), errorResponse);
     }
 }

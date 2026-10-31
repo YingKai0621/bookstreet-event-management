@@ -1,8 +1,8 @@
 # Sprint 08 General Feedback API Contract
 
-> Status: `DRAFT - REVIEW REQUIRED`.
+> Status: `APPROVED - FROZEN FOR IMPLEMENTATION`.
 >
-> This contract freezes the proposed HTTP, DTO, validation, security, throttle, persistence and
+> This contract freezes the approved HTTP, DTO, validation, security, throttle, persistence and
 > transaction boundaries for Sprint 08 General Feedback. Semantic changes require documentation
 > review before implementation changes.
 >

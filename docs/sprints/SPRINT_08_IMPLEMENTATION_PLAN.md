@@ -1,6 +1,6 @@
 # Sprint 08 General Feedback Implementation Plan
 
-> Status: `DRAFT - REVIEW REQUIRED`.
+> Status: `APPROVED - ACTIVE`.
 >
 > Delivery model: one developer owns the complete backend-to-frontend vertical slice.
 >

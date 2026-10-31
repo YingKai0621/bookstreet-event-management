@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @EnabledIfEnvironmentVariable(named = "EVENT_TEST_DATABASE_URL", matches = ".+")
 class Sprint07SchemaMigrationTests {
+    private static final MigrationVersion SPRINT_07_VERSION = MigrationVersion.fromVersion("13");
     private static final Instant NOW = Instant.parse("2026-10-28T08:20:00Z");
     private String schema;
 
@@ -40,8 +41,8 @@ class Sprint07SchemaMigrationTests {
     }
 
     @Test
-    void cleanDatabaseMigratesThroughLatestSchemaWithRewardSchema() throws SQLException {
-        Flyway flyway = flyway(null);
+    void cleanDatabaseMigratesThroughSprint07SchemaWithRewardSchema() throws SQLException {
+        Flyway flyway = flyway(SPRINT_07_VERSION);
 
         flyway.migrate();
 
@@ -70,7 +71,7 @@ class Sprint07SchemaMigrationTests {
             userCount = result.getLong(1);
         }
 
-        Flyway upgraded = flyway(null);
+        Flyway upgraded = flyway(SPRINT_07_VERSION);
         upgraded.migrate();
 
         assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("13");
@@ -86,7 +87,7 @@ class Sprint07SchemaMigrationTests {
 
     @Test
     void badgeUserBadgeAndNotificationGuardsAreEnforced() throws SQLException {
-        flyway(null).migrate();
+        flyway(SPRINT_07_VERSION).migrate();
 
         try (Connection connection = connectToSchema()) {
             long userId = userId(connection, "participantdemo");
@@ -136,7 +137,7 @@ class Sprint07SchemaMigrationTests {
 
     @Test
     void boothVisitAndPointLedgerGuardsAreEnforced() throws SQLException {
-        flyway(null).migrate();
+        flyway(SPRINT_07_VERSION).migrate();
 
         try (Connection connection = connectToSchema()) {
             RewardFixture fixture = insertRewardFixture(connection);

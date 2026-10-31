@@ -158,6 +158,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/media/booth-images/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/activities", "/api/v1/activities/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/public/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/chat/messages").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
                 .requestMatchers("/api/v1/participant/**").hasRole("PARTICIPANT")

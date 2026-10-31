@@ -374,6 +374,30 @@
   box-shadow: 0 0 0 3px rgba(23, 54, 46, 0.1);
 }
 
+.sk05-textarea-input.sk05-input-error,
+.sk05-text-input.sk05-input-error,
+.sk05-textarea-input.sk05-input-error:focus,
+.sk05-text-input.sk05-input-error:focus {
+  border-color: #C84C32;
+  background-color: #FFF9F7;
+  box-shadow: 0 0 0 3px rgba(200, 76, 50, 0.12);
+}
+
+.sk05-field-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: #A83D28;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.sk05-field-error svg {
+  flex: 0 0 auto;
+}
+
 .sk05-textarea-input {
   resize: vertical;
   min-height: 100px;
