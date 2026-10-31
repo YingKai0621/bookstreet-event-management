@@ -2,12 +2,15 @@
 
 ## Sprint 07 Booth Visit, Points and Badge Progression
 
-- Status: `ACTIVE`
+- Status: `COMPLETED`
 - Activation date: `2026-10-28`
+- Completion date: `2026-10-30`
 - Previous completed Sprint: `Sprint 06 Participant Activity Registration and Attendance`
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V12`
+- Implemented schema baseline: immutable Flyway migrations `V1` through `V13`
 - Sprint 7 migration: `V12__create_sprint7_reward_schema.sql`, implemented by Developer A and
   merged through PR #92 (merge commit `2178ba6`)
+- Post-baseline booth-image migration: `V13__add_booth_image_url.sql`, merged through PR #98;
+  it does not change the Sprint 7 reward contract or its V12 migration
 - Sprint baseline: `docs/sprints/sprint-07.md`
 - Current-state audit: `docs/development/SPRINT_07_CURRENT_STATE_AUDIT.md`
 - Use Case Specifications: `docs/use-cases/sprint-07-use-case-specifications.md`
@@ -38,7 +41,7 @@ Implementation is limited to these approved slices:
 - `UC-O07` Event-owned BoothVisit monitoring
 - `UC-A03` Badge catalog and bounded synchronization
 
-The active baseline contains **41 Acceptance Criteria**, **12 new endpoint headings** and extensions
+The completed baseline contains **41 Acceptance Criteria**, **12 new endpoint headings** and extensions
 to **4 existing Participant Notification operations**. Every implementation PR must identify its
 owned AC IDs and follow the exact route, DTO, error-code, transaction, locking, privacy and
 idempotency behavior in the approved API Contract.
@@ -67,17 +70,18 @@ entities or the backend `BADGE_UNLOCKED` writer.
 5. `S7-3B` — complete in PR #93: Admin Badge/backfill API and management UI.
 6. `S7-3C` — complete through PR #95 (merge commit `573f15a`): Participant reward read integration
    coverage, Badge Notification integration and frontend consistency gaps are closed.
-7. `S7-4` — automated backend, OpenAPI, real-session and Playwright verification is recorded in the
-   closure report. The physical phone-on-LAN check remains before Sprint completion.
+7. `S7-4` — complete: automated backend, OpenAPI, real-session and Playwright verification is
+   recorded in the closure report, and the physical phone-on-LAN flow passed during the
+   `2026-10-30` classroom demo.
 
 Detailed historical ownership and merge gates remain in the approved work assignment. New work
-must start from the V12/PR #95 baseline and must not duplicate the shared award or Participant
+must preserve the V12/PR #95 reward baseline and must not duplicate the shared award or Participant
 reward implementations.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL is durable truth; Redis stores Session only; do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`; V1 through V12 are immutable.
+- Hibernate remains `ddl-auto: validate`; V1 through V13 are immutable.
 - Backend `Clock` decides Event lifecycle and the exact `[startAt, endAt)` scan window.
 - Participant identity comes from Session; no command accepts caller-selected User or reward data.
 - One first visit awards exactly `10` Points from `rewards.booth-visit-points=10`.
@@ -98,13 +102,16 @@ reward implementations.
 - generic settings, roles/permissions, notification composer or preference system
 - email, SMS or push delivery for Badge unlocks
 - unbounded reporting beyond the approved Organizer BoothVisit monitoring slice
-- rewriting V1 through V12 or introducing a persistent backfill-job table
+- rewriting V1 through V13 or introducing a persistent backfill-job table
 
-## Activation result
+## Completion result
 
 The Project Owner approved and merged the Sprint 7 audit, baseline, 41-AC Use Case Specification,
 API Contract and three-developer vertical-slice work assignment through PR #86. PR #92 delivered
 V12, the reward write/scan foundation and Participant reward experience. PR #93 delivered
 Organizer BoothVisit monitoring and Admin Badge synchronization. PR #95 completed Developer C's
-Participant integration coverage and frontend consistency pass. Sprint 7 remains active only until
-the phone-on-LAN result is added to the closure evidence.
+Participant integration coverage and frontend consistency pass. The physical phone-on-LAN flow
+passed during the `2026-10-30` classroom demo, covering first scan, duplicate-scan idempotency,
+Participant reward and Notification refresh, and Organizer BoothVisit monitoring. Sprint 7 is
+therefore completed; PR #98 subsequently added demo/public-experience improvements without changing
+the approved Sprint 7 reward behavior.
