@@ -28,6 +28,7 @@ import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 interface ParticipantDashboardProps {
   language: Language;
   profile: ParticipantProfile;
+  totalPoints: number;
   events: ParticipantEvent[];
   activities: ParticipantActivity[];
   totalCertificatesCount: number;
@@ -54,6 +55,7 @@ interface CalendarEventItem {
 export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
   language,
   profile,
+  totalPoints,
   events,
   activities,
   totalCertificatesCount,
@@ -353,7 +355,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
         <Link to="/participant/rewards" className="summary-stat-card" style={{ textDecoration: 'none' }}>
           <div className="stat-number-box gold">
             <Star size={24} className="stat-star-icon" />
-            <span>{profile.points}</span>
+            <span>{totalPoints}</span>
           </div>
           <div className="stat-label-text">
             {language === 'vi' ? 'Điểm tích lũy' : 'Accumulated Points'}

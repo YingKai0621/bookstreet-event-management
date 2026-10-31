@@ -150,6 +150,7 @@ class BoothCatalogIntegrationTests {
                 .andExpect(jsonPath("$.name").value("Entrance Booth"))
                 .andExpect(jsonPath("$.maxCapacity").value(10))
                 .andExpect(jsonPath("$.mapX").value(25.0))
+                .andExpect(jsonPath("$.imageUrl").value("/images/booths/test-booth.png"))
                 .andExpect(jsonPath("$.categoryCode").doesNotExist());
 
         assertThat(jdbc.queryForObject("select location_type from locations where location_id = ?",
@@ -344,7 +345,8 @@ class BoothCatalogIntegrationTests {
                   "mapX": 20.50,
                   "mapY": 80.00,
                   "categoryCode": "PUBLISHER",
-                  "note": null
+                  "note": null,
+                  "imageUrl": "/images/booths/test-booth.png"
                 }
                 """.formatted(code);
     }

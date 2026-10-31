@@ -27,6 +27,8 @@ public interface BoothRepository extends JpaRepository<Booth, Long> {
     @EntityGraph(attributePaths = "location")
     Optional<Booth> findByBoothId(Long boothId);
 
+    boolean existsByImageUrl(String imageUrl);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "location")
     @Query("select booth from Booth booth where booth.boothId = :boothId")

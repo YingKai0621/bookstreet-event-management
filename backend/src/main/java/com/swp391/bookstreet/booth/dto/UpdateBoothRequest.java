@@ -35,6 +35,8 @@ public class UpdateBoothRequest {
     @Size(max = 50)
     private String categoryCode;
     private String note;
+    @Size(max = 2048)
+    private String imageUrl;
 
     public boolean contains(String field) {
         return suppliedFields.contains(field);
@@ -76,4 +78,7 @@ public class UpdateBoothRequest {
 
     public String getNote() { return note; }
     @JsonSetter("note") public void setNote(String value) { suppliedFields.add("note"); note = value; }
+
+    public String getImageUrl() { return imageUrl; }
+    @JsonSetter("imageUrl") public void setImageUrl(String value) { suppliedFields.add("imageUrl"); imageUrl = value; }
 }

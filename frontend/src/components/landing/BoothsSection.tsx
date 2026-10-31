@@ -5,9 +5,16 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
-import './BoothsSection.css';
 import { IconBookSpine, IconBookmark } from './CustomIcons';
 import { PublicEventContext } from './PublicEventContext';
+import './BoothsSection.css';
+
+const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
+
+function useDefaultBoothImage(event: React.SyntheticEvent<HTMLImageElement>): void {
+  const image = event.currentTarget;
+  if (!image.src.endsWith(DEFAULT_BOOTH_IMAGE)) image.src = DEFAULT_BOOTH_IMAGE;
+}
 
 interface BoothsSectionProps {
   language: Language;
@@ -308,6 +315,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                       alt={booth.image.alt}
                       loading="lazy"
                       className="kiosk-photo-img"
+                      onError={useDefaultBoothImage}
                     />}
                     <div className="kiosk-photo-overlay"></div>
                     <div className="kiosk-banner-tags">
@@ -438,7 +446,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               <X size={20} />
             </button>
             <div className="modal-booth-header-img">
-              {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />}
+              {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" onError={useDefaultBoothImage} />}
               <div className="modal-img-caption">
                 <span className="kiosk-number-badge">{activeModalBooth.code}</span>
               </div>

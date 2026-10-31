@@ -277,6 +277,16 @@
   font-weight: 800;
 }
 
+.illustrated-map-marker.category-stage .marker-index {
+  color: #ffffff;
+  background: #b84d3f;
+}
+
+.illustrated-map-marker.category-facility .marker-index {
+  color: #ffffff;
+  background: #376b91;
+}
+
 .marker-label {
   font-size: 0.7rem;
   font-weight: 800;

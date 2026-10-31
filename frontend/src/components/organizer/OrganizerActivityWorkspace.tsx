@@ -708,6 +708,13 @@ function isoToVietnamLocal(value: string): string {
   return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
 }
 
+function nextMinuteIso(): string {
+  const value = new Date();
+  value.setSeconds(0, 0);
+  value.setMinutes(value.getMinutes() + 1);
+  return value.toISOString();
+}
+
 function localDateOptions(startAt: string, endAt: string): Array<{ value: string; label: string }> {
   const startDate = isoToVietnamLocal(startAt).slice(0, 10);
   const endDate = isoToVietnamLocal(endAt).slice(0, 10);
@@ -736,23 +743,46 @@ function EventDateTimeField({
   value,
   eventStartAt,
   eventEndAt,
+  minimumAt,
+  allowExistingPastValue,
   onChange,
 }: {
   label: string;
   value: string;
   eventStartAt: string;
   eventEndAt: string;
+  minimumAt?: string;
+  allowExistingPastValue?: string;
   onChange: (value: string) => void;
 }) {
-  const options = useMemo(
+  const allOptions = useMemo(
     () => localDateOptions(eventStartAt, eventEndAt),
     [eventEndAt, eventStartAt],
   );
   const [date = '', time = ''] = value.split('T');
   const eventStartLocal = isoToVietnamLocal(eventStartAt);
   const eventEndLocal = isoToVietnamLocal(eventEndAt);
+  const minimumLocal = minimumAt ? isoToVietnamLocal(minimumAt) : '';
+  const minimumDate = minimumLocal.slice(0, 10);
+  const preservingExistingPastValue = Boolean(
+    minimumLocal
+    && value === allowExistingPastValue
+    && value < minimumLocal,
+  );
+  const options = allOptions.filter(option => (
+    !minimumDate
+    || option.value >= minimumDate
+    || (preservingExistingPastValue && option.value === date)
+  ));
   const startDate = eventStartLocal.slice(0, 10);
   const endDate = eventEndLocal.slice(0, 10);
+  const minimumTime = preservingExistingPastValue
+    ? undefined
+    : date === minimumDate ? minimumLocal.slice(11, 16) : undefined;
+  const eventStartTime = date === startDate ? eventStartLocal.slice(11, 16) : undefined;
+  const effectiveMinimumTime = minimumTime && eventStartTime
+    ? (minimumTime > eventStartTime ? minimumTime : eventStartTime)
+    : minimumTime || eventStartTime;
   const chooseDate = (nextDate: string) => {
     if (!nextDate) { onChange(''); return; }
     const defaultTime = nextDate === startDate ? eventStartLocal.slice(11, 16) : '09:00';
@@ -780,7 +810,7 @@ function EventDateTimeField({
             aria-label={`${label} - giờ`}
             type="time"
             value={time}
-            min={date === startDate ? eventStartLocal.slice(11, 16) : undefined}
+            min={effectiveMinimumTime}
             max={date === endDate ? eventEndLocal.slice(11, 16) : undefined}
             step="300"
             onChange={event => chooseTime(event.target.value)}
@@ -795,16 +825,26 @@ function EventDateTimeField({
 function DateTimePartsField({
   label,
   value,
+  min,
   max,
+  allowExistingPastValue,
   onChange,
 }: {
   label: string;
   value: string;
+  min?: string;
   max?: string;
+  allowExistingPastValue?: string;
   onChange: (value: string) => void;
 }) {
   const [date = '', time = ''] = value.split('T');
+  const [minDate = '', minTime = ''] = (min || '').split('T');
   const [maxDate = '', maxTime = ''] = (max || '').split('T');
+  const preservingExistingPastValue = Boolean(min && value === allowExistingPastValue && value < min);
+  const effectiveMinDate = preservingExistingPastValue ? undefined : minDate || undefined;
+  const effectiveMinTime = preservingExistingPastValue
+    ? undefined
+    : date && date === minDate ? minTime || undefined : undefined;
   return (
     <fieldset className="oaw-field oaw-datetime-field">
       <legend>{label} <b>*</b></legend>
@@ -815,6 +855,7 @@ function DateTimePartsField({
             aria-label={`${label} - ngày`}
             type="date"
             value={date}
+            min={effectiveMinDate}
             max={maxDate || undefined}
             onChange={event => onChange(event.target.value
               ? `${event.target.value}T${time || '17:00'}`
@@ -828,6 +869,7 @@ function DateTimePartsField({
             aria-label={`${label} - giờ`}
             type="time"
             value={time}
+            min={effectiveMinTime}
             max={date && date === maxDate ? maxTime || undefined : undefined}
             step="300"
             onChange={event => onChange(event.target.value
@@ -855,6 +897,7 @@ function CreateActivityModal({
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [minimumFutureAt] = useState(nextMinuteIso);
 
   useEffect(() => {
     let active = true;
@@ -966,8 +1009,8 @@ function CreateActivityModal({
               <label className="oaw-field oaw-field--wide"><span>Tên hoạt động <b>*</b></span><input value={form.title} onChange={e => setField('title', e.target.value)} maxLength={200} placeholder="Ví dụ: Lễ khai mạc" /></label>
               <label className="oaw-field"><span>Loại hoạt động <b>*</b></span><input value={form.activityType} onChange={e => setField('activityType', e.target.value)} maxLength={50} placeholder="Ví dụ: Khai mạc, tọa đàm..." /></label>
               <label className="oaw-field"><span>Địa điểm <b>*</b></span><select value={form.locationId} onChange={e => setField('locationId', e.target.value)} disabled={loadingLocations}><option value="">{loadingLocations ? 'Đang tải địa điểm...' : 'Chọn địa điểm'}</option>{locations.map(location => <option key={location.locationId} value={location.locationId}>{location.code} · {location.name} (tối đa {location.maxCapacity})</option>)}</select></label>
-              <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} onChange={value => setField('startAt', value)} />
-              <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} onChange={value => setField('endAt', value)} />
+              <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={minimumFutureAt} onChange={value => setField('startAt', value)} />
+              <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={form.startAt ? (vietnamLocalToIso(form.startAt) > minimumFutureAt ? vietnamLocalToIso(form.startAt) : minimumFutureAt) : minimumFutureAt} onChange={value => setField('endAt', value)} />
               <label className="oaw-field"><span>Sức chứa <b>*</b></span><input type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={e => setField('capacity', e.target.value)} placeholder={selectedLocation ? `Tối đa ${selectedLocation.maxCapacity}` : 'Số người'} /></label>
               <label className="oaw-field"><span>URL hình ảnh</span><input type="url" value={form.imageUrl} onChange={e => setField('imageUrl', e.target.value)} maxLength={2048} placeholder="https://..." /></label>
               <label className="oaw-field oaw-field--wide"><span>Mô tả</span><textarea value={form.description} onChange={e => setField('description', e.target.value)} maxLength={5000} rows={4} placeholder="Mô tả nội dung hoạt động..." /><small>{form.description.length}/5000</small></label>
@@ -975,7 +1018,7 @@ function CreateActivityModal({
             <div className="oaw-registration-box">
               <label><input type="checkbox" checked={form.registrationRequired} onChange={e => setField('registrationRequired', e.target.checked)} /><span><strong>Yêu cầu người tham gia đăng ký</strong><small>Bật cấu hình hạn đăng ký và QR điểm danh.</small></span></label>
               {form.registrationRequired && <div>
-                <DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} max={form.startAt || undefined} onChange={value => setField('registrationDeadlineAt', value)} />
+                <DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} min={isoToVietnamLocal(minimumFutureAt)} max={form.startAt || undefined} onChange={value => setField('registrationDeadlineAt', value)} />
                 <label className="oaw-field"><span>Mở quét QR trước giờ bắt đầu (phút)</span><input type="number" min="0" max="1440" step="1" value={form.attendanceEarlyScanMinutes} onChange={e => setField('attendanceEarlyScanMinutes', e.target.value)} placeholder="Để trống: 15 phút" /></label>
                 <label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label>
               </div>}
@@ -1463,6 +1506,7 @@ function EditActivityModal({
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [minimumFutureAt] = useState(nextMinuteIso);
   const coreEditable = activity.sourceProposalId === null;
 
   useEffect(() => {
@@ -1535,6 +1579,7 @@ function EditActivityModal({
     if (coreEditable && !selectedLocation) return 'Vui lòng chọn địa điểm dùng chung đang hợp lệ.';
     if (coreEditable && (!Number.isInteger(capacity) || capacity < 1 || (selectedLocation && capacity > selectedLocation.maxCapacity))) return 'Sức chứa phải là số nguyên dương và không vượt sức chứa địa điểm.';
     if (coreEditable && (!form.startAt || !form.endAt || new Date(vietnamLocalToIso(form.startAt)) >= new Date(vietnamLocalToIso(form.endAt)))) return 'Thời gian kết thúc phải sau thời gian bắt đầu.';
+    if (payload.startAt && new Date(payload.startAt).getTime() <= Date.now()) return 'Thời gian bắt đầu mới phải ở tương lai.';
     if (coreEditable && (new Date(vietnamLocalToIso(form.startAt)) < new Date(event.startDate) || new Date(vietnamLocalToIso(form.endAt)) > new Date(event.endDate))) return 'Thời gian hoạt động phải nằm hoàn toàn trong sự kiện.';
     if (form.imageUrl.trim()) {
       try {
@@ -1546,6 +1591,7 @@ function EditActivityModal({
       if (!form.registrationDeadlineAt) return 'Hoạt động yêu cầu đăng ký phải có hạn đăng ký.';
       const deadline = new Date(vietnamLocalToIso(form.registrationDeadlineAt));
       const start = new Date(vietnamLocalToIso(form.startAt));
+      if (payload.registrationDeadlineAt && deadline.getTime() < Date.now()) return 'Hạn đăng ký mới không được ở trong quá khứ.';
       if (deadline > start) return 'Hạn đăng ký không được sau thời điểm bắt đầu.';
     }
     if (Object.keys(payload).length === 0) return 'Bạn chưa thay đổi nội dung nào.';
@@ -1582,15 +1628,15 @@ function EditActivityModal({
               <label className="oaw-field oaw-field--wide"><span>Tên hoạt động</span><input disabled={!coreEditable} value={form.title} onChange={e => setField('title', e.target.value)} maxLength={200} /></label>
               <label className="oaw-field"><span>Loại hoạt động</span><input disabled={!coreEditable} value={form.activityType} onChange={e => setField('activityType', e.target.value)} maxLength={50} /></label>
               <label className="oaw-field"><span>Địa điểm</span><select disabled={!coreEditable || loadingLocations} value={form.locationId} onChange={e => setField('locationId', e.target.value)}>{activity.location.locationType === 'BOOTH' && <option value={activity.location.locationId}>{activity.location.code} · {activity.location.name}</option>}{locations.map(location => <option key={location.locationId} value={location.locationId}>{location.code} · {location.name}</option>)}</select></label>
-              {coreEditable ? <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} onChange={value => setField('startAt', value)} /> : <label className="oaw-field"><span>Bắt đầu</span><input disabled value={formatDateTime(activity.startAt)} /></label>}
-              {coreEditable ? <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} onChange={value => setField('endAt', value)} /> : <label className="oaw-field"><span>Kết thúc</span><input disabled value={formatDateTime(activity.endAt)} /></label>}
+              {coreEditable ? <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={minimumFutureAt} allowExistingPastValue={initialForm.startAt} onChange={value => setField('startAt', value)} /> : <label className="oaw-field"><span>Bắt đầu</span><input disabled value={formatDateTime(activity.startAt)} /></label>}
+              {coreEditable ? <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={form.startAt ? (vietnamLocalToIso(form.startAt) > minimumFutureAt ? vietnamLocalToIso(form.startAt) : minimumFutureAt) : minimumFutureAt} allowExistingPastValue={initialForm.endAt} onChange={value => setField('endAt', value)} /> : <label className="oaw-field"><span>Kết thúc</span><input disabled value={formatDateTime(activity.endAt)} /></label>}
               <label className="oaw-field"><span>Sức chứa</span><input disabled={!coreEditable} type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={e => setField('capacity', e.target.value)} /></label>
               <label className="oaw-field"><span>URL hình ảnh</span><input type="url" maxLength={2048} value={form.imageUrl} onChange={e => setField('imageUrl', e.target.value)} placeholder="https://..." /></label>
               <label className="oaw-field oaw-field--wide"><span>Mô tả</span><textarea disabled={!coreEditable} rows={4} maxLength={5000} value={form.description} onChange={e => setField('description', e.target.value)} /></label>
             </div>
             <div className="oaw-registration-box">
               <label><input type="checkbox" checked={form.registrationRequired} onChange={e => setField('registrationRequired', e.target.checked)} /><span><strong>Yêu cầu người tham gia đăng ký</strong><small>Cấu hình trước khi công bố hoạt động.</small></span></label>
-              {form.registrationRequired && <div><DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} max={form.startAt} onChange={value => setField('registrationDeadlineAt', value)} /><label className="oaw-field"><span>Mở quét QR trước giờ bắt đầu (phút)</span><input type="number" min="0" max="1440" step="1" value={form.attendanceEarlyScanMinutes} onChange={e => setField('attendanceEarlyScanMinutes', e.target.value)} placeholder="Để trống: 15 phút" /></label><label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label></div>}
+              {form.registrationRequired && <div><DateTimePartsField label="Hạn đăng ký" value={form.registrationDeadlineAt} min={isoToVietnamLocal(minimumFutureAt)} max={form.startAt} allowExistingPastValue={initialForm.registrationDeadlineAt} onChange={value => setField('registrationDeadlineAt', value)} /><label className="oaw-field"><span>Mở quét QR trước giờ bắt đầu (phút)</span><input type="number" min="0" max="1440" step="1" value={form.attendanceEarlyScanMinutes} onChange={e => setField('attendanceEarlyScanMinutes', e.target.value)} placeholder="Để trống: 15 phút" /></label><label className="oaw-check"><input type="checkbox" checked={form.certificateEnabled} onChange={e => setField('certificateEnabled', e.target.checked)} /> Cấp chứng nhận tham gia</label></div>}
             </div>
             {activity.status === 'PUBLISHED' && <label className="oaw-field oaw-change-reason"><span>Lý do thay đổi <b>*</b></span><textarea rows={3} minLength={10} maxLength={500} value={changeReason} onChange={e => { setChangeReason(e.target.value); setError(''); }} placeholder="Giải thích rõ lý do cập nhật hoạt động đã công bố..." /><small>{changeReason.length}/500</small></label>}
             {error && <p className="oaw-action-error" role="alert">{error}</p>}

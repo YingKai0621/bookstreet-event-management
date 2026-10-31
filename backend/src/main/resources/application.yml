@@ -74,6 +74,7 @@ springdoc:
 bookstreet:
   media:
     event-banner-directory: ${EVENT_BANNER_UPLOAD_DIR:uploads/event-banners}
+    booth-image-directory: ${BOOTH_IMAGE_UPLOAD_DIR:uploads/booth-images}
   chatbot:
     api-key: ${GEMINI_API_KEY:${CHATBOT_API_KEY:}}
     model: ${CHATBOT_MODEL:gemini-3.5-flash-lite}

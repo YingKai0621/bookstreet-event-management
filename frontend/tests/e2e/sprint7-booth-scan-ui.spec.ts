@@ -301,6 +301,15 @@ test('participant rewards renders real summary, badges and paged point history',
   await expect(history.getByText('Chưa có giao dịch điểm')).toBeVisible();
 });
 
+test('participant dashboard uses the reward summary as its accumulated point total', async ({ page }) => {
+  await mockBoothScanApp(page);
+
+  await page.goto('/participant');
+
+  const accumulatedPoints = page.getByRole('link', { name: /30 Điểm tích lũy/ });
+  await expect(accumulatedPoints).toBeVisible();
+});
+
 test('first Booth scan refreshes Badge inbox and Rewards when the participant opens them', async ({ page }) => {
   const state = await mockBoothScanApp(page);
   await page.goto(`/participant/booth-scan#token=${BOOTH_TOKEN}`);

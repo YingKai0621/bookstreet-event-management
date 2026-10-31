@@ -3,6 +3,8 @@ import { HeritageProfile } from '../types/heritage';
 import { apiClient } from './apiClient';
 import { boothApi } from './boothApi';
 
+const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
+
 async function getPublishedEvents(): Promise<EventItem[]> {
   const first = await apiClient.get<PageResponse<PublicEventResponse>>('/events?page=0&size=100&sort=startAt,asc');
   const remaining = first.totalPages > 1
@@ -34,13 +36,25 @@ export interface PublicActivity {
   status: string;
   imageUrl: string | null;
   location: string;
+  locationDetail: PublicActivityLocation;
+}
+
+export interface PublicActivityLocation {
+  locationId: number;
+  code: string;
+  name: string;
+  locationType: 'BOOTH' | 'STAGE' | 'WORKSHOP' | 'AREA';
+  description: string | null;
+  maxCapacity: number | null;
+  mapX: number | null;
+  mapY: number | null;
 }
 
 interface PublicActivityResponse {
   activityId: number;
   eventId: number;
   eventName: string;
-  location: { locationId: number; code: string; name: string; locationType: string };
+  location: PublicActivityLocation;
   title: string;
   description: string | null;
   activityType: string;
@@ -167,6 +181,7 @@ function toPublicActivity(activity: PublicActivityResponse): PublicActivity {
     status: activity.status,
     imageUrl: activity.imageUrl,
     location: activity.location?.name || activity.location?.code || '',
+    locationDetail: activity.location,
   };
 }
 
@@ -178,6 +193,18 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
         : categoryCode.includes('life') ? 'lifestyle'
           : categoryCode.includes('literature') ? 'literature' : 'other';
   const description = row.booth.description || row.booth.note || '';
+  const labelByCode: Record<string, { vi: string; en: string }> = {
+    LITERATURE: { vi: 'Văn học & Nghệ thuật', en: 'Literature & Arts' },
+    CHILDREN: { vi: 'Sách Thiếu nhi', en: "Children's Books" },
+    MANGA_COMICS: { vi: 'Truyện tranh & Manga', en: 'Manga & Comics' },
+    HISTORY_SOCIETY: { vi: 'Lịch sử & Xã hội', en: 'History & Society' },
+    ART_CULTURE: { vi: 'Nghệ thuật & Văn hóa', en: 'Arts & Culture' },
+    EDUCATION: { vi: 'Giáo dục & Kỹ năng', en: 'Education & Skills' },
+    TECHNOLOGY_SCIENCE: { vi: 'STEM & Công nghệ', en: 'STEM & Technology' },
+    LIFESTYLE: { vi: 'Phong cách sống', en: 'Lifestyle' },
+    CAFE: { vi: 'Cà phê sách', en: 'Book Cafe' },
+  };
+  const categoryLabel = labelByCode[row.booth.categoryCode || ''];
 
   return {
     id: String(row.booth.boothId),
@@ -186,8 +213,8 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
     nameEn: row.booth.name,
     publisher: '',
     category,
-    categoryLabelVi: row.booth.categoryCode || 'Gian hàng',
-    categoryLabelEn: row.booth.categoryCode || 'Booth',
+    categoryLabelVi: categoryLabel?.vi || 'Gian hàng',
+    categoryLabelEn: categoryLabel?.en || 'Booth',
     tagline: description,
     taglineEn: description,
     description,
@@ -201,7 +228,7 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
     maxCapacity: row.booth.maxCapacity,
     openHours: '',
     image: {
-      url: '',
+      url: row.booth.imageUrl || DEFAULT_BOOTH_IMAGE,
       alt: row.booth.name,
       source: '',
       license: '',
