@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/organizer/dashboard")
-@PreAuthorize("hasRole('ORGANIZER')")
+@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
 public class OrganizerDashboardController {
     private final OrganizerDashboardService service;
 

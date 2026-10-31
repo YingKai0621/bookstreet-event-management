@@ -10,7 +10,7 @@ import {
   Search,
   UserRound,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
 import {
@@ -25,49 +25,84 @@ import './OrganizerFeedbackView.css';
 
 const PAGE_SIZE = 10;
 
-const STATUS_OPTIONS: Array<{ value: OrganizerFeedbackStatus | ''; label: string }> = [
-  { value: '', label: 'Tất cả trạng thái' },
-  { value: 'NEW', label: 'Mới tiếp nhận' },
-  { value: 'IN_PROGRESS', label: 'Đang xử lý' },
-  { value: 'RESOLVED', label: 'Đã xử lý' },
-];
+const COPY = {
+  vi: {
+    heading: 'Góp ý trải nghiệm',
+    subtitle: 'Hàng đợi dùng chung cho toàn bộ Ban Tổ chức; ghi chú xử lý chỉ dùng nội bộ.',
+    total: 'Tổng góp ý', search: 'Tìm góp ý', searchPlaceholder: 'Tìm nội dung, người gửi, email, sự kiện...',
+    allStatuses: 'Tất cả trạng thái', newStatus: 'Mới tiếp nhận', inProgressStatus: 'Đang xử lý', resolvedStatus: 'Đã giải quyết',
+    allTargets: 'Tất cả phạm vi', bookStreetTarget: 'Toàn Đường Sách', eventTarget: 'Sự kiện', bookStreetName: 'Đường Sách TP.HCM',
+    statusFilter: 'Lọc trạng thái', targetFilter: 'Lọc phạm vi', eventFilter: 'Lọc theo mã sự kiện', eventPlaceholder: 'Mã sự kiện',
+    sort: 'Sắp xếp', newest: 'Mới nhất trước', oldest: 'Cũ nhất trước', loadingQueue: 'Đang tải góp ý…', retry: 'Thử lại',
+    empty: 'Chưa có góp ý phù hợp với bộ lọc.', viewDetail: 'Xem chi tiết', previousPage: 'Trang trước', nextPage: 'Trang sau', page: 'Trang',
+    detailTitle: 'Chi tiết góp ý', close: 'Đóng', loadingDetail: 'Đang tải chi tiết…', detailFailure: 'Không tải được chi tiết góp ý.',
+    sentAt: 'Gửi lúc', anonymous: 'Khách ẩn danh', noEmail: 'Không cung cấp email', messageTitle: 'Nội dung góp ý', handledBy: 'Xử lý gần nhất:',
+    noteLabel: 'Ghi chú nội bộ', noteHelp: 'Chỉ Ban Tổ chức xem được; nội dung này không gửi cho khách.',
+    notePlaceholder: 'Nhập kết quả hoặc hướng xử lý nội bộ...', notSent: 'Không gửi cho khách',
+    start: 'Xử lý góp ý', resolve: 'Đánh dấu đã giải quyết', reopen: 'Mở lại xử lý', updating: 'Đang cập nhật…',
+    noteValidation: 'Ghi chú nội bộ phải có từ 1 đến 1.000 ký tự.',
+    conflict: 'Góp ý vừa được Organizer khác cập nhật. Dữ liệu mới nhất đã được tải lại.',
+    forbidden: 'Tài khoản hiện tại không có quyền Organizer để xem hàng đợi góp ý.',
+    unauthorized: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    queueFailure: 'Không tải được hàng đợi góp ý.',
+  },
+  en: {
+    heading: 'Experience feedback',
+    subtitle: 'A shared queue for the Management Board; handling notes are for internal use only.',
+    total: 'Total feedback', search: 'Search feedback', searchPlaceholder: 'Search message, sender, email, or event...',
+    allStatuses: 'All statuses', newStatus: 'New', inProgressStatus: 'In progress', resolvedStatus: 'Resolved',
+    allTargets: 'All scopes', bookStreetTarget: 'Whole Book Street', eventTarget: 'Event', bookStreetName: 'HCMC Book Street',
+    statusFilter: 'Filter by status', targetFilter: 'Filter by scope', eventFilter: 'Filter by event ID', eventPlaceholder: 'Event ID',
+    sort: 'Sort', newest: 'Newest first', oldest: 'Oldest first', loadingQueue: 'Loading feedback…', retry: 'Retry',
+    empty: 'No feedback matches the current filters.', viewDetail: 'View details', previousPage: 'Previous', nextPage: 'Next', page: 'Page',
+    detailTitle: 'Feedback details', close: 'Close', loadingDetail: 'Loading details…', detailFailure: 'Unable to load feedback details.',
+    sentAt: 'Submitted', anonymous: 'Anonymous guest', noEmail: 'No contact email', messageTitle: 'Feedback message', handledBy: 'Last handled by:',
+    noteLabel: 'Internal note', noteHelp: 'Visible only to the Management Board; this is not sent to the guest.',
+    notePlaceholder: 'Enter the internal outcome or handling direction...', notSent: 'Not sent to the guest',
+    start: 'Handle feedback', resolve: 'Mark as resolved', reopen: 'Reopen handling', updating: 'Updating…',
+    noteValidation: 'The internal note must contain between 1 and 1,000 characters.',
+    conflict: 'Another Organizer updated this feedback. The latest durable state has been reloaded.',
+    forbidden: 'The current account does not have Organizer access to this feedback queue.',
+    unauthorized: 'Your session has expired. Please sign in again.',
+    queueFailure: 'Unable to load the feedback queue.',
+  },
+} as const;
 
-const TARGET_OPTIONS: Array<{ value: OrganizerFeedbackTargetType | ''; label: string }> = [
-  { value: '', label: 'Tất cả phạm vi' },
-  { value: 'BOOK_STREET', label: 'Toàn Đường Sách' },
-  { value: 'EVENT', label: 'Sự kiện' },
-];
-
-function statusLabel(status: OrganizerFeedbackStatus): string {
+function statusLabel(status: OrganizerFeedbackStatus, language: Language): string {
+  const copy = COPY[language];
   return {
-    NEW: 'Mới tiếp nhận',
-    IN_PROGRESS: 'Đang xử lý',
-    RESOLVED: 'Đã xử lý',
+    NEW: copy.newStatus,
+    IN_PROGRESS: copy.inProgressStatus,
+    RESOLVED: copy.resolvedStatus,
   }[status];
 }
 
-function targetLabel(feedback: OrganizerFeedbackListItem | OrganizerFeedbackDetail): string {
+function targetLabel(feedback: OrganizerFeedbackListItem | OrganizerFeedbackDetail, language: Language): string {
   return feedback.targetType === 'EVENT' && feedback.event
     ? feedback.event.name
-    : 'Đường Sách TP.HCM';
+    : COPY[language].bookStreetName;
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, language: Language): string {
   if (!value) return '—';
-  return new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date(value).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
 }
 
-function queueErrorMessage(error: unknown): string {
+function queueErrorMessage(error: unknown, language: Language): string {
+  const copy = COPY[language];
   if (error instanceof ApiError && error.status === 403) {
-    return 'Tài khoản hiện tại không có quyền Organizer để xem hàng đợi góp ý.';
+    return copy.forbidden;
   }
   if (error instanceof ApiError && error.status === 401) {
-    return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    return copy.unauthorized;
   }
-  return error instanceof Error ? error.message : 'Không tải được hàng đợi góp ý.';
+  return error instanceof Error ? error.message : copy.queueFailure;
 }
 
 export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ language }) => {
+  const copy = COPY[language];
+  const queueRequestSequence = useRef(0);
+  const detailRequestSequence = useRef(0);
   const [items, setItems] = useState<OrganizerFeedbackListItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -89,12 +124,18 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
 
   const closeDetail = useCallback(() => {
     if (actionLoading) return;
+    detailRequestSequence.current += 1;
     setSelectedId(null);
     setDetail(null);
     setActionError('');
     setInternalNote('');
   }, [actionLoading]);
   useModalDismiss(selectedId !== null, closeDetail);
+
+  useEffect(() => () => {
+    queueRequestSequence.current += 1;
+    detailRequestSequence.current += 1;
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -105,6 +146,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
   }, [searchInput]);
 
   const loadQueue = useCallback(async () => {
+    const requestSequence = ++queueRequestSequence.current;
     setLoading(true);
     try {
       const response = await organizerApi.listFeedbacks({
@@ -116,43 +158,58 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
         targetType: targetType || undefined,
         eventId: eventId ? Number(eventId) : undefined,
       });
+      if (requestSequence !== queueRequestSequence.current) return;
+
+      const lastPage = Math.max(0, response.totalPages - 1);
+      if (page > lastPage) {
+        setTotalElements(response.totalElements);
+        setTotalPages(response.totalPages);
+        setPage(lastPage);
+        return;
+      }
       setItems(response.content);
       setTotalElements(response.totalElements);
       setTotalPages(response.totalPages);
       setQueueError('');
     } catch (error) {
+      if (requestSequence !== queueRequestSequence.current) return;
       setItems([]);
       setTotalElements(0);
       setTotalPages(0);
-      setQueueError(queueErrorMessage(error));
+      setQueueError(queueErrorMessage(error, language));
     } finally {
-      setLoading(false);
+      if (requestSequence === queueRequestSequence.current) setLoading(false);
     }
-  }, [eventId, page, search, sort, status, targetType]);
+  }, [eventId, language, page, search, sort, status, targetType]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void loadQueue());
     return () => window.cancelAnimationFrame(frame);
   }, [loadQueue]);
 
-  const openFeedback = async (feedbackId: number) => {
+  const openFeedback = useCallback(async (feedbackId: number) => {
+    const requestSequence = ++detailRequestSequence.current;
     setSelectedId(feedbackId);
     setDetail(null);
     setDetailLoading(true);
     setActionError('');
     try {
       const response = await organizerApi.getFeedback(feedbackId);
+      if (requestSequence !== detailRequestSequence.current) return;
       setDetail(response);
       setInternalNote(response.internalNote || '');
     } catch (error) {
-      setActionError(queueErrorMessage(error));
+      if (requestSequence !== detailRequestSequence.current) return;
+      setActionError(queueErrorMessage(error, language));
     } finally {
-      setDetailLoading(false);
+      if (requestSequence === detailRequestSequence.current) setDetailLoading(false);
     }
-  };
+  }, [language]);
 
   const refreshDurableState = useCallback(async (feedbackId: number) => {
+    const requestSequence = ++detailRequestSequence.current;
     const refreshed = await organizerApi.getFeedback(feedbackId);
+    if (requestSequence !== detailRequestSequence.current) return;
     setDetail(refreshed);
     setInternalNote(refreshed.internalNote || '');
     await loadQueue();
@@ -163,7 +220,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     const normalizedNote = internalNote.trim().replace(/\s+/gu, ' ');
     if (detail.status === 'IN_PROGRESS'
       && (normalizedNote.length < 1 || [...normalizedNote].length > 1000)) {
-      setActionError('Ghi chú nội bộ phải có từ 1 đến 1.000 ký tự.');
+      setActionError(copy.noteValidation);
       return;
     }
 
@@ -181,8 +238,8 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     } catch (error) {
       const conflict = error instanceof ApiError && error.status === 409;
       setActionError(conflict
-        ? 'Góp ý vừa được Organizer khác cập nhật. Dữ liệu mới nhất đã được tải lại.'
-        : queueErrorMessage(error));
+        ? copy.conflict
+        : queueErrorMessage(error, language));
       try {
         await refreshDurableState(detail.feedbackId);
       } catch {
@@ -194,10 +251,10 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
   };
 
   const actionLabel = detail?.status === 'NEW'
-    ? 'Bắt đầu xử lý'
+    ? copy.start
     : detail?.status === 'IN_PROGRESS'
-      ? 'Hoàn tất xử lý'
-      : 'Mở lại xử lý';
+      ? copy.resolve
+      : copy.reopen;
   const ActionIcon = detail?.status === 'NEW'
     ? PlayCircle
     : detail?.status === 'IN_PROGRESS'
@@ -208,105 +265,110 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
     <header className="organizer-feedback-heading">
       <div>
         <h1 className="organizer-view-title workspace-page-title">
-          {language === 'vi' ? 'Góp ý trải nghiệm' : 'Experience feedback'}
+          {copy.heading}
         </h1>
         <p className="organizer-view-sub workspace-page-subtitle">
-          Hàng đợi dùng chung cho toàn bộ Ban Tổ chức; ghi chú xử lý chỉ dùng nội bộ.
+          {copy.subtitle}
         </p>
       </div>
-      <div className="organizer-feedback-total" aria-label={`${totalElements} góp ý`}>
-        <strong>{totalElements}</strong><span>Tổng góp ý</span>
+      <div className="organizer-feedback-total" aria-label={`${copy.total}: ${totalElements}`}>
+        <strong>{totalElements}</strong><span>{copy.total}</span>
       </div>
     </header>
 
     <div className="organizer-feedback-toolbar">
       <label className="organizer-feedback-search">
         <Search size={17} aria-hidden="true" />
-        <span className="sr-only">Tìm góp ý</span>
-        <input value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder="Tìm nội dung, người gửi, email, sự kiện..." />
+        <span className="sr-only">{copy.search}</span>
+        <input value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder={copy.searchPlaceholder} />
       </label>
-      <select value={status} onChange={event => { setPage(0); setStatus(event.target.value as OrganizerFeedbackStatus | ''); }} aria-label="Lọc trạng thái">
-        {STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      <select value={status} onChange={event => { setPage(0); setStatus(event.target.value as OrganizerFeedbackStatus | ''); }} aria-label={copy.statusFilter}>
+        <option value="">{copy.allStatuses}</option>
+        <option value="NEW">{copy.newStatus}</option>
+        <option value="IN_PROGRESS">{copy.inProgressStatus}</option>
+        <option value="RESOLVED">{copy.resolvedStatus}</option>
       </select>
       <select value={targetType} onChange={event => {
         const value = event.target.value as OrganizerFeedbackTargetType | '';
         setPage(0);
         setTargetType(value);
         if (value === 'BOOK_STREET') setEventId('');
-      }} aria-label="Lọc phạm vi">
-        {TARGET_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      }} aria-label={copy.targetFilter}>
+        <option value="">{copy.allTargets}</option>
+        <option value="BOOK_STREET">{copy.bookStreetTarget}</option>
+        <option value="EVENT">{copy.eventTarget}</option>
       </select>
-      <input className="organizer-feedback-event-filter" type="number" min="1" value={eventId} disabled={targetType === 'BOOK_STREET'} onChange={event => { setPage(0); setEventId(event.target.value); }} placeholder="Mã sự kiện" aria-label="Lọc theo mã sự kiện" />
-      <select value={sort} onChange={event => { setPage(0); setSort(event.target.value as typeof sort); }} aria-label="Sắp xếp">
-        <option value="submittedAt,desc">Mới nhất trước</option>
-        <option value="submittedAt,asc">Cũ nhất trước</option>
+      <input className="organizer-feedback-event-filter" type="number" min="1" step="1" value={eventId} disabled={targetType === 'BOOK_STREET'} onChange={event => { setPage(0); setEventId(event.target.value); }} placeholder={copy.eventPlaceholder} aria-label={copy.eventFilter} />
+      <select value={sort} onChange={event => { setPage(0); setSort(event.target.value as typeof sort); }} aria-label={copy.sort}>
+        <option value="submittedAt,desc">{copy.newest}</option>
+        <option value="submittedAt,asc">{copy.oldest}</option>
       </select>
     </div>
 
-    {loading && <div className="organizer-feedback-state"><LoaderCircle className="is-spinning" /><p>Đang tải góp ý…</p></div>}
+    {loading && <div className="organizer-feedback-state"><LoaderCircle className="is-spinning" /><p>{copy.loadingQueue}</p></div>}
     {!loading && queueError && <div className="organizer-feedback-state is-error" role="alert">
       <p>{queueError}</p>
-      <button type="button" className="btn-org-secondary" onClick={() => void loadQueue()}><RefreshCw size={16} />Thử lại</button>
+      <button type="button" className="btn-org-secondary" onClick={() => void loadQueue()}><RefreshCw size={16} />{copy.retry}</button>
     </div>}
     {!loading && !queueError && items.length === 0 && <div className="organizer-feedback-state">
-      <MessageSquare size={34} aria-hidden="true" /><p>Chưa có góp ý phù hợp với bộ lọc.</p>
+      <MessageSquare size={34} aria-hidden="true" /><p>{copy.empty}</p>
     </div>}
     {!loading && !queueError && items.length > 0 && <div className="organizer-feedback-list">
       {items.map(item => <article className="organizer-feedback-card" key={item.feedbackId}>
         <div className="organizer-feedback-card-main">
           <div className="organizer-feedback-card-title">
-            <strong>{targetLabel(item)}</strong>
-            <span className={`organizer-feedback-status is-${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
+            <strong>{targetLabel(item, language)}</strong>
+            <span className={`organizer-feedback-status is-${item.status.toLowerCase()}`}>{statusLabel(item.status, language)}</span>
           </div>
           <p>{item.messagePreview}</p>
-          <small><CalendarClock size={14} />{formatDate(item.submittedAt)}</small>
+          <small><CalendarClock size={14} />{formatDate(item.submittedAt, language)}</small>
         </div>
-        <button type="button" className="btn-org-secondary" onClick={() => void openFeedback(item.feedbackId)}>Xem chi tiết</button>
+        <button type="button" className="btn-org-secondary" onClick={() => void openFeedback(item.feedbackId)}>{copy.viewDetail}</button>
       </article>)}
     </div>}
 
     {!loading && !queueError && totalPages > 0 && <nav className="organizer-feedback-pagination" aria-label="Phân trang góp ý">
-      <button type="button" className="btn-org-secondary" disabled={page === 0} onClick={() => setPage(current => current - 1)}>Trang trước</button>
-      <span>Trang {page + 1}/{totalPages}</span>
-      <button type="button" className="btn-org-secondary" disabled={page + 1 >= totalPages} onClick={() => setPage(current => current + 1)}>Trang sau</button>
+      <button type="button" className="btn-org-secondary" disabled={page === 0} onClick={() => setPage(current => current - 1)}>{copy.previousPage}</button>
+      <span>{copy.page} {page + 1}/{totalPages}</span>
+      <button type="button" className="btn-org-secondary" disabled={page + 1 >= totalPages} onClick={() => setPage(current => current + 1)}>{copy.nextPage}</button>
     </nav>}
 
     {selectedId !== null && <div className="org-modal-overlay organizer-feedback-overlay" role="presentation">
       <div className="org-modal-box organizer-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="organizer-feedback-dialog-title">
         <div className="org-modal-header">
-          <div><h3 id="organizer-feedback-dialog-title">Chi tiết góp ý</h3><small>{detail ? targetLabel(detail) : `#${selectedId}`}</small></div>
-          <button type="button" className="btn-org-secondary" disabled={actionLoading} onClick={closeDetail}>Đóng</button>
+          <div><h3 id="organizer-feedback-dialog-title">{copy.detailTitle}</h3><small>{detail ? targetLabel(detail, language) : `#${selectedId}`}</small></div>
+          <button type="button" className="btn-org-secondary" disabled={actionLoading} onClick={closeDetail}>{copy.close}</button>
         </div>
         <div className="org-modal-body organizer-feedback-detail">
-          {detailLoading && <div className="organizer-feedback-state"><LoaderCircle className="is-spinning" /><p>Đang tải chi tiết…</p></div>}
+          {detailLoading && <div className="organizer-feedback-state"><LoaderCircle className="is-spinning" /><p>{copy.loadingDetail}</p></div>}
           {!detailLoading && !detail && <div className="organizer-feedback-state is-error" role="alert">
-            <p>{actionError || 'Không tải được chi tiết góp ý.'}</p>
-            <button type="button" className="btn-org-secondary" onClick={() => void openFeedback(selectedId)}><RefreshCw size={16} />Thử lại</button>
+            <p>{actionError || copy.detailFailure}</p>
+            <button type="button" className="btn-org-secondary" onClick={() => void openFeedback(selectedId)}><RefreshCw size={16} />{copy.retry}</button>
           </div>}
           {detail && <>
             <div className="organizer-feedback-detail-meta">
-              <span className={`organizer-feedback-status is-${detail.status.toLowerCase()}`}>{statusLabel(detail.status)}</span>
-              <span><CalendarClock size={15} />Gửi lúc {formatDate(detail.submittedAt)}</span>
-              <span><UserRound size={15} />{detail.guestName || detail.submitter?.fullName || 'Khách ẩn danh'}</span>
-              <span><Mail size={15} />{detail.contactEmail || 'Không cung cấp email'}</span>
+              <span className={`organizer-feedback-status is-${detail.status.toLowerCase()}`}>{statusLabel(detail.status, language)}</span>
+              <span><CalendarClock size={15} />{copy.sentAt} {formatDate(detail.submittedAt, language)}</span>
+              <span><UserRound size={15} />{detail.guestName || detail.submitter?.fullName || copy.anonymous}</span>
+              <span><Mail size={15} />{detail.contactEmail || copy.noEmail}</span>
             </div>
-            <section className="organizer-feedback-message"><h4>Nội dung góp ý</h4><p>{detail.message}</p></section>
-            {detail.lastHandledBy && <p className="organizer-feedback-handler">Xử lý gần nhất: <strong>{detail.lastHandledBy.fullName}</strong> · {formatDate(detail.updatedAt)}</p>}
+            <section className="organizer-feedback-message"><h4>{copy.messageTitle}</h4><p>{detail.message}</p></section>
+            {detail.lastHandledBy && <p className="organizer-feedback-handler">{copy.handledBy} <strong>{detail.lastHandledBy.fullName}</strong> · {formatDate(detail.updatedAt, language)}</p>}
             {detail.status === 'IN_PROGRESS' ? <label className="organizer-feedback-note">
-              <span>Ghi chú nội bộ <strong>*</strong></span>
-              <small>Chỉ Ban Tổ chức xem được; nội dung này không gửi cho khách.</small>
-              <textarea value={internalNote} onChange={event => setInternalNote(event.target.value)} rows={5} maxLength={1100} placeholder="Nhập kết quả hoặc hướng xử lý nội bộ..." />
+              <span>{copy.noteLabel} <strong>*</strong></span>
+              <small>{copy.noteHelp}</small>
+              <textarea value={internalNote} onChange={event => setInternalNote(event.target.value)} rows={5} maxLength={1100} placeholder={copy.notePlaceholder} />
             </label> : detail.internalNote && <section className="organizer-feedback-message is-note">
-              <h4>Ghi chú nội bộ</h4><small>Không gửi cho khách</small><p>{detail.internalNote}</p>
+              <h4>{copy.noteLabel}</h4><small>{copy.notSent}</small><p>{detail.internalNote}</p>
             </section>}
             {actionError && <div className="organizer-feedback-inline-error" role="alert">{actionError}</div>}
           </>}
         </div>
         {detail && <div className="org-modal-footer">
-          <button type="button" className="btn-org-secondary" disabled={actionLoading} onClick={closeDetail}>Đóng</button>
+          <button type="button" className="btn-org-secondary" disabled={actionLoading} onClick={closeDetail}>{copy.close}</button>
           <button type="button" className="btn-org-primary" disabled={actionLoading} onClick={() => void runAction()}>
             {actionLoading ? <LoaderCircle className="is-spinning" size={16} /> : <ActionIcon size={16} />}
-            {actionLoading ? 'Đang cập nhật…' : actionLabel}
+            {actionLoading ? copy.updating : actionLabel}
           </button>
         </div>}
       </div>

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
@@ -102,6 +103,23 @@ class OrganizerFeedbackControllerTests {
                         .content("{\"internalNote\":\"Đã xử lý.\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
+    }
+
+    @Test
+    void databaseFailureReturnsCanonicalPrivateError() throws Exception {
+        when(service.list("0", "20", "submittedAt,desc", null, null, null, null))
+                .thenThrow(new DataAccessResourceFailureException(
+                        "select contact_email, internal_note from private_table"
+                ));
+
+        mvc.perform(get(PATH))
+                .andExpect(status().isInternalServerError())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("Không thể xử lý góp ý lúc này."))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("contact_email")
+                )));
     }
 
     private UsernamePasswordAuthenticationToken authentication(Long userId) {

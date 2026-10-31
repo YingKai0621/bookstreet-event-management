@@ -3,6 +3,7 @@ import {
   CalendarDays,
   Layers,
   LayoutDashboard,
+  MessageSquare,
   Store,
   User,
   Users
@@ -39,6 +40,7 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
     { id: 'venues' as OrganizerTab, icon: <Building2 size={18} />, labelVi: 'Địa điểm tổ chức', labelEn: 'Venues' },
     { id: 'activities' as OrganizerTab, icon: <Layers size={18} />, labelVi: 'Hoạt động', labelEn: 'Activities' },
     { id: 'participants' as OrganizerTab, icon: <Users size={18} />, labelVi: 'Người tham gia', labelEn: 'Participants' },
+    { id: 'feedback' as OrganizerTab, icon: <MessageSquare size={18} />, labelVi: 'Góp ý', labelEn: 'Feedback' },
     { id: 'profile' as OrganizerTab, icon: <User size={18} />, labelVi: 'Hồ sơ Organizer', labelEn: 'Profile' }
   ];
 

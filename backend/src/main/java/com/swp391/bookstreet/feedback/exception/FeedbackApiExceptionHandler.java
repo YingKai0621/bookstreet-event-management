@@ -4,8 +4,11 @@ import com.swp391.bookstreet.common.response.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackages = "com.swp391.bookstreet.feedback.controller")
 public class FeedbackApiExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(FeedbackApiExceptionHandler.class);
 
     @ExceptionHandler(FeedbackApiException.class)
     public ResponseEntity<ApiErrorResponse> feedback(
@@ -51,6 +55,23 @@ public class FeedbackApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .cacheControl(CacheControl.noStore())
                 .body(new ApiErrorResponse(code, message, List.of(), Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiErrorResponse> dataAccessFailure(
+            DataAccessException exception,
+            HttpServletRequest request
+    ) {
+        log.error("Database failure while processing feedback request {}", request.getRequestURI(), exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(
+                        "INTERNAL_ERROR",
+                        "Không thể xử lý góp ý lúc này.",
+                        List.of(),
+                        Instant.now(),
+                        request.getRequestURI()
+                ));
     }
 
     private String classifyBindingFailure(Throwable exception) {
