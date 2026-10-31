@@ -210,7 +210,7 @@ The Organizer portal exposes one Feedback navigation item only after the real AP
 screen provides:
 
 - a paged queue with target, status, submitted time and privacy-safe summary;
-- server-backed search and target/status filters;
+- separate server-backed content, sender/email and Event-name searches plus target/status filters;
 - detail view for message and optional contact information;
 - explicit start, resolve and reopen actions;
 - an internal note field clearly labelled as not sent to the Guest;

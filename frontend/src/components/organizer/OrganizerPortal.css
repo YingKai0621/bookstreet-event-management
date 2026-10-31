@@ -245,6 +245,22 @@
   border-radius: 6px;
 }
 
+@media (max-width: 960px) {
+  .organizer-mobile-menu-btn {
+    display: grid;
+    place-items: center;
+  }
+
+  .organizer-app-shell .role-sidebar {
+    height: calc(100dvh - 64px);
+    top: 64px;
+  }
+
+  .organizer-app-shell .role-sidebar-backdrop {
+    inset: 64px 0 0;
+  }
+}
+
 .organizer-topbar-right {
   display: flex;
   align-items: center;

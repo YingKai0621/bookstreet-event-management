@@ -163,6 +163,26 @@ class AuthAuthorizationIntegrationTests {
     }
 
     @Test
+    void adminKeepsExistingOrganizerAccessButCannotAccessOrganizerFeedback() throws Exception {
+        String username = "admin" + uniqueSuffix();
+        register(username, username + "@example.com");
+        assignVerifiedRole(username, RoleCode.ADMIN);
+
+        Cookie sessionCookie = login(username);
+
+        mockMvc.perform(get("/api/v1/organizer/dashboard")
+                        .cookie(sessionCookie))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/organizer/feedbacks")
+                        .cookie(sessionCookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        deleteSession(sessionCookie);
+    }
+
+    @Test
     void unverifiedPartnerRoleCannotAccessPartnerEndpoint() throws Exception {
         String username = "uvpartner" + uniqueSuffix();
         register(username, username + "@example.com");

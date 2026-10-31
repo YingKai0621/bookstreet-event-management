@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/organizer/applications")
-@PreAuthorize("hasRole('ORGANIZER')")
+@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
 public class OrganizerApplicationReviewController {
 
     private final OrganizerApplicationReviewService reviewService;

@@ -33,21 +33,64 @@ import type {
   UpdateOrganizerLocationRequest,
 } from '../types/activity';
 
-export type OrganizerFeedbackStatus = 'new' | 'in_progress' | 'responded' | 'closed';
+export type OrganizerFeedbackStatus = 'NEW' | 'IN_PROGRESS' | 'RESOLVED';
+export type OrganizerFeedbackTargetType = 'BOOK_STREET' | 'EVENT';
 
-export interface OrganizerFeedback {
-  id: string;
-  targetScope: 'entire' | 'heritage' | 'booth' | 'facility';
-  targetName: string | null;
-  rating: number;
-  comments: string | null;
+export interface FeedbackEventBrief {
+  eventId: number;
+  name: string;
+}
+
+export interface FeedbackUserBrief {
+  userId: number;
+  fullName: string;
+}
+
+export interface OrganizerFeedbackListItem {
+  feedbackId: number;
+  targetType: OrganizerFeedbackTargetType;
+  event: FeedbackEventBrief | null;
+  messagePreview: string;
+  status: OrganizerFeedbackStatus;
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizerFeedbackDetail {
+  feedbackId: number;
+  targetType: OrganizerFeedbackTargetType;
+  event: FeedbackEventBrief | null;
+  submitter: FeedbackUserBrief | null;
+  guestName: string | null;
   contactEmail: string | null;
+  message: string;
   status: OrganizerFeedbackStatus;
   internalNote: string | null;
-  createdAt: string;
-  assignee?: { fullName: string } | null;
-  heritage?: { name: string; code: string } | null;
-  booth?: { name: string; code: string } | null;
+  lastHandledBy: FeedbackUserBrief | null;
+  submittedAt: string;
+  updatedAt: string;
+  handlingStartedAt: string | null;
+  resolvedAt: string | null;
+}
+
+export interface OrganizerFeedbackPage {
+  content: OrganizerFeedbackListItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface OrganizerFeedbackQuery {
+  page?: number;
+  size?: number;
+  sort?: 'submittedAt,desc' | 'submittedAt,asc';
+  search?: string;
+  senderSearch?: string;
+  eventNameSearch?: string;
+  targetType?: OrganizerFeedbackTargetType;
+  eventId?: number;
+  status?: OrganizerFeedbackStatus;
 }
 
 export interface OrganizerPartnerApplication {
@@ -736,8 +779,36 @@ export const organizerApi = {
     return unsupportedOrganizerFeature(`Báo cáo sự kiện ${eventId}`);
   },
 
-  getFeedbacks: async (): Promise<OrganizerFeedback[]> => [],
-  updateFeedback: (_id: string, _data: { status: OrganizerFeedbackStatus; internalNote?: string }): Promise<OrganizerFeedback> =>
-    unsupportedOrganizerFeature<OrganizerFeedback>('Quản lý góp ý'),
+  listFeedbacks: (query: OrganizerFeedbackQuery = {}) =>
+    apiClient.get<OrganizerFeedbackPage>(
+      `/organizer/feedbacks${activityQuery({
+        page: query.page ?? 0,
+        size: query.size ?? 20,
+        sort: query.sort ?? 'submittedAt,desc',
+        search: query.search,
+        senderSearch: query.senderSearch,
+        eventNameSearch: query.eventNameSearch,
+        targetType: query.targetType,
+        eventId: query.eventId,
+        status: query.status,
+      })}`,
+    ),
+  getFeedback: (feedbackId: number | string) =>
+    apiClient.get<OrganizerFeedbackDetail>(
+      `/organizer/feedbacks/${encodeURIComponent(feedbackId)}`,
+    ),
+  startHandlingFeedback: (feedbackId: number | string) =>
+    apiClient.post<OrganizerFeedbackDetail>(
+      `/organizer/feedbacks/${encodeURIComponent(feedbackId)}/start-handling`,
+    ),
+  resolveFeedback: (feedbackId: number | string, internalNote: string) =>
+    apiClient.post<OrganizerFeedbackDetail>(
+      `/organizer/feedbacks/${encodeURIComponent(feedbackId)}/resolve`,
+      { internalNote },
+    ),
+  reopenFeedback: (feedbackId: number | string) =>
+    apiClient.post<OrganizerFeedbackDetail>(
+      `/organizer/feedbacks/${encodeURIComponent(feedbackId)}/reopen`,
+    ),
 };
 
