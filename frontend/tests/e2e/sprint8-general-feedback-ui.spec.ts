@@ -222,6 +222,15 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
   await expect(page.getByText('Khu vực sân khấu được hướng dẫn rõ ràng và thân thiện.')).toBeVisible();
   await expect(page.locator('.organizer-feedback-card svg.lucide-star')).toHaveCount(0);
   await page.getByRole('button', { name: 'Xem chi tiết' }).click();
+  const overlay = page.locator('.organizer-feedback-overlay');
+  await expect(overlay).toBeVisible();
+  await expect.poll(() => overlay.evaluate(element => getComputedStyle(element).position)).toBe('fixed');
+  const dialogBox = await page.getByRole('dialog').boundingBox();
+  const viewport = page.viewportSize();
+  expect(dialogBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+  expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport!.height);
   await expect(page.getByText('minhan@example.test')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Xử lý góp ý' })).toBeVisible();
 
@@ -235,6 +244,10 @@ test('organizer uses the real shared queue, detail and legal actions', async ({ 
   await expect(page.getByRole('button', { name: 'Mở lại xử lý' })).toBeVisible();
   expect(mock.state()).toBe('RESOLVED');
   expect(mock.note()).toBe('Đã chuyển cho nhóm vận hành.');
+
+  await page.getByRole('button', { name: 'Đóng' }).first().click();
+  await expect(overlay).toHaveCount(0);
+  await expect.poll(() => page.locator('.organizer-main-viewport').evaluate(element => element.style.overflow)).toBe('');
 });
 
 test('organizer feedback is reachable from desktop and mobile navigation', async ({ page }) => {

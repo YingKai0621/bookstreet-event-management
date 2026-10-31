@@ -333,7 +333,7 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
       <button type="button" className="btn-org-secondary" disabled={page + 1 >= totalPages} onClick={() => setPage(current => current + 1)}>{copy.nextPage}</button>
     </nav>}
 
-    {selectedId !== null && <div className="org-modal-overlay organizer-feedback-overlay" role="presentation">
+    {selectedId !== null && <div className="org-modal-backdrop organizer-feedback-overlay" role="presentation">
       <div className="org-modal-box organizer-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="organizer-feedback-dialog-title">
         <div className="org-modal-header">
           <div><h3 id="organizer-feedback-dialog-title">{copy.detailTitle}</h3><small>{detail ? targetLabel(detail, language) : `#${selectedId}`}</small></div>
