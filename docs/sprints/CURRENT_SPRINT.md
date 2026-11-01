@@ -2,12 +2,13 @@
 
 ## Sprint 09 Heritage Public Content
 
-- Status: `ACTIVE`
+- Status: `COMPLETED`
 - Activation date: `2026-11-01`
-- Latest completed Sprint: `Sprint 08 General Feedback Submission and Organizer Handling`
+- Completion date: `2026-11-01`
+- Latest completed Sprint: `Sprint 09 Heritage Public Content`
 - Approved documentation merge: PR #105, merge commit `7e46809`
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V14`
-- Expected next Heritage migration: candidate `V15` only if it is still free when reserved
+- Implementation merge: PR #107, merge commit `7ed4e0e`
+- Implemented schema baseline: immutable Flyway migrations `V1` through `V15`
 - Sprint baseline: `docs/sprints/sprint-09.md`
 - Current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
 - Documentation audit: `docs/development/SPRINT_09_DOCUMENTATION_AUDIT.md`
@@ -17,7 +18,7 @@
   `docs/design/SPRINT_09_HERITAGE_PHYSICAL_ERD_OVERLAY.md`
 - Implementation and ownership plan: `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
 - Developer handoff: `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
-- Latest closure evidence: `docs/development/SPRINT_08_CLOSURE_REPORT.md`
+- Latest closure evidence: `docs/development/SPRINT_09_CLOSURE_REPORT.md`
 
 ## Sprint goal
 
@@ -73,7 +74,7 @@ The Heritage Owner consumes the migration supplied by the Project Owner and does
 create or edit a competing migration. Notification work remains separate and must not reserve or
 reuse the same Flyway version.
 
-## Mandatory delivery order
+## Completed delivery order
 
 1. The Project Owner updates from `main`, confirms the next free Flyway version, reserves it and
    creates the single Heritage migration.
@@ -89,9 +90,8 @@ reuse the same Flyway version.
 
 - PostgreSQL is durable truth. Redis stores server-side Session only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`. V1 through V14 are immutable.
-- The migration filename is not reserved by this document. The Project Owner must recheck before
-  creating it.
+- Hibernate remains `ddl-auto: validate`. V1 through V15 are immutable.
+- V15 is the applied Sprint 9 Heritage migration and must not be edited.
 - The Heritage schema has exactly the approved columns, constraints and indexes.
 - Heritage statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`.
 - Public list and detail expose only `PUBLISHED` records.
@@ -112,13 +112,11 @@ reuse the same Flyway version.
 - Notification delivery caused by Heritage changes
 - reports, analytics, map integration or unrelated frontend refactors
 
-## Activation result
+## Completion result
 
-PR #105 approved and merged the Sprint 9 current-state audit, product baseline, Physical ERD
-overlay, 28-AC Use Case Specification, ten-operation API Contract, implementation plan, developer
-handoff and documentation audit at merge commit `7e46809`.
+PR #105 approved the Sprint 9 documentation baseline at merge commit `7e46809`. PR #107 then
+delivered V15, the domain and APIs, the public experience, the shared Organizer management
+workflow and focused automated coverage at merge commit `7ed4e0e`.
 
-Sprint 9 is active from `2026-11-01`. At activation, the repository still contains only immutable
-migrations V1 through V14 and no Heritage application implementation. Candidate V15 is an expected
-next version, not a reservation. Implementation begins only after the Project Owner completes the
-migration reservation gate above.
+All 28 Acceptance Criteria have implementation and verification evidence in
+`docs/development/SPRINT_09_CLOSURE_REPORT.md`. Sprint 9 is closed as `COMPLETED` on `2026-11-01`.
