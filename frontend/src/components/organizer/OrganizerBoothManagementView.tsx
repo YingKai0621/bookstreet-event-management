@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
 import {
@@ -150,6 +151,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   const [viewingBooth, setViewingBooth] = useState<PhysicalBooth | null>(null);
   useModalDismiss(isFormModalOpen, closeFormModal);
   useModalDismiss(Boolean(viewingBooth), () => setViewingBooth(null));
+  const formBackdropHandlers = useBackdropClick(closeFormModal);
+  const detailBackdropHandlers = useBackdropClick(() => setViewingBooth(null));
 
   const loadBoothData = useCallback(async () => {
     setLoading(true);
@@ -948,7 +951,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
       {/* 5. CREATE / EDIT BOOTH MODAL */}
       {isFormModalOpen && (
-        <div className="booth-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeFormModal(); }}>
+        <div className="booth-modal-backdrop" {...formBackdropHandlers}>
           <div className="booth-modal-box" onClick={e => e.stopPropagation()}>
             <div className="booth-modal-header">
               <h2>
@@ -1171,7 +1174,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
       {/* 6. VIEW BOOTH DETAIL MODAL */}
       {viewingBooth && (
-        <div className="booth-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setViewingBooth(null); }}>
+        <div className="booth-modal-backdrop" {...detailBackdropHandlers}>
           <div className="booth-modal-box" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
             <div className="booth-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

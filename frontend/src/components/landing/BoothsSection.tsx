@@ -1,4 +1,5 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
@@ -78,6 +79,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       setIsBoothSheetClosing(false);
     }, 260);
   }, [activeModalBooth, isBoothSheetClosing]);
+  const boothBackdropHandlers = useBackdropClick(closeBoothModal);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
@@ -259,7 +261,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
         >
-          {isLoading || booths.length === 0 ? (
+          {isLoading ? (
             <div className="booths-carousel-page" style={{ opacity: 1 }} aria-busy="true">
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
@@ -283,6 +285,12 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                 </div>
               ))}
             </div>
+          ) : booths.length === 0 ? (
+            error ? null : (
+              <div className="booths-carousel-page" role="status" style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
+                <p>{language === 'vi' ? 'Sự kiện này chưa có gian hàng được công bố.' : 'This event has no published bookstalls yet.'}</p>
+              </div>
+            )
           ) : displayedBooths.length === 0 ? (
             <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
               <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
@@ -396,7 +404,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       {activeModalBooth && createPortal(
         <div
           className="modal-overlay booth-detail-modal-overlay"
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeBoothModal(); }}
+          {...boothBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="booth-detail-modal-title"

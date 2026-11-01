@@ -1,5 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   ArrowLeft,
   ArrowRight,
@@ -64,6 +65,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
     : '/';
   useModalDismiss(open && !activeModalBooth, () => navigate(publicHomeUrl));
   useModalDismiss(Boolean(activeModalBooth), () => navigate(boothCatalogUrl));
+  const boothBackdropHandlers = useBackdropClick(() => navigate(boothCatalogUrl));
 
   const categories = [
     { id: 'all', labelVi: 'Tất cả gian hàng', labelEn: 'All Stalls', count: booths.length },
@@ -158,7 +160,16 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             </div>
 
             {/* Featured Showcase Card on the right */}
-            {featuredBooth ? (
+            {isLoading ? (
+              <div className="heritage-featured skeleton-card" aria-hidden="true">
+                <div className="skeleton-dark" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+                <div style={{ width: '75%' }}>
+                  <div className="skeleton-dark" style={{ width: '130px', height: '12px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '85%', height: '28px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '65%', height: '14px' }} />
+                </div>
+              </div>
+            ) : featuredBooth ? (
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
@@ -181,12 +192,11 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 <ArrowRight className="heritage-featured-arrow" size={24} />
               </div>
             ) : (
-              <div className="heritage-featured skeleton-card" aria-hidden="true">
-                <div className="skeleton-dark" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
-                <div style={{ width: '75%' }}>
-                  <div className="skeleton-dark" style={{ width: '130px', height: '12px', marginBottom: '10px' }} />
-                  <div className="skeleton-dark" style={{ width: '85%', height: '28px', marginBottom: '10px' }} />
-                  <div className="skeleton-dark" style={{ width: '65%', height: '14px' }} />
+              <div className="heritage-featured" role="status">
+                <div>
+                  <span>{vi ? 'Dữ liệu gian hàng' : 'Bookstall data'}</span>
+                  <h2>{vi ? 'Chưa có gian hàng được công bố' : 'No published bookstalls yet'}</h2>
+                  <span>{vi ? 'Vui lòng quay lại sau.' : 'Please check back later.'}</span>
                 </div>
               </div>
             )}
@@ -247,7 +257,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             <span>{vi ? `${filteredBooths.length} gian hàng` : `${filteredBooths.length} pavilions`}</span>
           </div>
 
-          {isLoading || booths.length === 0 ? (
+          {isLoading ? (
             <div className="heritage-collection-grid" aria-busy="true">
               {[1, 2, 3, 4, 5, 6].map((item) => (
                 <article
@@ -269,6 +279,12 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 </article>
               ))}
             </div>
+          ) : booths.length === 0 ? (
+            error ? null : (
+              <div className="heritage-empty-result" role="status">
+                <p>{vi ? 'Sự kiện này chưa có gian hàng được công bố.' : 'This event has no published bookstalls yet.'}</p>
+              </div>
+            )
           ) : filteredBooths.length === 0 ? (
             <div className="heritage-empty-result">
               <p>{vi ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No kiosks matched your query.'}</p>
@@ -326,7 +342,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Detail Modal — rendered via Portal to escape fixed-panel stacking context */}
         {activeModalBooth && createPortal(
-          <div className="modal-overlay" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) navigate(boothCatalogUrl); }} role="dialog" aria-modal="true">
+          <div className="modal-overlay" {...boothBackdropHandlers} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => navigate(boothCatalogUrl)} aria-label="Đóng">
                 <X size={20} />

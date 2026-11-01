@@ -12,7 +12,6 @@ import {
   FileText,
   MessageSquare,
   Search,
-  Trash2,
   Undo2,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -63,14 +62,6 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
   const [filterReferenceTime] = useState(() => Date.now());
   const [detailApplication, setDetailApplication] = useState<PartnerEventApplication | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<PartnerEventApplication | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<PartnerEventApplication | null>(null);
-  const [dismissedWithdrawnIds, setDismissedWithdrawnIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('bookstreet_partner_dismissed_withdrawn_apps') || '[]');
-    } catch {
-      return [];
-    }
-  });
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -99,18 +90,16 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
     void loadApplications();
   }, [loadApplications]);
 
-  const activeApps = useMemo(() => applications.filter(app => !dismissedWithdrawnIds.includes(app.id)), [applications, dismissedWithdrawnIds]);
-
   const counts = useMemo(() => ({
-    all: activeApps.length,
-    pending: activeApps.filter(application => application.status === 'pending').length,
-    approved: activeApps.filter(application => application.status === 'approved').length,
-    rejected: activeApps.filter(application => application.status === 'rejected').length,
-    withdrawn: activeApps.filter(application => application.status === 'withdrawn').length,
+    all: applications.length,
+    pending: applications.filter(application => application.status === 'pending').length,
+    approved: applications.filter(application => application.status === 'approved').length,
+    rejected: applications.filter(application => application.status === 'rejected').length,
+    withdrawn: applications.filter(application => application.status === 'withdrawn').length,
   }), [applications]);
 
   const keyword = search.trim().toLocaleLowerCase('vi');
-  const visibleApplications = useMemo(() => activeApps
+  const visibleApplications = useMemo(() => applications
     .filter(application => {
       if (activeFilter !== 'all' && application.status !== activeFilter) return false;
       if (!matchesTimeFilter(application.endAt, timeFilter, filterReferenceTime)) return false;
@@ -120,7 +109,7 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
     .sort((left, right) => {
       const difference = partnerEventTimestamp(right.submittedAt) - partnerEventTimestamp(left.submittedAt);
       return sortOrder === 'newest' ? difference : -difference;
-    }), [activeFilter, activeApps, filterReferenceTime, keyword, sortOrder, timeFilter]);
+    }), [activeFilter, applications, filterReferenceTime, keyword, sortOrder, timeFilter]);
 
   const applicationPageCount = getPageCount(visibleApplications.length, APPLICATIONS_PER_PAGE);
   const currentApplicationPage = clampPage(applicationPage, applicationPageCount);
@@ -144,20 +133,6 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
   const openWithdrawDialog = (application: PartnerEventApplication) => {
     setDetailApplication(null);
     setWithdrawTarget(application);
-  };
-
-  const handleDeleteWithdrawn = (id: string) => {
-    setDismissedWithdrawnIds(prev => {
-      const next = Array.from(new Set([...prev, id]));
-      try {
-        localStorage.setItem('bookstreet_partner_dismissed_withdrawn_apps', JSON.stringify(next));
-      } catch {
-        // Ignore storage errors
-      }
-      return next;
-    });
-    setDeleteTarget(null);
-    setSuccessMessage('Đã xóa hồ sơ đã rút khỏi danh sách.');
   };
 
   const withdrawApplication = async () => {
@@ -243,16 +218,6 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
                     <span className={`event-status-pill is-${application.status}`}><span />{PARTNER_APPLICATION_STATUS_LABELS[application.status]}</span>
                     <button type="button" className="event-card-primary-action" onClick={() => setDetailApplication(application)}><FileText size={16} /> Xem hồ sơ <ArrowRight size={16} /></button>
                     {application.status === 'pending' && <button type="button" className="event-card-danger-action" onClick={() => openWithdrawDialog(application)}><Undo2 size={15} /> Rút hồ sơ</button>}
-                    {application.status === 'withdrawn' && (
-                      <button
-                        type="button"
-                        className="event-card-delete-action"
-                        onClick={() => setDeleteTarget(application)}
-                        title="Xóa hồ sơ đã rút khỏi danh sách"
-                      >
-                        <Trash2 size={15} /> Xóa hồ sơ
-                      </button>
-                    )}
                   </div>
                 </article>
               );
@@ -271,7 +236,7 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
       {detailApplication && <PartnerDialog title="Chi tiết hồ sơ tham gia" onClose={closeDetail}><div className="partner-dialog-body event-application-modal"><span className={`event-status-pill is-${detailApplication.status}`}><span />{PARTNER_APPLICATION_STATUS_LABELS[detailApplication.status]}</span><h3 className="partner-dialog-event-title">{detailApplication.eventTitle}</h3><div className="event-modal-meta"><span><CalendarDays size={15} />{detailApplication.dateRange || 'Lịch sự kiện đang cập nhật'}</span><span><Clock3 size={15} />Nộp lúc: {formatPartnerEventDateTime(detailApplication.submittedAt)}</span></div><div className="event-modal-note"><span>Ghi chú đăng ký</span><p>{detailApplication.applicationNote || 'Không có ghi chú.'}</p></div><div className="event-modal-note is-review"><span>Phản hồi từ Ban Quản Lý</span><p>{detailApplication.reviewNote || 'Chưa có phản hồi.'}</p></div><div className="partner-dialog-actions">{detailApplication.status === 'pending' && <button type="button" className="btn-part-danger" onClick={() => openWithdrawDialog(detailApplication)}><Undo2 size={15} />Rút hồ sơ</button>}<button type="button" className="btn-part-primary" onClick={closeDetail}>Đóng</button></div></div></PartnerDialog>}
 
       {withdrawTarget && (
-        <PartnerDialog title="Rút hồ sơ?" onClose={() => !processingId && setWithdrawTarget(null)}>
+        <PartnerDialog title="Xác nhận rút hồ sơ" onClose={() => !processingId && setWithdrawTarget(null)}>
           <div className="partner-dialog-body event-withdraw-dialog">
             <div className="event-withdraw-summary-card">
               <div className="event-withdraw-summary-top">
@@ -283,50 +248,18 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
               </div>
             </div>
 
-            <p className="event-withdraw-irrevocable">Không thể đăng ký lại sự kiện này.</p>
+            <p className="event-withdraw-irrevocable">Sau khi rút, hồ sơ sẽ không thể đăng ký lại cho cùng sự kiện.</p>
 
             <div className="partner-dialog-actions">
               <button type="button" className="btn-part-secondary" onClick={() => setWithdrawTarget(null)} disabled={Boolean(processingId)}>Giữ hồ sơ</button>
               <button type="button" className="btn-part-danger" onClick={() => void withdrawApplication()} disabled={Boolean(processingId)}>
-                <Undo2 size={16} />{processingId ? 'Đang rút…' : 'Rút hồ sơ'}
+                <Undo2 size={16} />{processingId ? 'Đang rút…' : 'Xác nhận rút hồ sơ'}
               </button>
             </div>
           </div>
         </PartnerDialog>
       )}
 
-      {deleteTarget && (
-        <PartnerDialog title="Xác nhận xóa hồ sơ" onClose={() => setDeleteTarget(null)}>
-          <div className="partner-dialog-body event-withdraw-dialog">
-            <div className="event-withdraw-hero">
-              <span className="event-withdraw-icon"><Trash2 size={24} /></span>
-              <div className="event-withdraw-hero-text">
-                <h4>Xóa hồ sơ đã rút khỏi danh sách?</h4>
-                <p>Hồ sơ này đã rút trước đó và sẽ được gỡ bỏ khỏi danh sách theo dõi của bạn.</p>
-              </div>
-            </div>
-
-            <div className="event-withdraw-summary-card">
-              <div className="event-withdraw-summary-top">
-                <span className="event-withdraw-summary-kicker">Hồ sơ #{deleteTarget.id}</span>
-                <span className="event-status-pill is-withdrawn"><span />Đã rút</span>
-              </div>
-              <h3>{deleteTarget.eventTitle}</h3>
-              <div className="event-withdraw-summary-meta">
-                <span><CalendarDays size={14} />{deleteTarget.dateRange || 'Lịch sự kiện đang cập nhật'}</span>
-                <span><Clock3 size={14} />Nộp lúc {formatPartnerEventDateTime(deleteTarget.submittedAt)}</span>
-              </div>
-            </div>
-
-            <div className="partner-dialog-actions">
-              <button type="button" className="btn-part-secondary" onClick={() => setDeleteTarget(null)}>Hủy</button>
-              <button type="button" className="btn-part-danger" onClick={() => handleDeleteWithdrawn(deleteTarget.id)}>
-                <Trash2 size={16} /> Xóa hồ sơ
-              </button>
-            </div>
-          </div>
-        </PartnerDialog>
-      )}
     </div>
   );
 };

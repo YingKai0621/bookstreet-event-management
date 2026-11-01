@@ -348,3 +348,24 @@
   gap: 0.4rem;
 }
 
+.org-crop-error,
+.org-crop-loading {
+  margin-bottom: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.org-crop-error {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.org-crop-loading {
+  border: 1px solid #cfdad5;
+  background: #f5f9f7;
+  color: #315e4f;
+}
+

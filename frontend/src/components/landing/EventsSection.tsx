@@ -1,5 +1,6 @@
 import '../participant/EventFeedback.css';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -86,6 +87,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
 
   useModalDismiss(Boolean(activeEventDetail), () => closeEventSheet('detail'));
   useModalDismiss(Boolean(showRegisterModal), () => closeEventSheet('register'));
+  const detailBackdropHandlers = useBackdropClick(() => closeEventSheet('detail'));
+  const registrationBackdropHandlers = useBackdropClick(() => closeEventSheet('register'));
 
   const weekEventIds = React.useMemo(() => {
     const today = new Date();
@@ -155,7 +158,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {activeEventDetail && createPortal(
         <div
           className="modal-overlay event-detail-modal-overlay"
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeEventSheet('detail'); }}
+          {...detailBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="event-detail-modal-title"
@@ -247,7 +250,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {showRegisterModal && createPortal(
         <div
           className="modal-overlay registration-modal-overlay"
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeEventSheet('register'); }}
+          {...registrationBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="registration-modal-title"

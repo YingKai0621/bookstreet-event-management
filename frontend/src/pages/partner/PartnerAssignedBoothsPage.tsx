@@ -18,6 +18,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import { paymentApi } from '../../services/paymentApi';
@@ -107,6 +108,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
   const loadGenerationRef = useRef(0);
 
   useModalDismiss(Boolean(selectedItem), () => setSelectedItem(null));
+  const detailBackdropHandlers = useBackdropClick(() => setSelectedItem(null));
 
   const applicationByEvent = useMemo(
     () => new Map(applications.map(application => [Number(application.eventId), application])),
@@ -345,7 +347,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
       )}
 
       {selectedItem && (
-        <div className="my-booths-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setSelectedItem(null); }}>
+        <div className="my-booths-modal-backdrop" {...detailBackdropHandlers}>
           <section
             className="my-booths-qr-modal"
             role="dialog"

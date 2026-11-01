@@ -1,5 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   AlertCircle,
   Calendar,
@@ -293,6 +294,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   const [eventSearch, setEventSearch] = useState('');
   const [now, setNow] = useState(0);
   useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
+  const boothBackdropHandlers = useBackdropClick(() => { if (busy !== 'submit') setSelectedBooth(null); });
 
   const eventId = boothEligibleApplications.some(application => application.eventId === requestedEventId)
     ? requestedEventId
@@ -950,7 +952,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       {selectedBooth && (
         <div
           className="booth-modal-backdrop"
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && busy !== 'submit') setSelectedBooth(null); }}
+          {...boothBackdropHandlers}
         >
           <div className="booth-modal-box s2-booth-request-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
             {/* Header */}
