@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import {
-  ExtendedHeritageProfile,
   Language
 } from '../../types';
 import { EventDetailView } from './EventDetailView';
@@ -139,7 +138,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [isLoadingEventOperations, setIsLoadingEventOperations] = useState(false);
   const [eventOperationsError, setEventOperationsError] = useState('');
   const [eventOperationsReloadKey, setEventOperationsReloadKey] = useState(0);
-  const [managedHeritageList, setManagedHeritageList] = useState<ExtendedHeritageProfile[]>([]);
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
@@ -300,53 +298,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       ...updatedProfile,
       notificationPreferences: current.notificationPreferences,
     }));
-  };
-
-  const heritagePayload = (item: ExtendedHeritageProfile) => ({
-    code: item.code,
-    name: item.name,
-    nameEn: item.nameEn,
-    province: item.province,
-    provinceEn: item.provinceEn,
-    category: item.category,
-    categoryEn: item.categoryEn,
-    period: item.period,
-    periodEn: item.periodEn,
-    address: item.address,
-    addressEn: item.addressEn,
-    briefDesc: item.briefDesc,
-    briefDescEn: item.briefDescEn,
-    story: item.story,
-    storyEn: item.storyEn,
-    highlights: item.highlights,
-    highlightsEn: item.highlightsEn,
-    referenceSource: item.referenceSource,
-    status: item.status,
-    qrStatus: item.qrStatus,
-    imageUrl: item.image.url || null,
-    imageAlt: item.image.alt || null,
-    imageSource: item.image.source || null,
-    imageLicense: item.image.license || null,
-    mapX: item.mapCoordinates.x,
-    mapY: item.mapCoordinates.y,
-    mapAreaName: item.mapCoordinates.areaName || null,
-  });
-
-  const refreshHeritages = async () => setManagedHeritageList(await organizerApi.getHeritages());
-
-  const handleCreateHeritage = async (item: ExtendedHeritageProfile) => {
-    await organizerApi.createHeritage(heritagePayload(item));
-    await refreshHeritages();
-  };
-
-  const handleUpdateHeritage = async (item: ExtendedHeritageProfile) => {
-    await organizerApi.updateHeritage(item.id, heritagePayload(item));
-    await refreshHeritages();
-  };
-
-  const handleDeleteHeritage = async (heritageId: string) => {
-    await organizerApi.deleteHeritage(heritageId);
-    await refreshHeritages();
   };
 
   const handleSaveEvent = async (request: OrganizerEventRequest, eventId?: string) => {
@@ -623,13 +574,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         {activeTab === 'feedback' && <OrganizerFeedbackView language={language} />}
 
         {activeTab === 'public_content' && (
-          <OrganizerPublicContentView 
-            language={language}
-            heritageList={managedHeritageList}
-            onAddHeritage={handleCreateHeritage}
-            onUpdateHeritage={handleUpdateHeritage}
-            onDeleteHeritage={handleDeleteHeritage}
-          />
+          <OrganizerPublicContentView language={language} />
         )}
 
         {activeTab === 'notifications' && (

@@ -508,6 +508,10 @@ button.heritage-pull-up:active svg,
   line-height: 1.95;
   color: #66715f;
 }
+.heritage-content-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .heritage-values {
   list-style: none;
 }
@@ -651,6 +655,12 @@ button.heritage-pull-up:active svg,
 .heritage-not-found {
   padding: 130px 56px;
   min-height: 70vh;
+}
+.heritage-not-found > p {
+  max-width: 620px;
+  margin: 0 auto 24px;
+  color: #647366;
+  line-height: 1.7;
 }
 .heritage-not-found a {
   display: inline-flex;

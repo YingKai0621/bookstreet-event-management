@@ -37,9 +37,12 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
                 || exception instanceof InvalidCsrfTokenException;
         boolean feedbackRequest = request.getRequestURI().startsWith("/api/v1/public/feedbacks")
                 || request.getRequestURI().startsWith("/api/v1/organizer/feedbacks");
+        boolean heritageRequest = request.getRequestURI().startsWith("/api/v1/heritages")
+                || request.getRequestURI().startsWith("/api/v1/organizer/heritages");
         boolean contractCsrfFailure = csrfFailure
                 && (request.getRequestURI().startsWith("/api/v1/admin/badges")
-                    || feedbackRequest);
+                    || feedbackRequest
+                    || heritageRequest);
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 contractCsrfFailure ? "CSRF_INVALID" : "ACCESS_DENIED",
                 contractCsrfFailure ? "CSRF token is missing or invalid."
@@ -52,7 +55,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        if (feedbackRequest) {
+        if (feedbackRequest || heritageRequest) {
             response.setHeader("Cache-Control", "no-store");
         }
         objectMapper.writeValue(response.getOutputStream(), errorResponse);

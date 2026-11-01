@@ -1,34 +1,67 @@
-export interface HeritageProfile {
-  id: string; // 'ds-01'
-  code: string; // 'DS-01'
-  name: string;
-  nameEn: string;
-  province: string;
-  provinceEn: string;
-  unescoRecognition?: string;
-  category: string;
-  categoryEn: string;
-  period: string;
-  periodEn: string;
-  address: string;
-  addressEn: string;
-  briefDesc: string;
-  briefDescEn: string;
-  highlights: string[];
-  highlightsEn: string[];
-  story: string;
-  storyEn: string;
-  referenceSource: string;
-  updatedDate: string;
-  image: {
-    url: string;
-    alt: string;
-    source: string;
-    license: string;
-  };
-  mapCoordinates: {
-    x: number;
-    y: number;
-    areaName: string;
-  };
+export interface PublicHeritageListItem {
+  publicCode: string;
+  title: string;
+  summary: string | null;
+  imageUrl: string | null;
+  locationText: string | null;
+  publishedAt: string;
+}
+
+export interface PublicHeritageDetail extends PublicHeritageListItem {
+  content: string;
+}
+
+export type HeritageProfile = PublicHeritageListItem;
+
+export interface HeritagePageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export type HeritageStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface OrganizerHeritageListItem {
+  heritageContentId: number;
+  publicCode: string;
+  title: string;
+  summary: string | null;
+  imageUrl: string | null;
+  locationText: string | null;
+  status: HeritageStatus;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizerHeritageDetail extends OrganizerHeritageListItem {
+  content: string;
+}
+
+export interface OrganizerHeritageQuery {
+  page?: number;
+  size?: number;
+  sort?: 'updatedAt,desc' | 'updatedAt,asc' | 'title,asc' | 'title,desc';
+  search?: string;
+  status?: HeritageStatus;
+}
+
+export interface CreateHeritageRequest {
+  publicCode: string;
+  title: string;
+  summary?: string | null;
+  content: string;
+  imageUrl?: string | null;
+  locationText?: string | null;
+}
+
+export interface UpdateHeritageRequest {
+  title: string;
+  summary: string | null;
+  content: string;
+  imageUrl: string | null;
+  locationText: string | null;
+  expectedUpdatedAt: string;
 }

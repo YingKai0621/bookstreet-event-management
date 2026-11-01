@@ -1,5 +1,9 @@
 import { Booth, EventItem } from '../types';
-import { HeritageProfile } from '../types/heritage';
+import {
+  HeritagePageResponse,
+  PublicHeritageDetail,
+  PublicHeritageListItem,
+} from '../types/heritage';
 import { apiClient } from './apiClient';
 import { boothApi } from './boothApi';
 
@@ -250,42 +254,6 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
   };
 }
 
-export function toHeritageProfile(heritage: Record<string, unknown>): HeritageProfile {
-  return {
-    id: String(heritage.slug || heritage.id),
-    code: String(heritage.code || ''),
-    name: String(heritage.name || ''),
-    nameEn: String(heritage.nameEn || heritage.name || ''),
-    province: String(heritage.province || ''),
-    provinceEn: String(heritage.provinceEn || heritage.province || ''),
-    category: String(heritage.category || ''),
-    categoryEn: String(heritage.categoryEn || heritage.category || ''),
-    period: String(heritage.period || ''),
-    periodEn: String(heritage.periodEn || heritage.period || ''),
-    address: String(heritage.address || ''),
-    addressEn: String(heritage.addressEn || heritage.address || ''),
-    briefDesc: String(heritage.briefDesc || ''),
-    briefDescEn: String(heritage.briefDescEn || heritage.briefDesc || ''),
-    highlights: Array.isArray(heritage.highlights) ? heritage.highlights.map(String) : [],
-    highlightsEn: Array.isArray(heritage.highlightsEn) ? heritage.highlightsEn.map(String) : [],
-    story: String(heritage.story || ''),
-    storyEn: String(heritage.storyEn || heritage.story || ''),
-    referenceSource: String(heritage.referenceSource || ''),
-    updatedDate: heritage.updatedAt ? new Date(String(heritage.updatedAt)).toLocaleDateString('vi-VN') : '',
-    image: {
-      url: String(heritage.imageUrl || ''),
-      alt: String(heritage.imageAlt || heritage.name || ''),
-      source: String(heritage.imageSource || ''),
-      license: String(heritage.imageLicense || ''),
-    },
-    mapCoordinates: {
-      x: Number(heritage.mapX || 0),
-      y: Number(heritage.mapY || 0),
-      areaName: String(heritage.mapAreaName || ''),
-    },
-  };
-}
-
 export const publicApi = {
   getEvents: getPublishedEvents,
   async getBooths(eventId: string): Promise<Booth[]> {
@@ -293,11 +261,19 @@ export const publicApi = {
     const rows = await boothApi.listAllPublicEventBooths(eventId);
     return rows.filter(row => row.enabled).map(toPublicBooth);
   },
-  async getHeritages(): Promise<HeritageProfile[]> {
-    // Heritage persistence/API belongs to a future module and is not part of the
-    // active backend schema. Keep current public screens empty instead of issuing
-    // a request that is guaranteed to return 401/404.
-    return [];
+  async getHeritages(): Promise<PublicHeritageListItem[]> {
+    const first = await apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
+      '/heritages?page=0&size=100',
+    );
+    const remaining = first.totalPages > 1
+      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+        apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
+          `/heritages?page=${index + 1}&size=100`,
+        )))
+      : [];
+    return [first, ...remaining]
+      .sort((left, right) => left.page - right.page)
+      .flatMap(page => page.content);
   },
   async getActivities(eventId?: string): Promise<PublicActivity[]> {
     const endpoint = (page: number) => {
@@ -315,7 +291,8 @@ export const publicApi = {
       .flatMap(page => page.content)
       .map(toPublicActivity);
   },
-  getHeritageBySlug: (slug: string) => apiClient.get(`/public/heritages/${slug}`),
+  getHeritage: (publicCode: string) =>
+    apiClient.get<PublicHeritageDetail>(`/heritages/${encodeURIComponent(publicCode)}`),
   submitFeedback: (payload: CreatePublicFeedbackRequest) =>
     apiClient.post<PublicFeedbackReceipt>('/public/feedbacks', payload),
 };

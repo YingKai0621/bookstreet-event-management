@@ -22,6 +22,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @EnabledIfEnvironmentVariable(named = "EVENT_TEST_DATABASE_URL", matches = ".+")
 class Sprint08SchemaMigrationTests {
+    private static final MigrationVersion SPRINT_08_VERSION = MigrationVersion.fromVersion("14");
     private static final Instant NOW = Instant.parse("2026-10-31T08:20:00Z");
     private String schema;
 
@@ -41,7 +42,7 @@ class Sprint08SchemaMigrationTests {
 
     @Test
     void cleanDatabaseMigratesThroughV14WithFeedbackTableAndIndexes() throws SQLException {
-        Flyway flyway = flyway(null);
+        Flyway flyway = flyway(SPRINT_08_VERSION);
         flyway.migrate();
 
         assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
@@ -66,7 +67,7 @@ class Sprint08SchemaMigrationTests {
             before = result.getLong(1);
         }
 
-        Flyway upgraded = flyway(null);
+        Flyway upgraded = flyway(SPRINT_08_VERSION);
         upgraded.migrate();
 
         try (Connection connection = connect(); Statement statement = connection.createStatement();
@@ -78,7 +79,7 @@ class Sprint08SchemaMigrationTests {
 
     @Test
     void targetTextWorkflowTimestampAndForeignKeyGuardsRejectInvalidRows() throws SQLException {
-        flyway(null).migrate();
+        flyway(SPRINT_08_VERSION).migrate();
         try (Connection connection = connect()) {
             long organizerId = userId(connection, "organizerdemo");
             long eventId = insertEvent(connection, organizerId);

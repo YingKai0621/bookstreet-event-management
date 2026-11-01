@@ -11,6 +11,7 @@ interface HeritageSectionProps {
   language: Language;
   heritageList?: HeritageProfile[];
   isLoading?: boolean;
+  error?: string;
 }
 
 const VISIBLE_LANDMARKS = 7;
@@ -25,11 +26,16 @@ const FAN_SLOTS = [
   { rotation: 20, scale: 0.79, y: 3.9, zIndex: 4 },
 ];
 
-const imageFor = (item: HeritageProfile) => item.image?.url || '';
-const imageAlt = (item: HeritageProfile) => item.image?.alt || `Ảnh tư liệu: ${item.name}`;
+const imageFor = (item: HeritageProfile) => item.imageUrl || '';
+const imageAlt = (item: HeritageProfile) => `Ảnh minh họa: ${item.title}`;
 const EMPTY_HERITAGE_LIST: HeritageProfile[] = [];
 
-export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heritageList, isLoading = false }) => {
+export const HeritageSection: React.FC<HeritageSectionProps> = ({
+  language,
+  heritageList,
+  isLoading = false,
+  error = '',
+}) => {
   const vi = language === 'vi';
   const landmarks = heritageList || EMPTY_HERITAGE_LIST;
   const [centerIndex, setCenterIndex] = useState(HALF_FAN);
@@ -217,7 +223,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
 
   const visibleCards = getVisibleMap();
 
-  if (isLoading || landmarks.length === 0) {
+  if (isLoading) {
     return (
       <section className="figma-heritage-section" id="di-san" aria-busy="true">
         <div className="container">
@@ -272,6 +278,35 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
     );
   }
 
+  if (landmarks.length === 0) {
+    return (
+      <section className="figma-heritage-section" id="di-san">
+        <div className="container">
+          <div className="figma-section-header heritage-fan-header">
+            <span className="figma-eyebrow">
+              <IconHeritageSeal size={16} color="var(--figma-gold)" style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              {vi ? 'HÀNH TRÌNH DI SẢN' : 'HERITAGE TRAIL'}
+            </span>
+            <h2 className="figma-section-title">
+              {vi ? 'Khám phá di sản qua từng trang ảnh' : 'Discover heritage through every card'}
+            </h2>
+            <p className="figma-section-subtitle" role={error ? 'alert' : undefined}>
+              {error
+                ? (vi ? 'Chưa thể tải nội dung di sản. Vui lòng thử lại sau.' : 'Heritage content is unavailable. Please try again later.')
+                : (vi ? 'Hiện chưa có nội dung di sản được công bố.' : 'There is no published heritage content yet.')}
+            </p>
+          </div>
+          <div className="heritage-section-more-row">
+            <Link to="/di-san" className="heritage-btn-see-more-borderless">
+              <span>{vi ? 'Mở không gian di sản' : 'Open heritage collection'}</span>
+              <ChevronRight size={18} className="heritage-more-icon" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="figma-heritage-section" id="di-san">
       <div className="container">
@@ -286,7 +321,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           </p>
         </div>
 
-        <div className="heritage-fan-shell" aria-label={vi ? 'Mười điểm di tích' : 'Ten heritage landmarks'} onMouseLeave={() => setHoveredIndex(null)}>
+        <div className="heritage-fan-shell" aria-label={vi ? 'Các điểm di sản' : 'Heritage landmarks'} onMouseLeave={() => setHoveredIndex(null)}>
           <div
             className="heritage-fan-stage"
             onPointerDown={(event) => {
@@ -306,11 +341,11 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           >
             {landmarks.map((heritage, index) => (
               <Link
-                to={`/di-san/${heritage.id}`}
-                key={heritage.id}
+                to={`/di-san/${encodeURIComponent(heritage.publicCode)}`}
+                key={heritage.publicCode}
                 ref={element => { cardRefs.current[index] = element; }}
                 className="heritage-fan-card"
-                aria-label={`${vi ? 'Khám phá' : 'Explore'} ${vi ? heritage.name : heritage.nameEn}`}
+                aria-label={`${vi ? 'Khám phá' : 'Explore'} ${heritage.title}`}
                 tabIndex={visibleCards.has(index) ? 0 : -1}
                 onClick={event => focusCard(event, index)}
                 onMouseEnter={() => setHoveredIndex(index)}
@@ -324,10 +359,12 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
                   decoding="async"
                 />
                 <span className="heritage-fan-shade" aria-hidden="true" />
-                <span className="heritage-fan-code">{heritage.code}</span>
+                <span className="heritage-fan-code">{heritage.publicCode}</span>
                 <span className="heritage-fan-copy">
-                  <span className="heritage-fan-place"><MapPin size={13} /> {vi ? heritage.province : heritage.provinceEn}</span>
-                  <strong>{vi ? heritage.name : heritage.nameEn}</strong>
+                  {heritage.locationText && (
+                    <span className="heritage-fan-place"><MapPin size={13} /> {heritage.locationText}</span>
+                  )}
+                  <strong>{heritage.title}</strong>
                   <span className="heritage-fan-open">{vi ? 'Mở câu chuyện' : 'Open story'} <ArrowRight size={15} /></span>
                 </span>
               </Link>
@@ -339,7 +376,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           <div className="heritage-fan-controls" aria-label={vi ? 'Điều hướng di tích' : 'Heritage navigation'}>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(-1)} aria-label={vi ? 'Di tích trước' : 'Previous landmark'}><ChevronLeft size={20} /></button>
             <div className="heritage-fan-dots" aria-label={vi ? `${centerIndex + 1} trên ${landmarks.length}` : `${centerIndex + 1} of ${landmarks.length}`}>
-              {landmarks.map((heritage, index) => <span key={heritage.id} className={index === centerIndex ? 'is-active' : ''} />)}
+              {landmarks.map((heritage, index) => <span key={heritage.publicCode} className={index === centerIndex ? 'is-active' : ''} />)}
             </div>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(1)} aria-label={vi ? 'Di tích tiếp theo' : 'Next landmark'}><ChevronRight size={20} /></button>
           </div>

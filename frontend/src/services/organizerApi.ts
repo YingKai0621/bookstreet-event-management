@@ -1,4 +1,3 @@
-import { ExtendedHeritageProfile } from '../types';
 import {
   OrganizerActivityItem,
   OrganizerBoothItem,
@@ -32,6 +31,14 @@ import type {
   UpdateOrganizerActivityRequest,
   UpdateOrganizerLocationRequest,
 } from '../types/activity';
+import type {
+  CreateHeritageRequest,
+  HeritagePageResponse,
+  OrganizerHeritageDetail,
+  OrganizerHeritageListItem,
+  OrganizerHeritageQuery,
+  UpdateHeritageRequest,
+} from '../types/heritage';
 
 export type OrganizerFeedbackStatus = 'NEW' | 'IN_PROGRESS' | 'RESOLVED';
 export type OrganizerFeedbackTargetType = 'BOOK_STREET' | 'EVENT';
@@ -557,10 +564,48 @@ export const organizerApi = {
   createBooth: (_data: unknown) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
   updateBooth: (_id: string, _data: unknown) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
   deleteBooth: (_id: string) => unsupportedOrganizerFeature('Quản trị gian hàng kiểu cũ'),
-  createHeritage: (_data: unknown) => unsupportedOrganizerFeature('Nội dung di sản'),
-  updateHeritage: (_id: string, _data: unknown) => unsupportedOrganizerFeature('Nội dung di sản'),
-  deleteHeritage: (_id: string) => unsupportedOrganizerFeature('Nội dung di sản'),
-  getHeritages: async (): Promise<ExtendedHeritageProfile[]> => [],
+  listHeritages(query: OrganizerHeritageQuery = {}) {
+    const params = new URLSearchParams({
+      page: String(query.page ?? 0),
+      size: String(query.size ?? 10),
+      sort: query.sort ?? 'updatedAt,desc',
+    });
+    if (query.search?.trim()) params.set('search', query.search.trim());
+    if (query.status) params.set('status', query.status);
+    return apiClient.get<HeritagePageResponse<OrganizerHeritageListItem>>(
+      `/organizer/heritages?${params.toString()}`,
+    );
+  },
+  getHeritage: (heritageContentId: number) =>
+    apiClient.get<OrganizerHeritageDetail>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}`,
+    ),
+  createHeritage: (request: CreateHeritageRequest) =>
+    apiClient.post<OrganizerHeritageDetail>('/organizer/heritages', request),
+  updateHeritage: (heritageContentId: number, request: UpdateHeritageRequest) =>
+    apiClient.patch<OrganizerHeritageDetail>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}`,
+      request,
+    ),
+  publishHeritage: (heritageContentId: number, expectedUpdatedAt: string) =>
+    apiClient.post<OrganizerHeritageDetail>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}/publish`,
+      { expectedUpdatedAt },
+    ),
+  archiveHeritage: (heritageContentId: number, expectedUpdatedAt: string) =>
+    apiClient.post<OrganizerHeritageDetail>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}/archive`,
+      { expectedUpdatedAt },
+    ),
+  republishHeritage: (heritageContentId: number, expectedUpdatedAt: string) =>
+    apiClient.post<OrganizerHeritageDetail>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}/republish`,
+      { expectedUpdatedAt },
+    ),
+  deleteHeritage: (heritageContentId: number, expectedUpdatedAt: string) =>
+    apiClient.delete<void>(
+      `/organizer/heritages/${encodeURIComponent(heritageContentId)}?expectedUpdatedAt=${encodeURIComponent(expectedUpdatedAt)}`,
+    ),
   async getActivities(eventId?: string): Promise<OrganizerActivityItem[]> {
     const response = await apiClient.get<ActivityPageResponse<OrganizerActivityResponse>>(
       `/organizer/activities${activityQuery({ eventId, page: 0, size: 100, sort: 'startAt,asc' })}`,
