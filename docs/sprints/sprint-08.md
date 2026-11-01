@@ -1,20 +1,23 @@
 # Sprint 08 General Feedback Submission and Organizer Handling
 
-- Status: `ACTIVE - APPROVED FOR IMPLEMENTATION`
+- Status: `COMPLETED`
 - Prepared date: `2026-10-31`
 - Activation date: `2026-10-31`
+- Completion date: `2026-11-01`
 - Approved documentation merge: `a6f070c` (PR #100)
 - Activation merge: `b6c8297` (PR #101)
-- Latest completed sprint: Sprint 07 Booth Visit, Points and Badge Progression
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V13`
+- Public/schema implementation merge: `8384fe9` (PR #102)
+- Organizer/closure implementation merge: `071b97a` (PR #103)
+- Latest completed sprint: Sprint 08 General Feedback Submission and Organizer Handling
+- Implemented schema baseline: immutable Flyway migrations `V1` through `V14`
 - Current-state audit: `docs/development/SPRINT_08_CURRENT_STATE_AUDIT.md`
-- Proposed implementation owner: one developer for the complete vertical slice
-- Migration owner: the same developer, after the next available Flyway version is reserved
+- Delivery owner: one developer completed the full vertical slice
+- Migration owner: the same developer delivered immutable V14
 
-This is the approved active Sprint baseline. PR #100 approved the Physical ERD overlay, Use Case
-Specification, API Contract, Implementation Plan and documentation audit together; PR #101 updated
-`CURRENT_SPRINT.md` and `AI_CONTEXT.md` to authorize implementation. The migration version remains
-conditional until it is rechecked immediately before creation.
+This is the completed Sprint baseline. PR #100 approved the Physical ERD overlay, Use Case
+Specification, API Contract, Implementation Plan and documentation audit together. PR #101
+authorized implementation. PR #102 delivered the public/schema slice and PR #103 delivered the
+Organizer slice. The accepted migration is V14 and is now immutable.
 
 ## 1. Purpose
 
@@ -74,7 +77,7 @@ this Sprint.
 - reporting dashboards, score aggregates or Feedback analytics;
 - CAPTCHA, third-party moderation or a generic abuse-prevention platform;
 - Heritage/public-content CRUD, broad Organizer Notifications or unrelated placeholder screens;
-- rewriting V1 through V13.
+- rewriting V1 through V14.
 
 ## 4. Existing prerequisites and invariants
 
@@ -235,9 +238,9 @@ work starts, the Physical ERD overlay must reconcile:
 - indexes needed for the shared Organizer queue;
 - foreign-key delete behavior and no-hard-delete history policy.
 
-The next migration is currently expected to be V14, but no document reserves that number. The
-assigned migration owner must recheck `main` and other active work immediately before creation.
-V1-V13 remain immutable.
+V14 was confirmed available and applied as
+`V14__create_sprint8_general_feedback_schema.sql`. V1-V14 are now immutable. Any later extension,
+including Heritage support, requires a new migration.
 
 ## 9. Acceptance Criteria baseline
 
@@ -372,7 +375,8 @@ The following must be reviewed together before implementation begins:
 5. the compact one-developer delivery plan and migration ownership declaration.
 
 These documents were approved through PR #100 and `docs/sprints/CURRENT_SPRINT.md` activated Sprint
-8 through PR #101. Sprint 7 remains the latest completed Sprint while Sprint 8 is active.
+8 through PR #101. Implementation was merged through PR #102 and PR #103. Closure evidence is in
+`docs/development/SPRINT_08_CLOSURE_REPORT.md`, and Sprint 8 is now the latest completed Sprint.
 
 ## 14. Approved product decisions
 

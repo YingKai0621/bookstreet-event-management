@@ -214,6 +214,59 @@ async function mockOrganizerFeedback(page: Page, conflictOnStart = false) {
   return { state: () => state, note: () => note };
 }
 
+test('organizer queue renders loading and empty states', async ({ page }) => {
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/auth/me')) return json(route, organizerAccount);
+    if (url.pathname.endsWith('/auth/csrf')) {
+      return json(route, { headerName: 'X-CSRF-TOKEN', token: 'organizer-state-csrf' });
+    }
+    if (url.pathname === '/api/v1/organizer/feedbacks') {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return json(route, pageResponse([]));
+    }
+    return json(route, pageResponse([]));
+  });
+
+  await page.goto('/organizer');
+  await page.getByRole('button', { name: 'Góp ý', exact: true }).click();
+  await expect(page.getByText('Đang tải góp ý…')).toBeVisible();
+  await expect(page.getByText('Chưa có góp ý phù hợp với bộ lọc.')).toBeVisible();
+});
+
+for (const queueFailure of [
+  {
+    name: 'forbidden',
+    status: 403,
+    body: { code: 'ACCESS_DENIED', message: 'Forbidden.', fieldErrors: [] },
+    expected: 'Tài khoản hiện tại không có quyền Organizer để xem hàng đợi góp ý.',
+  },
+  {
+    name: 'server failure',
+    status: 500,
+    body: { code: 'INTERNAL_ERROR', message: 'Không tải được hàng đợi góp ý.', fieldErrors: [] },
+    expected: 'Không tải được hàng đợi góp ý.',
+  },
+]) {
+  test(`organizer queue renders the ${queueFailure.name} state`, async ({ page }) => {
+    await page.route('**/api/v1/**', async route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/auth/me')) return json(route, organizerAccount);
+      if (url.pathname.endsWith('/auth/csrf')) {
+        return json(route, { headerName: 'X-CSRF-TOKEN', token: 'organizer-error-csrf' });
+      }
+      if (url.pathname === '/api/v1/organizer/feedbacks') {
+        return json(route, queueFailure.body, queueFailure.status);
+      }
+      return json(route, pageResponse([]));
+    });
+
+    await page.goto('/organizer/feedback');
+    await expect(page.getByRole('alert')).toContainText(queueFailure.expected);
+    await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
+  });
+}
+
 test('organizer uses the real shared queue, detail and legal actions', async ({ page }) => {
   const mock = await mockOrganizerFeedback(page);
   await page.goto('/organizer/feedback');
@@ -407,6 +460,7 @@ test('queue returns to the last valid page after a transition shrinks pagination
 
   await page.goto('/organizer/feedback');
   await page.getByRole('button', { name: 'Trang sau' }).click();
+  await expect(page.getByText('Trang 2/3')).toBeVisible();
   await page.getByRole('button', { name: 'Trang sau' }).click();
   await expect(page.getByText('Trang 3/3')).toBeVisible();
   await page.getByRole('button', { name: 'Xem chi tiết' }).click();

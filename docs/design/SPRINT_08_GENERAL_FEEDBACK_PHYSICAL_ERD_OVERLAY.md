@@ -1,10 +1,10 @@
 # Sprint 08 General Feedback - Physical ERD Overlay
 
-> Status: **APPROVED FOR SPRINT 08 IMPLEMENTATION**
+> Status: **IMPLEMENTED BY FLYWAY V14**
 >
 > Scope: Sprint 08 General Feedback only
 >
-> Baseline: physical schema after Flyway `V13`
+> Applied baseline: physical schema through Flyway `V14`
 >
 > Related documents:
 >
@@ -14,16 +14,12 @@
 
 ## 1. Purpose
 
-This document defines the approved physical database overlay for the Sprint 08 General Feedback vertical slice.
+This document records the physical database overlay implemented for the Sprint 08 General Feedback
+vertical slice by `V14__create_sprint8_general_feedback_schema.sql`.
 
-It is intentionally an overlay instead of an immediate edit to the current Physical ERD because:
-
-- Sprint 08 is active and this overlay is approved for implementation.
-- The current database has no `general_feedbacks` table.
-- The current target ERD includes `HERITAGE`, while Sprint 08 supports only `BOOK_STREET` and `EVENT`.
-- The overlay, Use Case Specifications and API Contract are approved; the implementation migration must follow them exactly.
-
-After implementation, the main Physical ERD and its report must be updated to reflect the applied schema.
+The implementation keeps the target ERD's broader `HERITAGE` concept deferred. The applied table
+supports only `BOOK_STREET` and `EVENT`, exactly as approved by the Sprint 8 Use Case Specification
+and API Contract. The main Physical ERD report now records the applied V14 schema.
 
 ## 2. Source-of-truth alignment
 
@@ -53,7 +49,7 @@ This is a Sprint scope restriction, not a permanent removal of Heritage from the
 - The Guest receives submission acknowledgement only; no reply, email, notification or public resolution result is persisted.
 - Anonymous throttling is enforced by the application layer and does not persist raw IP addresses.
 
-## 3. Proposed table
+## 3. Implemented table
 
 ### 3.1 Table name
 
@@ -301,18 +297,15 @@ No index is proposed for free-text contains search in Sprint 08. The initial dat
   Session-only, and raw IP addresses must not be added to PostgreSQL, limiter keys or logs for this
   feature.
 
-## 9. Migration and rollout direction
+## 9. Migration and rollout result
 
-After document approval:
-
-1. Recheck the latest Flyway version on the implementation branch.
-2. If `V14` is still available, create `V14__create_sprint8_general_feedback_schema.sql`; otherwise use the next free version.
-3. Create the table, constraints, foreign keys and indexes in one focused migration.
-4. Do not edit any applied migration from `V1` through `V13`.
-5. Do not add production/demo Feedback rows to the schema migration.
-6. Add the matching JPA entity and repository only after the migration contract is fixed.
-7. Verify both a clean database migration and an upgrade from the current `V13` schema.
-8. Update the main Physical ERD/report and project context through their assigned owners after the migration is accepted.
+1. V14 was confirmed available on the implementation branch.
+2. `V14__create_sprint8_general_feedback_schema.sql` created the table, constraints, foreign keys
+   and indexes in one focused migration.
+3. No production or demo Feedback row was added by the migration.
+4. Clean V1-to-V14 migration, V13-to-V14 upgrade and Hibernate validation are covered by focused
+   automated tests.
+5. V1 through V14 are now immutable.
 
 If Heritage persistence is later introduced, a new migration must:
 
@@ -354,5 +347,6 @@ The implementation review confirmed:
 - the shared Organizer access model;
 - the migration version after checking the latest `main`.
 
-This overlay, the Use Case Specifications and the API Contract were approved together. Sprint 08
-activation authorizes the database and application implementation described by those documents.
+This overlay, the Use Case Specifications and the API Contract were approved together. The public
+and Organizer implementations were accepted through PR #102 and PR #103. Closure evidence is
+recorded in `docs/development/SPRINT_08_CLOSURE_REPORT.md`.

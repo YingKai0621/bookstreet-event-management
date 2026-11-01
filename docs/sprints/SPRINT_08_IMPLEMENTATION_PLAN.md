@@ -1,6 +1,6 @@
 # Sprint 08 General Feedback Implementation Plan
 
-> Status: `APPROVED - ACTIVE`.
+> Status: `COMPLETED` on `2026-11-01`.
 >
 > Delivery model: one developer owns the complete backend-to-frontend vertical slice.
 >
@@ -459,16 +459,16 @@ After code/evidence is accepted:
 
 ## 8. Security and privacy implementation checklist
 
-- [ ] Redis-backed Session remains the only authentication model; no JWT and no Redis throttle data.
-- [ ] Public POST is permit-all but CSRF-protected.
-- [ ] Optional submitter identity comes only from Security context.
-- [ ] Organizer operations require effective Organizer authority.
-- [ ] Shared Feedback access does not modify Event ownership rules.
-- [ ] Contact email and internal note are absent from public/list DTOs and logs.
-- [ ] Raw client IP is not persisted/logged; anonymous in-memory key uses HMAC digest.
-- [ ] HMAC secret is external configuration and not committed.
-- [ ] Unknown fields reject caller-selected identity/status/actor/timestamps.
-- [ ] No public Feedback list/detail, delete or delivery endpoint exists.
+- [x] Redis-backed Session remains the only authentication model, with no JWT and no Redis throttle data.
+- [x] Public POST is permit-all but CSRF-protected.
+- [x] Optional submitter identity comes only from Security context.
+- [x] Organizer operations require effective Organizer authority.
+- [x] Shared Feedback access does not modify Event ownership rules.
+- [x] Contact email and internal note are absent from public/list DTOs and logs.
+- [x] Raw client IP is not persisted or logged, and the anonymous in-memory key uses an HMAC digest.
+- [x] HMAC secret is external configuration and not committed.
+- [x] Unknown fields reject caller-selected identity/status/actor/timestamps.
+- [x] No public Feedback list/detail, delete or delivery endpoint exists.
 
 ## 9. Pull-request checklist
 
@@ -485,15 +485,15 @@ Every implementation PR/commit must state:
 
 Before merge:
 
-- [ ] Branch started from updated `main`.
-- [ ] No V1–V13 edit.
-- [ ] Contract routes/DTOs/errors are unchanged or docs were re-reviewed first.
-- [ ] `git diff --check` is clean.
-- [ ] Relevant backend tests pass.
-- [ ] Frontend lint/build pass for UI changes.
-- [ ] Focused Sprint 08 Playwright passes for completed UI paths.
-- [ ] No mock fallback remains in the completed slice.
-- [ ] No unrelated formatting/refactor is included.
+- [x] Branch started from updated `main`.
+- [x] No V1–V13 edit.
+- [x] Contract routes, DTOs and errors remain aligned with the approved documents.
+- [x] `git diff --check` is clean.
+- [x] Relevant backend tests pass.
+- [x] Frontend lint/build pass for UI changes.
+- [x] Focused Sprint 08 Playwright passes for completed UI paths.
+- [x] No mock fallback remains in the completed slice.
+- [x] No unrelated formatting/refactor is included.
 
 ## 10. Sprint completion gate
 
