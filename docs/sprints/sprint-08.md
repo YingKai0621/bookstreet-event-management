@@ -66,7 +66,7 @@ this Sprint.
 
 ### 3.2 Explicitly out of scope
 
-- `HERITAGE` Feedback until Heritage persistence has a separate approved baseline;
+- Heritage as a General Feedback target.
 - Location, Booth, Facility or Activity as General Feedback targets;
 - satisfaction stars, General Feedback score or changes to `ActivityRating`;
 - phone contact, attachments or arbitrary custom fields;
@@ -118,9 +118,8 @@ Draft or unknown Events are not valid public targets. The Use Case Specification
 must align Event eligibility with the existing public Event visibility rules, including the
 already-approved handling of Completed or Cancelled public detail links.
 
-`HERITAGE` is a documented deferred branch of `UC-G04`, not a fake option in the Sprint 8 UI. The
-schema/API must reject unsupported target values and caller-supplied Booth, Location, Facility or
-Activity references.
+Heritage is not a `UC-G04` target in the current business baseline. The schema and API reject
+`HERITAGE` together with caller-supplied Booth, Location, Facility or Activity references.
 
 ### 5.3 Content and privacy
 
@@ -196,7 +195,7 @@ The Landing Page:
 - offers “Toàn Đường Sách” and the `PUBLISHED`/`ONGOING` Events already returned by public
   discovery; an existing public context may preselect a public-detail-eligible
   `COMPLETED`/`CANCELLED` Event without widening discovery;
-- removes Heritage choices until that dependency exists;
+- removes Heritage choices because Heritage is not a General Feedback target.
 - removes the star/rating control;
 - provides separate optional name and email inputs;
 - labels message as required and explains that Feedback is a one-way contribution;
@@ -239,8 +238,8 @@ work starts, the Physical ERD overlay must reconcile:
 - foreign-key delete behavior and no-hard-delete history policy.
 
 V14 was confirmed available and applied as
-`V14__create_sprint8_general_feedback_schema.sql`. V1-V14 are now immutable. Any later extension,
-including Heritage support, requires a new migration.
+`V14__create_sprint8_general_feedback_schema.sql`. V1-V14 are now immutable. Heritage target support
+is not planned and must not be introduced by a later migration.
 
 ## 9. Acceptance Criteria baseline
 
@@ -381,7 +380,8 @@ These documents were approved through PR #100 and `docs/sprints/CURRENT_SPRINT.m
 ## 14. Approved product decisions
 
 - Feedback is a one-way contribution channel; no result is sent back to the Guest.
-- Sprint 8 supports only `BOOK_STREET` and `EVENT`; `HERITAGE` is deferred explicitly.
+- Sprint 8 supports only `BOOK_STREET` and `EVENT`. Heritage is permanently excluded from
+  General Feedback by the current business baseline.
 - every verified Organizer shares one Feedback queue across all Events;
 - shared Feedback access does not grant shared Event mutation rights;
 - General Feedback has no star score and does not reuse `ActivityRating`;

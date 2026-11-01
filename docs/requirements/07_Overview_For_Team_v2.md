@@ -86,7 +86,7 @@ Join Event không giữ chỗ Activity và không cấp Event QR. Nếu user đ�
 
 - Mỗi Event có organizerUserId xác định Organizer chịu trách nhiệm; request hủy/rút lưu handledAt, kết quả/review note nhưng không lưu handledByUserId.
 
-- GeneralFeedback chỉ target đúng một trong BOOK_STREET, EVENT hoặc HERITAGE; không target Location hoặc Activity. Notification là in-app gửi tới User, không có NotificationType entity hoặc senderUserId.
+- GeneralFeedback chỉ target đúng một trong BOOK_STREET hoặc EVENT. Heritage, Location và Activity không phải GeneralFeedback target. Notification là in-app gửi tới User, không có NotificationType entity hoặc senderUserId.
 
 - Đăng ký dùng username, full name và password; confirm password không lưu database. Email tùy chọn với PARTICIPANT nhưng phải verified trước khi cấp PARTNER, ORGANIZER hoặc ADMIN. Authorization dùng User/Role/UserRole và chỉ có 5 actor: Guest, Participant, Partner, Organizer, Admin.
 

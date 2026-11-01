@@ -231,15 +231,17 @@ through V14 are now immutable.
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- General Feedback reporting, persisted heritage/map data and broad Organizer/Partner/Admin
-  notifications outside the approved Sprint 8 slice
+- General Feedback reporting, Heritage content persistence, map data and broad
+  Organizer/Partner/Admin notifications outside the approved Sprint 8 slice
 
 ## Next implementation task
 
 - Keep Sprint 8 closed and use its closure report as the evidence baseline.
 - Audit remaining real gaps and approve the next Sprint baseline before starting new feature code.
-- Do not extend General Feedback to Heritage, reports, Guest replies or distributed throttling
-  without a separately approved scope and, where required, a new Flyway migration.
+- General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT` in the current
+  business baseline. Heritage content is independent and must not be added as a Feedback target.
+- Reports, Guest replies and distributed throttling still require separately approved scope and,
+  where required, a new Flyway migration.
 
 ## Latest completed Sprint
 

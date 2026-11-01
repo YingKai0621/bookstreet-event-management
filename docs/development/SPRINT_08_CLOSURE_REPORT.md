@@ -99,7 +99,8 @@ report.
 
 ## 5. Remaining debt and out-of-scope work
 
-- Heritage Feedback requires persisted Heritage content, an approved scope and a new migration.
+- Heritage content remains independent from General Feedback. `HERITAGE` is not a supported or
+  planned Feedback target.
 - Guest reply, status lookup, email/SMS/push delivery and public Feedback list/detail remain out of
   scope.
 - Reporting, statistics, Admin Feedback management, transition history and hard delete remain out

@@ -36,7 +36,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Explore Events, Activities, Booths, Booth Map and Heritage content without login.
 
-- Submit General Feedback without login for exactly one target: BOOK_STREET, EVENT or HERITAGE. Location and Activity are not GeneralFeedback targets.
+- Submit General Feedback without login for exactly one target: BOOK_STREET or EVENT. Heritage, Location and Activity are not GeneralFeedback targets.
 
 ## Participant Event Participation
 
