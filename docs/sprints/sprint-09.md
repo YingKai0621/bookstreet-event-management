@@ -1,19 +1,21 @@
 # Sprint 09 Heritage Public Content
 
-- Status: `ACTIVE`
+- Status: `COMPLETED`
 - Prepared date: `2026-11-01`
 - Activation date: `2026-11-01`
 - Approved documentation merge: `7e46809` (PR #105)
-- Latest completed Sprint: Sprint 08 General Feedback Submission and Organizer Handling
-- Current production schema baseline: immutable Flyway migrations `V1` through `V14`
+- Previous completed Sprint at activation: Sprint 08 General Feedback Submission and Organizer Handling
+- Completion date: `2026-11-01`
+- Implementation merge: PR #107, merge commit `7ed4e0e`
+- Current production schema baseline: immutable Flyway migrations `V1` through `V15`
 - Current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
-- Delivery owner: one assigned developer for the application vertical slice and all 28 criteria
-- Migration owner: the Project Owner after the next migration version is rechecked and reserved
-- Activation state: active for migration reservation and implementation from updated `main`
+- Delivery owner: one assigned developer completed the application vertical slice and all 28 criteria
+- Migration owner: the Project Owner reserved and delivered the applied V15 migration
+- Delivery state: completed with closure evidence in `docs/development/SPRINT_09_CLOSURE_REPORT.md`
 
-Sprint 09 may be activated only after the current-state audit, this baseline, the Heritage Physical ERD
-overlay, Use Case Specifications, API Contract, implementation plan, implementation handoff, and
-documentation audit are reviewed together.
+Sprint 09 was activated after the current-state audit, this baseline, the Heritage Physical ERD
+overlay, Use Case Specifications, API Contract, implementation plan, implementation handoff and
+documentation audit were reviewed together.
 
 ## 1. Purpose
 
@@ -79,7 +81,7 @@ limits General Feedback to `BOOK_STREET` and `EVENT`.
 - version history, scheduled publication, content expiration, or rollback workflow
 - bulk import, bulk export, or bulk deletion
 - unrelated Landing Page or Organizer portal redesign
-- rewriting Flyway V1 through V14
+- rewriting Flyway V1 through V15
 
 ## 4. Existing prerequisites and invariants
 
@@ -91,8 +93,8 @@ Sprint 09 must preserve these completed behaviors:
 - verified email remains required for the `ORGANIZER` role
 - PostgreSQL remains the durable source of truth
 - Hibernate remains `ddl-auto: validate`
-- Flyway V1 through V14 remain immutable
-- the next production migration number is rechecked from updated `main` immediately before creation
+- Flyway V1 through V15 remain immutable
+- V15 is the applied Heritage migration and was reserved only after rechecking updated `main`
 - Event ownership and every completed Event, Booth, Activity, Payment, Attendance, Reward, Rating, and
   Feedback workflow remain unchanged
 - General Feedback continues to support only `BOOK_STREET` and `EVENT`
@@ -296,9 +298,8 @@ domain fields. It must specify at least:
 - indexes for public published ordering and Organizer status or search access
 - deletion behavior and the absence of a General Feedback foreign key
 
-The implementation must create one new production migration only after rechecking the latest migration on
-updated `main`. At the time this draft was prepared, `V15` appears available. This number is not reserved by
-this document.
+The implementation created one production migration after rechecking the latest migration on updated
+`main`. V15 is now applied and immutable.
 
 No demo Heritage rows are inserted by the production migration. Demo data, if later required, must use an
 approved isolated seed path and must not contain credentials or personal data.
@@ -398,9 +399,9 @@ approved isolated seed path and must not contain credentials or personal data.
 - audit implementation against all Acceptance Criteria
 - update the applied Physical ERD, context, Sprint status, and closure evidence only after acceptance
 
-## 12. Documentation deliverables before activation
+## 12. Completed activation prerequisites
 
-Sprint 09 requires:
+Sprint 09 activation required and received:
 
 1. `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
 2. this Sprint baseline
@@ -411,8 +412,8 @@ Sprint 09 requires:
 7. `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
 8. `docs/development/SPRINT_09_DOCUMENTATION_AUDIT.md`
 
-`CURRENT_SPRINT.md` and `AI_CONTEXT.md` must not mark Sprint 09 active until these documents agree and the
-Project Owner approves activation.
+These documents agreed before the Project Owner approved activation. `CURRENT_SPRINT.md` and
+`AI_CONTEXT.md` now record the completed implementation and closure evidence.
 
 ## 13. Definition of Done
 
@@ -430,7 +431,7 @@ Sprint 09 is complete only when:
 - no `.env`, credentials, local IP, Session token, CSRF token, personal data, or demo secret is committed
 - the closure report records the actual migration, merge commits, tests, and any accepted limitation
 
-## 14. Product decisions recorded in this draft
+## 14. Product decisions recorded in this Sprint
 
 - Organizer is the only Heritage management actor in Sprint 09
 - every verified Organizer manages the same shared collection
