@@ -3067,3 +3067,130 @@
     justify-content: space-between;
   }
 }
+
+/* Rewards workspace alignment */
+.rewards-page {
+  width: min(100%, 1220px);
+  margin: 0 auto;
+}
+
+.rewards-page .rewards-page-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid #e2eae5;
+}
+
+.rewards-page .participant-page-title {
+  margin: 0;
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+}
+
+.rewards-page .participant-page-sub {
+  margin: 0.35rem 0 0;
+}
+
+.rewards-page .rewards-page-header .btn-part-secondary {
+  min-height: 42px;
+  padding: 0.6rem 0.9rem;
+  border-color: #cfddd6;
+  background: #fff;
+  color: #214d3e;
+}
+
+.rewards-page .rewards-summary-grid {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.rewards-page .rewards-summary-grid .summary-stat-card {
+  min-height: 88px;
+  box-sizing: border-box;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(23, 56, 46, 0.045);
+}
+
+.rewards-page .rewards-summary-grid .stat-number-box {
+  min-width: 48px;
+  font-size: 1.75rem;
+}
+
+.rewards-page .rewards-summary-grid .stat-label-text {
+  color: #496057;
+  font-size: 0.84rem;
+}
+
+.rewards-page .rewards-collection-section {
+  margin: 0 0 1.25rem;
+  padding: 1.1rem;
+  border: 1px solid #e0e8e3;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.rewards-page .reward-section-toolbar {
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid #e9efeb;
+}
+
+.rewards-page .reward-section-toolbar h2 {
+  font-size: 1.2rem;
+}
+
+.rewards-page .reward-section-toolbar p {
+  margin-top: 0.22rem;
+}
+
+.rewards-page .reward-filter-row {
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
+}
+
+.rewards-page .reward-filter-row select {
+  min-width: 160px;
+  min-height: 40px;
+  border-radius: 9px;
+  background-color: #fbfcfb;
+  font-size: 0.8rem;
+}
+
+.rewards-page .reward-filter-row select:last-child {
+  min-width: 205px;
+}
+
+@media (max-width: 760px) {
+  .rewards-page .rewards-page-header,
+  .rewards-page .reward-section-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rewards-page .rewards-page-header .btn-part-secondary {
+    align-self: flex-start;
+  }
+
+  .rewards-page .rewards-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rewards-page .reward-filter-row {
+    flex-wrap: wrap;
+  }
+
+  .rewards-page .reward-filter-row select,
+  .rewards-page .reward-filter-row select:last-child {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+}

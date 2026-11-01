@@ -345,7 +345,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
       )}
 
       {selectedItem && (
-        <div className="my-booths-modal-backdrop" onClick={() => setSelectedItem(null)}>
+        <div className="my-booths-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setSelectedItem(null); }}>
           <section
             className="my-booths-qr-modal"
             role="dialog"

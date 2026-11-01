@@ -259,8 +259,8 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
         >
-          {isLoading ? (
-            <div className="booths-carousel-page" style={{ opacity: 1 }}>
+          {isLoading || booths.length === 0 ? (
+            <div className="booths-carousel-page" style={{ opacity: 1 }} aria-busy="true">
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
                   <div className="kiosk-card-photo-wrapper skeleton-box" style={{ minHeight: '160px', width: '100%' }} />
@@ -285,7 +285,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
             </div>
           ) : displayedBooths.length === 0 ? (
             <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
-              <p>{booths.length === 0 ? (language === 'vi' ? 'Sự kiện này chưa có gian hàng.' : 'This event has no booths yet.') : (language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.')}</p>
+              <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
@@ -396,7 +396,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       {activeModalBooth && createPortal(
         <div
           className="modal-overlay booth-detail-modal-overlay"
-          onClick={closeBoothModal}
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeBoothModal(); }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="booth-detail-modal-title"

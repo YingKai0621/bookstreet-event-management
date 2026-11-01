@@ -233,7 +233,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
       <header className="obr-header">
         <div className="obr-title-group">
           <h1 id="organizer-booth-request-title" className="organizer-view-title workspace-page-title">
-            Yêu cầu gian hàng theo sự kiện
+            Yêu cầu cho thuê gian hàng theo sự kiện
           </h1>
           <p className="organizer-view-sub workspace-page-subtitle">
             Xét duyệt yêu cầu thuê, khóa giá và theo dõi thời hạn thanh toán giữ chỗ của đối tác.
@@ -731,7 +731,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
 
       {/* Modal: Reject Request */}
       {rejectingRequest && (
-        <div className="s2-modal-backdrop" onClick={() => setRejectingRequest(null)}>
+        <div className="s2-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setRejectingRequest(null); }}>
           <div className="s2-modal s2-modal-small" onClick={event => event.stopPropagation()}>
             <div className="s2-modal-header">
               <h2>Từ chối yêu cầu thuê gian hàng</h2>

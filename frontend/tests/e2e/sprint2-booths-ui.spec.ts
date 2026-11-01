@@ -457,7 +457,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Đóng', exact: true }).click();
 
   await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Yêu cầu gian hàng theo sự kiện' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Yêu cầu (cho thuê )?gian hàng theo sự kiện/ })).toBeVisible();
   await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('101');
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toHaveCount(0);
   await expect(page.getByText('NXB Demo')).toBeVisible();

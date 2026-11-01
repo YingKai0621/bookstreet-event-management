@@ -66,7 +66,7 @@ export const OrganizerEventLifecycleModal: React.FC<OrganizerEventLifecycleModal
       : 'The draft will be permanently deleted if it has no dependent business records.');
 
   return createPortal(
-    <div className="org-modal-backdrop" onClick={() => { if (!isSubmitting) onClose(); }}>
+    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isSubmitting) onClose(); }}>
       <section
         className="org-modal-box org-event-lifecycle-modal"
         role="dialog"

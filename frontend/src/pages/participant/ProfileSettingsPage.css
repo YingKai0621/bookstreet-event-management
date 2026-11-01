@@ -16,7 +16,7 @@
 .reader-profile-page .profile-names p { font-size: .9rem; overflow-wrap: anywhere; }
 .reader-role, .reader-coming-soon { display: inline-block; padding: 5px 10px; margin-top: 10px; border-radius: 6px; background: #e1efe7; color: #185e48; font-size: .75rem; font-weight: 600; }
 .reader-profile-page .reader-edit-button { width: auto; min-height: 44px; flex-shrink: 0; }
-.reader-profile-body { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr); gap: clamp(24px, 4vw, 48px); padding: 22px 28px; }
+.reader-profile-body { display: block; max-width: 780px; padding: 22px 28px; }
 .reader-section-heading { display: flex; align-items: center; gap: 10px; color: #185e48; }
 .reader-section-heading h3 { margin: 0; font-size: 1.08rem; color: #172421; }
 .reader-section-description { font-size: .85rem; color: #637771; line-height: 1.5; margin: 8px 0 12px; }

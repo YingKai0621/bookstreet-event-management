@@ -3550,36 +3550,46 @@
 
 .org-event-detail-tabs {
   display: flex;
-  gap: 1.7rem;
+  align-items: center;
+  gap: 0.2rem;
+  width: fit-content;
+  max-width: 100%;
   margin-top: 1rem;
+  padding: 0.28rem;
+  border: 1px solid #dce6e1;
+  border-radius: 14px;
+  background: #f4f7f5;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 .org-event-detail-tabs .org-tab-btn {
   flex: 0 0 auto;
-  min-height: 43px;
-  padding: 0 0 0.65rem;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
-  color: #66756f;
+  color: #61736c;
   font: inherit;
-  font-size: 0.94rem;
-  font-weight: 550;
+  font-size: 0.88rem;
+  font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
 .org-event-detail-tabs .org-tab-btn:hover {
+  background: #e8efeb;
   color: #17382e;
 }
 
 .org-event-detail-tabs .org-tab-btn.is-active {
-  border-bottom-color: #17382e;
-  color: #172421;
-  font-weight: 700;
+  border-color: #d5e2dc;
+  background: #ffffff;
+  color: #17382e;
+  font-weight: 750;
+  box-shadow: 0 2px 5px rgba(23, 56, 46, 0.1), inset 0 -2px #17382e;
 }
 
 .org-event-overview {

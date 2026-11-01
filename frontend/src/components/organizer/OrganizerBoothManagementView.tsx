@@ -948,7 +948,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
       {/* 5. CREATE / EDIT BOOTH MODAL */}
       {isFormModalOpen && (
-        <div className="booth-modal-backdrop" onClick={closeFormModal}>
+        <div className="booth-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeFormModal(); }}>
           <div className="booth-modal-box" onClick={e => e.stopPropagation()}>
             <div className="booth-modal-header">
               <h2>
@@ -1171,7 +1171,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
 
       {/* 6. VIEW BOOTH DETAIL MODAL */}
       {viewingBooth && (
-        <div className="booth-modal-backdrop" onClick={() => setViewingBooth(null)}>
+        <div className="booth-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setViewingBooth(null); }}>
           <div className="booth-modal-box" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
             <div className="booth-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

@@ -10,12 +10,14 @@ import {
   Search,
   Send,
   Trash2,
+  Crop,
   Upload,
   X
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerActivityItem } from '../../types/organizer';
+import { EventImageCropModal } from './EventImageCropModal';
 
 interface ActivityManagementViewProps {
   language: Language;
@@ -45,7 +47,9 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<OrganizerActivityItem | null>(null);
   const [formData, setFormData] = useState<OrganizerActivityItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  useModalDismiss(Boolean(selectedActivity), () => { setSelectedActivity(null); setFormData(null); setShowDeleteConfirm(false); });
+  const [rawActivityCropSrc, setRawActivityCropSrc] = useState('');
+  const [isActivityCropOpen, setIsActivityCropOpen] = useState(false);
+  useModalDismiss(Boolean(selectedActivity) && !isActivityCropOpen, () => { setSelectedActivity(null); setFormData(null); setShowDeleteConfirm(false); });
 
   const handleOpenDetail = (act: OrganizerActivityItem) => {
     setSelectedActivity(act);
@@ -411,7 +415,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
 
       {/* Detail & Edit Modal if viewing or editing an activity */}
       {selectedActivity && formData && (
-        <div className="org-modal-backdrop" onClick={handleCloseModal}>
+        <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) handleCloseModal(); }}>
           <div 
             className="org-modal-box" 
             style={{ 
@@ -556,6 +560,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                           type="file"
                           accept="image/*"
                           style={{ display: 'none' }}
+                          onClick={e => { (e.currentTarget as HTMLInputElement).value = ''; }}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -563,6 +568,8 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                               reader.onload = (evt) => {
                                 if (typeof evt.target?.result === 'string') {
                                   setFormData({ ...formData, thumbnail: evt.target.result });
+                                  setRawActivityCropSrc(evt.target.result);
+                                  setIsActivityCropOpen(true);
                                 }
                               };
                               reader.readAsDataURL(file);
@@ -570,6 +577,33 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                           }}
                         />
                       </label>
+                      {formData.thumbnail && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!rawActivityCropSrc) setRawActivityCropSrc(formData.thumbnail);
+                            setIsActivityCropOpen(true);
+                          }}
+                          style={{
+                            padding: '0.28rem 0.65rem',
+                            fontSize: '0.76rem',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            background: '#F5F9F7',
+                            border: '1px solid #9FB5AB',
+                            borderRadius: '6px',
+                            color: '#17382E',
+                            fontWeight: 650,
+                            marginLeft: '0.4rem'
+                          }}
+                          title="Căn chỉnh vị trí ảnh hiển thị"
+                        >
+                          <Crop size={13} />
+                          <span>Căn chỉnh ảnh</span>
+                        </button>
+                      )}
                     </div>
                     <input
                       type="text"
@@ -888,6 +922,15 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                 </div>
               </div>
             </form>
+            <EventImageCropModal
+              isOpen={isActivityCropOpen}
+              imageSrc={rawActivityCropSrc || formData.thumbnail || ''}
+              onClose={() => setIsActivityCropOpen(false)}
+              onConfirm={(_file, _previewUrl, dataUrl) => {
+                setFormData(prev => prev ? { ...prev, thumbnail: dataUrl } : null);
+                setIsActivityCropOpen(false);
+              }}
+            />
           </div>
         </div>
       )}
