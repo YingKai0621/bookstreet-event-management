@@ -17,21 +17,22 @@
 This document records the physical database overlay implemented for the Sprint 08 General Feedback
 vertical slice by `V14__create_sprint8_general_feedback_schema.sql`.
 
-The implementation keeps the target ERD's broader `HERITAGE` concept deferred. The applied table
-supports only `BOOK_STREET` and `EVENT`, exactly as approved by the Sprint 8 Use Case Specification
-and API Contract. The main Physical ERD report now records the applied V14 schema.
+The applied table supports only `BOOK_STREET` and `EVENT`, exactly as approved by the Sprint 8 Use
+Case Specification and API Contract. The product decision dated `2026-11-01` confirms that
+Heritage content remains independent from General Feedback. The main Physical ERD report now
+records the applied V14 schema.
 
 ## 2. Source-of-truth alignment
 
 ### 2.1 Business baseline retained
 
-The broader business baseline allows General Feedback to target Book Street, Event or Heritage content. Sprint 08 delivers only the persistence currently supported by the application:
+The current business baseline allows General Feedback to target only Book Street or Event:
 
 - `BOOK_STREET`: feedback about the Book Street as a whole.
 - `EVENT`: feedback about one persisted Event.
-- `HERITAGE`: explicitly deferred because Heritage persistence is not implemented in the current schema.
 
-This is a Sprint scope restriction, not a permanent removal of Heritage from the business baseline.
+Heritage content is managed and displayed independently. It is not a General Feedback target and
+does not create a relationship between `general_feedbacks` and `heritage_contents`.
 
 ### 2.2 Approved Sprint 08 decisions represented here
 
@@ -78,7 +79,7 @@ This is a Sprint scope restriction, not a permanent removal of Heritage from the
 
 The Sprint 08 table does not include:
 
-- `heritage_content_id`, because no Heritage persistence exists yet.
+- `heritage_content_id`, because Heritage is not a General Feedback target.
 - `subject`, because the approved Guest flow requires a message rather than a separate subject field.
 - rating or satisfaction fields, because Activity Rating is a separate feature.
 - phone number.
@@ -307,14 +308,9 @@ No index is proposed for free-text contains search in Sprint 08. The initial dat
    automated tests.
 5. V1 through V14 are now immutable.
 
-If Heritage persistence is later introduced, a new migration must:
-
-- add `heritage_content_id` with its foreign key;
-- extend `target_type` to include `HERITAGE`;
-- replace the target-reference check with a three-way exactly-one-target rule;
-- preserve all existing General Feedback rows.
-
-The Sprint 08 migration must never be edited retroactively for that extension.
+Future Heritage persistence must remain independent. No later migration may add
+`heritage_content_id` or `HERITAGE` to `general_feedbacks` under the current business baseline.
+The Sprint 08 migration remains immutable.
 
 ## 10. Validation checklist
 
@@ -339,7 +335,7 @@ The migration and persistence tests derived from this overlay must cover at leas
 The implementation review confirmed:
 
 - the two supported Sprint 08 target types;
-- the exclusion of `subject` and Heritage persistence;
+- the exclusion of `subject` and any Heritage Feedback relationship.
 - the approved message and note limits;
 - the workflow metadata and state invariants;
 - the absence of a separate history table;

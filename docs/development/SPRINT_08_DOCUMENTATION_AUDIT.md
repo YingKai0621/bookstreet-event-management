@@ -147,9 +147,9 @@ activation or implementation gates, not hidden product decisions.
 
 Audit result: `PASS`.
 
-- BR-65's broader Heritage target remains acknowledged, not deleted from the business baseline.
-- Sprint 08 deliberately implements only `BOOK_STREET` and `EVENT` because no durable Heritage
-  entity currently exists.
+- The product decision dated `2026-11-01` supersedes the earlier deferred Heritage assumption.
+- BR-65 now permanently limits General Feedback to `BOOK_STREET` and `EVENT`. Heritage content is
+  independent and does not require a Feedback foreign key.
 - General Feedback remains separate from Activity Rating and stores no score.
 - Optional name and email are contact context only; no phone is accepted and no result is sent.
 - Every verified Organizer uses the same Management Board queue.

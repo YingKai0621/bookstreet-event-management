@@ -850,7 +850,7 @@ Sprint 08 must not change:
 
 Explicitly excluded:
 
-- `HERITAGE` Feedback persistence/API/UI;
+- `HERITAGE` Feedback persistence, API or UI because Heritage is not a General Feedback target.
 - Location, Booth, Facility or Activity General Feedback targets;
 - Guest reply/status lookup, email, SMS, push or Notification delivery;
 - Feedback hard delete, edit-after-submit or public listing;

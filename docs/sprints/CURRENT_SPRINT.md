@@ -92,7 +92,8 @@ the Sprint activation branch.
 - Authentication remains Spring Security Session with HttpOnly cookie; do not introduce JWT.
 - Hibernate remains `ddl-auto: validate`. V1 through V14 are immutable.
 - Any later schema change requires a new Flyway migration after the next version is rechecked.
-- General Feedback targets are only `BOOK_STREET` and `EVENT`; `HERITAGE` is deferred.
+- General Feedback targets are only `BOOK_STREET` and `EVENT`. `HERITAGE` is excluded from the
+  current business baseline and is not a future Feedback target.
 - General Feedback has no score/rating and does not change completed Activity Rating behavior.
 - Public submission is `permitAll` but remains CSRF-protected.
 - The abuse throttle is bounded process-local volatile state: 10 counted attempts per client key
@@ -105,7 +106,7 @@ the Sprint activation branch.
 
 ## Explicitly out of scope
 
-- `HERITAGE`, Location, Booth, Facility or Activity General Feedback targets
+- Heritage, Location, Booth, Facility or Activity General Feedback targets
 - General Feedback rating, phone number, attachment or arbitrary custom fields
 - Guest reply, status lookup, email, SMS, push or Notification delivery
 - Feedback hard delete, edit-after-submit or public list/detail

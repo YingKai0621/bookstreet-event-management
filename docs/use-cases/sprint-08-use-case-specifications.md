@@ -26,9 +26,9 @@ Sprint 08 implements:
 The Organizer path does not introduce a new top-level Use Case. It provides Management Board
 handling for submissions created through `UC-G04`.
 
-BR-65 continues to define `HERITAGE` as a valid future business target. Sprint 08 defers that
-branch because the current durable schema has no Heritage entity. The UI and API must not pretend
-that the branch is available.
+BR-65 defines only `BOOK_STREET` and `EVENT` as valid General Feedback targets. Heritage content is
+independent from Feedback. The UI and API must reject `HERITAGE` rather than expose it as a future
+option.
 
 ## 2. Shared rules
 
@@ -82,7 +82,7 @@ the public-detail eligibility rule above.
 
 The following are not Sprint 08 General Feedback targets:
 
-- `HERITAGE` until its persistence dependency exists;
+- `HERITAGE` because it is not a General Feedback target.
 - Location, Booth, Facility or Activity;
 - a caller-defined arbitrary target name or target identifier.
 

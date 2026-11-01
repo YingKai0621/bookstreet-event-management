@@ -42,7 +42,7 @@ require documentation review before code changes.
 
 ### 1.2 Explicitly out of scope
 
-- Heritage persistence or `HERITAGE` General Feedback.
+- Heritage persistence and any `HERITAGE` General Feedback target.
 - Location, Booth, Facility or Activity General Feedback targets.
 - Changes to Activity Rating.
 - Guest reply, Feedback status lookup, email, SMS, push or Notification delivery.
@@ -455,7 +455,8 @@ After code/evidence is accepted:
 - record the actual migration filename and merge commit;
 - create the Sprint 08 closure report with evidence per AC;
 - update `CURRENT_SPRINT.md` to completed only after all 28 criteria pass;
-- preserve the audit and decisions that explain the deferred Heritage branch.
+- preserve the audit trail and record that the later `2026-11-01` product decision permanently
+  removed Heritage from General Feedback scope.
 
 ## 8. Security and privacy implementation checklist
 

@@ -647,7 +647,7 @@ Tổng điểm được tính bằng `SUM(point_transactions.points)`, không l�
 
 ![Cụm Communication, Feedback và Heritage](assets/Physical_07_Content_Feedback.png)
 
-*Hình 10 PNG legacy; bảng Notification trong file drawio đã được cập nhật theo mục 9.1*
+*Hình 10 là PNG legacy và có thể còn thể hiện quan hệ Feedback–Heritage đã bị loại bỏ. File drawio nguồn và bảng bên dưới là nguồn hiện hành. Bảng Notification trong file drawio đã được cập nhật theo mục 9.1.*
 
 | **Bảng**          | **Trách nhiệm**                    | **Ràng buộc chính**                                                        |
 |-------------------|------------------------------------|----------------------------------------------------------------------------|
@@ -708,7 +708,8 @@ verified là after-commit side effect và không thay thế row này.
 ## 9.2 Bảng `general_feedbacks`
 
 Sprint 8 V14 kích hoạt kênh góp ý một chiều cho toàn Đường Sách hoặc một Event công khai. Heritage
-vẫn là nhánh nghiệp vụ được hoãn và chưa phải target hợp lệ của schema hiện hành.
+không phải GeneralFeedback target trong baseline hiện hành và không có quan hệ khóa ngoại với
+`general_feedbacks`.
 
 | Cột | Kiểu/null | Ghi chú |
 |---|---|---|
@@ -896,8 +897,8 @@ Sprint 6 Physical overlay và sơ đồ đã được triển khai theo chuỗi 
 4. Public submission, bounded process-local throttle, shared Organizer queue, detail và các chuyển
    trạng thái hợp lệ đã được triển khai qua PR #102 và PR #103.
 
-5. Sprint 8 hỗ trợ `BOOK_STREET` và `EVENT`. Heritage, trả lời Guest, báo cáo và distributed
-   throttling vẫn nằm ngoài phạm vi.
+5. GeneralFeedback chỉ hỗ trợ `BOOK_STREET` và `EVENT`. Heritage không phải target. Trả lời Guest,
+   báo cáo và distributed throttling vẫn nằm ngoài phạm vi.
 
 # 15 Kết luận
 

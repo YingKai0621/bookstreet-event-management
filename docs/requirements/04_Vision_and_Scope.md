@@ -73,7 +73,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 | **Actor**              | **Hiểu đơn giản**                    | **Trách nhiệm chính**                                                                                                                                                                                  |
 |------------------------|--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Guest / Public Visitor | Khách chưa đăng nhập                 | Xem nội dung công khai: Event, Activity, Booth, Map, Heritage; có thể gửi general feedback.                                                                                                            |
+| Guest / Public Visitor | Khách chưa đăng nhập                 | Xem nội dung công khai gồm Event, Activity, Booth, Map và Heritage. Có thể gửi General Feedback cho toàn Đường Sách hoặc một Event.                                                                    |
 | Participant            | Người dùng đã đăng nhập              | Join/Leave Event, đăng ký/hủy Activity, tự quét Activity/Booth QR, theo dõi Attendance, BoothVisit, rewards và rating.                                                                                 |
 | Partner / Exhibitor    | Nhà xuất bản / đơn vị tham gia       | Apply Event, chọn Booth, gửi Booth Request, Activity Proposal và các request thay đổi/hủy.                                                                                                             |
 | Event Organizer        | Ban quản lý / Ban tổ chức Đường Sách | Quản lý Event, duyệt request, cấu hình giá Booth, quản lý payment/booth/activity/report.                                                                                                               |
@@ -107,7 +107,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 - Activity/Event reschedule/cancellation, notification và lịch sử trạng thái.
 
-- General Feedback chỉ target đúng một trong BOOK_STREET, EVENT hoặc HERITAGE; không target Location hoặc Activity. Verified Activity Rating yêu cầu Attendance hợp lệ; basic analytics/report.
+- General Feedback chỉ target đúng một trong BOOK_STREET hoặc EVENT. Heritage, Location và Activity không phải GeneralFeedback target. Verified Activity Rating yêu cầu Attendance hợp lệ. Basic analytics và report giữ nguyên phạm vi đã duyệt.
 
 # 8. Out of Scope - MVP
 
@@ -135,7 +135,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 
 | **Module**                 | **Phạm vi**                                                                                                                                                                                                         |
 |----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Public Experience          | Browse/Search Event, Activity, Booth; Map; Heritage; public feedback.                                                                                                                                               |
+| Public Experience          | Browse và search Event, Activity, Booth, Map và Heritage. Public Feedback chỉ áp dụng cho toàn Đường Sách hoặc một Event.                                                                                            |
 | Identity & Access          | Username/password authentication, optional email cho Participant, verified email cho role nâng cao, multi-role và ownership/private data.                                                                           |
 | Event Management           | Create, publish, configure deadlines/limits, lifecycle, cancel.                                                                                                                                                     |
 | Partner Participation      | Organization profile, apply Event, approval and withdrawal khi application còn PENDING.                                                                                                                             |

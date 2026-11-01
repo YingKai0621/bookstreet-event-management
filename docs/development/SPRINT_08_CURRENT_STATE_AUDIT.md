@@ -11,6 +11,10 @@
 - Sprint 8 status after this audit: **not activated until the Sprint baseline, schema overlay, Use
   Case Specification and API Contract pass their documentation gates**
 
+> Supersession note dated `2026-11-01`: references below to a future or deferred Heritage Feedback
+> target describe the pre-Sprint-9 baseline inspected on `2026-10-31`. The current BR-65 and UC-G04
+> permanently limit General Feedback to `BOOK_STREET` and `EVENT`. Heritage content is independent.
+
 ## 1. Purpose and guardrails
 
 This document records the repository state relevant to General Feedback before any Sprint 8
@@ -52,7 +56,8 @@ Evidence inspected for this audit:
 The approved requirements establish only the following General Feedback behavior:
 
 - `UC-G04` allows a Guest to submit General Feedback without logging in.
-- `BR-65` requires exactly one target: `BOOK_STREET`, `EVENT` or `HERITAGE`.
+- At the time of this audit, `BR-65` listed `HERITAGE` as a third future target. That statement was
+  superseded on `2026-11-01`. Current BR-65 permits only `BOOK_STREET` or `EVENT`.
 - General Feedback must not target a Location, Booth or Activity.
 - `submittedByUserId`, guest name and contact email are optional.
 - `ActivityRating` remains Attendance-owned, score-based and restricted to eligible Participants;
@@ -74,13 +79,14 @@ delivery channel.
 The active schema through V13 contains no `general_feedbacks` table. V13 adds only Booth image
 metadata and does not implement Feedback or Heritage persistence.
 
-The Physical ERD drawio contains `general_feedbacks` and `heritage_contents` as target/reference
-tables, but neither table exists in the immutable migration chain. The target GeneralFeedback
-shape currently lists:
+At the time of this audit, the Physical ERD drawio contained `general_feedbacks` and
+`heritage_contents` as target/reference tables, but neither table existed in the immutable migration
+chain. The pre-decision GeneralFeedback shape listed:
 
 - `general_feedback_id`;
 - optional `submitted_by_user_id`;
-- `target_type` plus optional `event_id` or `heritage_content_id`;
+- `target_type` plus optional `event_id` or `heritage_content_id`. The Heritage field and relationship
+  have since been removed from the ERD source.
 - optional `guest_name`, `contact_email` and `subject`;
 - required `message` and `status`;
 - `submitted_at` and optional `resolved_at`;
@@ -127,7 +133,7 @@ The visible form is not aligned with the approved baseline:
 - it sends `comments`, while the target model names the durable content `message`;
 - its single contact input advertises phone or email but sends the value as `contactEmail`;
 - it sends display-only `targetName` and `source` fields;
-- it does not send the approved `targetType` or Event/Heritage reference identity;
+- it does not send the approved `targetType` or Event reference identity.
 - it effectively offers only `BOOK_STREET`, because `getHeritages()` intentionally returns an
   empty list and it offers no Event target;
 - the service type still permits `boothId`, which conflicts with `BR-65`.
@@ -158,15 +164,14 @@ Activity Rating tests are unrelated regression coverage and must remain unchange
 
 The following conflicts must be resolved or explicitly bounded before coding:
 
-1. **Target dependency:** the business baseline requires `HERITAGE`, but
-   `heritage_contents` is not implemented. A `HERITAGE` foreign key cannot be added exactly as the
-   target ERD describes without also implementing or otherwise approving that dependency.
+1. **Target dependency resolved:** the `2026-11-01` product decision removed `HERITAGE` from
+   General Feedback. Heritage persistence no longer creates a Feedback foreign-key dependency.
 2. **Submission shape:** the Landing Page is rating-oriented, while the approved target model is a
    message-oriented General Feedback record.
 3. **Target shape:** frontend placeholder types allow Booth and Facility targets, which are
    forbidden by `BR-65`.
 4. **Handling ownership:** `UC-G04` defines Guest submission, but no approved Use Case or Business
-   Rule says which Organizer may list or update `BOOK_STREET`, `EVENT` or `HERITAGE` feedback.
+   Rule at audit time said which Organizer may list or update `BOOK_STREET` or `EVENT` feedback.
 5. **Processing lifecycle:** the ERD has `status` and `resolved_at`, but the status enum,
    transitions and reopen behavior are not approved. UI values cannot silently become the
    baseline.
@@ -241,8 +246,8 @@ This candidate intentionally excludes:
 
 The Project Owner approved the following Sprint 8 direction on `2026-10-31`:
 
-1. Sprint 8 implements the `BOOK_STREET` and `EVENT` targets as a documented partial `UC-G04`
-   slice. `HERITAGE` remains deferred until Heritage persistence has its own approved baseline.
+1. Sprint 8 implements the `BOOK_STREET` and `EVENT` targets. The later `2026-11-01` product
+   decision confirms these are the complete General Feedback target set and Heritage is not deferred.
 2. Every verified `ORGANIZER` account belongs to the shared Management Board queue and may view and
    process Feedback across all Events. Event ownership remains unchanged for Event mutation APIs;
    this shared access is specific to Feedback.

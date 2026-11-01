@@ -173,7 +173,7 @@ Logical ERD và Physical ERD hiện hành đã giữ nguyên ý nghĩa của Con
 
 - Bổ sung User, Role, UserRole và bảng kỹ thuật user_tokens; username là duy nhất không phân biệt hoa thường, email tùy chọn với Participant nhưng phải xác minh trước khi cấp PARTNER, ORGANIZER hoặc ADMIN.
 
-- Bổ sung GeneralFeedback với đúng một target BOOK_STREET, EVENT hoặc HERITAGE; không target Location hoặc Activity. ActivityRating vẫn tách riêng và yêu cầu Attendance hợp lệ.
+- GeneralFeedback có đúng một target BOOK_STREET hoặc EVENT. Heritage, Location và Activity không phải GeneralFeedback target. ActivityRating vẫn tách riêng và yêu cầu Attendance hợp lệ.
 
 - Bổ sung change, cancellation và withdrawal request cùng audit cần thiết mà không làm thay đổi các quan hệ cốt lõi trong Conceptual.
 
