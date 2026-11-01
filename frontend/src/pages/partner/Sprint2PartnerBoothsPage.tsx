@@ -950,7 +950,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       {selectedBooth && (
         <div
           className="booth-modal-backdrop"
-          onClick={() => busy !== 'submit' && setSelectedBooth(null)}
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && busy !== 'submit') setSelectedBooth(null); }}
         >
           <div className="booth-modal-box s2-booth-request-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
             {/* Header */}

@@ -135,11 +135,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
               {isEditing && <div className="reader-profile-actions"><button type="button" className="btn-part-secondary" disabled={isSaving} onClick={cancelEdit}><X size={17} />{vi ? 'Hủy' : 'Cancel'}</button><button type="submit" className="btn-part-primary" disabled={isSaving}><Check size={17} />{isSaving ? (vi ? 'Đang lưu...' : 'Saving...') : (vi ? 'Lưu' : 'Save')}</button></div>}
             </form>
           </section>
-          <section className="reader-profile-preferences" aria-labelledby="reader-preferences-title">
-            <div className="reader-section-heading"><Mail size={20} /><h3 id="reader-preferences-title">{vi ? 'Thông báo qua email' : 'Email notifications'}</h3></div>
-            <span className="reader-coming-soon">{vi ? 'Chưa khả dụng' : 'Not available yet'}</span>
-            <p className="reader-section-description">{vi ? 'Tùy chọn nhận lời nhắc hoạt động và thông tin sự kiện sẽ được mở khi tính năng sẵn sàng.' : 'Activity reminders and event updates will be available when this feature is ready.'}</p>
-          </section>
+
         </div>
       </div>
     </div>

@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
-  Gift,
   History,
   Medal,
   RefreshCw,
@@ -102,9 +101,6 @@ export function RewardsPage({ language }: RewardsPageProps) {
               : 'Track booth-visit points, transaction history, and badge progress.'}
           </p>
         </div>
-        <button type="button" className="btn-part-secondary" onClick={() => void loadRewards()}>
-          <RefreshCw size={16} />{vi ? 'Làm mới' : 'Refresh'}
-        </button>
       </div>
 
       {isLoading && !summary ? (
@@ -225,28 +221,6 @@ export function RewardsPage({ language }: RewardsPageProps) {
               onPage={setPointPage} vi={vi} />
           </section>
 
-          <div className="rewards-earn-card">
-            <div className="rewards-earn-header">
-              <Gift size={20} color="#B3862A" />
-              <h3 className="rewards-earn-title">
-                {vi ? 'Cách nhận thêm điểm và mở khóa huy hiệu' : 'How to earn points and badges'}
-              </h3>
-            </div>
-            <div className="rewards-earn-grid">
-              <div className="rewards-earn-step">
-                <strong>{vi ? 'Ghé gian hàng' : 'Visit booths'}</strong>
-                <p>{vi ? 'Quét QR tại gian hàng khi sự kiện đang diễn ra.' : 'Scan the booth QR while its event is ongoing.'}</p>
-              </div>
-              <div className="rewards-earn-step">
-                <strong>{vi ? 'Mỗi gian hàng một lần' : 'Once per booth'}</strong>
-                <p>{vi ? 'Mỗi gian hàng chỉ cộng điểm một lần trong cùng sự kiện.' : 'Each booth awards points once in the same event.'}</p>
-              </div>
-              <div className="rewards-earn-step">
-                <strong>{vi ? 'Huy hiệu tự động' : 'Automatic badges'}</strong>
-                <p>{vi ? 'Huy hiệu tự mở khóa khi tổng điểm đạt mốc.' : 'Badges unlock automatically at their threshold.'}</p>
-              </div>
-            </div>
-          </div>
         </>
       )}
     </div>

@@ -158,7 +158,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             </div>
 
             {/* Featured Showcase Card on the right */}
-            {featuredBooth && (
+            {featuredBooth ? (
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
@@ -179,6 +179,15 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                   <span>{vi ? featuredBooth.tagline : featuredBooth.taglineEn}</span>
                 </div>
                 <ArrowRight className="heritage-featured-arrow" size={24} />
+              </div>
+            ) : (
+              <div className="heritage-featured skeleton-card" aria-hidden="true">
+                <div className="skeleton-dark" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+                <div style={{ width: '75%' }}>
+                  <div className="skeleton-dark" style={{ width: '130px', height: '12px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '85%', height: '28px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '65%', height: '14px' }} />
+                </div>
               </div>
             )}
           </div>
@@ -238,7 +247,29 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             <span>{vi ? `${filteredBooths.length} gian hàng` : `${filteredBooths.length} pavilions`}</span>
           </div>
 
-          {filteredBooths.length === 0 ? (
+          {isLoading || booths.length === 0 ? (
+            <div className="heritage-collection-grid" aria-busy="true">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <article
+                  key={item}
+                  className="heritage-collection-card skeleton-card"
+                  aria-hidden="true"
+                >
+                  <div className="heritage-card-image skeleton-box" style={{ borderRadius: 0 }} />
+                  <div className="heritage-card-body">
+                    <div className="skeleton-box" style={{ width: '45%', height: '12px', marginBottom: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '80%', height: '22px', marginBottom: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '100%', height: '14px', marginBottom: '6px' }} />
+                    <div className="skeleton-box" style={{ width: '70%', height: '14px', marginBottom: '16px' }} />
+                    <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div className="skeleton-box" style={{ width: '85px', height: '16px' }} />
+                      <div className="skeleton-box" style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : filteredBooths.length === 0 ? (
             <div className="heritage-empty-result">
               <p>{vi ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No kiosks matched your query.'}</p>
               <button
@@ -295,7 +326,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Detail Modal — rendered via Portal to escape fixed-panel stacking context */}
         {activeModalBooth && createPortal(
-          <div className="modal-overlay" onClick={() => navigate(boothCatalogUrl)} role="dialog" aria-modal="true">
+          <div className="modal-overlay" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) navigate(boothCatalogUrl); }} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => navigate(boothCatalogUrl)} aria-label="Đóng">
                 <X size={20} />

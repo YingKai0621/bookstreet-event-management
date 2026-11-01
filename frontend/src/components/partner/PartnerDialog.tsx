@@ -31,8 +31,12 @@ export function PartnerDialog({ title, children, onClose }: {
       previous?.focus();
     };
   }, []);
-  return <div className="partner-dialog-backdrop" onClick={event => {
-    if (event.target === event.currentTarget) onClose();
+  const mouseDownTargetRef = useRef<EventTarget | null>(null);
+  return <div className="partner-dialog-backdrop" onMouseDown={event => {
+    mouseDownTargetRef.current = event.target;
+  }} onClick={event => {
+    if (event.target === event.currentTarget && mouseDownTargetRef.current === event.currentTarget) onClose();
+    mouseDownTargetRef.current = null;
   }}>
     <div className="partner-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
       <header><h2 id={titleId}>{title}</h2><button type="button" className="partner-square-button" aria-label="Đóng" onClick={onClose}><X size={20} /></button></header>

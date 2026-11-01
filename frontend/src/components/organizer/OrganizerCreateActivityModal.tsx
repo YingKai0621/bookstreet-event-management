@@ -1,6 +1,7 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   AlertCircle,
+  Crop,
   Building2,
   Calendar,
   Clock,
@@ -14,6 +15,7 @@ import {
 import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerActivityItem, OrganizerEvent } from '../../types/organizer';
+import { EventImageCropModal } from './EventImageCropModal';
 
 interface OrganizerCreateActivityModalProps {
   language: Language;
@@ -45,9 +47,11 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [thumbnail, setThumbnail] = useState('');
+  const [rawCropSrc, setRawCropSrc] = useState('');
+  const [isCropOpen, setIsCropOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  useModalDismiss(isOpen, onClose);
+  useModalDismiss(isOpen && !isCropOpen, onClose);
 
   React.useEffect(() => {
     if (!events.some(event => event.id === eventId)) setEventId(events[0]?.id || '');
@@ -104,7 +108,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
   };
 
   return (
-    <div className="org-modal-backdrop" onClick={onClose}>
+    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) onClose(); }}>
       <div 
         className="org-modal-box" 
         style={{ 
@@ -411,6 +415,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
                     type="file"
                     accept="image/*"
                     style={{ display: 'none' }}
+                    onClick={e => { (e.currentTarget as HTMLInputElement).value = ''; }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -418,6 +423,8 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
                         reader.onload = (evt) => {
                           if (typeof evt.target?.result === 'string') {
                             setThumbnail(evt.target.result);
+                            setRawCropSrc(evt.target.result);
+                            setIsCropOpen(true);
                           }
                         };
                         reader.readAsDataURL(file);
@@ -446,12 +453,44 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
                   }}
                 />
                 {thumbnail && (
-                  <img
-                    src={thumbnail}
-                    alt="Thumbnail preview"
-                    style={{ width: 44, height: 38, borderRadius: '6px', objectFit: 'cover', border: '1px solid #E5E7EB', flexShrink: 0 }}
-                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
-                  />
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!rawCropSrc) setRawCropSrc(thumbnail);
+                        setIsCropOpen(true);
+                      }}
+                      style={{
+                        padding: '0 0.65rem',
+                        height: '38px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        background: '#F5F9F7',
+                        border: '1px solid #9FB5AB',
+                        borderRadius: '6px',
+                        color: '#17382E',
+                        fontWeight: 650,
+                        flexShrink: 0
+                      }}
+                      title="Căn chỉnh vị trí ảnh hiển thị"
+                    >
+                      <Crop size={13} />
+                      <span>Căn chỉnh</span>
+                    </button>
+                    <img
+                      src={thumbnail}
+                      alt="Thumbnail preview"
+                      style={{ width: 44, height: 38, borderRadius: '6px', objectFit: 'cover', border: '1px solid #E5E7EB', flexShrink: 0, cursor: 'pointer' }}
+                      onClick={() => {
+                        if (!rawCropSrc) setRawCropSrc(thumbnail);
+                        setIsCropOpen(true);
+                      }}
+                      onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                    />
+                  </>
                 )}
               </div>
             </div>

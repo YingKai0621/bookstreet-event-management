@@ -155,7 +155,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {activeEventDetail && createPortal(
         <div
           className="modal-overlay event-detail-modal-overlay"
-          onClick={() => closeEventSheet('detail')}
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeEventSheet('detail'); }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="event-detail-modal-title"
@@ -247,7 +247,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {showRegisterModal && createPortal(
         <div
           className="modal-overlay registration-modal-overlay"
-          onClick={() => closeEventSheet('register')}
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) closeEventSheet('register'); }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="registration-modal-title"

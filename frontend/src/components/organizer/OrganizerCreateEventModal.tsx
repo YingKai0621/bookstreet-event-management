@@ -1,4 +1,5 @@
-import { AlertCircle, Check, ChevronDown, Image as ImageIcon, X } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, Crop, Image as ImageIcon, X } from 'lucide-react';
+import { EventImageCropModal } from './EventImageCropModal';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
@@ -173,8 +174,11 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const [bannerPreviewFailed, setBannerPreviewFailed] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerObjectUrl, setBannerObjectUrl] = useState('');
+  const [rawBannerUrl, setRawBannerUrl] = useState('');
+  const [rawBannerMeta, setRawBannerMeta] = useState<{ name: string; type: string }>({ name: 'event-banner.jpg', type: 'image/jpeg' });
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const errorAlertRef = useRef<HTMLDivElement>(null);
-  useModalDismiss(isOpen, () => { if (!isSaving) onClose(); });
+  useModalDismiss(isOpen && !isCropModalOpen, () => { if (!isSaving) onClose(); });
 
   useEffect(() => {
     if (!error) return;
@@ -215,8 +219,12 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       setFieldErrors(current => ({ ...current, bannerUrl: 'Ảnh banner không được vượt quá 5 MB.' }));
       return;
     }
+    const objectUrl = URL.createObjectURL(file);
     setBannerFile(file);
-    setBannerObjectUrl(URL.createObjectURL(file));
+    setBannerObjectUrl(objectUrl);
+    setRawBannerUrl(objectUrl);
+    setRawBannerMeta({ name: file.name, type: file.type });
+    setIsCropModalOpen(true);
     setBannerPreviewFailed(false);
     setFieldErrors(current => {
       if (!current.bannerUrl) return current;
@@ -392,7 +400,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const describedBy = (field: FormField) => fieldErrors[field] ? `${FIELD_IDS[field]}-error` : undefined;
 
   return createPortal(
-    <div className="org-modal-backdrop" onClick={() => { if (!isSaving) onClose(); }}>
+    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isSaving) onClose(); }}>
       <div
         className="org-modal-box org-event-form-modal"
         role="dialog"
@@ -454,6 +462,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         disabled={isSaving}
+                        onClick={e => { (e.currentTarget as HTMLInputElement).value = ''; }}
                         onChange={changeEvent => selectBannerFile(changeEvent.target.files?.[0])}
                       />
                       <div className="org-event-banner-upload-row">
@@ -461,11 +470,27 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                           <ImageIcon size={17} aria-hidden="true" />
                           {bannerFile ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
                         </label>
+                        {(bannerObjectUrl || form.bannerUrl) && !bannerPreviewFailed && (
+                          <button
+                            type="button"
+                            className="org-event-banner-upload-button"
+                            onClick={() => {
+                              if (!rawBannerUrl) {
+                                setRawBannerUrl(bannerObjectUrl || form.bannerUrl);
+                              }
+                              setIsCropModalOpen(true);
+                            }}
+                            disabled={isSaving}
+                            title="Mở khung kéo chỉnh vị trí ảnh hiển thị trên các thẻ và modal"
+                          >
+                            <Crop size={15} aria-hidden="true" /> Căn chỉnh vị trí
+                          </button>
+                        )}
                         {bannerFile && (
                           <button
                             type="button"
                             className="org-event-banner-clear"
-                            onClick={() => { setBannerFile(null); setBannerObjectUrl(''); }}
+                            onClick={() => { setBannerFile(null); setBannerObjectUrl(''); setRawBannerUrl(''); }}
                             disabled={isSaving}
                           >
                             <X size={15} aria-hidden="true" /> Bỏ ảnh đã chọn
@@ -489,7 +514,21 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                         />
                       </div>
                     </div>
-                    {(bannerObjectUrl || form.bannerUrl) && !bannerPreviewFailed && <img src={bannerObjectUrl || form.bannerUrl} alt="Xem trước banner sự kiện" onError={() => setBannerPreviewFailed(true)} />}
+                    {(bannerObjectUrl || form.bannerUrl) && !bannerPreviewFailed && (
+                      <img
+                        src={bannerObjectUrl || form.bannerUrl}
+                        alt="Xem trước banner sự kiện"
+                        style={{ cursor: 'pointer' }}
+                        title="Nhấn để căn chỉnh vị trí ảnh"
+                        onClick={() => {
+                          if (!rawBannerUrl) {
+                            setRawBannerUrl(bannerObjectUrl || form.bannerUrl);
+                          }
+                          setIsCropModalOpen(true);
+                        }}
+                        onError={() => setBannerPreviewFailed(true)}
+                      />
+                    )}
                     {(bannerObjectUrl || form.bannerUrl) && bannerPreviewFailed && <div className="org-event-banner-error"><ImageIcon size={18} />Không tải được ảnh</div>}
                   </div>
                   {renderFieldError('bannerUrl')}
@@ -578,6 +617,20 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
             </div>
           </div>
         </form>
+
+        <EventImageCropModal
+          isOpen={isCropModalOpen}
+          imageSrc={rawBannerUrl || bannerObjectUrl || form.bannerUrl}
+          fileName={rawBannerMeta.name}
+          fileType={rawBannerMeta.type}
+          onClose={() => setIsCropModalOpen(false)}
+          onConfirm={(croppedFile, previewUrl) => {
+            setBannerFile(croppedFile);
+            setBannerObjectUrl(previewUrl);
+            setBannerPreviewFailed(false);
+            setIsCropModalOpen(false);
+          }}
+        />
       </div>
     </div>,
     document.body,

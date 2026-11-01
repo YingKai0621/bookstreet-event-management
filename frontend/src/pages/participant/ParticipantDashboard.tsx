@@ -830,7 +830,11 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
       {/* 4. Modal "Xem Thêm" Sự Kiện trong ngày */}
       {selectedDayEvents && (
-        <div className="participant-calendar-modal-backdrop" onClick={() => setSelectedDayEvents(null)}>
+        <div
+          className="participant-calendar-modal-backdrop"
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }}
+          onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setSelectedDayEvents(null); }}
+        >
           <div className="participant-calendar-modal" onClick={(e) => e.stopPropagation()}>
             <div className="calendar-modal-header">
               <div className="calendar-modal-title-group">
@@ -873,7 +877,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                             gap: '3px'
                           }}>
                             <CheckCircle2 size={11} />
-                            <span>Đã đăng ký (Sẽ tham gia)</span>
+                            <span>{language === 'vi' ? 'Đã đăng ký' : 'Registered'}</span>
                           </span>
                         )}
                       </div>
@@ -938,7 +942,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           aria-modal="true"
           aria-label={language === 'vi' ? 'Đăng ký trên lịch' : 'Calendar registration'}
           style={{ zIndex: 10000 }}
-          onClick={() => { if (!isRegistering) setConfirmingEvent(null); }}
+          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }}
+          onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isRegistering) setConfirmingEvent(null); }}
         >
           <div
             className="participant-calendar-modal"
@@ -1012,7 +1017,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       gap: '3px'
                     }}>
                       <CheckCircle2 size={12} />
-                      <span>{language === 'vi' ? 'Đã đăng ký (Sẽ tham gia)' : 'Registered (Attending)'}</span>
+                      <span>{language === 'vi' ? 'Đã đăng ký' : 'Registered'}</span>
                     </span>
                   ) : (
                     <span style={{

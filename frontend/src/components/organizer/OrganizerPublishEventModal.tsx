@@ -176,7 +176,7 @@ export const OrganizerPublishEventModal: React.FC<OrganizerPublishEventModalProp
     : (vi ? 'Công bố sự kiện' : 'Publish event');
 
   return createPortal(
-    <div className="org-modal-backdrop" onClick={() => { if (!isPublishing) onClose(); }}>
+    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isPublishing) onClose(); }}>
       <section
         className="org-modal-box org-publish-event-modal"
         role="dialog"
