@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -134,6 +135,24 @@ class PublicFeedbackServiceTests {
                 .isInstanceOfSatisfying(FeedbackApiException.class, error -> {
                     assertThat(error.getCode()).isEqualTo("EVENT_NOT_FOUND");
                     assertThat(error.getStatus().value()).isEqualTo(404);
+                });
+    }
+
+    @Test
+    void persistenceFailureReturnsInternalErrorInsteadOfSuccessReceipt() {
+        when(feedbackRepository.saveAndFlush(any()))
+                .thenThrow(new DataIntegrityViolationException("test persistence failure"));
+
+        assertThatThrownBy(() -> service.submit(new CreatePublicFeedbackRequest(
+                GeneralFeedbackTargetType.BOOK_STREET,
+                null,
+                null,
+                null,
+                "Nội dung góp ý hợp lệ."
+        ), null, "192.0.2.10"))
+                .isInstanceOfSatisfying(FeedbackApiException.class, error -> {
+                    assertThat(error.getCode()).isEqualTo("INTERNAL_ERROR");
+                    assertThat(error.getStatus().value()).isEqualTo(500);
                 });
     }
 }
