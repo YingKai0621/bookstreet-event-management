@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Move, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import './EventImageCropModal.css';
 
 interface EventImageCropModalProps {
@@ -39,6 +40,9 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
     startOffsetY: 0,
   });
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(true);
+  const [cropError, setCropError] = useState('');
+  const backdropHandlers = useBackdropClick(() => { if (!isProcessing) onClose(); });
 
   // Measure viewport
   useEffect(() => {
@@ -59,15 +63,36 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
   // Load natural image dimensions
   useEffect(() => {
     if (!isOpen || !imageSrc) return;
+    let cancelled = false;
+    imageElementRef.current = null;
+    // Reset the view while synchronizing with the newly requested external image resource.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setImgDimensions(null);
+    setIsImageLoading(true);
+    setCropError('');
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      if (cancelled) return;
       imageElementRef.current = img;
       setImgDimensions({ width: img.naturalWidth || 800, height: img.naturalHeight || 450 });
       setZoom(1);
       setOffset({ x: 0, y: 0 });
+      setIsImageLoading(false);
+    };
+    img.onerror = () => {
+      if (cancelled) return;
+      imageElementRef.current = null;
+      setImgDimensions(null);
+      setIsImageLoading(false);
+      setCropError('Không thể tải ảnh để căn chỉnh. Nếu đây là liên kết từ website khác, máy chủ ảnh có thể không cho phép xử lý CORS. Bạn vẫn có thể hủy và giữ ảnh gốc.');
     };
     img.src = imageSrc;
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [isOpen, imageSrc]);
 
   if (!isOpen || !imageSrc) return null;
@@ -150,6 +175,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
   const handleApplyCrop = async () => {
     if (!imageElementRef.current || !imgDimensions || isProcessing) return;
     setIsProcessing(true);
+    setCropError('');
     try {
       const canvas = document.createElement('canvas');
       canvas.width = CROP_WIDTH;
@@ -197,8 +223,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
 
       onConfirm(croppedFile, previewUrl, dataUrl);
     } catch {
-      // Fallback: if CORS or canvas fails, still close cleanly
-      onClose();
+      setCropError('Không thể tạo ảnh đã căn chỉnh. Liên kết ảnh có thể chặn xử lý CORS; vui lòng hủy để giữ ảnh gốc hoặc chọn ảnh từ máy.');
     } finally {
       setIsProcessing(false);
     }
@@ -209,7 +234,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
   const focusPercentY = maxOffsetY > 0 ? 50 - (clampedOffset.y / maxOffsetY) * 50 : 50;
 
   return createPortal(
-    <div className="org-crop-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) onClose(); }}>
+    <div className="org-crop-modal-backdrop" {...backdropHandlers}>
       <div
         className="org-crop-modal-dialog"
         role="dialog"
@@ -228,6 +253,8 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
         </div>
 
         <div className="org-crop-modal-body">
+          {cropError && <div className="org-crop-error" role="alert">{cropError}</div>}
+          {isImageLoading && <div className="org-crop-loading" role="status">Đang tải ảnh để căn chỉnh…</div>}
           {/* Interactive Facebook-style Reposition Viewport */}
           <div
             ref={viewportRef}
@@ -239,7 +266,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
             onPointerCancel={handlePointerUp}
             onWheel={handleWheel}
           >
-            {imgDimensions && (
+            {imgDimensions && !cropError && (
               <img
                 src={imageSrc}
                 alt="Khung căn chỉnh"
@@ -268,12 +295,12 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
           </div>
 
           {/* Facebook-style Zoom Slider Bar */}
-          <div className="org-crop-controls-bar">
+          <div className="org-crop-controls-bar" aria-disabled={!imgDimensions || Boolean(cropError)}>
             <button
               type="button"
               className="org-crop-zoom-btn"
               onClick={() => handleZoomChange(zoom - 0.1)}
-              disabled={zoom <= 1}
+              disabled={!imgDimensions || Boolean(cropError) || zoom <= 1}
               aria-label="Thu nhỏ"
             >
               <ZoomOut size={18} />
@@ -287,12 +314,13 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
               onChange={e => handleZoomChange( parseFloat(e.target.value) )}
               className="org-crop-zoom-slider"
               aria-label="Mức phóng đại ảnh"
+              disabled={!imgDimensions || Boolean(cropError)}
             />
             <button
               type="button"
               className="org-crop-zoom-btn"
               onClick={() => handleZoomChange(zoom + 0.1)}
-              disabled={zoom >= 3}
+              disabled={!imgDimensions || Boolean(cropError) || zoom >= 3}
               aria-label="Phóng to"
             >
               <ZoomIn size={18} />
@@ -303,13 +331,14 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
               className="org-crop-reset-btn"
               onClick={handleReset}
               title="Đặt lại vị trí ban đầu"
+              disabled={!imgDimensions || Boolean(cropError)}
             >
               <RotateCcw size={14} /> Đặt lại
             </button>
           </div>
 
           {/* Live Multi-Card Preview Strip */}
-          <div className="org-crop-live-previews">
+          {imgDimensions && !cropError && <div className="org-crop-live-previews">
             <span className="org-crop-preview-label">Xem trước hiển thị trên các thẻ & modal (không bị mất góc quan trọng):</span>
             <div className="org-crop-preview-cards">
               <div className="org-crop-preview-item">
@@ -340,7 +369,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
                 <small>Ảnh thu nhỏ</small>
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         <div className="org-crop-modal-footer">
@@ -351,7 +380,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
             type="button"
             className="btn-org-primary org-crop-save-btn"
             onClick={() => void handleApplyCrop()}
-            disabled={isProcessing}
+            disabled={isProcessing || isImageLoading || !imgDimensions || Boolean(cropError)}
           >
             <Check size={16} />
             {isProcessing ? 'Đang xử lý...' : 'Lưu vị trí ảnh'}

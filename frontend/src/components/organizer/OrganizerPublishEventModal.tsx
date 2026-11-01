@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Send, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import type { ApiFieldError } from '../../services/apiError';
 import type { Language } from '../../types';
 import type { OrganizerEvent } from '../../types/organizer';
@@ -158,6 +159,7 @@ export const OrganizerPublishEventModal: React.FC<OrganizerPublishEventModalProp
   const cannotPublish = issues.length > 0;
   const vi = language === 'vi';
   useModalDismiss(Boolean(event), () => { if (!isPublishing) onClose(); });
+  const backdropHandlers = useBackdropClick(() => { if (!isPublishing) onClose(); });
 
   useEffect(() => {
     if (event) titleRef.current?.focus({ preventScroll: true });
@@ -176,7 +178,7 @@ export const OrganizerPublishEventModal: React.FC<OrganizerPublishEventModalProp
     : (vi ? 'Công bố sự kiện' : 'Publish event');
 
   return createPortal(
-    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isPublishing) onClose(); }}>
+    <div className="org-modal-backdrop" {...backdropHandlers}>
       <section
         className="org-modal-box org-publish-event-modal"
         role="dialog"

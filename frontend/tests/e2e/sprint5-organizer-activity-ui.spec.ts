@@ -453,6 +453,7 @@ test('Organizer reviews Proposal, Change Request and Cancellation Request via de
 
 test('Organizer loads and creates a shared activity location through Organizer API', async ({ page }) => {
   const state = await mockOrganizerSprint5(page);
+  const longDescription = Array.from({ length: 151 }, (_, index) => `từ${index + 1}`).join(' ');
   await page.goto('/portal');
 
   await page.getByRole('button', { name: 'Địa điểm tổ chức', exact: true }).click();
@@ -466,6 +467,8 @@ test('Organizer loads and creates a shared activity location through Organizer A
   await dialog.getByLabel(/Tên địa điểm/).fill('Phòng workshop B');
   await dialog.getByLabel(/Loại địa điểm/).selectOption('WORKSHOP');
   await dialog.getByLabel(/Sức chứa tối đa/).fill('45');
+  await dialog.getByLabel('Mô tả').fill(longDescription);
+  await expect(dialog.getByText(/\/5\.000 ký tự$/)).toBeVisible();
   await expect(dialog.getByLabel('Tọa độ X')).toHaveCount(0);
   await expect(dialog.getByLabel('Tọa độ Y')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
@@ -476,6 +479,7 @@ test('Organizer loads and creates a shared activity location through Organizer A
     name: 'Phòng workshop B',
     locationType: 'WORKSHOP',
     maxCapacity: 45,
+    description: longDescription,
     mapX: null,
     mapY: null,
   });

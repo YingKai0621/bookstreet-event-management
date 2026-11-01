@@ -1,6 +1,7 @@
 import '../../components/participant/EventFeedback.css';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   ArrowLeft,
   ArrowRight,
@@ -90,6 +91,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate(publicHomeUrl));
   useModalDismiss(Boolean(activeModalEvent), () => navigate(eventCatalogUrl));
   useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
+  const detailBackdropHandlers = useBackdropClick(() => navigate(eventCatalogUrl));
+  const registrationBackdropHandlers = useBackdropClick(() => setRegisteredEvent(null));
 
   const eventTypes = [
     { id: 'all', labelVi: 'Tất cả sự kiện', labelEn: 'All Events', count: events.length },
@@ -338,7 +341,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
         {/* Event Detail Modal — rendered via Portal */}
         {activeModalEvent && createPortal(
-          <div className="modal-overlay" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) navigate(eventCatalogUrl); }} role="dialog" aria-modal="true">
+          <div className="modal-overlay" {...detailBackdropHandlers} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => navigate(eventCatalogUrl)} aria-label="Đóng">
                 <X size={20} />
@@ -395,7 +398,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
         {/* Event Registration Modal — rendered via Portal */}
         {registeredEvent && createPortal(
-          <div className="modal-overlay registration-modal-overlay" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setRegisteredEvent(null); }} role="dialog" aria-modal="true" aria-labelledby="reg-modal-heading">
+          <div className="modal-overlay registration-modal-overlay" {...registrationBackdropHandlers} role="dialog" aria-modal="true" aria-labelledby="reg-modal-heading">
             <div className={`modal-content modal-register-content ${registerSuccess ? 'event-feedback-modal' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setRegisteredEvent(null)} aria-label="Đóng">
                 <X size={20} />

@@ -60,8 +60,16 @@ test('Organizer uploads a local banner before creating the Event', async ({ page
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
   });
 
+  const cropDialog = page.getByRole('dialog', { name: 'Căn chỉnh ảnh sự kiện' });
+  await expect(cropDialog).toBeVisible();
+  await cropDialog.getByRole('button', { name: 'Lưu vị trí ảnh' }).click();
+  await expect(cropDialog).toHaveCount(0);
   await expect(page.getByAltText('Xem trước banner sự kiện')).toHaveAttribute('src', /^blob:/);
-  await expect(page.getByText('banner-demo.png')).toBeVisible();
+  await expect(page.getByText('banner-demo-cropped.png')).toBeVisible();
+  await page.getByRole('button', { name: /Căn chỉnh vị trí/ }).click();
+  await expect(cropDialog).toBeVisible();
+  await expect(cropDialog.getByRole('alert')).toHaveCount(0);
+  await cropDialog.getByRole('button', { name: 'Hủy', exact: true }).click();
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   await expect.poll(() => uploaded).toBe(true);

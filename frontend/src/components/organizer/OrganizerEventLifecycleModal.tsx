@@ -2,6 +2,7 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import type { Language } from '../../types';
 import type { OrganizerEvent } from '../../types/organizer';
 
@@ -34,6 +35,7 @@ export const OrganizerEventLifecycleModal: React.FC<OrganizerEventLifecycleModal
   const vi = language === 'vi';
 
   useModalDismiss(isOpen, () => { if (!isSubmitting) onClose(); });
+  const backdropHandlers = useBackdropClick(() => { if (!isSubmitting) onClose(); });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,7 +68,7 @@ export const OrganizerEventLifecycleModal: React.FC<OrganizerEventLifecycleModal
       : 'The draft will be permanently deleted if it has no dependent business records.');
 
   return createPortal(
-    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isSubmitting) onClose(); }}>
+    <div className="org-modal-backdrop" {...backdropHandlers}>
       <section
         className="org-modal-box org-event-lifecycle-modal"
         role="dialog"

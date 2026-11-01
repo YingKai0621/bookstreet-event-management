@@ -1,5 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   AlertCircle,
   ArrowRight,
@@ -90,6 +91,8 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
   const [registerSuccessToast, setRegisterSuccessToast] = useState<string | null>(null);
   useModalDismiss(Boolean(selectedDayEvents), () => setSelectedDayEvents(null));
   useModalDismiss(Boolean(confirmingEventSnapshot), () => { if (!isRegistering) setConfirmingEvent(null); });
+  const calendarBackdropHandlers = useBackdropClick(() => setSelectedDayEvents(null));
+  const registrationBackdropHandlers = useBackdropClick(() => { if (!isRegistering) setConfirmingEvent(null); });
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -832,8 +835,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       {selectedDayEvents && (
         <div
           className="participant-calendar-modal-backdrop"
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }}
-          onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setSelectedDayEvents(null); }}
+          {...calendarBackdropHandlers}
         >
           <div className="participant-calendar-modal" onClick={(e) => e.stopPropagation()}>
             <div className="calendar-modal-header">
@@ -942,8 +944,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           aria-modal="true"
           aria-label={language === 'vi' ? 'Đăng ký trên lịch' : 'Calendar registration'}
           style={{ zIndex: 10000 }}
-          onMouseDown={e => { (e.currentTarget as any)._down = e.target; }}
-          onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isRegistering) setConfirmingEvent(null); }}
+          {...registrationBackdropHandlers}
         >
           <div
             className="participant-calendar-modal"

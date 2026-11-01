@@ -235,6 +235,9 @@ test('pending withdrawal requires confirmation and uses existing withdrawal API'
   await page.getByRole('button', { name: 'Rút hồ sơ', exact: true }).click();
   await page.getByRole('button', { name: 'Xác nhận rút hồ sơ', exact: true }).click();
   await expect(page.locator('article')).toContainText('Đã rút');
+  await expect(page.getByRole('button', { name: /Xóa hồ sơ/ })).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('article')).toContainText('Đã rút');
   expect(state.withdrawals).toBe(1);
 });
 

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
@@ -93,6 +94,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
     setApprovingRequest(null);
     setRejectingRequest(null);
   });
+  const rejectBackdropHandlers = useBackdropClick(() => { if (!busyKey) setRejectingRequest(null); });
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
   const selectedEvent = events.find(event => event.id === eventId);
@@ -731,7 +733,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
 
       {/* Modal: Reject Request */}
       {rejectingRequest && (
-        <div className="s2-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget) setRejectingRequest(null); }}>
+        <div className="s2-modal-backdrop" {...rejectBackdropHandlers}>
           <div className="s2-modal s2-modal-small" onClick={event => event.stopPropagation()}>
             <div className="s2-modal-header">
               <h2>Từ chối yêu cầu thuê gian hàng</h2>

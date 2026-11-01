@@ -33,7 +33,7 @@ interface LocationForm {
 }
 
 const PAGE_SIZE = LIST_PAGE_SIZE;
-const DESCRIPTION_WORD_LIMIT = 150;
+const DESCRIPTION_CHARACTER_LIMIT = 5000;
 const CARD_DESCRIPTION_CHARACTER_LIMIT = 180;
 const EMPTY_FORM: LocationForm = {
   code: '',
@@ -54,21 +54,6 @@ function safeError(cause: unknown, fallback: string): string {
   const message = cause instanceof Error ? cause.message : '';
   if (!message || /JDBC|executing SQL|Hibernate|SQLException/i.test(message)) return fallback;
   return message;
-}
-
-function wordCount(value: string): number {
-  return value.trim() ? value.trim().split(/\s+/).length : 0;
-}
-
-function limitWords(value: string, limit = DESCRIPTION_WORD_LIMIT): string {
-  const words = value.split(/(\s+)/);
-  let count = 0;
-
-  return words.filter(part => {
-    if (!part.trim()) return true;
-    count += 1;
-    return count <= limit;
-  }).join('');
 }
 
 function truncateCardDescription(value: string): string {
@@ -171,7 +156,7 @@ export function OrganizerLocationManagementView() {
     if (!/^[A-Z0-9_-]{1,30}$/.test(code)) return 'Mã gồm 1–30 ký tự A–Z, 0–9, dấu gạch ngang hoặc gạch dưới.';
     if (!name || name.length > 100) return 'Tên địa điểm phải có từ 1 đến 100 ký tự.';
     if (!Number.isInteger(capacity) || capacity < 1) return 'Sức chứa phải là số nguyên dương.';
-    if (wordCount(form.description) > DESCRIPTION_WORD_LIMIT) return 'Mô tả không được vượt quá 150 từ.';
+    if (form.description.length > DESCRIPTION_CHARACTER_LIMIT) return 'Mô tả không được vượt quá 5.000 ký tự.';
     return '';
   };
 
@@ -263,7 +248,7 @@ export function OrganizerLocationManagementView() {
             <label>Trạng thái <span>*</span><select value={String(form.active)} onChange={event => setField('active', event.target.value === 'true')}><option value="true">Đang hoạt động</option><option value="false">Tạm ngưng</option></select></label>
             <label>Sức chứa tối đa <span>*</span><input type="number" required min="1" step="1" value={form.maxCapacity} onChange={event => setField('maxCapacity', event.target.value)} placeholder="Ví dụ: 120" /></label>
             </div>
-            <label className="organizer-location-wide">Mô tả<textarea rows={4} value={form.description} onChange={event => setField('description', limitWords(event.target.value))} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{wordCount(form.description)}/{DESCRIPTION_WORD_LIMIT} từ</small></label>
+            <label className="organizer-location-wide">Mô tả<textarea rows={4} maxLength={DESCRIPTION_CHARACTER_LIMIT} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length.toLocaleString('vi-VN')}/{DESCRIPTION_CHARACTER_LIMIT.toLocaleString('vi-VN')} ký tự</small></label>
           </div>
           {formError && <p className="venue-error" role="alert">{formError}</p>}
           <div className="venue-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>

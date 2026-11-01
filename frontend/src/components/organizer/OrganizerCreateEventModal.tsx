@@ -3,6 +3,7 @@ import { EventImageCropModal } from './EventImageCropModal';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ApiError } from '../../services/apiClient';
 import { organizerApi } from '../../services/organizerApi';
 import { Language } from '../../types';
@@ -177,8 +178,10 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const [rawBannerUrl, setRawBannerUrl] = useState('');
   const [rawBannerMeta, setRawBannerMeta] = useState<{ name: string; type: string }>({ name: 'event-banner.jpg', type: 'image/jpeg' });
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const ownedBannerUrlsRef = useRef<Set<string>>(new Set());
   const errorAlertRef = useRef<HTMLDivElement>(null);
   useModalDismiss(isOpen && !isCropModalOpen, () => { if (!isSaving) onClose(); });
+  const backdropHandlers = useBackdropClick(() => { if (!isSaving) onClose(); });
 
   useEffect(() => {
     if (!error) return;
@@ -187,8 +190,9 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   }, [error]);
 
   useEffect(() => () => {
-    if (bannerObjectUrl) URL.revokeObjectURL(bannerObjectUrl);
-  }, [bannerObjectUrl]);
+    ownedBannerUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    ownedBannerUrlsRef.current.clear();
+  }, []);
 
   if (!isOpen) return null;
 
@@ -202,8 +206,12 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
     });
     setError('');
     if (field === 'bannerUrl') {
+      ownedBannerUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      ownedBannerUrlsRef.current.clear();
       setBannerFile(null);
       setBannerObjectUrl('');
+      setRawBannerUrl('');
+      setRawBannerMeta({ name: 'event-banner.jpg', type: 'image/jpeg' });
       setBannerPreviewFailed(false);
     }
   };
@@ -219,7 +227,10 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       setFieldErrors(current => ({ ...current, bannerUrl: 'Ảnh banner không được vượt quá 5 MB.' }));
       return;
     }
+    ownedBannerUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    ownedBannerUrlsRef.current.clear();
     const objectUrl = URL.createObjectURL(file);
+    ownedBannerUrlsRef.current.add(objectUrl);
     setBannerFile(file);
     setBannerObjectUrl(objectUrl);
     setRawBannerUrl(objectUrl);
@@ -400,7 +411,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const describedBy = (field: FormField) => fieldErrors[field] ? `${FIELD_IDS[field]}-error` : undefined;
 
   return createPortal(
-    <div className="org-modal-backdrop" onMouseDown={e => { (e.currentTarget as any)._down = e.target; }} onClick={e => { if (e.target === e.currentTarget && (e.currentTarget as any)._down === e.currentTarget && !isSaving) onClose(); }}>
+    <div className="org-modal-backdrop" {...backdropHandlers}>
       <div
         className="org-modal-box org-event-form-modal"
         role="dialog"
@@ -490,7 +501,14 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                           <button
                             type="button"
                             className="org-event-banner-clear"
-                            onClick={() => { setBannerFile(null); setBannerObjectUrl(''); setRawBannerUrl(''); }}
+                            onClick={() => {
+                              ownedBannerUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+                              ownedBannerUrlsRef.current.clear();
+                              setBannerFile(null);
+                              setBannerObjectUrl('');
+                              setRawBannerUrl('');
+                              setRawBannerMeta({ name: 'event-banner.jpg', type: 'image/jpeg' });
+                            }}
                             disabled={isSaving}
                           >
                             <X size={15} aria-hidden="true" /> Bỏ ảnh đã chọn
@@ -625,6 +643,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
           fileType={rawBannerMeta.type}
           onClose={() => setIsCropModalOpen(false)}
           onConfirm={(croppedFile, previewUrl) => {
+            ownedBannerUrlsRef.current.add(previewUrl);
             setBannerFile(croppedFile);
             setBannerObjectUrl(previewUrl);
             setBannerPreviewFailed(false);
