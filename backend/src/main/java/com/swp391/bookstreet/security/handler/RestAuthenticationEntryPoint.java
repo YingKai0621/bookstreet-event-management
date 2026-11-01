@@ -42,7 +42,8 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        if (request.getRequestURI().startsWith("/api/v1/organizer/feedbacks")) {
+        if (request.getRequestURI().startsWith("/api/v1/organizer/feedbacks")
+                || request.getRequestURI().startsWith("/api/v1/organizer/heritages")) {
             response.setHeader("Cache-Control", "no-store");
         }
         objectMapper.writeValue(response.getOutputStream(), errorResponse);
