@@ -1,9 +1,10 @@
 # Sprint 09 Heritage Use Case Specifications
 
-- Status: `DRAFT - REVIEW REQUIRED`
+- Status: `APPROVED - ACTIVE`
 - Prepared date: `2026-11-01`
 - Scope: Heritage public discovery and shared Organizer management
-- Activation state: this specification does not activate Sprint 09 or authorize implementation
+- Activation date: `2026-11-01`
+- Approved documentation merge: `7e46809` (PR #105)
 
 This document refines the Heritage portions of `UC-G01 Explore Book Street` and
 `UC-O09 Manage Public Content`. It does not create a new top-level Use Case.

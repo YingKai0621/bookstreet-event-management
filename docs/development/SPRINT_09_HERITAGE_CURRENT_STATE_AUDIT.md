@@ -2,14 +2,14 @@
 
 ## Document status
 
-- Status: `DRAFT - REVIEW REQUIRED`
+- Status: `REVIEWED - PRODUCT DECISIONS APPROVED`
 - Audit date: `2026-11-01`
 - Product decision date: `2026-11-01`
 - Audited branch baseline: `main` at merge commit `c053a9c`
 - Latest completed Sprint: Sprint 08
 - Current production database baseline: Flyway `V1` through `V14`
-- Candidate scope: Heritage supporting public content
-- Activation state: this document does not activate Sprint 09 and does not authorize implementation
+- Approved scope: Heritage supporting public content
+- Activation state: historical audit evidence. Sprint activation is recorded in `CURRENT_SPRINT.md`
 
 ## 1. Purpose and guardrails
 

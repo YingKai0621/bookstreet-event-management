@@ -106,6 +106,17 @@ Last updated: `2026-11-01`
   queue, the `NEW -> IN_PROGRESS -> RESOLVED` lifecycle with reopen, one-way Guest communication
   and a bounded process-local public-submission throttle. Redis remains dedicated to Session
   storage and General Feedback has no rating/score.
+- Sprint 9 Heritage Public Content is active from 2026-11-01. PR #105 (merge commit `7e46809`)
+  approved its current-state audit, product baseline, Physical ERD overlay, 28-AC Use Case
+  Specification, ten-operation API Contract, implementation plan, developer handoff and clean
+  documentation audit. No Heritage migration or application implementation existed at activation.
+- Sprint 9 delivers one shared Organizer-managed Heritage collection plus public reads for
+  published content. Its statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`. Heritage remains
+  independent from General Feedback and is not a Feedback target.
+- The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
+  free version. One assigned Heritage Owner consumes that migration and owns the entity,
+  repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
+  Criteria.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -231,13 +242,17 @@ through V14 are now immutable.
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- General Feedback reporting, Heritage content persistence, map data and broad
-  Organizer/Partner/Admin notifications outside the approved Sprint 8 slice
+- Sprint 9 Heritage migration, backend APIs, public frontend and Organizer frontend integration
+- General Feedback reporting, map data and broad Organizer/Partner/Admin notifications outside
+  the approved Sprint 8 and Sprint 9 slices
 
 ## Next implementation task
 
-- Keep Sprint 8 closed and use its closure report as the evidence baseline.
-- Audit remaining real gaps and approve the next Sprint baseline before starting new feature code.
+- Keep Sprint 8 closed and use its closure report as the latest completed-Sprint evidence baseline.
+- The Project Owner must update from `main`, list all Flyway files, reserve the next free version
+  and create the single approved Heritage migration. Candidate V15 is not reserved by the docs.
+- Assign one Heritage Owner to integrate the supplied migration and implement the approved Sprint 9
+  application slice in the mandatory `S9-H1` through `S9-H5` order.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT` in the current
   business baseline. Heritage content is independent and must not be added as a Feedback target.
 - Reports, Guest replies and distributed throttling still require separately approved scope and,
@@ -246,7 +261,8 @@ through V14 are now immutable.
 ## Latest completed Sprint
 
 Sprint 08 General Feedback Submission and Organizer Handling is the latest completed Sprint as of
-2026-11-01. No Sprint 9 baseline is active yet.
+2026-11-01. Sprint 09 Heritage Public Content is the active implementation baseline and is not yet
+complete.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -255,10 +271,17 @@ Sprint 8 includes these approved Use Case slices:
 - explicit start, resolve and reopen workflow actions
 - real Landing Page and Organizer portal integration
 
+Sprint 9 includes these approved active Use Case slices:
+
+- `UC-G01` public Heritage list and detail for published content
+- `UC-O09` shared Organizer Heritage management
+- exact Draft, Published and Archived lifecycle with optimistic concurrency
+- real public and Organizer Heritage frontend integration
+
 ## Current approved baselines
 
-- Requirement baseline: active MVP rules plus completed Sprint 7 reward and Sprint 8 General
-  Feedback refinements
+- Requirement baseline: active MVP rules plus completed Sprint 7 reward, completed Sprint 8 General
+  Feedback refinements and active Sprint 9 Heritage decisions
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
@@ -266,19 +289,23 @@ Sprint 8 includes these approved Use Case slices:
 - Physical implementation source: immutable Flyway V1–V14. V10 implements the Sprint 6
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
   approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
-  the Sprint 8 General Feedback overlay.
-- Latest completed Sprint baseline: `docs/sprints/sprint-08.md`
-- Latest completed Sprint Use Cases: `docs/use-cases/sprint-08-use-case-specifications.md`
-- Latest completed Sprint API Contract: `docs/api/sprint-08-api-contract.md`
-- Latest completed Sprint Physical ERD overlay:
-  `docs/design/SPRINT_08_GENERAL_FEEDBACK_PHYSICAL_ERD_OVERLAY.md`
-- Latest completed Sprint implementation/ownership plan: `docs/sprints/SPRINT_08_IMPLEMENTATION_PLAN.md`
+  the Sprint 8 General Feedback overlay. The Sprint 9 Heritage overlay is approved but not yet
+  applied through a migration.
+- Active Sprint baseline: `docs/sprints/sprint-09.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-09-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-09-api-contract.md`
+- Active Sprint Physical ERD overlay:
+  `docs/design/SPRINT_09_HERITAGE_PHYSICAL_ERD_OVERLAY.md`
+- Active Sprint implementation/ownership plan: `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
+- Active Sprint developer handoff:
+  `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
 - Latest closure evidence: `docs/development/SPRINT_08_CLOSURE_REPORT.md`
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
 source. Use immutable V1–V14 and the current Physical ERD report as the physical implementation
-truth. The Sprint 8 overlay and API Contract remain the feature-specific interpretation sources.
+truth. Use the approved Sprint 9 Heritage overlay and API Contract as the active feature-specific
+interpretation sources until the Project Owner supplies the reserved migration.
 
 ## Authentication baseline
 

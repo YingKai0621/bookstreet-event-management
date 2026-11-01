@@ -2,19 +2,21 @@
 
 ## Document status
 
-- Status: `DRAFT - REVIEW REQUIRED`
+- Status: `APPROVED FOR IMPLEMENTATION`
 - Prepared date: `2026-11-01`
+- Activation date: `2026-11-01`
+- Approved documentation merge: `7e46809` (PR #105)
 - Current production baseline: immutable Flyway migrations `V1` through `V14`
 - Candidate migration: `V15__create_sprint9_heritage_content_schema.sql`
 - Migration reservation state: not reserved until the latest `main` is rechecked
 - Related Sprint baseline: `docs/sprints/sprint-09.md`
 - Related current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
-- Application state: this overlay is not applied and does not authorize a migration
+- Application state: approved but not applied. The Project Owner creates the migration after reservation
 
 ## 1. Purpose
 
 This overlay defines the exact Sprint 09 physical persistence boundary for Heritage public content. It
-translates the approved candidate domain into one PostgreSQL table without activating implementation.
+translates the approved domain into one PostgreSQL table for the assigned migration owner.
 
 The design intentionally keeps Heritage independent from General Feedback, Event, Activity, Location,
 Map, QR persistence, analytics, and Admin management.
@@ -447,9 +449,10 @@ republish. A generic public status setter is not part of the domain boundary.
 
 ### 9.1 Version ownership
 
-At preparation time, `V15` appears to be the next production migration version. The assigned migration owner
-must update `main`, inspect `backend/src/main/resources/db/migration`, and confirm the number again before
-creating the file.
+At activation time, `V15` appears to be the next production migration version. The Project Owner is the
+exclusive Heritage migration author and must update `main`, inspect
+`backend/src/main/resources/db/migration`, reserve the next free number, and confirm it again before creating
+the file.
 
 If another migration takes V15 first, Sprint 09 uses the next available version. This overlay is identified by
 feature purpose, not by a permanently reserved version number.

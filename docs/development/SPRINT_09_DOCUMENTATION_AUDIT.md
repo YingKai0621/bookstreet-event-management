@@ -7,6 +7,9 @@
 > This result confirms that the candidate Sprint 09 Heritage documents are internally consistent and
 > implementable against the inspected repository baseline. It does not activate Sprint 09 and does not
 > authorize coding before the approval and activation gates in section 10 are complete.
+>
+> Approval state: the Project Owner approved and merged the documentation through PR #105 at `7e46809`.
+> The later Sprint activation is recorded in `docs/sprints/CURRENT_SPRINT.md`.
 
 ## 1. Audit scope
 
@@ -107,9 +110,9 @@ activation, migration-reservation, and implementation gates rather than hidden p
 - Severity: `P0 pre-code gate`.
 - Status: `OPEN GATE - EXPECTED AND DOCUMENTED`.
 - Evidence: the inspected production migration directory contains V1 through V14 and no V15 file.
-- Required action: after the documentation is approved and Sprint 9 is active, update from `main`, list all
-  migrations, coordinate with the Notification developer, and reserve the next free version with the
-  project owner.
+- Required action: after the documentation is approved and Sprint 9 is active, the Project Owner updates
+  from `main`, lists all migrations, coordinates with the Notification developer, and reserves the next free
+  version.
 - Constraint: V1 through V14 remain immutable. The documentation does not reserve V15.
 
 ### AUD-S9-06 - Current broad Organizer security matcher can admit an Admin-only account
@@ -159,9 +162,9 @@ activation, migration-reservation, and implementation gates rather than hidden p
 
 - Severity: `P1 coordination dependency`.
 - Status: `COVERED BY PLAN AND HANDOFF`.
-- Required coordination: each workstream owns its feature files and one reserved migration. Shared security,
-  route, sidebar, portal, and type edits are serialized by merge order. The later branch rebases and reapplies
-  only its focused change.
+- Required coordination: the Project Owner exclusively owns the Heritage migration, and the Notification
+  workstream must not use the same reserved number. Shared security, route, sidebar, portal, and type edits
+  are serialized by merge order. The later branch rebases and reapplies only its focused change.
 - Boundary: Heritage publication and archive create no Notification side effect in Sprint 9.
 
 ## 4. Scope and business consistency
@@ -320,8 +323,9 @@ The plan identifies current shared files and candidate feature files without aut
 
 Audit result: `PASS`.
 
-- One Heritage Owner owns the complete backend-to-frontend slice and all 28 criteria.
-- Migration ownership is exclusive and requires explicit reservation after latest-main verification.
+- One Heritage Owner owns the application backend-to-frontend slice and evidence for all 28 criteria.
+- The Project Owner exclusively owns the Heritage migration SQL after latest-main verification and explicit
+  reservation.
 - Notification is a separate future workstream with its own audit, scope, contract, plan, and criteria.
 - The Notification developer cannot modify Heritage lifecycle, DTOs, persistence, routes, or tests.
 - The Heritage developer cannot redesign Notification or add outbound side effects.
@@ -339,7 +343,7 @@ The documentation audit is clean, but coding remains blocked until all gates bel
 2. Documentation changes are committed, reviewed, and merged through the normal PR path.
 3. `docs/sprints/CURRENT_SPRINT.md` explicitly activates Sprint 9.
 4. The implementation owner starts from updated `main` on a dedicated branch.
-5. The next free migration version is rechecked and reserved centrally.
+5. The Project Owner rechecks and reserves the next free migration version centrally.
 6. Heritage and Notification owners confirm migration and shared-file boundaries.
 7. The implementation PR records the documentation baseline commit and reserved migration.
 
