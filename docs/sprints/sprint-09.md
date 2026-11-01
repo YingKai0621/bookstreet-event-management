@@ -1,13 +1,15 @@
 # Sprint 09 Heritage Public Content
 
-- Status: `DRAFT - REVIEW REQUIRED`
+- Status: `ACTIVE`
 - Prepared date: `2026-11-01`
+- Activation date: `2026-11-01`
+- Approved documentation merge: `7e46809` (PR #105)
 - Latest completed Sprint: Sprint 08 General Feedback Submission and Organizer Handling
 - Current production schema baseline: immutable Flyway migrations `V1` through `V14`
 - Current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
-- Candidate delivery owner: one developer for the complete vertical slice
-- Candidate migration owner: the same developer after the next migration version is rechecked
-- Activation state: this draft does not activate Sprint 09 or authorize feature implementation
+- Delivery owner: one assigned developer for the application vertical slice and all 28 criteria
+- Migration owner: the Project Owner after the next migration version is rechecked and reserved
+- Activation state: active for migration reservation and implementation from updated `main`
 
 Sprint 09 may be activated only after the current-state audit, this baseline, the Heritage Physical ERD
 overlay, Use Case Specifications, API Contract, implementation plan, implementation handoff, and
@@ -362,7 +364,7 @@ approved isolated seed path and must not contain credentials or personal data.
 28. `AC-S9-REG-03`: no production or test fallback exposes local Heritage seed data when the real API is empty
     or unavailable.
 
-## 11. Candidate implementation units
+## 11. Approved implementation units
 
 ### S9-1 Documentation and schema contract
 
@@ -444,4 +446,5 @@ Sprint 09 is complete only when:
 - QR is derived from the public URL and is not persisted
 - map coordinates, analytics, bilingual persistence, reports, and Admin management are excluded
 
-These decisions remain reviewable until this document is approved and Sprint 09 is activated.
+These decisions are approved and frozen for Sprint 09 implementation. Semantic changes require a new
+documentation review before code changes.

@@ -1,10 +1,10 @@
 # Sprint 09 Heritage API Contract
 
-> Status: `DRAFT - REVIEW REQUIRED`.
+> Status: `APPROVED - FROZEN FOR IMPLEMENTATION`.
 >
-> This contract freezes the candidate HTTP, DTO, validation, security, concurrency, persistence,
-> and frontend integration boundaries for Sprint 09 Heritage. It does not activate Sprint 09 or
-> authorize implementation before the complete document set is reviewed.
+> This contract freezes the approved HTTP, DTO, validation, security, concurrency, persistence,
+> and frontend integration boundaries for Sprint 09 Heritage. Semantic changes require documentation
+> review before implementation changes.
 >
 > Sources of truth, in precedence order: `docs/requirements/05_Business_Rules.md`,
 > `docs/requirements/06_Use_Case_List.md`, `docs/sprints/sprint-09.md`,
@@ -894,8 +894,8 @@ The API maps to `heritage_contents` exactly as defined by the Sprint 09 Physical
 | `updatedAt` and `expectedUpdatedAt` | `updated_at` |
 
 The production migration version is rechecked from updated `main` immediately before implementation.
-At the time of this draft, `V15__create_sprint9_heritage_content_schema.sql` is only a candidate and is not
-reserved by this contract. V1 through V14 remain immutable.
+At activation, `V15__create_sprint9_heritage_content_schema.sql` is only a candidate and is not reserved by
+this contract. V1 through V14 remain immutable.
 
 No production or demo Heritage rows belong in the schema migration. There is no Heritage foreign key in
 `general_feedbacks` and no Feedback foreign key in `heritage_contents`.

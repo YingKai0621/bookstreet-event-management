@@ -1,132 +1,124 @@
 # Current Sprint
 
-## Sprint 08 General Feedback Submission and Organizer Handling
+## Sprint 09 Heritage Public Content
 
-- Status: `COMPLETED`
-- Activation date: `2026-10-31`
-- Completion date: `2026-11-01`
+- Status: `ACTIVE`
+- Activation date: `2026-11-01`
 - Latest completed Sprint: `Sprint 08 General Feedback Submission and Organizer Handling`
+- Approved documentation merge: PR #105, merge commit `7e46809`
 - Implemented schema baseline: immutable Flyway migrations `V1` through `V14`
-- Implemented Sprint 8 migration: `V14__create_sprint8_general_feedback_schema.sql`
-- Sprint baseline: `docs/sprints/sprint-08.md`
-- Current-state audit: `docs/development/SPRINT_08_CURRENT_STATE_AUDIT.md`
-- Documentation audit: `docs/development/SPRINT_08_DOCUMENTATION_AUDIT.md`
-- Use Case Specifications: `docs/use-cases/sprint-08-use-case-specifications.md`
-- API Contract: `docs/api/sprint-08-api-contract.md`
+- Expected next Heritage migration: candidate `V15` only if it is still free when reserved
+- Sprint baseline: `docs/sprints/sprint-09.md`
+- Current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
+- Documentation audit: `docs/development/SPRINT_09_DOCUMENTATION_AUDIT.md`
+- Use Case Specifications: `docs/use-cases/sprint-09-use-case-specifications.md`
+- API Contract: `docs/api/sprint-09-api-contract.md`
 - Physical ERD source: `docs/design/12_Physical_ERD_Report.md` plus
-  `docs/design/SPRINT_08_GENERAL_FEEDBACK_PHYSICAL_ERD_OVERLAY.md`
-- Implementation and ownership plan: `docs/sprints/SPRINT_08_IMPLEMENTATION_PLAN.md`
-- Sprint 7 closure evidence: `docs/development/SPRINT_07_CLOSURE_REPORT.md`
-- Sprint 8 closure evidence: `docs/development/SPRINT_08_CLOSURE_REPORT.md`
-- Implementation merges: PR #102 (`8384fe9`) and PR #103 (`071b97a`)
+  `docs/design/SPRINT_09_HERITAGE_PHYSICAL_ERD_OVERLAY.md`
+- Implementation and ownership plan: `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
+- Developer handoff: `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
+- Latest closure evidence: `docs/development/SPRINT_08_CLOSURE_REPORT.md`
 
 ## Sprint goal
 
-Deliver General Feedback as one coherent PostgreSQL-backed vertical slice:
+Deliver Heritage as one coherent PostgreSQL-backed content-management slice:
 
-1. A Guest submits one-way Feedback for the whole Book Street or an eligible public Event.
-2. Optional Guest name/email and the required message are normalized without collecting a phone
-   number or satisfaction score.
-3. A valid authenticated Session may associate the current User without accepting caller-selected
-   identity.
-4. Every verified Organizer sees the same Management Board queue across the Book Street and all
-   Events.
-5. Organizer handling uses explicit `NEW -> IN_PROGRESS -> RESOLVED` transitions with the approved
-   reopen path and internal note behavior.
-6. The existing Landing Page and Organizer Feedback surfaces use the real API without mock success,
-   placeholder rows or Guest-reply wording.
-7. Existing Event ownership, Activity Rating, Session/CSRF and Sprint 7 reward behavior remain
+1. A Guest can browse a public Heritage list and open public Heritage detail.
+2. Public reads expose only published Heritage content and never leak Draft or Archived records.
+3. Every verified Organizer manages the same shared Heritage collection.
+4. Organizer commands provide create, list, detail, update, publish, archive and republish behavior
+   with the approved lifecycle and optimistic concurrency contract.
+5. Existing General Feedback, Event ownership, Session, CSRF and completed Sprint behavior remain
    unchanged.
 
 ## Scope and acceptance baseline
 
-The delivered implementation is limited to:
+The active implementation is limited to:
 
-- the `BOOK_STREET` and `EVENT` branches of `UC-G04 Submit General Feedback`;
-- the bounded Organizer handling extension for the same General Feedback workflow;
-- one `general_feedbacks` table and its exact constraints/indexes;
-- public CSRF-protected submission with a bounded process-local abuse throttle;
-- one shared Organizer queue, detail and three explicit workflow actions;
-- real Landing Page and Organizer portal integration;
-- focused migration, backend, frontend and browser verification.
+- `UC-G01 Browse Heritage Content`
+- `UC-O09 Manage Heritage Content`
+- one `heritage_contents` table with the approved 11 columns, nine checks and two indexes
+- the exact `DRAFT`, `PUBLISHED` and `ARCHIVED` lifecycle
+- one shared Organizer collection without per-Organizer ownership
+- real public and Organizer frontend integration
+- focused migration, backend, frontend and browser verification
 
-The completed baseline contains **28 Acceptance Criteria**:
+The approved baseline contains **28 Acceptance Criteria**:
 
-- 12 Guest/Public criteria: `AC-G04-S8-01` through `AC-G04-S8-12`;
-- 12 Organizer criteria: `AC-O-S8-01` through `AC-O-S8-12`;
-- 4 schema/regression criteria: `AC-X-S8-01` through `AC-X-S8-04`.
+- 14 Organizer criteria: `AC-O09-S9-01` through `AC-O09-S9-14`
+- 8 public criteria: `AC-G01-S9-01` through `AC-G01-S9-08`
+- 3 database criteria: `AC-S9-DB-01` through `AC-S9-DB-03`
+- 3 regression criteria: `AC-S9-REG-01` through `AC-S9-REG-03`
 
-The API Contract defines exactly six operations: one public create, two Organizer reads and three
-Organizer transitions. The implementation PRs identify their owned AC IDs and preserve the
-approved route, DTO, error, authorization, transaction, privacy and throttle contract.
+The API Contract defines exactly ten operations. These are two public reads and eight Organizer
+operations. The implementation must preserve the approved routes, DTOs, errors, authorization,
+transactions, lifecycle rules and `expectedUpdatedAt` concurrency contract.
 
 ## Ownership
 
-One assigned **Sprint 08 General Feedback Owner** owned the complete vertical slice, including:
+The **Project Owner** exclusively owns the Heritage Flyway migration SQL after updating from
+`main`, listing every existing migration and reserving the next free version.
 
-- the single Sprint 8 migration and General Feedback persistence model;
-- backend Feedback service, security/CSRF and process-local throttle integration;
-- public submission and Organizer query/transition APIs;
-- Landing Page and Organizer Feedback UI integration;
-- focused tests and closure evidence.
+One assigned **Sprint 09 Heritage Owner** owns the application slice and evidence for all 28
+Acceptance Criteria, including:
 
-Reviewers reviewed without creating a competing migration, throttle, entity or transition
-implementation. The owner started from updated `main` on dedicated feature branches.
+- Heritage entity, repository and persistence integration
+- backend public and Organizer APIs
+- security, CSRF, lifecycle and concurrency behavior
+- public and Organizer Heritage UI integration
+- focused backend, frontend and browser tests
+- implementation traceability and closure evidence
 
-## Delivery record
+The Heritage Owner consumes the migration supplied by the Project Owner and does not independently
+create or edit a competing migration. Notification work remains separate and must not reserve or
+reuse the same Flyway version.
 
-1. `S8-1 Public vertical slice and foundation` — recheck migration availability, create the
-   migration/persistence model, implement the public CSRF/throttle boundary, public create API,
-   Landing Page integration and focused public/schema tests.
-2. `S8-2 Organizer vertical slice` — implement the shared queue/detail/transitions, wire the
-   existing Organizer Feedback screen and add focused authorization/concurrency tests.
-3. `S8-3 Verification and closure` — run focused browser and affected regression checks, perform
-   real-API smoke, then update the applied Physical ERD/context and closure evidence.
+## Mandatory delivery order
 
-These units were delivered sequentially. No migration or application implementation was added to
-the Sprint activation branch.
+1. The Project Owner updates from `main`, confirms the next free Flyway version, reserves it and
+   creates the single Heritage migration.
+2. `S9-H1 Heritage domain foundation` integrates the supplied migration with the entity,
+   repository and focused schema tests.
+3. `S9-H2 Heritage backend APIs` implements all approved public and Organizer operations.
+4. `S9-H3 Public Heritage frontend` connects the real public list and detail experience.
+5. `S9-H4 Organizer Heritage frontend` connects the real management workflow.
+6. `S9-H5 Verification and closure` completes focused regression, traceability and closure
+   evidence.
 
 ## Non-negotiable implementation rules
 
-- PostgreSQL is durable truth; Redis stores server-side Session only.
-- Authentication remains Spring Security Session with HttpOnly cookie; do not introduce JWT.
+- PostgreSQL is durable truth. Redis stores server-side Session only.
+- Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
 - Hibernate remains `ddl-auto: validate`. V1 through V14 are immutable.
-- Any later schema change requires a new Flyway migration after the next version is rechecked.
-- General Feedback targets are only `BOOK_STREET` and `EVENT`. `HERITAGE` is excluded from the
-  current business baseline and is not a future Feedback target.
-- General Feedback has no score/rating and does not change completed Activity Rating behavior.
-- Public submission is `permitAll` but remains CSRF-protected.
-- The abuse throttle is bounded process-local volatile state: 10 counted attempts per client key
-  in 600 seconds and at most 5,000 active windows. Redis is not used for throttle counters.
-- Every verified Organizer shares the Feedback queue, but Feedback access never widens Event
-  mutation ownership.
-- Statuses are exactly `NEW`, `IN_PROGRESS` and `RESOLVED`; viewing never changes status.
-- Resolve requires an internal note; no processing result is sent to the Guest.
-- Do not commit `.env`, credentials, HMAC secrets, local IPs, contact data or demo Feedback.
+- The migration filename is not reserved by this document. The Project Owner must recheck before
+  creating it.
+- The Heritage schema has exactly the approved columns, constraints and indexes.
+- Heritage statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`.
+- Public list and detail expose only `PUBLISHED` records.
+- Every verified Organizer manages the same collection. Admin-only access is denied.
+- Heritage remains independent from General Feedback and is not a Feedback target.
+- Published content is not hard deleted. The approved removal behavior is archive.
+- Mutating existing Heritage records uses `expectedUpdatedAt` to detect stale writes.
+- Do not commit `.env`, credentials, local IPs, local scripts or demo-only content.
 
 ## Explicitly out of scope
 
-- Heritage, Location, Booth, Facility or Activity General Feedback targets
-- General Feedback rating, phone number, attachment or arbitrary custom fields
-- Guest reply, status lookup, email, SMS, push or Notification delivery
-- Feedback hard delete, edit-after-submit or public list/detail
-- transition-history table
-- reports, statistics, dashboards or Admin Feedback API/UI
-- CAPTCHA, third-party moderation or distributed throttling
-- unrelated frontend refactors or changes to completed Sprint 1–7 behavior
+- Heritage Feedback, rating, comments or moderation queue
+- Heritage ownership per Organizer
+- Heritage localization, version history or approval workflow
+- media upload, image processing or asset storage changes
+- categories, tags, search engine integration or recommendation behavior
+- Admin Heritage API or UI
+- Notification delivery caused by Heritage changes
+- reports, analytics, map integration or unrelated frontend refactors
 
-## Completion result
+## Activation result
 
-The Project Owner approved and merged the Sprint 8 current-state audit, baseline, Physical ERD
-overlay, 28-AC Use Case Specification, six-operation API Contract, one-developer Implementation
-Plan and clean documentation audit through PR #100 (merge commit `a6f070c`). The activation check
-on `2026-10-31` confirmed that the repository contains immutable migrations V1 through V13 and no
-V14 file yet.
+PR #105 approved and merged the Sprint 9 current-state audit, product baseline, Physical ERD
+overlay, 28-AC Use Case Specification, ten-operation API Contract, implementation plan, developer
+handoff and documentation audit at merge commit `7e46809`.
 
-The public vertical slice and schema were implemented through PR #102. The shared Organizer queue,
-detail, legal transitions and UI states were implemented through PR #103. Flyway V14 is now an
-immutable applied migration. Focused migration, backend and browser verification plus the affected
-frontend build checks are recorded in the Sprint 8 closure report.
-
-Sprint 8 is closed. No Sprint 9 baseline is active yet, so new feature implementation must wait for
-an approved Sprint baseline instead of extending Sprint 8 implicitly.
+Sprint 9 is active from `2026-11-01`. At activation, the repository still contains only immutable
+migrations V1 through V14 and no Heritage application implementation. Candidate V15 is an expected
+next version, not a reservation. Implementation begins only after the Project Owner completes the
+migration reservation gate above.

@@ -1,13 +1,14 @@
 # Sprint 09 Heritage Implementation and Ownership Plan
 
-> Status: `DRAFT - REVIEW REQUIRED`.
+> Status: `APPROVED - ACTIVE` from `2026-11-01`.
 >
-> Delivery model: one developer owns the complete Heritage backend-to-frontend vertical slice.
+> Delivery model: one Heritage developer owns the application vertical slice and all 28 criteria. The
+> Project Owner exclusively owns the Heritage migration SQL file.
 >
-> Documentation branch: `docs/sprint9-heritage-audit`.
+> Approved documentation merge: `7e46809` through PR #105.
 >
-> This plan does not activate Sprint 09 or authorize implementation before the complete Sprint 09
-> document set passes the requested cross-document audit.
+> Sprint 09 activation is recorded in `docs/sprints/CURRENT_SPRINT.md`. Implementation starts from updated
+> `main` after the migration version is reserved.
 
 ## 1. Purpose and implementation boundary
 
@@ -72,9 +73,9 @@ visibility rule requires documentation review before code changes.
 
 ### 2.1 Heritage owner
 
-The assigned **Sprint 09 Heritage Owner** is the only developer permitted to implement or edit Heritage
-persistence, API, security integration, public UI, Organizer UI, and Heritage-specific tests until the
-slice is merged.
+The assigned **Sprint 09 Heritage Owner** is the only developer permitted to implement or edit the Heritage
+entity, repository, API, security integration, public UI, Organizer UI, and Heritage-specific tests until
+the slice is merged. The Project Owner separately owns the migration SQL file.
 
 The Heritage Owner owns all 28 criteria:
 
@@ -83,8 +84,9 @@ The Heritage Owner owns all 28 criteria:
 - `AC-S9-DB-01` through `AC-S9-DB-03`
 - `AC-S9-REG-01` through `AC-S9-REG-03`
 
-Reviewers may review and request changes. They must not create a competing Heritage migration, entity,
-controller, route contract, lifecycle, or frontend model.
+Reviewers may review and request changes. Only the Project Owner may create or edit the Heritage migration.
+No reviewer or feature developer creates a competing entity, controller, route contract, lifecycle, or
+frontend model.
 
 ### 2.2 Notification developer boundary
 
@@ -112,18 +114,18 @@ Candidate filename only when the version is still free:
 backend/src/main/resources/db/migration/V15__create_sprint9_heritage_content_schema.sql
 ```
 
-Before creating the migration, the Heritage Owner must:
+Before creating the migration, the Project Owner must:
 
 1. update local `main`
 2. list every migration in `backend/src/main/resources/db/migration`
 3. check whether the Notification workstream or another merged branch used the next version
-4. reserve the next free version with the project owner
-5. record that version in the implementation PR description
+4. reserve the next free version centrally
+5. record that version in the migration and implementation PR descriptions
 
 Rules:
 
 - Heritage and Notification never use the same migration number.
-- The developer who receives a migration version owns that file until merge.
+- The Project Owner owns the reserved Heritage migration file until merge.
 - If another migration merges first, the unmerged owner renumbers before review and updates affected docs.
 - No developer edits another feature's migration to avoid a version collision.
 - After a migration is merged or applied to a shared environment, it is immutable.
@@ -193,7 +195,7 @@ After the documentation gate is merged:
 2. fetch and pull the latest accepted baseline
 3. verify the worktree is clean except explicitly preserved local-only files
 4. create one branch such as `feat/sprint9-heritage`
-5. recheck and reserve the migration version
+5. obtain the reserved migration filename from the Project Owner
 6. record the documentation baseline commit and reserved migration in the PR description
 
 Do not carry unrelated local edits into the implementation branch. Do not stage `.env` or the user's
@@ -201,7 +203,7 @@ untracked `backend/scripts/` directory.
 
 ### 3.3 Sequential implementation units
 
-The Heritage Owner implements these units in order:
+The Heritage Owner implements these units in order after the Project Owner supplies the reserved migration:
 
 1. **S9-H1 Schema and domain foundation**
 2. **S9-H2 Backend public and Organizer APIs**
@@ -276,10 +278,15 @@ secret, Redis key, storage path, upload limit, scheduler, queue, or external ser
 
 ### 4.3 Migration and backend tests
 
-The owner controls:
+The Project Owner controls only:
 
 ```text
 backend/src/main/resources/db/migration/V{reserved}__create_sprint9_heritage_content_schema.sql
+```
+
+The Heritage Owner controls:
+
+```text
 backend/src/test/java/com/swp391/bookstreet/heritage/
 backend/src/test/java/com/swp391/bookstreet/migration/Sprint09SchemaMigrationTests.java
 backend/src/test/java/com/swp391/bookstreet/heritage/Sprint09HibernateValidationTests.java
@@ -324,10 +331,12 @@ copy the full historical browser suite into a Sprint 09 file.
 
 ### 5.1 Migration reservation
 
-- Refresh `main` and reserve the next free migration with the project owner.
+- The Project Owner refreshes `main` and reserves the next free migration.
 - Confirm V1 through V14 remain byte-for-byte unchanged.
 - Confirm no Notification or other branch reserved the same number.
-- Create exactly one Heritage migration.
+- The Project Owner creates exactly one Heritage migration.
+- The Heritage Owner reviews the supplied schema against the overlay and adds integration evidence without
+  editing the migration SQL.
 
 ### 5.2 Physical schema
 

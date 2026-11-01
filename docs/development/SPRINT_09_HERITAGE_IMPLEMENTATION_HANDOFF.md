@@ -1,11 +1,11 @@
 # Sprint 09 Heritage Implementation Handoff
 
-> Status: `DRAFT - DO NOT IMPLEMENT YET`.
+> Status: `APPROVED - READY FOR ASSIGNMENT`.
 >
 > Intended recipient: the single developer assigned as Sprint 09 Heritage Owner.
 >
-> Start condition: the complete Sprint 09 documentation set is audited, approved, merged, and Sprint 09 is
-> explicitly activated in `docs/sprints/CURRENT_SPRINT.md`.
+> Start condition: Sprint 09 is active in `docs/sprints/CURRENT_SPRINT.md`, the developer starts from updated
+> `main`, and the Project Owner supplies the reserved Heritage migration.
 
 ## 1. Handoff purpose
 
@@ -35,8 +35,8 @@ Read these files in this order:
 13. `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
 14. `docs/development/SPRINT_09_DOCUMENTATION_AUDIT.md`
 
-Do not start implementation while `CURRENT_SPRINT.md` still states that Sprint 8 is the latest completed
-Sprint and no Sprint 9 baseline is active.
+Do not start implementation unless `CURRENT_SPRINT.md` marks Sprint 9 as active and the Project Owner has
+supplied a uniquely reserved Heritage migration.
 
 ## 3. Locked product decisions
 
@@ -63,9 +63,9 @@ Changing any item above requires documentation review before code changes.
 
 ## 4. Your ownership
 
-The Heritage Owner owns the complete vertical slice:
+The Heritage Owner owns the application vertical slice and evidence for all 28 criteria:
 
-- one new immutable Flyway migration
+- entity and repository integration with the Project Owner's immutable Flyway migration
 - the backend `heritage` feature package
 - public Heritage list and direct detail APIs
 - Organizer Heritage query and mutation APIs
@@ -75,8 +75,9 @@ The Heritage Owner owns the complete vertical slice:
 - focused migration, backend, frontend, browser, and regression tests
 - implementation evidence for all 28 Acceptance Criteria
 
-Reviewers may request changes but must not create a competing Heritage migration, model, lifecycle, API,
-or frontend contract.
+The Project Owner exclusively creates and edits the Heritage migration SQL. Reviewers and the Heritage
+Owner may request a correction but must not create a competing migration, model, lifecycle, API, or frontend
+contract.
 
 ## 5. Boundary with the Notification developer
 
@@ -99,8 +100,8 @@ change merges first. The second developer rebases on current `main` and reapplie
 2. Confirm the worktree does not contain unrelated staged changes.
 3. Preserve local `.env` and the user's untracked `backend/scripts/` directory without staging them.
 4. Create a dedicated branch such as `feat/sprint9-heritage`.
-5. List every existing Flyway migration.
-6. Ask the project owner to reserve the next free migration version.
+5. Obtain the reserved migration filename and SQL from the Project Owner.
+6. Confirm no Notification or other branch uses the same migration number.
 7. Record the documentation commit and reserved migration version in the implementation PR.
 8. Recheck shared files before editing them if Notification work has started.
 
@@ -110,7 +111,8 @@ change merges first. The second developer rebases on current `main` and reapplie
 
 Implement in this order:
 
-1. `S9-H1` schema, entity, status enum, repository foundation, and migration tests
+1. `S9-H1` review the supplied schema, then implement the entity, status enum, repository foundation, and
+   migration tests
 2. `S9-H2` backend public APIs, Organizer APIs, security, concurrency, and focused tests
 3. `S9-H3` public Landing Page, collection, direct detail, QR, and browser tests
 4. `S9-H4` Organizer route, list, detail, mutations, conflict handling, and browser tests
@@ -264,7 +266,7 @@ Do not mark Sprint 9 complete until the applied Physical ERD, closure evidence, 
 ## 15. Stop and ask before proceeding when
 
 - Sprint 9 is not explicitly active
-- the next migration version is not reserved
+- the Project Owner has not supplied a uniquely reserved Heritage migration
 - a source document conflicts with another higher-priority source
 - implementation would require a new field, status, role, route, transition, error code, or dependency
 - Notification work already owns the same migration or shared-file change
