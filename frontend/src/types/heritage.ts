@@ -20,3 +20,48 @@ export interface HeritagePageResponse<T> {
   totalElements: number;
   totalPages: number;
 }
+
+export type HeritageStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface OrganizerHeritageListItem {
+  heritageContentId: number;
+  publicCode: string;
+  title: string;
+  summary: string | null;
+  imageUrl: string | null;
+  locationText: string | null;
+  status: HeritageStatus;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizerHeritageDetail extends OrganizerHeritageListItem {
+  content: string;
+}
+
+export interface OrganizerHeritageQuery {
+  page?: number;
+  size?: number;
+  sort?: 'updatedAt,desc' | 'updatedAt,asc' | 'title,asc' | 'title,desc';
+  search?: string;
+  status?: HeritageStatus;
+}
+
+export interface CreateHeritageRequest {
+  publicCode: string;
+  title: string;
+  summary?: string | null;
+  content: string;
+  imageUrl?: string | null;
+  locationText?: string | null;
+}
+
+export interface UpdateHeritageRequest {
+  title: string;
+  summary: string | null;
+  content: string;
+  imageUrl: string | null;
+  locationText: string | null;
+  expectedUpdatedAt: string;
+}
