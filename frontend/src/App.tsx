@@ -66,7 +66,7 @@ import type { BoothRequest } from './types/booth';
 import {
   Booth,
   EventItem,
-  ExtendedHeritageProfile,
+  HeritageProfile,
   Language,
   ParticipantActivity,
   ParticipantCertificate,
@@ -202,7 +202,8 @@ export function App() {
     return () => cancelAnimationFrame(frame);
   }, [location.hash, isSlidePageOpen, isPortalRoute]);
 
-  const [heritageList, setHeritageList] = useState<ExtendedHeritageProfile[]>([]);
+  const [heritageList, setHeritageList] = useState<HeritageProfile[]>([]);
+  const [heritageError, setHeritageError] = useState('');
   const [booths, setBooths] = useState<Booth[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
@@ -252,6 +253,7 @@ export function App() {
     let isMounted = true;
     const refreshPublicData = async () => {
       setIsPublicDataLoading(true);
+      setHeritageError('');
       const [eventsRes, heritagesRes] = await Promise.allSettled([
         publicApi.getEvents(),
         publicApi.getHeritages(),
@@ -267,13 +269,15 @@ export function App() {
       }
 
       if (heritagesRes.status === 'fulfilled') {
-        setHeritageList(heritagesRes.value.map(h => ({
-          ...h,
-          status: 'published' as const,
-          qrStatus: 'active' as const,
-        })));
+        setHeritageList(heritagesRes.value);
       } else {
         console.warn('Could not fetch public heritages', heritagesRes.reason);
+        setHeritageList([]);
+        setHeritageError(
+          heritagesRes.reason instanceof Error
+            ? heritagesRes.reason.message
+            : 'Không thể tải nội dung di sản.',
+        );
       }
       setIsPublicDataLoading(false);
     };
@@ -1083,6 +1087,7 @@ export function App() {
             language={language}
             heritageList={heritageList}
             isLoading={isPublicDataLoading}
+            error={heritageError}
           />
 
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
@@ -1108,7 +1113,13 @@ export function App() {
       </div>
 
       {/* Full Dedicated Sliding Experience Pages (Right to Left Transition) */}
-      <HeritageExperience language={language} open={isHeritage} heritageList={heritageList} />
+      <HeritageExperience
+        language={language}
+        open={isHeritage}
+        heritageList={heritageList}
+        isLoading={isPublicDataLoading}
+        listError={heritageError}
+      />
       <BoothsExperience 
         language={language} 
         open={isBooths} 
