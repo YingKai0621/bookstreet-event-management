@@ -1258,7 +1258,7 @@ class EventApiIntegrationTests {
                         .with(authentication(identity(owner, true, "ORGANIZER")))
                         .contentType("application/json")
                         .content("{\"boothRequestDeadlineAt\":\""
-                                + eventStartAt.minus(Duration.ofMinutes(60)) + "\"}"))
+                                + eventStartAt.minus(Duration.ofHours(25)) + "\"}"))
                 .andExpect(status().isOk());
     }
 
