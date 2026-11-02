@@ -29,7 +29,9 @@ interface EventsExperienceProps {
   onOpenRegisterModal?: (event: EventItem) => void;
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
+  registeredEventIds?: ReadonlySet<string>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  onLeaveEvent?: (eventId: string) => void | Promise<void>;
   selectedEventId?: string;
 }
 
@@ -58,7 +60,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   isLoading = false,
   isParticipantAuthenticated = false,
   participantProfile: _participantProfile,
+  registeredEventIds = new Set<string>(),
   onJoinEvent,
+  onLeaveEvent,
   selectedEventId = '',
 }) => {
   const vi = language === 'vi';
@@ -75,6 +79,8 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registeredEvent, setRegisteredEvent] = useState<EventItem | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [detailUnregisterError, setDetailUnregisterError] = useState<string | null>(null);
+  const [isUnregisteringDetail, setIsUnregisteringDetail] = useState(false);
   const [deadlinePassed, setDeadlinePassed] = useState(false);
   const registrationNow = useDeadlineClock(events.map(event => event.registrationDeadlineAt));
   const eventCatalogUrl = selectedEventId
@@ -374,23 +380,51 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               <p className="modal-body-desc">
                 {vi ? activeModalEvent.summary : activeModalEvent.summaryEn}
               </p>
-              <button
-                type="button"
-                className="btn-figma-primary"
-                style={{ width: '100%' }}
-                disabled={registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow)}
-                onClick={() => {
-                  const ev = activeModalEvent;
-                  navigate(eventCatalogUrl);
-                  setRegisteredEvent(ev);
-                  setRegisterSuccess(false);
-                  setDeadlinePassed(false);
-                  setRegistrationError(null);
-                }}
-              >
-                <CheckCircle size={16} />
-                <span>{registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (vi ? 'Tham gia sự kiện' : 'Join Event')}</span>
-              </button>
+              {detailUnregisterError && (
+                <p className="participant-inline-error" role="alert" style={{ color: '#DC2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                  {detailUnregisterError}
+                </p>
+              )}
+              {registeredEventIds.has(activeModalEvent.id) && isParticipantAuthenticated && onLeaveEvent ? (
+                <button
+                  type="button"
+                  className="btn-figma-primary"
+                  style={{ width: '100%', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+                  disabled={isUnregisteringDetail}
+                  onClick={async () => {
+                    setIsUnregisteringDetail(true);
+                    setDetailUnregisterError(null);
+                    try {
+                      await onLeaveEvent(activeModalEvent.id);
+                    } catch (error) {
+                      setDetailUnregisterError(error instanceof Error ? error.message : (vi ? 'Không thể hủy đăng ký sự kiện.' : 'Failed to cancel registration.'));
+                    } finally {
+                      setIsUnregisteringDetail(false);
+                    }
+                  }}
+                >
+                  <X size={16} />
+                  <span>{isUnregisteringDetail ? (vi ? 'Đang hủy đăng ký...' : 'Cancelling...') : (vi ? 'Hủy đăng ký' : 'Cancel Registration')}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-figma-primary"
+                  style={{ width: '100%' }}
+                  disabled={registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow)}
+                  onClick={() => {
+                    const ev = activeModalEvent;
+                    navigate(eventCatalogUrl);
+                    setRegisteredEvent(ev);
+                    setRegisterSuccess(false);
+                    setDeadlinePassed(false);
+                    setRegistrationError(null);
+                  }}
+                >
+                  <CheckCircle size={16} />
+                  <span>{registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (vi ? 'Tham gia sự kiện' : 'Join Event')}</span>
+                </button>
+              )}
             </div>
           </div>,
           document.body

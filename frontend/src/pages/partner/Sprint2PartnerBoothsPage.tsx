@@ -292,6 +292,13 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [eventSearch, setEventSearch] = useState('');
+  const requestScope: 'event' | 'all' = searchParams.get('scope') === 'all' ? 'all' : 'event';
+  const setRequestScope = useCallback((scope: 'event' | 'all') => {
+    const next = new URLSearchParams(searchParams);
+    if (scope === 'all') next.set('scope', 'all');
+    else next.delete('scope');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [now, setNow] = useState(0);
   useModalDismiss(Boolean(selectedBooth), () => { if (busy !== 'submit') setSelectedBooth(null); });
   const boothBackdropHandlers = useBackdropClick(() => { if (busy !== 'submit') setSelectedBooth(null); });
@@ -325,6 +332,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     const normalized = new URLSearchParams();
     if (eventId) normalized.set('eventId', eventId);
     if (tab === 'requests') normalized.set('view', 'requests');
+    if (searchParams.get('scope') === 'all') normalized.set('scope', 'all');
     const boothId = Number.parseInt(searchParams.get('boothId') || '', 10);
     if (Number.isInteger(boothId) && boothId > 0) normalized.set('boothId', String(boothId));
     if (normalized.toString() !== new URLSearchParams(searchParams).toString()) {
@@ -492,6 +500,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
         ? 'Đã rút yêu cầu và giải phóng giữ chỗ gian hàng.'
         : 'Đã rút yêu cầu gian hàng.');
       setWithdrawTarget(null);
+      onRefreshData();
       await loadData();
     } catch (caughtError) {
       if (caughtError instanceof ApiError) {
@@ -508,6 +517,11 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       setBusy('');
     }
   };
+
+  const eventTitleById = new Map(applications.map(application => [application.eventId, application.eventTitle]));
+  const allScopeRequests = [...(allRequests || [])]
+    .sort((left, right) => new Date(right.submittedAt).getTime() - new Date(left.submittedAt).getTime());
+  const visibleRequests = requestScope === 'all' ? allScopeRequests : requests;
 
   if (!boothEligibleApplications.length) {
     return (
@@ -693,9 +707,22 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
               <h2>Yêu cầu thuê gian hàng</h2>
               <p>Kiểm tra tiến trình xét duyệt, thời hạn giữ chỗ và các thao tác cần hoàn tất cho từng gian hàng.</p>
             </div>
-            <strong>{requests.length} yêu cầu</strong>
+            <div className="s2-request-scope">
+              <div className="s2-request-scope-toggle" role="group" aria-label="Phạm vi yêu cầu">
+                <button type="button" aria-pressed={requestScope === 'event'} className={requestScope === 'event' ? 'is-active' : ''} onClick={() => setRequestScope('event')}>
+                  Sự kiện đang chọn
+                </button>
+                <button type="button" aria-pressed={requestScope === 'all'} className={requestScope === 'all' ? 'is-active' : ''} onClick={() => setRequestScope('all')}>
+                  Tất cả sự kiện
+                </button>
+              </div>
+              <strong>{visibleRequests.length} yêu cầu</strong>
+            </div>
           </div>
-          <PaginatedList items={requests}>{pageItems => (<div className="s2-request-list">
+          {requestScope === 'all' && allRequests === null && (
+            <p className="s2-map-guidance"><Info size={16} /> Chưa tải được danh sách yêu cầu của tất cả sự kiện. Hãy bấm Làm mới.</p>
+          )}
+          <PaginatedList items={visibleRequests}>{pageItems => (<div className="s2-request-list">
             {pageItems.map(request => {
               const isHoldActive = request.hold?.status === 'ACTIVE';
               const boothInfo = booths.find(b => b.booth.boothId === request.boothId);
@@ -711,6 +738,11 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
                   <header className="s2-partner-request-header">
                     <div className="s2-partner-request-identity">
                       <span className="s2-partner-request-eyebrow">YÊU CẦU THUÊ GIAN HÀNG · #{request.boothRequestId}</span>
+                      {requestScope === 'all' && (
+                        <span className="s2-partner-request-event">
+                          {eventTitleById.get(String(request.eventId)) || `Sự kiện #${request.eventId}`}
+                        </span>
+                      )}
                       <h3>Gian {request.boothCode}</h3>
                       {boothName && <p><b>Tên gian</b>{boothName}</p>}
                       <span className="s2-partner-request-submitted">
@@ -818,7 +850,15 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
                 </article>
               );
             })}
-            {!requests.length && (
+            {requestScope === 'all' && !visibleRequests.length && (
+              <div className="s2-empty s2-partner-request-empty">
+                <span><Store size={30} /></span>
+                <strong>Bạn chưa có yêu cầu thuê gian hàng nào</strong>
+                <p>Chọn một gian còn trống trên sơ đồ để gửi yêu cầu đầu tiên đến Ban tổ chức.</p>
+                <button type="button" onClick={() => setTab('browse')}>Xem sơ đồ gian hàng <ChevronRight size={15} /></button>
+              </div>
+            )}
+            {requestScope === 'event' && !requests.length && (
               <div className="s2-empty s2-partner-request-empty">
                 <span><Store size={30} /></span>
                 <strong>Sự kiện này chưa có yêu cầu thuê gian hàng</strong>

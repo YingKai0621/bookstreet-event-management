@@ -366,6 +366,10 @@ export function App() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
+  const [publicEventSwitchNotice, setPublicEventSwitchNotice] = useState<string | null>(null);
+  const [isNoticeClosing, setIsNoticeClosing] = useState(false);
+  const publicEventSwitchTimerRef = useRef<number | null>(null);
+  const publicEventSwitchCloseTimerRef = useRef<number | null>(null);
   const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
   const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
   const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
@@ -383,8 +387,31 @@ export function App() {
   const publicBoothsError = hasCurrentBooths ? loadedBooths.error : '';
   const isPublicBoothsLoading = Boolean(isPublicRoute && publicEventId && !hasCurrentBooths);
 
+  useEffect(() => {
+    return () => {
+      if (publicEventSwitchTimerRef.current !== null) window.clearTimeout(publicEventSwitchTimerRef.current);
+      if (publicEventSwitchCloseTimerRef.current !== null) window.clearTimeout(publicEventSwitchCloseTimerRef.current);
+    };
+  }, []);
+
+  const dismissPublicEventSwitchNotice = () => {
+    if (isNoticeClosing) return;
+    setIsNoticeClosing(true);
+    if (publicEventSwitchTimerRef.current !== null) {
+      window.clearTimeout(publicEventSwitchTimerRef.current);
+      publicEventSwitchTimerRef.current = null;
+    }
+    publicEventSwitchCloseTimerRef.current = window.setTimeout(() => {
+      setPublicEventSwitchNotice(null);
+      setIsNoticeClosing(false);
+      publicEventSwitchCloseTimerRef.current = null;
+    }, 320);
+  };
+
   const selectPublicEvent = (eventId: string) => {
-    if (!publicContextEvents.some(event => event.id === eventId)) return;
+    const targetEvent = publicContextEvents.find(event => event.id === eventId);
+    if (!targetEvent) return;
+    const isSwitchingEvent = eventId !== publicEventId;
     setSelectedPublicEventId(eventId);
     const params = new URLSearchParams(location.search);
     params.set('eventId', eventId);
@@ -393,6 +420,27 @@ export function App() {
       search: `?${params.toString()}`,
       hash: location.hash,
     }, { replace: true, preventScrollReset: true });
+
+    if (isSwitchingEvent) {
+      const eventName = language === 'vi' ? targetEvent.title : (targetEvent.titleEn || targetEvent.title);
+      setPublicEventSwitchNotice(
+        language === 'vi'
+          ? `Đang hiển thị gian hàng & sơ đồ của sự kiện: ${eventName}`
+          : `Showing booths & map for event: ${eventName}`,
+      );
+      setIsNoticeClosing(false);
+      if (publicEventSwitchTimerRef.current !== null) window.clearTimeout(publicEventSwitchTimerRef.current);
+      if (publicEventSwitchCloseTimerRef.current !== null) window.clearTimeout(publicEventSwitchCloseTimerRef.current);
+      publicEventSwitchTimerRef.current = window.setTimeout(() => {
+        setIsNoticeClosing(true);
+        publicEventSwitchCloseTimerRef.current = window.setTimeout(() => {
+          setPublicEventSwitchNotice(null);
+          setIsNoticeClosing(false);
+          publicEventSwitchCloseTimerRef.current = null;
+        }, 320);
+        publicEventSwitchTimerRef.current = null;
+      }, 3200);
+    }
   };
 
   useEffect(() => {
@@ -464,6 +512,15 @@ export function App() {
       });
     return () => { active = false; };
   }, [isPublicRoute, publicEventId]);
+
+  useEffect(() => {
+    if (!isPublicRoute || featuredPublicEvents.length === 0) return;
+    featuredPublicEvents.forEach(event => {
+      if (event.id && event.id !== publicEventId) {
+        void publicApi.getBooths(event.id).catch(() => {});
+      }
+    });
+  }, [featuredPublicEvents, isPublicRoute, publicEventId]);
 
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantProfileError, setParticipantProfileError] = useState('');
@@ -762,7 +819,15 @@ export function App() {
       ? { userId, eventIds: current.eventIds.filter(id => id !== event.id) }
       : current);
     setParticipantEvents(current => current.map(item => item.id === event.id ? { ...item, ...event } : item));
-    navigate('/participant');
+    try {
+      const events = await participantApi.getEvents();
+      if (currentParticipantId.current === userId) setParticipantEvents(events);
+    } catch {
+      // Keep authoritative leave response if refresh fails.
+    }
+    if (location.pathname.startsWith('/participant/events')) {
+      navigate('/participant');
+    }
   };
 
   const handleUpdateProfile = async (updated: Partial<ParticipantProfile>) => {
@@ -960,7 +1025,9 @@ export function App() {
               activities={participantActivities}
               totalCertificatesCount={participantProfile.certificatesCount ?? participantCertificates.length}
               onJoinEvent={handleJoinParticipantEvent}
+              onLeaveEvent={handleLeaveParticipantEvent}
               onRegisterActivity={handleRegisterActivity}
+              onCancelActivity={handleCancelActivity}
             />
           } />
           <Route path="/participant/events" element={
@@ -1215,7 +1282,7 @@ export function App() {
     <div className="duongsach-app-root">
       {/* 1. Header công khai */}
       <Header 
-        isHeritage={isHeritage}
+        isHeritage={isSlidePageOpen}
         onToggleHeritage={() => navigate(isHeritage ? '/' : '/di-san')}
         language={language} 
         onLanguageChange={(lang) => setLanguage(lang)}
@@ -1225,6 +1292,19 @@ export function App() {
         onParticipantLogout={handleParticipantLogout}
         selectedPublicEventId={publicEventId}
       />
+
+      {publicEventSwitchNotice && (
+        <div
+          key={publicEventSwitchNotice}
+          className={`public-event-switch-toast ${isNoticeClosing ? 'is-leaving' : ''}`}
+          aria-live="polite"
+          onClick={dismissPublicEventSwitchNotice}
+          title={language === 'vi' ? 'Bấm để ẩn thông báo' : 'Click to dismiss'}
+        >
+          <span className="public-event-switch-toast-dot" aria-hidden="true" />
+          <span>{publicEventSwitchNotice}</span>
+        </div>
+      )}
 
       <div className={`main-app-container ${isSlidePageOpen ? 'heritage-active-bg' : ''}`} inert={isSlidePageOpen} aria-hidden={isSlidePageOpen || undefined}>
         <main id="main-content">
@@ -1271,6 +1351,7 @@ export function App() {
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
             onJoinEvent={handleJoinParticipantEvent}
+            onLeaveEvent={handleLeaveParticipantEvent}
             selectedEventId={publicEventId}
             onSelectEventId={selectPublicEvent}
           />
@@ -1340,7 +1421,9 @@ export function App() {
           isLoading={isPublicDataLoading}
           isParticipantAuthenticated={isParticipantAuthenticated}
           participantProfile={participantProfile}
+          registeredEventIds={new Set(landingRegistrations?.userId === participantUserId ? landingRegistrations?.eventIds : [])}
           onJoinEvent={handleJoinParticipantEvent}
+          onLeaveEvent={handleLeaveParticipantEvent}
           selectedEventId={publicEventId}
         />
       </DeferredRouteChunk>

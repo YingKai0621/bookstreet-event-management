@@ -37,6 +37,7 @@ interface EventsSectionProps {
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  onLeaveEvent?: (eventId: string) => void | Promise<void>;
   selectedEventId?: string;
   onSelectEventId?: (eventId: string) => void;
 }
@@ -50,6 +51,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
   onJoinEvent,
+  onLeaveEvent,
   selectedEventId,
   onSelectEventId,
 }) => {
@@ -57,6 +59,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   const [showRegisterModal, setShowRegisterModal] = useState<EventItem | null>(null);
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [detailUnregisterError, setDetailUnregisterError] = useState<string | null>(null);
+  const [isUnregisteringDetail, setIsUnregisteringDetail] = useState(false);
   const registrationNow = useDeadlineClock([activeEventDetail?.registrationDeadlineAt, showRegisterModal?.registrationDeadlineAt]);
   const [closingSheet, setClosingSheet] = useState<'detail' | 'register' | null>(null);
   const sheetDragStartY = React.useRef<number | null>(null);
@@ -67,8 +71,10 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   const closeEventSheet = React.useCallback((sheet: 'detail' | 'register') => {
     if (closingSheet) return;
     const finishClose = () => {
-      if (sheet === 'detail') setActiveEventDetail(null);
-      else {
+      if (sheet === 'detail') {
+        setActiveEventDetail(null);
+        setDetailUnregisterError(null);
+      } else {
         setShowRegisterModal(null);
         setRegisteredSuccess(false);
       }
@@ -229,18 +235,46 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             <p className="modal-body-desc">
               {language === 'vi' ? activeEventDetail.summary : activeEventDetail.summaryEn}
             </p>
-            <button
-              type="button"
-              className="btn-figma-primary"
-              disabled={registeredEventIds.has(activeEventDetail.id) || registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow)}
-              onClick={() => {
-                const e = activeEventDetail;
-                setActiveEventDetail(null);
-                handleOpenRegister(e);
-              }}
-            >
-              {registeredEventIds.has(activeEventDetail.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event')}
-            </button>
+            {detailUnregisterError && (
+              <p className="participant-inline-error" role="alert" style={{ color: '#DC2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                {detailUnregisterError}
+              </p>
+            )}
+            {registeredEventIds.has(activeEventDetail.id) && isParticipantAuthenticated && onLeaveEvent ? (
+              <button
+                type="button"
+                className="btn-figma-primary"
+                style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+                disabled={isUnregisteringDetail}
+                onClick={async () => {
+                  setIsUnregisteringDetail(true);
+                  setDetailUnregisterError(null);
+                  try {
+                    await onLeaveEvent(activeEventDetail.id);
+                    setActiveEventDetail(null);
+                  } catch (error) {
+                    setDetailUnregisterError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể hủy đăng ký sự kiện.' : 'Failed to cancel registration.'));
+                  } finally {
+                    setIsUnregisteringDetail(false);
+                  }
+                }}
+              >
+                {isUnregisteringDetail ? (language === 'vi' ? 'Đang hủy đăng ký...' : 'Cancelling...') : (language === 'vi' ? 'Hủy đăng ký' : 'Cancel Registration')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-figma-primary"
+                disabled={registeredEventIds.has(activeEventDetail.id) || registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow)}
+                onClick={() => {
+                  const e = activeEventDetail;
+                  setActiveEventDetail(null);
+                  handleOpenRegister(e);
+                }}
+              >
+                {registeredEventIds.has(activeEventDetail.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event')}
+              </button>
+            )}
           </div>
         </div>,
         document.body,

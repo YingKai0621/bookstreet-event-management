@@ -225,15 +225,15 @@ export const ActivityRatingsPage = ({
                         </Link>
                         <h2><Link to={`/participant/activities/detail/${encodeURIComponent(activity.id)}`}>{activity.title}</Link></h2>
                       </div>
-                      <span className={`participant-rating-status ${invalidated ? 'is-invalidated' : rating ? 'is-rated' : eligible ? 'is-pending' : 'is-unavailable'}`}>
-                        {invalidated
-                          ? (vi ? 'Đã vô hiệu hóa' : 'Invalidated')
-                          : rating
-                            ? (vi ? 'Đã đánh giá' : 'Rated')
+                      {(!rating || invalidated) && (
+                        <span className={`participant-rating-status ${invalidated ? 'is-invalidated' : eligible ? 'is-pending' : 'is-unavailable'}`}>
+                          {invalidated
+                            ? (vi ? 'Đã vô hiệu hóa' : 'Invalidated')
                             : eligible
                               ? (vi ? 'Có thể đánh giá' : 'Ready to rate')
                               : (vi ? 'Chưa thể đánh giá' : 'Not ready')}
-                      </span>
+                        </span>
+                      )}
                     </div>
                     <div className="participant-rating-meta">
                       <span><Calendar size={15} />{activity.date}</span>

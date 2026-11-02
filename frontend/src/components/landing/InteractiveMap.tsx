@@ -681,7 +681,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     ? (language === 'vi' ? 'Chọn một sự kiện đã công bố để xem gian hàng và địa điểm hoạt động trên sơ đồ.' : 'Select a published event to view its booths and activity locations on the map.')
                     : mapError
                       ? mapError
-                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng hoặc địa điểm với đủ tọa độ để hiển thị trên bản đồ.' : 'This event has no booths or locations with complete coordinates to display on the map.')}
+                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.' : 'This event has no booths with complete valid coordinates to display on the map.')}
                 </p>
                 <div className="panel-highlights-box">
                   <span className="highlights-header-label">
