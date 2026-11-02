@@ -34,7 +34,9 @@ interface ParticipantDashboardProps {
   activities: ParticipantActivity[];
   totalCertificatesCount: number;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  onLeaveEvent?: (eventId: string) => void | Promise<void>;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
+  onCancelActivity?: (activityId: string) => void | Promise<void>;
 }
 
 interface CalendarEventItem {
@@ -49,6 +51,7 @@ interface CalendarEventItem {
   badgeColor?: string;
   status?: 'happening' | 'upcoming' | 'ended';
   isRegistered?: boolean;
+  canCancel?: boolean;
   shortDesc?: string;
   dateStr?: string;
 }
@@ -61,7 +64,9 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
   activities,
   totalCertificatesCount,
   onJoinEvent,
+  onLeaveEvent,
   onRegisterActivity,
+  onCancelActivity,
 }) => {
   // Chỉ lấy những hoạt động người dùng thực sự đã đăng ký (status === 'registered' hoặc 'attended')
   const registeredActivities = activities.filter(a => a.status === 'registered' || a.status === 'attended');
@@ -134,6 +139,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
       badgeColor: '#0E7490',
       status: statusForDate(date),
       isRegistered: activity.status === 'registered' || activity.status === 'attended',
+      canCancel: activity.status === 'registered' && statusForDate(date) !== 'ended',
       shortDesc: activity.description,
       dateStr: date,
     }));
@@ -161,6 +167,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
           badgeColor: '#185E48',
           status: event.status === 'ended' ? ('ended' as const) : statusForDate(date),
           isRegistered: event.isJoined,
+          canCancel: event.isJoined && event.status !== 'ended',
           registrationDeadlineAt: event.registrationDeadlineAt,
           shortDesc: event.shortDesc,
           dateStr: event.dateRange,
@@ -304,6 +311,36 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
 
     // Show toast
     setRegisterSuccessToast(language === 'vi' ? `Đăng ký thành công "${title}"! Đã thêm vào mục Sự kiện của tôi.` : `Successfully registered for "${title}"! Added to My Events.`);
+    setTimeout(() => {
+      setRegisterSuccessToast(null);
+    }, 4500);
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!confirmingEvent || isRegistering || !confirmingEvent.isRegistered) return;
+    setIsRegistering(true);
+    setRegistrationError('');
+
+    try {
+      if (confirmingEvent.type === 'event') {
+        if (!onLeaveEvent) throw new Error(language === 'vi' ? 'Chưa thể hủy đăng ký sự kiện. Vui lòng tải lại trang.' : 'Cancellation unavailable. Reload the page.');
+        await onLeaveEvent(confirmingEvent.id);
+      } else {
+        if (!onCancelActivity) throw new Error(language === 'vi' ? 'Chưa thể hủy đăng ký hoạt động. Vui lòng tải lại trang.' : 'Cancellation unavailable. Reload the page.');
+        await onCancelActivity(confirmingEvent.id);
+      }
+    } catch (error) {
+      setRegistrationError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể hủy đăng ký. Vui lòng thử lại.' : 'Cancellation failed. Please try again.'));
+      return;
+    } finally {
+      setIsRegistering(false);
+    }
+
+    const title = confirmingEvent.title;
+    setConfirmingEvent(null);
+    setSelectedDayEvents(null);
+
+    setRegisterSuccessToast(language === 'vi' ? `Đã hủy đăng ký "${title}".` : `Cancelled registration for "${title}".`);
     setTimeout(() => {
       setRegisterSuccessToast(null);
     }, 4500);
@@ -918,14 +955,30 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                           <span>{registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia' : 'Register')}</span>
                         </button>
                       ) : (
-                        <Link
-                          to={evt.link}
-                          className="modal-event-action-btn"
-                          onClick={() => setSelectedDayEvents(null)}
-                        >
-                          <span>{language === 'vi' ? 'Chi tiết' : 'View'}</span>
-                          <ArrowRight size={14} />
-                        </Link>
+                        <>
+                          {evt.isRegistered && (evt.canCancel ?? evt.status !== 'ended') && (
+                            <button
+                              type="button"
+                              className="modal-event-action-btn"
+                              style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', cursor: 'pointer' }}
+                              onClick={() => {
+                                setRegistrationError('');
+                                setConfirmingEvent(evt);
+                              }}
+                            >
+                              <X size={14} />
+                              <span>{language === 'vi' ? 'Hủy đăng ký' : 'Cancel registration'}</span>
+                            </button>
+                          )}
+                          <Link
+                            to={evt.link}
+                            className="modal-event-action-btn"
+                            onClick={() => setSelectedDayEvents(null)}
+                          >
+                            <span>{language === 'vi' ? 'Chi tiết' : 'View'}</span>
+                            <ArrowRight size={14} />
+                          </Link>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1122,6 +1175,30 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                 >
                   {language === 'vi' ? 'Đóng' : 'Close'}
                 </button>
+
+                {confirmingEvent.isRegistered && (confirmingEvent.canCancel ?? confirmingEvent.status !== 'ended') && (
+                  <button
+                    type="button"
+                    style={{
+                      padding: '0.65rem 1.35rem',
+                      borderRadius: '8px',
+                      border: '1px solid #FECACA',
+                      background: '#FEF2F2',
+                      color: '#DC2626',
+                      fontWeight: 750,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
+                    }}
+                    onClick={handleCancelRegistration}
+                    disabled={isRegistering}
+                  >
+                    <X size={16} />
+                    <span>{isRegistering ? (language === 'vi' ? 'Đang hủy...' : 'Cancelling...') : (language === 'vi' ? 'Hủy đăng ký' : 'Cancel Registration')}</span>
+                  </button>
+                )}
 
                 {!confirmingEvent.isRegistered && (
                   <button

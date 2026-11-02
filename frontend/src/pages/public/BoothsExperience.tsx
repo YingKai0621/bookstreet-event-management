@@ -271,7 +271,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                     <div className="skeleton-box" style={{ width: '80%', height: '22px', marginBottom: '10px' }} />
                     <div className="skeleton-box" style={{ width: '100%', height: '14px', marginBottom: '6px' }} />
                     <div className="skeleton-box" style={{ width: '70%', height: '14px', marginBottom: '16px' }} />
-                    <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="heritage-card-footer">
                       <div className="skeleton-box" style={{ width: '85px', height: '16px' }} />
                       <div className="skeleton-box" style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
                     </div>
@@ -319,11 +319,11 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                     </span>
                     <h3>{vi ? booth.name : booth.nameEn}</h3>
                     <p>{vi ? booth.tagline : booth.taglineEn}</p>
-                    <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="heritage-card-footer">
                       <span className="heritage-card-arrow-text">
                         {vi ? 'Xem chi tiết' : 'View details'}
                       </span>
-                      <ArrowRight size={16} color="var(--figma-gold)" />
+                      <ArrowRight size={16} className="heritage-card-arrow-icon" />
                     </div>
                   </div>
                 </article>

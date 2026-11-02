@@ -162,7 +162,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     try {
       const [physicalBooths, locationPage] = await Promise.all([
         boothApi.listAllPhysicalBooths(),
-        organizerApi.listActivityLocations({ page: 0, size: 100, sort: 'code,asc' }),
+        organizerApi.listActivityLocations({ page: 0, size: 100, sort: 'code,asc' }).catch(() => ({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 })),
       ]);
       setBooths(physicalBooths);
       setLocations(locationPage.content);
@@ -542,7 +542,11 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           mapY: locationDraftCoords[locationId].y,
         })),
       ]);
-      setSuccessMessage(`Đã lưu tọa độ của ${boothIds.length + locationIds.length} vị trí.`);
+      setSuccessMessage(
+        locationIds.length > 0 && boothIds.length === 0
+          ? `Đã lưu tọa độ của ${locationIds.length} địa điểm.`
+          : `Đã lưu tọa độ của ${boothIds.length} gian hàng.`
+      );
       await loadBoothData();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Không thể lưu tọa độ sơ đồ.');
@@ -590,7 +594,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               aria-pressed={activeMode === 'map'}
             >
               <MapPin size={16} />
-              <span>{language === 'vi' ? 'Sơ đồ không gian Đường Sách' : 'Book Street Map'}</span>
+              <span>{language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth Map'}</span>
             </button>
           </div>
         </div>

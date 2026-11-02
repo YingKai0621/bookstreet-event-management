@@ -58,6 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [activeSection, setActiveSection] = useState<string>('');
   const [passedSections, setPassedSections] = useState<string[]>([]);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [prevIsHeritage, setPrevIsHeritage] = useState(isHeritage);
+  if (isHeritage !== prevIsHeritage) {
+    setPrevIsHeritage(isHeritage);
+    setIsHeaderVisible(true);
+  }
   const accountDropdownRef = useRef<HTMLDivElement>(null);
   const lastScrollYRef = useRef(0);
   const navigationHeaderHoldUntilRef = useRef(0);
@@ -141,8 +146,12 @@ export const Header: React.FC<HeaderProps> = ({
   }, [navLinks]);
 
   useEffect(() => {
+    const getActiveSlideSheet = () =>
+      document.querySelector<HTMLElement>('.heritage-sheet.is-open');
+
     const updateHeaderVisibility = () => {
-      const currentScrollY = window.scrollY;
+      const activeSheet = getActiveSlideSheet();
+      const currentScrollY = activeSheet ? activeSheet.scrollTop : window.scrollY;
       const scrollDelta = currentScrollY - lastScrollYRef.current;
 
       if (currentScrollY <= 12 || Date.now() < navigationHeaderHoldUntilRef.current) {
@@ -157,10 +166,23 @@ export const Header: React.FC<HeaderProps> = ({
       }
     };
 
-    lastScrollYRef.current = window.scrollY;
-    window.addEventListener('scroll', updateHeaderVisibility, { passive: true });
-    return () => window.removeEventListener('scroll', updateHeaderVisibility);
-  }, []);
+    const handleScrollEvent = (event: Event) => {
+      const target = event.target;
+      if (
+        target === document ||
+        target === window ||
+        (target instanceof HTMLElement && target.classList.contains('heritage-sheet'))
+      ) {
+        updateHeaderVisibility();
+      }
+    };
+
+    const activeSheet = getActiveSlideSheet();
+    const currentScrollY = activeSheet ? activeSheet.scrollTop : window.scrollY;
+    lastScrollYRef.current = currentScrollY;
+    window.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', handleScrollEvent, { capture: true });
+  }, [isHeritage]);
 
   // Tính toán phần trăm tiến trình đi ngang qua các nút menu (từ nút 0 đến nút 5)
   const getActiveProgressIndex = () => {

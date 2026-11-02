@@ -308,10 +308,14 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
                 : (vi ? 'Hiện chưa có nội dung di sản được công bố.' : 'There is no published heritage content yet.')}
             </p>
           </div>
-          <div className="heritage-section-more-row">
-            <Link to="/di-san" className="heritage-btn-see-more-borderless">
+          <div className="section-bottom-see-more-row heritage-section-more-row">
+            <Link
+              to="/di-san"
+              className="btn-section-see-more-borderless heritage-btn-see-more-borderless"
+              aria-label={vi ? 'Mở không gian di sản' : 'Open heritage collection'}
+            >
               <span>{vi ? 'Mở không gian di sản' : 'Open heritage collection'}</span>
-              <ChevronRight size={18} className="heritage-more-icon" />
+              <ChevronRight size={17} className="see-more-arrow-icon heritage-more-icon" />
             </Link>
           </div>
         </div>
@@ -394,10 +398,14 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
           </div>
         )}
 
-        <div className="heritage-section-more-row">
-          <Link to="/di-san" className="heritage-btn-see-more-borderless">
+        <div className="section-bottom-see-more-row heritage-section-more-row">
+          <Link
+            to="/di-san"
+            className="btn-section-see-more-borderless heritage-btn-see-more-borderless"
+            aria-label={vi ? `Xem đầy đủ ${landmarks.length} điểm di sản` : `View all ${landmarks.length} landmarks`}
+          >
             <span>{vi ? `Xem đầy đủ ${landmarks.length} điểm di sản` : `View all ${landmarks.length} landmarks`}</span>
-            <ChevronRight size={18} className="heritage-more-icon" />
+            <ChevronRight size={17} className="see-more-arrow-icon heritage-more-icon" />
           </Link>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../../services/mapService';
 import { boothApi } from '../../services/boothApi';
 import { publicApi, type PublicActivity } from '../../services/publicApi';
 import { Booth, EventItem, Language } from '../../types';
+import type { EventBooth } from '../../types/booth';
 import { IconMapBookPin } from './CustomIcons';
 import { eventBoothToMarker } from '../booth-map/boothMapModel';
 import { PublicEventContext } from './PublicEventContext';
@@ -88,6 +89,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const allBooths = booths || EMPTY_BOOTHS;
   const selectedEvent = events.find(event => event.id === selectedEventId);
   const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
+  const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [mapError, setMapError] = useState('');
   const [mapImageUrl, setMapImageUrl] = useState<string>(DEFAULT_MAP_IMAGE);
@@ -97,6 +99,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     let isMounted = true;
     if (!selectedEventId) {
       setMapPoints([]);
+      setEventBooths([]);
       setSelectedPointId('');
       setMapError('');
       setIsMapLoading(false);
@@ -112,6 +115,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       .then(([boothsResult, activitiesResult]) => {
         if (!isMounted) return;
         const rows = boothsResult.status === 'fulfilled' ? boothsResult.value : [];
+        setEventBooths(rows);
         const boothPoints = rows.flatMap(row => {
           const marker = eventBoothToMarker(row);
           if (!marker) return [];
@@ -123,8 +127,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             nameEn: marker.name,
             category: 'booth' as const,
             status,
-            statusLabelVi: 'Gian hàng',
-            statusLabelEn: 'Bookstall',
+            statusLabelVi: marker.status === 'AVAILABLE' ? 'Còn trống' : marker.status === 'ON_HOLD' ? 'Đang giữ chỗ' : marker.status === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở',
+            statusLabelEn: marker.status === 'AVAILABLE' ? 'Available' : marker.status === 'ON_HOLD' ? 'On hold' : marker.status === 'ASSIGNED' ? 'Assigned' : 'Unavailable',
             x: marker.x,
             y: marker.y,
             shortDesc: row.booth.description || row.booth.note || 'Không gian giới thiệu sách tại Đường Sách.',
@@ -326,6 +330,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const activeBooth = selectedPoint
     ? allBooths.find(b => b.code === selectedPoint.code || b.name.toLowerCase().includes(selectedPoint.name.toLowerCase()))
     : null;
+  const selectedEventBooth = selectedPoint ? eventBooths.find(b => b.booth.boothId.toString() === selectedPoint.id || b.booth.code === selectedPoint.code) : null;
 
   return (
     <section className="figma-map-section" id="ban-do">
@@ -547,6 +552,15 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   {language === 'vi' ? selectedPoint.shortDesc : (selectedPoint.shortDescEn || selectedPoint.shortDesc)}
                 </p>
 
+                {selectedEventBooth && (
+                  <div className="public-map-booth-facts" aria-label={language === 'vi' ? 'Thông tin gian hàng theo sự kiện' : 'Event booth information'}>
+                    <span className={`public-map-status status-${selectedPoint.status}`}>{selectedPoint.statusLabelVi}</span>
+                    <span>{language === 'vi' ? 'Giá sự kiện' : 'Event price'}: <strong>{selectedEventBooth.rentalPrice === null
+                      ? (language === 'vi' ? 'Chưa cấu hình' : 'Not configured')
+                      : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedEventBooth.rentalPrice)}</strong></span>
+                  </div>
+                )}
+
                 {/* Highlights & Features Box */}
                 {selectedPoint.features && selectedPoint.features.length > 0 && (
                   <div className="panel-highlights-box">
@@ -637,7 +651,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     ? (language === 'vi' ? 'Chọn một sự kiện đã công bố để xem gian hàng và địa điểm hoạt động trên sơ đồ.' : 'Select a published event to view its booths and activity locations on the map.')
                     : mapError
                       ? mapError
-                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng hoặc địa điểm với đủ tọa độ để hiển thị trên bản đồ.' : 'This event has no booths or locations with complete coordinates to display on the map.')}
+                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.' : 'This event has no booths with complete valid coordinates to display on the map.')}
                 </p>
                 <div className="panel-highlights-box">
                   <span className="highlights-header-label">

@@ -171,6 +171,7 @@
 .figma-stalls-slider-track {
   display: block;
   position: relative;
+  min-height: clamp(24rem, 26.5vw, 27.5rem);
   overflow: hidden;
   overflow-y: hidden;
   scroll-snap-type: none;
@@ -183,9 +184,34 @@
 
 .booths-carousel-page {
   width: 100%;
+  min-height: clamp(23.5rem, 26vw, 26.5rem);
   display: flex;
   align-items: stretch;
   gap: 1.5rem;
+  transition: opacity 180ms ease;
+}
+
+.booths-carousel-page.is-updating {
+  opacity: 0.72;
+}
+
+.booths-carousel-page.booths-empty-state {
+  min-height: clamp(23.5rem, 26vw, 26.5rem);
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 2rem 1.5rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(24, 41, 36, 0.14);
+  background: rgba(255, 255, 255, 0.45);
+  color: #52605C;
+  text-align: center;
+}
+
+.booths-carousel-page.booths-empty-state p {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 500;
 }
 
 .figma-stalls-slider-track::-webkit-scrollbar {
@@ -637,6 +663,11 @@
   .booths-carousel-page {
     width: max-content;
     gap: 1rem;
+  }
+
+  .booths-carousel-page.booths-empty-state {
+    width: 100%;
+    min-height: 21.5rem;
   }
 
   .booths-explore-card {
