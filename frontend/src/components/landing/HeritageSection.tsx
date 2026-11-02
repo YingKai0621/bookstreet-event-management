@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { ArrowRight, ChevronLeft, ChevronRight, Image as ImageIcon, MapPin } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Language } from '../../types';
 import { HeritageProfile } from '../../types/heritage';
 import { IconHeritageSeal } from './CustomIcons';
@@ -40,6 +40,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
   error = '',
 }) => {
   const vi = language === 'vi';
+  const navigate = useNavigate();
   const landmarks = heritageList || EMPTY_HERITAGE_LIST;
   const [centerIndex, setCenterIndex] = useState(Math.min(HALF_FAN, Math.max(0, landmarks.length - 1)));
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -220,13 +221,15 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
   };
 
   const focusCard = (event: React.MouseEvent<HTMLAnchorElement>, index: number) => {
+    event.preventDefault();
     if (didSwipe.current) {
-      event.preventDefault();
       didSwipe.current = false;
       return;
     }
-    if (index === activeIndex) return;
-    event.preventDefault();
+    if (event.currentTarget.getAttribute('aria-current') === 'true') {
+      navigate(event.currentTarget.getAttribute('href') || '/di-san');
+      return;
+    }
     const selectedSlot = getVisibleMap().get(index);
     travelDirection.current = selectedSlot !== undefined && selectedSlot < HALF_FAN ? -1 : 1;
     setHoveredIndex(null);

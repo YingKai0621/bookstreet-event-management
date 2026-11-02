@@ -145,14 +145,23 @@ export const OrganizerFeedbackView: React.FC<{ language: Language }> = ({ langua
   }, []);
 
   useEffect(() => {
+    const nextSearch = searchInput.trim();
+    const nextSenderSearch = senderSearchInput.trim();
+    const nextEventNameSearch = eventNameSearchInput.trim();
+    if (
+      nextSearch === search
+      && nextSenderSearch === senderSearch
+      && nextEventNameSearch === eventNameSearch
+    ) return;
+
     const timeout = window.setTimeout(() => {
       setPage(0);
-      setSearch(searchInput.trim());
-      setSenderSearch(senderSearchInput.trim());
-      setEventNameSearch(eventNameSearchInput.trim());
+      setSearch(nextSearch);
+      setSenderSearch(nextSenderSearch);
+      setEventNameSearch(nextEventNameSearch);
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [eventNameSearchInput, searchInput, senderSearchInput]);
+  }, [eventNameSearch, eventNameSearchInput, search, searchInput, senderSearch, senderSearchInput]);
 
   const loadQueue = useCallback(async () => {
     const requestSequence = ++queueRequestSequence.current;

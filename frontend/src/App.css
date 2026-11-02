@@ -291,3 +291,63 @@
   }
 }
 
+/* Route chunks keep navigation understandable while their code is downloaded. */
+.app-route-loading {
+  min-height: 100dvh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #f7f5ef;
+  color: #17382e;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-route-loading.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.app-section-loading {
+  min-height: 32rem;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #f7f5ef;
+  color: #526860;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-chunk-error {
+  min-height: 16rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: #fff8ec;
+  color: #713f12;
+  text-align: center;
+}
+
+.app-chunk-error.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  min-height: 100dvh;
+}
+
+.app-chunk-error button {
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #17382e;
+  border-radius: 8px;
+  background: #17382e;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
