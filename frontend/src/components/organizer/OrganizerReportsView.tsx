@@ -33,25 +33,26 @@ export const OrganizerReportsView: React.FC<OrganizerReportsViewProps> = ({
   selectedEventId,
   onSelectEventId,
 }) => {
-  const [report, setReport] = useState<OrganizerReport | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadedReport, setLoadedReport] = useState<{
+    eventId: string;
+    report: OrganizerReport | null;
+  }>({ eventId: '', report: null });
+  const report = loadedReport.eventId === selectedEventId ? loadedReport.report : null;
+  const isLoading = Boolean(selectedEventId && loadedReport.eventId !== selectedEventId);
 
   useEffect(() => {
-    if (!selectedEventId) {
-      setReport(null);
-      return;
-    }
-    setIsLoading(true);
+    if (!selectedEventId) return;
+    let active = true;
+    const requestedEventId = selectedEventId;
     organizerApi
-      .getReport(selectedEventId)
-      .then(setReport)
-      .catch(() => {
-        // When backend report API is not available or has no data, set report to null gracefully
-        setReport(null);
+      .getReport(requestedEventId)
+      .then(nextReport => {
+        if (active) setLoadedReport({ eventId: requestedEventId, report: nextReport });
       })
-      .finally(() => {
-        setIsLoading(false);
+      .catch(() => {
+        if (active) setLoadedReport({ eventId: requestedEventId, report: null });
       });
+    return () => { active = false; };
   }, [selectedEventId]);
 
   const exportCsv = () => {

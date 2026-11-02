@@ -1,5 +1,5 @@
 import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { Language, PartnerOrganization } from '../../types';
 import '../participant/ParticipantPages.css';
@@ -24,6 +24,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
   const [contactEmail, setContactEmail] = useState(organization.email);
   const [contactPhone, setContactPhone] = useState(organization.phone);
   const [address, setAddress] = useState(organization.address);
+  const [organizationSource, setOrganizationSource] = useState(organization);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -65,7 +66,8 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     e.target.value = '';
   };
 
-  useEffect(() => {
+  if (organizationSource !== organization) {
+    setOrganizationSource(organization);
     setName(organization.name);
     setDescription(organization.shortDesc);
     setCategoryCode(organization.categoryCode || 'OTHER');
@@ -73,7 +75,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     setContactEmail(organization.email);
     setContactPhone(organization.phone);
     setAddress(organization.address);
-  }, [organization]);
+  }
 
   const saveProfile = async () => {
     setIsSaving(true);

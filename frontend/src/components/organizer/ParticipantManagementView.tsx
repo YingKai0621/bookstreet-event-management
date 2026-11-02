@@ -102,6 +102,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   const search = searchParams.get('search') || '';
   const activityId = searchParams.get('activityId') || '';
   const [searchInput, setSearchInput] = useState(search);
+  const [searchSource, setSearchSource] = useState(search);
   const [activities, setActivities] = useState<OrganizerActivityResponse[]>([]);
   const [eventPage, setEventPage] = useState(EMPTY_EVENT_PAGE);
   const [activityPage, setActivityPage] = useState(EMPTY_ACTIVITY_PAGE);
@@ -128,7 +129,10 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
 
   const selectedActivity = useMemo(() => activities.find(activity => String(activity.activityId) === activityId) || null, [activities, activityId]);
   const currentPage = view === 'event' ? eventPage : activityPage;
-  useEffect(() => setSearchInput(search), [search]);
+  if (searchSource !== search) {
+    setSearchSource(search);
+    setSearchInput(search);
+  }
   useModalDismiss(selectedRegistrationId !== null, () => { if (!isSavingCorrection) setSelectedRegistrationId(null); });
 
   const updateQuery = useCallback((updates: Record<string, string | null>, replace = false) => {
@@ -138,6 +142,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Leaving activity view clears its scoped options; otherwise this effect owns the remote load.
     if (view !== 'activity' || !selectedEventId || selectedEventId === 'all') { setActivities([]); return; }
     let active = true;
     setIsLoadingActivities(true);
@@ -158,6 +163,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   useEffect(() => {
     if (view === 'booth' || !selectedEventId || selectedEventId === 'all' || (view === 'activity' && !activityId)) return;
     let active = true;
+    // oxlint-disable-next-line react/set-state-in-effect -- Query changes intentionally enter loading state before the remote page request.
     setIsLoadingRows(true);
     setLoadError('');
     const request = view === 'event'
@@ -171,6 +177,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
   }, [activityId, eventStatus, outcome, page, reloadKey, participationRefresh, search, selectedEventId, view]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Closing the drawer clears private detail state; an open drawer starts its guarded request.
     if (selectedRegistrationId === null) { setDetail(null); setHistory([]); setDetailError(''); return; }
     let active = true;
     setIsLoadingDetail(true);

@@ -42,18 +42,14 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
   const [endTime, setEndTime] = useState('11:00');
   const [location, setLocation] = useState('');
   const [capacity, setCapacity] = useState(50);
-  const [eventId, setEventId] = useState(events[0]?.id || '');
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [thumbnail, setThumbnail] = useState('');
+  const selectedEventId = events[0]?.id || '';
 
   const [error, setError] = useState<string | null>(null);
   useModalDismiss(isOpen, onClose);
   const backdropHandlers = useBackdropClick(onClose);
-
-  React.useEffect(() => {
-    if (!events.some(event => event.id === eventId)) setEventId(events[0]?.id || '');
-  }, [events, eventId]);
 
   if (!isOpen) return null;
 
@@ -79,7 +75,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
 
     const newActivity: OrganizerActivityItem = {
       id: '',
-      eventId,
+      eventId: selectedEventId,
       title: title.trim(),
       type,
       dateStr: formattedDate,

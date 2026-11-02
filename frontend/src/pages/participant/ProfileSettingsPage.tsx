@@ -16,6 +16,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone || '');
+  const [profileSource, setProfileSource] = useState({ name: profile.name, phone: profile.phone || '' });
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -24,10 +25,11 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
   const [resendAfter, setResendAfter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  if (profileSource.name !== profile.name || profileSource.phone !== (profile.phone || '')) {
+    setProfileSource({ name: profile.name, phone: profile.phone || '' });
     setName(profile.name);
     setPhone(profile.phone || '');
-  }, [profile.name, profile.phone]);
+  }
 
   const persist = async (updated: Partial<ParticipantProfile>) => {
     setIsSaving(true);

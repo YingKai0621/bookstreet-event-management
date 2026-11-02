@@ -117,10 +117,6 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
 
   const loadAssignments = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
-    setLoading(true);
-    setError('');
-    setNotice('');
-
     try {
       const requests = await boothApi.listAllPartnerRequests(undefined, 'COMPLETED');
       const results = await Promise.allSettled(
@@ -148,7 +144,15 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
     }
   }, []);
 
+  const refreshAssignments = () => {
+    setLoading(true);
+    setError('');
+    setNotice('');
+    void loadAssignments();
+  };
+
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The guarded async loader owns this initial remote-data request.
     void loadAssignments();
     return () => { loadGenerationRef.current += 1; };
   }, [loadAssignments]);
@@ -192,7 +196,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
           <h1 id="my-booths-title" className="workspace-page-title">{language === 'vi' ? 'Gian hàng của tôi' : 'My booths'}</h1>
           <p className="workspace-page-subtitle">Quản lý gian hàng đã được cấp, xem mã QR và theo dõi hoạt động tại từng sự kiện.</p>
         </div>
-        <button type="button" className="my-booths-refresh" onClick={() => void loadAssignments()} disabled={loading}>
+        <button type="button" className="my-booths-refresh" onClick={refreshAssignments} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'my-booths-spin' : ''} />
           {loading ? 'Đang cập nhật…' : 'Làm mới'}
         </button>
@@ -223,7 +227,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
         <div className="my-booths-alert is-error" role="alert">
           <AlertCircle size={18} />
           <span>{error}</span>
-          <button type="button" onClick={() => void loadAssignments()}>Thử lại</button>
+          <button type="button" onClick={refreshAssignments}>Thử lại</button>
         </div>
       )}
       {notice && <div className="my-booths-alert" role="status"><AlertCircle size={18} />{notice}</div>}

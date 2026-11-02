@@ -12,7 +12,7 @@ import {
   User,
   X
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerProfile } from '../../types/organizer';
 
@@ -33,6 +33,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
+  const [profileSource, setProfileSource] = useState(profile);
 
   // Notification preferences do not have an approved backend contract yet.
   const notifyNewBooth = profile.notificationPreferences?.newBooth ?? false;
@@ -46,10 +47,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   useModalDismiss(showLogoutConfirm, () => setShowLogoutConfirm(false));
 
-  useEffect(() => {
+  if (profileSource !== profile) {
+    setProfileSource(profile);
     setEditPhone(profile.phone);
     setEditAvatarUrl(profile.avatarUrl || '');
-  }, [profile]);
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

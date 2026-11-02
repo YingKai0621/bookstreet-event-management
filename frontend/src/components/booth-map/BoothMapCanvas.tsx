@@ -76,9 +76,11 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
 
   // Popover Form State
   const [popoverForm, setPopoverForm] = useState<{
+    sourceKey: string;
     code: string;
     name: string;
   }>({
+    sourceKey: '',
     code: '',
     name: '',
   });
@@ -91,15 +93,16 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   const pointerStartPos = useRef({ x: 0, y: 0 });
   const hasMovedMarkerRef = useRef(false);
 
-  // Sync popover form when active marker changes
-  useEffect(() => {
-    if (activePopoverData) {
-      setPopoverForm({
-        code: activePopoverData.code || '',
-        name: activePopoverData.name || '',
-      });
+  const activePopoverSourceKey = activePopoverData
+    ? `${activePopoverData.markerId}\u0000${activePopoverData.code}\u0000${activePopoverData.name}`
+    : '';
+  const activePopoverForm = activePopoverData && popoverForm.sourceKey !== activePopoverSourceKey
+    ? {
+      sourceKey: activePopoverSourceKey,
+      code: activePopoverData.code || '',
+      name: activePopoverData.name || '',
     }
-  }, [activePopoverData]);
+    : popoverForm;
 
   // Close popover on Escape key
   useEffect(() => {
@@ -223,8 +226,8 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
     try {
       await onSavePopover({
         ...activePopoverData,
-        code: popoverForm.code.trim().toUpperCase() || activePopoverData.code,
-        name: popoverForm.name.trim() || activePopoverData.name,
+        code: activePopoverForm.code.trim().toUpperCase() || activePopoverData.code,
+        name: activePopoverForm.name.trim() || activePopoverData.name,
         status: activePopoverData.status,
         partnerName: activePopoverData.partnerName || '',
       });
@@ -415,8 +418,8 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                   <input
                     type="text"
                     className="popover-code-input"
-                    value={popoverForm.code}
-                    onChange={e => setPopoverForm({ ...popoverForm, code: e.target.value.toUpperCase() })}
+                    value={activePopoverForm.code}
+                    onChange={e => setPopoverForm({ ...activePopoverForm, code: e.target.value.toUpperCase() })}
                     placeholder="Mã gian..."
                     title="Chỉnh sửa mã gian hàng (Ví dụ: A01, BOOTH-A02)"
                     maxLength={30}
@@ -426,8 +429,8 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                   <input
                     type="text"
                     className="popover-title-input"
-                    value={popoverForm.name}
-                    onChange={e => setPopoverForm({ ...popoverForm, name: e.target.value })}
+                    value={activePopoverForm.name}
+                    onChange={e => setPopoverForm({ ...activePopoverForm, name: e.target.value })}
                     placeholder="Tên gian hàng..."
                     required
                   />

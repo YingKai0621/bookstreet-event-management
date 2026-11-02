@@ -29,6 +29,7 @@ async function setup(page: Page, _tab: string) {
       totalPages: 1,
     };
     else if (path.endsWith('/organizer/booths')) body = { content: Array.from({ length: 40 }, (_, i) => ({ boothId: i + 1, code: `A${i}`, name: `Gian hàng ${i}`, categoryCode: 'BOOK', maxCapacity: 10, active: true })), page: 0, totalPages: 1, totalElements: 40 };
+    else if (path.endsWith('/organizer/locations')) body = { content: [], page: 0, size: 100, totalPages: 0, totalElements: 0 };
     await route.fulfill({ json: body });
   });
 }
