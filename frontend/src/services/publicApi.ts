@@ -9,6 +9,20 @@ import { boothApi } from './boothApi';
 
 const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
 
+function assertHeritagePage(
+  value: unknown,
+): asserts value is HeritagePageResponse<PublicHeritageListItem> {
+  if (
+    !value
+    || typeof value !== 'object'
+    || !Array.isArray((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).content)
+    || !Number.isInteger((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).page)
+    || !Number.isInteger((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).totalPages)
+  ) {
+    throw new Error('Dữ liệu di sản trả về không đúng định dạng.');
+  }
+}
+
 async function getPublishedEvents(): Promise<EventItem[]> {
   const first = await apiClient.get<PageResponse<PublicEventResponse>>('/events?page=0&size=100&sort=startAt,asc');
   const remaining = first.totalPages > 1
@@ -265,12 +279,14 @@ export const publicApi = {
     const first = await apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
       '/heritages?page=0&size=100',
     );
+    assertHeritagePage(first);
     const remaining = first.totalPages > 1
       ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
         apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
           `/heritages?page=${index + 1}&size=100`,
         )))
       : [];
+    remaining.forEach(assertHeritagePage);
     return [first, ...remaining]
       .sort((left, right) => left.page - right.page)
       .flatMap(page => page.content);

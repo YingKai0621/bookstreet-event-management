@@ -66,12 +66,12 @@ test('landing carousel keeps navigation available for exactly three heritage sto
   const sideCard = page.locator('.heritage-fan-card:not([aria-current="true"])').first();
   const sideHref = await sideCard.getAttribute('href');
   expect(sideHref).toBeTruthy();
-  await sideCard.click({ force: true });
+  await sideCard.dispatchEvent('click');
   await expect(page).toHaveURL(/\/$/);
 
   const newlyCenteredCard = page.locator(`.heritage-fan-card[href="${sideHref}"]`);
   await expect(newlyCenteredCard).toHaveAttribute('aria-current', 'true');
-  await newlyCenteredCard.click({ force: true });
+  await newlyCenteredCard.dispatchEvent('click');
   await expect(page).toHaveURL(new RegExp(`${sideHref}$`));
 });
 

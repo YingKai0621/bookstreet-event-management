@@ -20,7 +20,8 @@
   width: 100%;
   max-width: var(--workspace-page-max-width);
   margin-inline: auto;
-  padding: var(--workspace-page-top-space) var(--workspace-page-inline-space) var(--workspace-page-bottom-space);
+  /* Route CSS is loaded on demand, so this shared workspace frame must remain authoritative. */
+  padding: var(--workspace-page-top-space) var(--workspace-page-inline-space) var(--workspace-page-bottom-space) !important;
 }
 
 /* Page wrappers must not add a second top inset before the heading. */
@@ -58,34 +59,34 @@
 }
 
 :is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) h1.workspace-page-title {
-  margin: 0;
-  padding: 0;
-  font-family: var(--workspace-title-font);
-  font-size: var(--workspace-title-size);
-  font-weight: 700;
-  font-style: normal;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
-  color: var(--workspace-title-color);
-  text-align: left;
-  text-transform: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: var(--workspace-title-font) !important;
+  font-size: var(--workspace-title-size) !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--workspace-title-color) !important;
+  text-align: left !important;
+  text-transform: none !important;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
 :is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) p.workspace-page-subtitle {
-  margin: var(--workspace-heading-gap) 0 0;
-  padding: 0;
-  max-width: 80ch;
-  font-family: var(--workspace-subtitle-font);
-  font-size: var(--workspace-subtitle-size);
-  font-weight: 400;
-  font-style: normal;
-  line-height: 1.35;
-  letter-spacing: normal;
-  color: var(--workspace-subtitle-color);
-  text-align: left;
-  text-transform: none;
+  margin: var(--workspace-heading-gap) 0 0 !important;
+  padding: 0 !important;
+  max-width: 80ch !important;
+  font-family: var(--workspace-subtitle-font) !important;
+  font-size: var(--workspace-subtitle-size) !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  line-height: 1.35 !important;
+  letter-spacing: normal !important;
+  color: var(--workspace-subtitle-color) !important;
+  text-align: left !important;
+  text-transform: none !important;
   text-wrap: pretty;
 }
 
@@ -94,4 +95,10 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
+}
+
+@media (max-width: 960px) {
+  .participant-app-shell.participant-app-shell .participant-main-viewport {
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom)) !important;
+  }
 }
