@@ -38,7 +38,8 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         boolean feedbackRequest = request.getRequestURI().startsWith("/api/v1/public/feedbacks")
                 || request.getRequestURI().startsWith("/api/v1/organizer/feedbacks");
         boolean heritageRequest = request.getRequestURI().startsWith("/api/v1/heritages")
-                || request.getRequestURI().startsWith("/api/v1/organizer/heritages");
+                || request.getRequestURI().startsWith("/api/v1/organizer/heritages")
+                || request.getRequestURI().startsWith("/api/v1/organizer/heritage-images");
         boolean contractCsrfFailure = csrfFailure
                 && (request.getRequestURI().startsWith("/api/v1/admin/badges")
                     || feedbackRequest

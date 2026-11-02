@@ -45,7 +45,8 @@ visibility rule requires documentation review before code changes.
 - Exact `expectedUpdatedAt` optimistic concurrency for every shared Organizer mutation.
 - Real public Landing Page, `/di-san`, and `/di-san/:publicCode` integration.
 - Real `/organizer/public-content` Heritage management integration.
-- Derived QR from the canonical public detail URL.
+- No Heritage QR or technical-code labels on public screens.
+- Bounded local JPG, PNG and WebP upload with preview and abandoned-upload cleanup.
 - Focused migration, backend, frontend, browser, security, and regression evidence.
 - Closure documentation after implementation evidence exists.
 
@@ -59,8 +60,8 @@ visibility rule requires documentation review before code changes.
 - Public Heritage search or category API.
 - Map coordinates or marker editing.
 - Rich text or executable HTML.
-- Heritage upload, asset library, or storage-provider work.
-- Persisted QR data, scan analytics, view counters, reports, or dashboards.
+- External storage-provider work or a general asset library.
+- QR presentation/persistence, scan analytics, view counters, reports, or dashboards.
 - Notifications, comments, likes, subscriptions, scheduled publication, or version history.
 - Bulk import, export, or delete.
 - Production seed rows.
@@ -274,7 +275,8 @@ Expected focused shared edits:
 - OpenAPI verification when the repository's existing OpenAPI test requires route coverage
 
 Avoid application-property changes unless implementation proves they are required. Heritage introduces no
-secret, Redis key, storage path, upload limit, scheduler, queue, or external service configuration.
+secret, Redis key, scheduler, queue, or external service configuration. The local Heritage image directory
+and 5 MB multipart boundary follow the approved media contract.
 
 ### 4.3 Migration and backend tests
 
@@ -427,7 +429,7 @@ entity validates against both clean and upgraded PostgreSQL schemas.
 
 Implement one reusable Heritage normalization and validation boundary that matches the API Contract:
 
-- canonical uppercase `publicCode`
+- backend-generated canonical uppercase `publicCode` derived from title with unique numeric suffixes
 - exact title, summary, content, image URL, and location limits
 - optional blank-to-null behavior
 - content line-ending normalization
@@ -479,7 +481,7 @@ Requirements:
 - list omits full content and returns exact `updatedAt`
 - detail returns the canonical Organizer representation
 - create always produces one valid `DRAFT`
-- duplicate canonical code race maps to the stable conflict
+- title-derived code allocation is serialized and resolves collisions with numeric suffixes
 
 ### 6.4 Organizer update API
 
@@ -620,14 +622,14 @@ Display-only adapters may preserve the existing visual direction. They cannot in
 - Optional image, summary, and location render safely.
 - Existing labels may remain bilingual, but content does not pretend to have a stored English translation.
 
-### 7.4 Direct detail and QR
+### 7.4 Direct detail and public presentation
 
 - `/di-san/:publicCode` fetches detail directly from the route parameter.
 - A fresh browser load does not depend on Landing Page state.
 - Detail distinguishes loading, not-found, failure, and populated states.
 - Stored content renders as text.
-- QR derives from the current origin plus URL-encoded canonical `publicCode`.
-- No internal id, token, tracking value, or QR API is used.
+- Public screens do not render a QR block or technical `publicCode` label.
+- Organizer screens upload validated local images and persist only the returned approved URL.
 
 ### 7.5 S9-H3 focused tests
 
@@ -636,7 +638,7 @@ Display-only adapters may preserve the existing visual direction. They cannot in
 - Direct detail in a fresh browser context.
 - Draft, archived, and unknown detail not-found behavior.
 - Optional field rendering and image fallback.
-- Canonical links and QR value.
+- Canonical links and absence of QR/code labels.
 - No unsupported search/category or legacy mock fallback.
 - Desktop and mobile layout smoke for affected screens.
 
@@ -763,7 +765,7 @@ Use PostgreSQL and Redis with the real backend and frontend:
 5. Edit the draft and confirm `updatedAt` advances.
 6. Publish and confirm the same public code appears in list and direct detail.
 7. Open the detail in a fresh browser context.
-8. Scan or inspect the QR and confirm the canonical frontend URL.
+8. Confirm direct canonical URLs work and no Heritage QR/code label is rendered.
 9. Edit published content and confirm public detail updates.
 10. Archive and confirm public list and detail remove the item.
 11. Republish and confirm the same code and original `publishedAt` return.
@@ -896,7 +898,7 @@ Sprint 09 Heritage is complete only when:
 - shared Organizer authority and stale-write protection are proven
 - all three lifecycle transitions and eligible delete are proven
 - public and Organizer UIs use real APIs with no fallback data
-- direct detail and derived QR work
+- direct detail works without Heritage QR presentation
 - all 28 Acceptance Criteria have evidence
 - affected regressions remain green
 - backend and frontend CI are green

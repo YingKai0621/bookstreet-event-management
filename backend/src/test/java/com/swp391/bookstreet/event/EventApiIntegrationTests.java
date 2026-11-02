@@ -180,7 +180,7 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void paymentWindowCrossingEventStartPreventsPublicationButNotDraftSave() throws Exception {
+    void paymentAndSetupWindowCanBeSavedInDraftButPreventsPublication() throws Exception {
         long id = createEvent();
         String boothRequestDeadline = eventStartAt.minus(Duration.ofMinutes(30)).toString();
 
@@ -197,9 +197,74 @@ class EventApiIntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
                 .andExpect(jsonPath("$.fieldErrors[0].field")
                         .value("boothPaymentWindowMinutes"));
+    }
+
+    @Test
+    void unusedCancellationCutoffsDoNotBlockPublication() throws Exception {
+        long id = createEvent();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "partnerWithdrawalCutoffAt": null,
+                                  "boothCancellationCutoffAt": null,
+                                  "activityCancellationCutoffAt": null
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+    }
+
+    @Test
+    void equalPartnerAndDownstreamDeadlinePreventsPublication() throws Exception {
+        long id = createEvent();
+        String partnerDeadline = jdbc.queryForObject(
+                "select partner_application_deadline_at from events where event_id = ?",
+                Instant.class, id).toString();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\"" + partnerDeadline + "\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("boothRequestDeadlineAt"));
 
         assertThat(jdbc.queryForObject("select status from events where event_id = ?",
                 String.class, id)).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void zeroPartnerQuotasDoNotRequireBoothOrActivityDeadlines() throws Exception {
+        long id = createEvent();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "maxBoothsPerPartner": 0,
+                                  "maxActivitiesPerPartner": 0,
+                                  "boothRequestDeadlineAt": null,
+                                  "activityProposalDeadlineAt": null
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
 
     @Test
@@ -1611,7 +1676,7 @@ class EventApiIntegrationTests {
         Instant boothRequestDeadlineAt = baseTime.plus(Duration.ofDays(20));
         Instant activityProposalDeadlineAt = baseTime.plus(Duration.ofDays(20));
         Instant partnerWithdrawalCutoffAt = baseTime.plus(Duration.ofDays(20));
-        Instant boothCancellationCutoffAt = baseTime.plus(Duration.ofDays(20));
+        Instant boothCancellationCutoffAt = baseTime.plus(Duration.ofDays(25));
         Instant activityCancellationCutoffAt = baseTime.plus(Duration.ofDays(25));
 
         eventStartAt = baseTime.plus(Duration.ofDays(30));

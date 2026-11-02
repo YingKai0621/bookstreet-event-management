@@ -3,7 +3,6 @@ package com.swp391.bookstreet.heritage.dto;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
 public record CreateHeritageRequest(
-        String publicCode,
         String title,
         String summary,
         String content,

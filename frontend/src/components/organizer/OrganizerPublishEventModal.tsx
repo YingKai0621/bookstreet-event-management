@@ -35,32 +35,20 @@ const FIELD_LABELS: Record<string, { vi: string; en: string }> = {
   boothRequestDeadlineAt: { vi: 'Hạn yêu cầu gian hàng', en: 'Booth request deadline' },
   activityProposalDeadlineAt: { vi: 'Hạn đề xuất hoạt động', en: 'Activity proposal deadline' },
   participantRegistrationDeadlineAt: { vi: 'Hạn người tham gia đăng ký', en: 'Participant registration deadline' },
-  partnerWithdrawalCutoffAt: { vi: 'Hạn đối tác rút hồ sơ', en: 'Partner withdrawal cutoff' },
-  boothCancellationCutoffAt: { vi: 'Hạn hủy gian hàng', en: 'Booth cancellation cutoff' },
-  activityCancellationCutoffAt: { vi: 'Hạn hủy hoạt động', en: 'Activity cancellation cutoff' },
   boothPaymentWindowMinutes: { vi: 'Thời hạn giữ chỗ gian hàng', en: 'Booth payment window' },
   maxBoothsPerPartner: { vi: 'Số gian hàng tối đa / đối tác', en: 'Maximum booths per partner' },
   maxActivitiesPerPartner: { vi: 'Số hoạt động tối đa / đối tác', en: 'Maximum activities per partner' },
 };
 
-const DEADLINE_FIELDS: Array<keyof Pick<
+type DeadlineField = keyof Pick<
   OrganizerEvent,
   | 'partnerApplicationDeadlineAt'
   | 'boothRequestDeadlineAt'
   | 'activityProposalDeadlineAt'
   | 'participantRegistrationDeadlineAt'
-  | 'partnerWithdrawalCutoffAt'
-  | 'boothCancellationCutoffAt'
-  | 'activityCancellationCutoffAt'
->> = [
-  'partnerApplicationDeadlineAt',
-  'boothRequestDeadlineAt',
-  'activityProposalDeadlineAt',
-  'participantRegistrationDeadlineAt',
-  'partnerWithdrawalCutoffAt',
-  'boothCancellationCutoffAt',
-  'activityCancellationCutoffAt',
-];
+>;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function fieldLabel(field: string, language: Language): string {
   const label = FIELD_LABELS[field];
@@ -102,8 +90,19 @@ function getEventPublishIssues(
   if (end === null) add('endAt', vi ? 'Thời gian kết thúc chưa hợp lệ.' : 'End time is invalid.');
   else if (start !== null && end <= start) add('endAt', vi ? 'Thời gian kết thúc phải sau thời gian bắt đầu.' : 'End time must be after start time.');
 
-  const deadlineTimes = new Map<string, number>();
-  DEADLINE_FIELDS.forEach(field => {
+  const boothsEnabled = Number.isInteger(event.maxBoothsPerPartner)
+    && event.maxBoothsPerPartner > 0;
+  const activitiesEnabled = Number.isInteger(event.maxActivitiesPerPartner)
+    && event.maxActivitiesPerPartner > 0;
+  const deadlineFields: DeadlineField[] = [
+    'partnerApplicationDeadlineAt',
+    'participantRegistrationDeadlineAt',
+  ];
+  if (boothsEnabled) deadlineFields.push('boothRequestDeadlineAt');
+  if (activitiesEnabled) deadlineFields.push('activityProposalDeadlineAt');
+
+  const deadlineTimes = new Map<DeadlineField, number>();
+  deadlineFields.forEach(field => {
     const value = event[field];
     const parsed = timestamp(value);
     if (!value) {
@@ -120,17 +119,31 @@ function getEventPublishIssues(
   const partnerDeadline = deadlineTimes.get('partnerApplicationDeadlineAt');
   const boothDeadline = deadlineTimes.get('boothRequestDeadlineAt');
   const activityDeadline = deadlineTimes.get('activityProposalDeadlineAt');
-  if (partnerDeadline !== undefined && boothDeadline !== undefined && boothDeadline < partnerDeadline) {
-    add('boothRequestDeadlineAt', vi ? 'Hạn yêu cầu gian hàng không được trước hạn đối tác đăng ký.' : 'Booth request deadline must not be before partner application deadline.');
+  const participantDeadline = deadlineTimes.get('participantRegistrationDeadlineAt');
+  if (partnerDeadline !== undefined && boothDeadline !== undefined
+      && boothDeadline < partnerDeadline + DAY_MS) {
+    add('boothRequestDeadlineAt', vi
+      ? 'Hạn yêu cầu gian hàng phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức duyệt hồ sơ.'
+      : 'The Booth request deadline must be at least 24 hours after the partner application deadline.');
   }
-  if (partnerDeadline !== undefined && activityDeadline !== undefined && activityDeadline < partnerDeadline) {
-    add('activityProposalDeadlineAt', vi ? 'Hạn đề xuất hoạt động không được trước hạn đối tác đăng ký.' : 'Activity proposal deadline must not be before partner application deadline.');
+  if (partnerDeadline !== undefined && activityDeadline !== undefined
+      && activityDeadline < partnerDeadline + DAY_MS) {
+    add('activityProposalDeadlineAt', vi
+      ? 'Hạn đề xuất hoạt động phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức duyệt hồ sơ.'
+      : 'The Activity proposal deadline must be at least 24 hours after the partner application deadline.');
+  }
+  if (participantDeadline !== undefined && start !== null && participantDeadline >= start) {
+    add('participantRegistrationDeadlineAt', vi ? 'Hạn người tham gia đăng ký phải trước thời gian bắt đầu sự kiện.' : 'Participant registration deadline must be before the event start time.');
   }
 
-  if (!Number.isFinite(event.boothPaymentWindowMinutes) || event.boothPaymentWindowMinutes < 60 || event.boothPaymentWindowMinutes > 10080) {
+  if (boothsEnabled && (!Number.isFinite(event.boothPaymentWindowMinutes)
+      || event.boothPaymentWindowMinutes < 60 || event.boothPaymentWindowMinutes > 10080)) {
     add('boothPaymentWindowMinutes', vi ? 'Thời hạn giữ chỗ phải từ 1 giờ đến 7 ngày.' : 'Booth payment window must be between 1 hour and 7 days.');
-  } else if (boothDeadline !== undefined && start !== null && boothDeadline + event.boothPaymentWindowMinutes * 60_000 > start) {
-    add('boothPaymentWindowMinutes', vi ? 'Hạn yêu cầu gian hàng cộng thời gian giữ chỗ không được vượt quá thời gian bắt đầu.' : 'Booth request deadline plus payment window must not exceed the start time.');
+  } else if (boothsEnabled && boothDeadline !== undefined && start !== null
+      && boothDeadline + event.boothPaymentWindowMinutes * 60_000 + DAY_MS > start) {
+    add('boothPaymentWindowMinutes', vi
+      ? 'Hạn yêu cầu gian hàng cộng thời gian thanh toán phải kết thúc trước sự kiện ít nhất 24 giờ để chuẩn bị gian hàng.'
+      : 'The Booth request deadline plus payment window must end at least 24 hours before the Event for setup.');
   }
   if (!Number.isFinite(event.maxBoothsPerPartner) || event.maxBoothsPerPartner < 0) {
     add('maxBoothsPerPartner', vi ? 'Giới hạn gian hàng không được là số âm.' : 'Booth limit cannot be negative.');
@@ -203,8 +216,8 @@ export const OrganizerPublishEventModal: React.FC<OrganizerPublishEventModalProp
             <>
               <p className="org-publish-event-lead" role={failure ? 'alert' : undefined}>
                 {failure?.message || (vi
-                  ? 'Bản nháp còn thiếu hoặc có thông tin chưa hợp lệ. Hãy chỉnh sửa trước khi công bố.'
-                  : 'The draft has missing or invalid information. Edit it before publishing.')}
+                  ? `Còn ${displayedIssues.length} thông tin cần sửa trước khi công bố.`
+                  : `${displayedIssues.length} items must be fixed before publishing.`)}
               </p>
               {displayedIssues.length > 0 && (
                 <ul className="org-publish-event-issues">

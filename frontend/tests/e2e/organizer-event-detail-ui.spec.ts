@@ -34,6 +34,7 @@ interface DetailScenario {
   emptyOperations?: boolean;
   applications?: MockApplication[];
   eventStatus?: 'DRAFT' | 'PUBLISHED';
+  invalidTimeline?: boolean;
 }
 
 interface MockApplication {
@@ -62,6 +63,14 @@ async function setupEventDetail(page: Page, scenario: DetailScenario = {}) {
     cancelledAt: null,
     cancellationReason: null,
   };
+  if (scenario.invalidTimeline) {
+    currentEvent = {
+      ...currentEvent,
+      boothRequestDeadlineAt: currentEvent.partnerApplicationDeadlineAt,
+      activityProposalDeadlineAt: currentEvent.partnerApplicationDeadlineAt,
+      participantRegistrationDeadlineAt: currentEvent.startAt,
+    };
+  }
   let applications: MockApplication[] = scenario.applications ?? (scenario.emptyOperations ? [] : [
     {
       applicationId: 11,
@@ -242,12 +251,20 @@ test.describe('Organizer event detail overview', () => {
     await expect(page.getByText('1 chờ duyệt')).toBeVisible();
     await expect(page.getByText('1 ngày')).toBeVisible();
     await expect(page.getByText('Ngày hội sách dành cho độc giả, đối tác xuất bản và cộng đồng sáng tạo.')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mốc thời hạn khác' })).toBeVisible();
-    await expect(page.getByText('Rút hồ sơ đối tác')).toBeVisible();
-    await expect(page.getByText('Hủy hoạt động')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Thời hạn dành cho đối tác' })).toBeVisible();
+    await expect(page.getByText('Nhận yêu cầu gian hàng đến')).toBeVisible();
+    await expect(page.getByText('Nhận đề xuất hoạt động đến')).toBeVisible();
+    await expect(page.getByText('Rút hồ sơ đối tác')).toHaveCount(0);
+    await expect(page.getByText('Hủy gian hàng')).toHaveCount(0);
+    await expect(page.getByText('Hủy hoạt động')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Hồ sơ đối tác: 2' }).click();
     await expect(page).toHaveURL(/\/organizer\/events\/501\?section=partners/);
+
+    await page.getByRole('button', { name: 'Cài đặt' }).click();
+    await expect(page.getByText('Hạn cuối yêu cầu gian hàng')).toBeVisible();
+    await expect(page.getByText('Hạn rút khỏi sự kiện')).toHaveCount(0);
+    await expect(page.getByText('Hạn gửi yêu cầu hủy hoạt động')).toHaveCount(0);
   });
 
   test('cancels a published event with a validated reason and updates the screen', async ({ page }) => {
@@ -283,6 +300,23 @@ test.describe('Organizer event detail overview', () => {
     await expect(page).toHaveURL(/\/organizer\/events$/);
     await expect(page.getByText('Chưa có sự kiện nào')).toBeVisible();
     expect(state.actions).toEqual(['delete']);
+  });
+
+  test('blocks publication and names every contradictory timeline field', async ({ page }) => {
+    await setupEventDetail(page, { eventStatus: 'DRAFT', invalidTimeline: true });
+    await page.goto(`${BASE_URL}/organizer/events/501`);
+
+    await page.getByRole('button', { name: 'Công bố', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Chưa thể công bố' });
+    await expect(dialog).toContainText('Còn 3 thông tin cần sửa trước khi công bố.');
+    await expect(dialog).toContainText('Hạn yêu cầu gian hàng phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức duyệt hồ sơ.');
+    await expect(dialog).toContainText('Hạn đề xuất hoạt động phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức duyệt hồ sơ.');
+    await expect(dialog).toContainText('Hạn người tham gia đăng ký phải trước thời gian bắt đầu sự kiện.');
+    await expect(dialog.getByRole('button', { name: 'Công bố', exact: true })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Chỉnh sửa bản nháp' }).click();
+    await expect(page.getByRole('heading', { name: 'Chỉnh sửa bản nháp' })).toBeVisible();
+    await expect(page.getByText('3 mốc cần sửa trước khi công bố')).toBeVisible();
+    await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toBeFocused();
   });
 
   test('keeps empty operation values truthful and the desktop layout free of horizontal overflow', async ({ page }) => {

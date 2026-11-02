@@ -34,6 +34,7 @@ import type {
 import type {
   CreateHeritageRequest,
   HeritagePageResponse,
+  HeritageImageUploadResponse,
   OrganizerHeritageDetail,
   OrganizerHeritageListItem,
   OrganizerHeritageQuery,
@@ -582,6 +583,18 @@ export const organizerApi = {
     ),
   createHeritage: (request: CreateHeritageRequest) =>
     apiClient.post<OrganizerHeritageDetail>('/organizer/heritages', request),
+  uploadHeritageImage(file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient.postForm<HeritageImageUploadResponse>('/organizer/heritage-images', form);
+  },
+  deleteUploadedHeritageImage(imageUrl: string) {
+    const prefix = '/assets/heritage/uploads/';
+    if (!imageUrl.startsWith(prefix)) return Promise.resolve();
+    return apiClient.delete<void>(
+      `/organizer/heritage-images/${encodeURIComponent(imageUrl.slice(prefix.length))}`,
+    );
+  },
   updateHeritage: (heritageContentId: number, request: UpdateHeritageRequest) =>
     apiClient.patch<OrganizerHeritageDetail>(
       `/organizer/heritages/${encodeURIComponent(heritageContentId)}`,

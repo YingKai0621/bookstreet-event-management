@@ -14,6 +14,18 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class EventValidation {
+    private static final long MIN_PARTNER_REVIEW_HOURS = 24;
+    private static final long MIN_BOOTH_SETUP_MINUTES = 24 * 60;
+    private static final Set<String> PUBLICATION_TIMELINE_FIELDS = Set.of(
+            "startAt",
+            "partnerApplicationDeadlineAt",
+            "boothRequestDeadlineAt",
+            "activityProposalDeadlineAt",
+            "participantRegistrationDeadlineAt",
+            "boothPaymentWindowMinutes",
+            "maxBoothsPerPartner",
+            "maxActivitiesPerPartner");
+
     public void validate(Event event) {
         validateRequired(event, "EVENT_CONFIGURATION_INVALID");
         validateValues(event);
@@ -26,14 +38,16 @@ public class EventValidation {
     void validateForPublish(Event event, Instant now) {
         validateRequired(event, "EVENT_INCOMPLETE_FOR_PUBLISH");
         publishDeadline(event.getPartnerApplicationDeadlineAt(), "partnerApplicationDeadlineAt", now);
-        publishDeadline(event.getBoothRequestDeadlineAt(), "boothRequestDeadlineAt", now);
-        publishDeadline(event.getActivityProposalDeadlineAt(), "activityProposalDeadlineAt", now);
         publishDeadline(event.getParticipantRegistrationDeadlineAt(), "participantRegistrationDeadlineAt", now);
-        publishDeadline(event.getPartnerWithdrawalCutoffAt(), "partnerWithdrawalCutoffAt", now);
-        publishDeadline(event.getBoothCancellationCutoffAt(), "boothCancellationCutoffAt", now);
-        publishDeadline(event.getActivityCancellationCutoffAt(), "activityCancellationCutoffAt", now);
+        if (boothsEnabled(event)) {
+            publishDeadline(event.getBoothRequestDeadlineAt(), "boothRequestDeadlineAt", now);
+        }
+        if (partnerActivitiesEnabled(event)) {
+            publishDeadline(event.getActivityProposalDeadlineAt(), "activityProposalDeadlineAt", now);
+        }
         validateValues(event);
-        validateBoothPaymentBoundary(event);
+        validatePublicationTimeline(event);
+        if (boothsEnabled(event)) validateBoothPaymentBoundary(event);
         require(event.getStartAt().isAfter(now), "EVENT_TIME_INVALID", "startAt",
                 "Event must start after publication time.");
     }
@@ -42,36 +56,40 @@ public class EventValidation {
         validateRequired(event, "EVENT_CONFIGURATION_INVALID");
         validatePublishedDeadlinesPresent(event);
         validateValues(event);
-        validateBoothPaymentBoundary(event);
+        if (suppliedFields.stream().anyMatch(PUBLICATION_TIMELINE_FIELDS::contains)) {
+            validatePublicationTimeline(event);
+        }
+        if (boothsEnabled(event)) validateBoothPaymentBoundary(event);
         require(event.getStartAt().isAfter(now), "EVENT_TIME_INVALID", "startAt",
                 "Event must start after operational update time.");
 
         validateSuppliedDeadline(event.getPartnerApplicationDeadlineAt(),
                 "partnerApplicationDeadlineAt", suppliedFields, now);
-        validateSuppliedDeadline(event.getBoothRequestDeadlineAt(),
-                "boothRequestDeadlineAt", suppliedFields, now);
-        validateSuppliedDeadline(event.getActivityProposalDeadlineAt(),
-                "activityProposalDeadlineAt", suppliedFields, now);
+        if (boothsEnabled(event)) {
+            validateSuppliedDeadline(event.getBoothRequestDeadlineAt(),
+                    "boothRequestDeadlineAt", suppliedFields, now);
+        }
+        if (partnerActivitiesEnabled(event)) {
+            validateSuppliedDeadline(event.getActivityProposalDeadlineAt(),
+                    "activityProposalDeadlineAt", suppliedFields, now);
+        }
         validateSuppliedDeadline(event.getParticipantRegistrationDeadlineAt(),
                 "participantRegistrationDeadlineAt", suppliedFields, now);
-        validateSuppliedDeadline(event.getPartnerWithdrawalCutoffAt(),
-                "partnerWithdrawalCutoffAt", suppliedFields, now);
-        validateSuppliedDeadline(event.getBoothCancellationCutoffAt(),
-                "boothCancellationCutoffAt", suppliedFields, now);
-        validateSuppliedDeadline(event.getActivityCancellationCutoffAt(),
-                "activityCancellationCutoffAt", suppliedFields, now);
     }
 
     void validateBoothPaymentBoundary(Event event) {
         try {
             Instant paymentDeadline = event.getBoothRequestDeadlineAt().plus(
-                    event.getBoothPaymentWindowMinutes(), ChronoUnit.MINUTES);
+                    event.getBoothPaymentWindowMinutes() + MIN_BOOTH_SETUP_MINUTES,
+                    ChronoUnit.MINUTES);
             require(!paymentDeadline.isAfter(event.getStartAt()),
                     "EVENT_TIME_INVALID", "boothPaymentWindowMinutes",
-                    "Booth request deadline plus payment window must not be after event start time.");
+                    "Booth request deadline plus payment window must leave at least 24 hours "
+                            + "for setup before event start time.");
         } catch (DateTimeException | ArithmeticException error) {
             require(false, "EVENT_TIME_INVALID", "boothPaymentWindowMinutes",
-                    "Booth request deadline plus payment window is outside the supported time range.");
+                    "Booth request deadline, payment window and setup time are outside "
+                            + "the supported time range.");
         }
     }
 
@@ -84,13 +102,14 @@ public class EventValidation {
 
     private void validatePublishedDeadlinesPresent(Event event) {
         requirePresent(event.getPartnerApplicationDeadlineAt(), "partnerApplicationDeadlineAt");
-        requirePresent(event.getBoothRequestDeadlineAt(), "boothRequestDeadlineAt");
-        requirePresent(event.getActivityProposalDeadlineAt(), "activityProposalDeadlineAt");
         requirePresent(event.getParticipantRegistrationDeadlineAt(),
                 "participantRegistrationDeadlineAt");
-        requirePresent(event.getPartnerWithdrawalCutoffAt(), "partnerWithdrawalCutoffAt");
-        requirePresent(event.getBoothCancellationCutoffAt(), "boothCancellationCutoffAt");
-        requirePresent(event.getActivityCancellationCutoffAt(), "activityCancellationCutoffAt");
+        if (boothsEnabled(event)) {
+            requirePresent(event.getBoothRequestDeadlineAt(), "boothRequestDeadlineAt");
+        }
+        if (partnerActivitiesEnabled(event)) {
+            requirePresent(event.getActivityProposalDeadlineAt(), "activityProposalDeadlineAt");
+        }
     }
 
     private void requirePresent(Instant value, String field) {
@@ -141,27 +160,48 @@ public class EventValidation {
         noLaterThan(event.getBoothRequestDeadlineAt(), start, "boothRequestDeadlineAt", "startAt");
         noLaterThan(event.getActivityProposalDeadlineAt(), start, "activityProposalDeadlineAt", "startAt");
         noLaterThan(event.getParticipantRegistrationDeadlineAt(), start, "participantRegistrationDeadlineAt", "startAt");
-        noLaterThan(event.getPartnerWithdrawalCutoffAt(), start, "partnerWithdrawalCutoffAt", "startAt");
-        noLaterThan(event.getBoothCancellationCutoffAt(), start, "boothCancellationCutoffAt", "startAt");
-        noLaterThan(event.getActivityCancellationCutoffAt(), start, "activityCancellationCutoffAt", "startAt");
+    }
 
-        noEarlierThanApplication(event.getBoothRequestDeadlineAt(), event.getPartnerApplicationDeadlineAt(),
-                "boothRequestDeadlineAt");
-        noEarlierThanApplication(event.getActivityProposalDeadlineAt(), event.getPartnerApplicationDeadlineAt(),
-                "activityProposalDeadlineAt");
+    private void validatePublicationTimeline(Event event) {
+        if (boothsEnabled(event)) {
+            requireMinimumPartnerReviewWindow(event.getBoothRequestDeadlineAt(),
+                    event.getPartnerApplicationDeadlineAt(), "boothRequestDeadlineAt");
+        }
+        if (partnerActivitiesEnabled(event)) {
+            requireMinimumPartnerReviewWindow(event.getActivityProposalDeadlineAt(),
+                    event.getPartnerApplicationDeadlineAt(), "activityProposalDeadlineAt");
+        }
+        require(event.getParticipantRegistrationDeadlineAt().isBefore(event.getStartAt()),
+                "EVENT_TIME_INVALID", "participantRegistrationDeadlineAt",
+                "Participant registration deadline must be before event start time.");
+    }
+
+    private void requireMinimumPartnerReviewWindow(Instant downstreamDeadline,
+            Instant applicationDeadline, String field) {
+        try {
+            Instant earliest = applicationDeadline.plus(MIN_PARTNER_REVIEW_HOURS,
+                    ChronoUnit.HOURS);
+            require(!downstreamDeadline.isBefore(earliest), "EVENT_TIME_INVALID", field,
+                    field + " must be at least 24 hours after partnerApplicationDeadlineAt.");
+        } catch (DateTimeException | ArithmeticException error) {
+            require(false, "EVENT_TIME_INVALID", field,
+                    field + " is outside the supported time range.");
+        }
+    }
+
+    private static boolean boothsEnabled(Event event) {
+        return event.getMaxBoothsPerPartner() != null && event.getMaxBoothsPerPartner() > 0;
+    }
+
+    private static boolean partnerActivitiesEnabled(Event event) {
+        return event.getMaxActivitiesPerPartner() != null
+                && event.getMaxActivitiesPerPartner() > 0;
     }
 
     private void noLaterThan(Instant value, Instant limit, String field, String limitField) {
         if (value != null && limit != null) {
             require(!value.isAfter(limit), "EVENT_TIME_INVALID", field,
                     field + " must not be after " + limitField + ".");
-        }
-    }
-
-    private void noEarlierThanApplication(Instant value, Instant applicationDeadline, String field) {
-        if (value != null && applicationDeadline != null) {
-            require(!value.isBefore(applicationDeadline), "EVENT_TIME_INVALID", field,
-                    field + " must not be before partnerApplicationDeadlineAt.");
         }
     }
 

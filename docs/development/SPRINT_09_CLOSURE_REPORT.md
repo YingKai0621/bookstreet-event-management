@@ -6,7 +6,7 @@
 - Documentation baseline: PR #105, merge commit `7e46809`
 - Implementation: PR #107, merge commit `7ed4e0e`
 - Schema baseline: immutable Flyway migrations V1 through V15
-- Acceptance baseline: 28 Acceptance Criteria and 10 API operations
+- Acceptance baseline: 28 Acceptance Criteria and 13 API operations after the Heritage UX amendment
 
 Sprint 9 is complete. Heritage content now uses durable PostgreSQL data through the approved real
 APIs. Anonymous visitors can browse published Heritage content and Organizers share one management
@@ -17,9 +17,9 @@ from General Feedback.
 
 - V15 creates `heritage_contents` with the approved 11-column shape, lifecycle constraints and
   public and Organizer query indexes.
-- The backend exposes exactly the approved two public operations and eight Organizer operations.
-- Anonymous visitors can browse a paged published collection, open stable direct detail URLs and
-  use a QR code derived from the public URL.
+- The backend exposes the approved content operations plus bounded local Heritage image upload/read/cleanup.
+- Anonymous visitors can browse a paged published collection and open stable direct detail URLs without
+  technical-code labels or a Heritage QR block.
 - Verified Organizers share one server-paged collection with content search, status filtering and
   deterministic ordering.
 - Organizer create and update validate normalized content and preserve the stable public identity.
@@ -48,8 +48,8 @@ from General Feedback.
 - `Sprint09HeritageIntegrationTests` covers published-only list and detail access, canonical public
   code lookup, non-disclosure of private or invalid records and deterministic paging.
 - `sprint9-public-heritage-ui.spec.ts` covers the real Landing Page collection, direct detail URLs,
-  derived QR content, optional-field degradation, loading, empty, not-found and failure states.
-- The public frontend does not require prior list state and does not persist QR image data.
+  absence of QR/code labels, optional-field degradation, loading, empty, not-found and failure states.
+- The public frontend does not require prior list state and does not display or persist QR image data.
 
 ### 2.3 Database criteria `AC-S9-DB-01` through `AC-S9-DB-03`
 
@@ -100,8 +100,8 @@ environment-gated run with database tests skipped was not accepted as closure ev
 - Heritage Feedback, ratings, comments and Guest replies are not part of the approved model.
 - Heritage changes do not trigger email, SMS, push or in-app Notification delivery.
 - Reports, analytics, map integration, localization and a rich-text editor remain out of scope.
-- Media upload and external object storage remain separate future work. Sprint 9 stores approved
-  image URLs only.
+- Organizer Heritage supports bounded local JPG, PNG and WebP upload while PostgreSQL stores only the
+  approved image URL. External object storage and a general asset library remain future work.
 - Existing unrelated frontend lint warnings and production bundle splitting remain general
   technical debt.
 - Any new feature or schema work requires a separately approved Sprint baseline and the next free

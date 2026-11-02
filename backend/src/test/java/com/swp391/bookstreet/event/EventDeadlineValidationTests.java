@@ -18,28 +18,16 @@ class EventDeadlineValidationTests {
 
     record Deadline(String field, BiConsumer<Event, Instant> setter) {}
 
-    static Stream<Deadline> deadlines() {
+    static Stream<Deadline> activeDeadlines() {
         return Stream.of(
                 new Deadline("partnerApplicationDeadlineAt", Event::setPartnerApplicationDeadlineAt),
                 new Deadline("boothRequestDeadlineAt", Event::setBoothRequestDeadlineAt),
                 new Deadline("activityProposalDeadlineAt", Event::setActivityProposalDeadlineAt),
-                new Deadline("participantRegistrationDeadlineAt", Event::setParticipantRegistrationDeadlineAt),
-                new Deadline("partnerWithdrawalCutoffAt", Event::setPartnerWithdrawalCutoffAt),
-                new Deadline("boothCancellationCutoffAt", Event::setBoothCancellationCutoffAt),
-                new Deadline("activityCancellationCutoffAt", Event::setActivityCancellationCutoffAt));
-    }
-
-    static Stream<Deadline> deadlinesAllowedAtStart() {
-        return Stream.of(
-                new Deadline("activityProposalDeadlineAt", Event::setActivityProposalDeadlineAt),
-                new Deadline("participantRegistrationDeadlineAt", Event::setParticipantRegistrationDeadlineAt),
-                new Deadline("partnerWithdrawalCutoffAt", Event::setPartnerWithdrawalCutoffAt),
-                new Deadline("boothCancellationCutoffAt", Event::setBoothCancellationCutoffAt),
-                new Deadline("activityCancellationCutoffAt", Event::setActivityCancellationCutoffAt));
+                new Deadline("participantRegistrationDeadlineAt", Event::setParticipantRegistrationDeadlineAt));
     }
 
     @ParameterizedTest
-    @MethodSource("deadlines")
+    @MethodSource("activeDeadlines")
     void rejectsDeadlineAfterStartForSavingAndPublishing(Deadline deadline) {
         Event event = event();
         deadline.setter().accept(event, START.plusSeconds(1));
@@ -48,44 +36,80 @@ class EventDeadlineValidationTests {
     }
 
     @ParameterizedTest
-    @MethodSource("deadlinesAllowedAtStart")
-    void acceptsExactStartIncludingEquivalentTimezone(Deadline deadline) {
+    @MethodSource("activeDeadlines")
+    void draftAcceptsExactStartIncludingEquivalentTimezone(Deadline deadline) {
         Event event = event();
         deadline.setter().accept(event, START.atOffset(java.time.ZoneOffset.ofHours(7)).toInstant());
         assertThatCode(() -> validation.validate(event)).doesNotThrowAnyException();
-        assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
     }
 
     @Test
-    void rejectsDownstreamDeadlinesBeforePartnerApplicationsClose() {
+    void draftAllowsContradictoryDownstreamDeadlineButPublicationRequiresReviewWindow() {
         Event event = event();
-        event.setPartnerApplicationDeadlineAt(START.minusSeconds(3600));
-        event.setBoothRequestDeadlineAt(START.minusSeconds(3601));
-        assertInvalid(() -> validation.validate(event), "boothRequestDeadlineAt");
-        event.setBoothRequestDeadlineAt(START.minusSeconds(3600));
-        event.setActivityProposalDeadlineAt(START.minusSeconds(3601));
-        assertInvalid(() -> validation.validateForPublish(event), "activityProposalDeadlineAt");
-        event.setActivityProposalDeadlineAt(START.minusSeconds(3600));
-        assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
-    }
-
-    @Test
-    void cutoffCanBeAfterApplicationDeadlineAndMissingFieldsStayOptional() {
-        Event event = event();
+        Instant partnerDeadline = START.minusSeconds(72 * 3600);
+        event.setPartnerApplicationDeadlineAt(partnerDeadline);
+        event.setBoothRequestDeadlineAt(partnerDeadline.minusSeconds(1));
         assertThatCode(() -> validation.validate(event)).doesNotThrowAnyException();
-        event.setPartnerApplicationDeadlineAt(START.minusSeconds(3600));
-        event.setPartnerWithdrawalCutoffAt(START.minusSeconds(50));
-        event.setBoothCancellationCutoffAt(START);
+        assertInvalid(() -> validation.validateForPublish(event), "boothRequestDeadlineAt");
+
+        event.setBoothRequestDeadlineAt(partnerDeadline.plusSeconds(24 * 3600 - 1));
+        assertInvalid(() -> validation.validateForPublish(event), "boothRequestDeadlineAt");
+        event.setBoothRequestDeadlineAt(partnerDeadline.plusSeconds(24 * 3600));
+
+        event.setActivityProposalDeadlineAt(partnerDeadline.plusSeconds(24 * 3600 - 1));
+        assertInvalid(() -> validation.validateForPublish(event), "activityProposalDeadlineAt");
+        event.setActivityProposalDeadlineAt(partnerDeadline.plusSeconds(24 * 3600));
         assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void legacyCutoffsAreNotRequiredForPublication() {
+        Event event = event();
+        event.setPartnerWithdrawalCutoffAt(null);
+        event.setBoothCancellationCutoffAt(null);
+        event.setActivityCancellationCutoffAt(null);
+
+        assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void participantDeadlineAtStartCanBeSavedAsDraftButCannotBePublished() {
+        Event participantTimeline = event();
+        participantTimeline.setParticipantRegistrationDeadlineAt(participantTimeline.getStartAt());
+        assertThatCode(() -> validation.validate(participantTimeline)).doesNotThrowAnyException();
+        assertInvalid(() -> validation.validateForPublish(participantTimeline), "participantRegistrationDeadlineAt");
     }
 
     @Test
     void movingStartEarlierRevalidatesExistingDeadlines() {
         Event event = event();
-        deadlines().forEach(d -> d.setter().accept(event, null));
+        activeDeadlines().forEach(d -> d.setter().accept(event, null));
         event.setParticipantRegistrationDeadlineAt(START.minusSeconds(10));
         event.setStartAt(START.minusSeconds(20));
         assertInvalid(() -> validation.validate(event), "participantRegistrationDeadlineAt");
+    }
+
+    @Test
+    void publicationRequiresPaymentAndSetupToFinishAtLeastOneDayBeforeStart() {
+        Event event = event();
+        event.setBoothPaymentWindowMinutes(60);
+        event.setBoothRequestDeadlineAt(START.minusSeconds(25 * 3600 - 1));
+        assertThatCode(() -> validation.validate(event)).doesNotThrowAnyException();
+        assertInvalid(() -> validation.validateForPublish(event), "boothPaymentWindowMinutes");
+
+        event.setBoothRequestDeadlineAt(START.minusSeconds(25 * 3600));
+        assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void disabledPartnerFlowsDoNotRequireTheirDeadlines() {
+        Event event = event();
+        event.setMaxBoothsPerPartner(0);
+        event.setMaxActivitiesPerPartner(0);
+        event.setBoothRequestDeadlineAt(null);
+        event.setActivityProposalDeadlineAt(null);
+
+        assertThatCode(() -> validation.validateForPublish(event)).doesNotThrowAnyException();
     }
 
     private void assertInvalid(Runnable action, String field) {
@@ -104,9 +128,10 @@ class EventDeadlineValidationTests {
         event.setBoothPaymentWindowMinutes(60);
         event.setMaxBoothsPerPartner(1);
         event.setMaxActivitiesPerPartner(5);
-        deadlines().forEach(d -> d.setter().accept(event, START));
-        event.setPartnerApplicationDeadlineAt(START.minusSeconds(3600));
-        event.setBoothRequestDeadlineAt(START.minusSeconds(3600));
+        event.setPartnerApplicationDeadlineAt(START.minusSeconds(72 * 3600));
+        event.setBoothRequestDeadlineAt(START.minusSeconds(48 * 3600));
+        event.setActivityProposalDeadlineAt(START.minusSeconds(48 * 3600));
+        event.setParticipantRegistrationDeadlineAt(START.minusSeconds(3_600));
         return event;
     }
 }

@@ -68,9 +68,11 @@ metadata. The API Contract cannot widen this public response boundary.
 Each Heritage record has two identities:
 
 - `heritageContentId`, an internal numeric identity for persistence and Organizer operations
-- `publicCode`, a stable public identity for public detail links and derived QR values
+- `publicCode`, a backend-generated stable identity used by public detail links
 
-On create, the application trims and uppercases the supplied public code before validating it. The
+On create, the application derives the public code from the normalized title. Organizer input never
+contains this technical value. The generator removes Vietnamese diacritics, converts non-alphanumeric
+runs to single hyphens, uppercases the result and adds a numeric suffix when required for uniqueness. The
 canonical value must:
 
 - contain 3 to 100 characters
@@ -82,7 +84,7 @@ Uniqueness is case-insensitive in business meaning and canonical at persistence.
 code returns a conflict and creates no row.
 
 `publicCode` is immutable after creation. Content updates and lifecycle commands cannot replace it. Public
-links and derived QR values always use the canonical uppercase code.
+links always use the canonical uppercase code, while public screens do not display it as a label.
 
 ### 2.3 Content fields and normalization
 
@@ -109,7 +111,9 @@ Normalization applies before validation:
 - an approved local path beginning with `/assets/heritage/`
 
 Data URLs, blob URLs, raw bytes, base64 values, operating-system paths, traversal paths, scripts, and
-unsupported schemes are rejected. Sprint 09 adds no Heritage upload endpoint or asset manager.
+unsupported schemes are rejected. The Organizer may upload a validated JPG, PNG, or WebP file up to 5 MB;
+the backend generates its filename, stores it in local Heritage media storage and returns an approved
+`/assets/heritage/uploads/` URL. This is not a general asset manager.
 
 Unknown create or update fields are rejected. The API must not silently accept or discard bilingual
 content, analytics, coordinates, category, period, source, license, QR status, ownership, lifecycle status,
@@ -216,13 +220,10 @@ state checking, concurrency checking, and persistence produce one committed resu
 The client shows success only after the durable response succeeds. Network or server failure cannot produce
 a fabricated success state.
 
-### 2.10 Derived QR behavior
+### 2.10 Public presentation boundary
 
-Any Heritage QR displayed by the public frontend is generated from the canonical public detail URL that
-contains `publicCode`.
-
-The QR is only a navigation convenience. It grants no authority and has no persisted token, image, status,
-scan counter, or analytics record.
+The stable generated `publicCode` remains part of the route contract, but Heritage screens display no QR
+block and no technical-code label. No QR token, image, status, scan counter, or analytics record exists.
 
 ## 3. UC-O09 Heritage management extension
 
@@ -256,10 +257,10 @@ Authenticated User with effective verified `ORGANIZER` authority.
 ### Main flow B — Create a draft
 
 1. Organizer chooses to create Heritage content.
-2. Organizer provides a public code, title, required content, and any approved optional fields.
+2. Organizer provides a title, required content, an optional uploaded image, and other approved optional fields.
 3. Client sends only approved create fields.
 4. System normalizes and validates the command.
-5. System verifies that the normalized public code is unique.
+5. System derives and reserves a unique canonical public code from the title.
 6. System creates exactly one `DRAFT` row with null `publishedAt` and one server operation time shared by
    `createdAt` and `updatedAt`.
 7. System returns the committed Organizer representation.
@@ -319,7 +320,7 @@ Authenticated User with effective verified `ORGANIZER` authority.
 - Invalid search, status, sort, or page input returns validation and does not substitute another query.
 - Empty list result returns a successful empty page.
 - Invalid or unknown create fields return validation and create no row.
-- Duplicate normalized public code returns conflict and creates no row.
+- A title-derived code collision receives the next unique numeric suffix without asking the Organizer.
 - Attempt to update `publicCode`, status, or server timestamps through content update is rejected.
 - A content update containing no approved mutable field is rejected without advancing `updatedAt`.
 - Missing, malformed, or stale `expectedUpdatedAt` changes nothing.
@@ -378,19 +379,19 @@ And no match returns a successful empty page
 
 ```gherkin
 Given an authorized Organizer supplies valid approved Heritage fields
-And the normalized publicCode is not already used
 When create commits
 Then exactly one Heritage row is created
-And publicCode is stored in canonical uppercase form
+And publicCode is generated from the title in canonical uppercase form
+And an existing title-derived code receives a unique numeric suffix
 And status is DRAFT
 And publishedAt is null
 And createdAt and updatedAt contain the same server operation time
 ```
 
-**AC-O09-S9-04 Invalid or duplicate create produces no row**
+**AC-O09-S9-04 Invalid create or image upload produces no row**
 
 ```gherkin
-Given a create command contains blank oversized malformed duplicate or unsupported data
+Given a create command or image upload contains blank oversized malformed or unsupported data
 When the command is validated or persisted
 Then the stable validation or conflict outcome is returned
 And no Heritage row is created
@@ -538,13 +539,6 @@ Guest. The same behavior also applies to authenticated users using public routes
 3. System resolves only a matching `PUBLISHED` row.
 4. Client renders the approved public detail fields and safely handles absent optional values.
 
-### Main flow C — Use a displayed QR
-
-1. Public detail constructs its canonical URL from the configured public origin and `publicCode`.
-2. Client generates a QR from that URL.
-3. Scanning the QR opens the same public detail route.
-4. Normal public visibility rules still apply when the route is requested.
-
 ### Alternate and exception flows
 
 - No published rows returns a successful empty collection.
@@ -560,7 +554,7 @@ Guest. The same behavior also applies to authenticated users using public routes
 - Public reads do not mutate Heritage data or analytics.
 - Only published content is returned.
 - Public responses reveal no internal id or management-only concurrency metadata.
-- No QR data is persisted.
+- No QR data is persisted or displayed.
 
 ### Acceptance Criteria
 
@@ -634,13 +628,13 @@ And optional sections are omitted or use the approved image fallback
 And no broken markup unsafe HTML or client exception appears
 ```
 
-**AC-G01-S9-08 Public QR is derived and not persisted**
+**AC-G01-S9-08 Public Heritage omits QR and technical-code labels**
 
 ```gherkin
-Given one published Heritage detail is displayed with a QR
-When the QR value is inspected and scanned
-Then it contains only the canonical public detail URL using publicCode
-And normal public visibility rules apply to the resulting request
+Given one published Heritage list or detail is displayed
+When its public presentation is inspected
+Then no QR block or technical publicCode label is rendered
+And direct canonical links continue to work
 And no QR token image status counter or scan record is stored
 ```
 
@@ -727,7 +721,8 @@ The Sprint 09 API Contract must map every behavior above without weakening it. I
 - one consistent error envelope and field-error representation
 - public-safe non-disclosure for private, unknown, and malformed public codes
 - successful delete response behavior
-- the absence of upload, Feedback, Admin management, QR persistence, analytics, and mock endpoints
+- bounded local image upload and the absence of Feedback, Admin management, QR presentation/persistence,
+  analytics, and mock endpoints
 
 The API Contract must not introduce a caller-selected owner, role, status on create, arbitrary lifecycle
 update, internal timestamp, Heritage Feedback target, or new authentication mechanism.
@@ -754,7 +749,7 @@ update, internal timestamp, Heritage Feedback target, or new authentication mech
 
 - Load only real published content from the backend.
 - Preserve the existing direct `/di-san/:publicCode` frontend route.
-- Use `publicCode` consistently for links and QR values.
+- Use `publicCode` consistently for links without displaying it as a label.
 - Distinguish loading, empty list, not-found detail, and retryable failure.
 - Do not expose draft or archived records from stale client data.
 - Safely omit optional summary and location.
@@ -794,8 +789,8 @@ This specification does not authorize:
 - bilingual persistence
 - map coordinates or marker editing
 - rich text or executable HTML
-- image upload or storage-provider integration
-- persisted QR data or scan analytics
+- external image storage-provider integration or a general asset library
+- QR presentation, persisted QR data or scan analytics
 - view counters or reporting
 - notifications, subscriptions, comments, or likes
 - scheduled publication, version history, rollback, or expiration

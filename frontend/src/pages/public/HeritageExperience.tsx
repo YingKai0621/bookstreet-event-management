@@ -1,5 +1,4 @@
-import { ArrowLeft, ArrowRight, MapPin, QrCode } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { ArrowLeft, ArrowRight, Image as ImageIcon, MapPin } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PaginatedList } from '../../components/ui/PaginatedList';
@@ -19,6 +18,12 @@ interface HeritageExperienceProps {
   heritageList?: HeritageProfile[];
   isLoading?: boolean;
   listError?: string;
+}
+
+function HeritageImage({ src, alt, vi, eager = false }: { src: string | null; alt: string; vi: boolean; eager?: boolean }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!src || failedSrc === src) return <span className="heritage-image-fallback"><ImageIcon size={38} />{vi ? 'Chưa có ảnh' : 'No image yet'}</span>;
+  return <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined} onError={() => setFailedSrc(src)} />;
 }
 
 type DetailState = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
@@ -121,7 +126,6 @@ export function HeritageExperience({
     </div>
   );
 }
-
 function decodePathSegment(value: string) {
   try {
     return decodeURIComponent(value);
@@ -177,18 +181,15 @@ function renderCollection(
             <div className="heritage-hero-footnote">
               <strong>{heritageList.length}</strong>
               <span>{vi ? 'nội dung đang công bố' : 'published stories'}</span>
-              <i />
-              <QrCode size={17} />
-              <span>{vi ? 'Liên kết QR cho từng câu chuyện' : 'A QR link for every story'}</span>
             </div>
           </div>
           <Link className="heritage-featured" to={`/di-san/${encodeURIComponent(featured.publicCode)}`}>
-            {featured.imageUrl && <img src={featured.imageUrl} alt={`Ảnh minh họa: ${featured.title}`} fetchPriority="high" />}
+            <HeritageImage src={featured.imageUrl} alt={`Ảnh minh họa: ${featured.title}`} vi={vi} eager />
             <span className="heritage-image-ribbon">01</span>
             <div>
               <span>{vi ? 'Câu chuyện nổi bật' : 'Featured story'}</span>
               <h2>{featured.title}</h2>
-              <span>{featured.summary || featured.locationText || featured.publicCode}</span>
+              <span>{featured.summary || featured.locationText || (vi ? 'Mở để đọc câu chuyện di sản' : 'Open the heritage story')}</span>
             </div>
             <ArrowRight className="heritage-featured-arrow" size={24} />
           </Link>
@@ -214,8 +215,7 @@ function renderCollection(
                   className="heritage-collection-card"
                 >
                   <div className="heritage-card-image">
-                    {item.imageUrl && <img src={item.imageUrl} alt={`Ảnh minh họa: ${item.title}`} loading="lazy" />}
-                    <span className="heritage-card-badge">{item.publicCode}</span>
+                    <HeritageImage src={item.imageUrl} alt={`Ảnh minh họa: ${item.title}`} vi={vi} />
                   </div>
                   <div className="heritage-card-copy">
                     {item.locationText && (
@@ -286,7 +286,7 @@ function renderDetail(
         <div className="heritage-inner">
           <Link to="/di-san" className="heritage-back"><ArrowLeft size={17} />{vi ? 'Tất cả di sản' : 'All heritage stories'}</Link>
           <div className="heritage-detail-heading">
-            <span className="heritage-kicker">{item.publicCode}</span>
+            <span className="heritage-kicker">{vi ? 'CÂU CHUYỆN DI SẢN' : 'HERITAGE STORY'}</span>
             <h1 tabIndex={-1}>{item.title}</h1>
             {item.locationText && <p><MapPin size={17} />{item.locationText}</p>}
           </div>
@@ -302,7 +302,6 @@ function renderDetail(
           </section>
           <Link to="/di-san" className="heritage-return"><ArrowLeft size={18} />{vi ? 'Quay về danh mục di sản' : 'Back to the heritage collection'}</Link>
         </article>
-        <aside className="heritage-qr-aside"><HeritageQr item={item} vi={vi} /></aside>
       </div>
       {next && (
         <section className="heritage-next heritage-inner">
@@ -331,21 +330,5 @@ function StatusPanel({
       {description && <p>{description}</p>}
       {backLabel && <Link to="/di-san"><ArrowLeft size={18} />{backLabel}</Link>}
     </section>
-  );
-}
-
-function HeritageQr({ item, vi }: { item: PublicHeritageDetail; vi: boolean }) {
-  const url = `${window.location.origin}/di-san/${encodeURIComponent(item.publicCode)}`;
-  return (
-    <div className="heritage-qr-card">
-      <span className="heritage-section-marker">{vi ? 'MANG CÂU CHUYỆN THEO BẠN' : 'TAKE THE STORY WITH YOU'}</span>
-      <h2>{vi ? 'Quét để khám phá' : 'Scan to explore'}</h2>
-      <div className="heritage-qr-code">
-        <QRCodeSVG value={url} size={184} level="M" marginSize={4} title={`${item.publicCode}: ${item.title}`} />
-      </div>
-      <strong>{item.publicCode}</strong>
-      <p>{vi ? 'Mã QR mở trực tiếp trang di sản này.' : 'This QR opens this heritage story directly.'}</p>
-      <a href={url}>{vi ? 'Mở liên kết di sản' : 'Open heritage link'}<ArrowRight size={14} /></a>
-    </div>
   );
 }

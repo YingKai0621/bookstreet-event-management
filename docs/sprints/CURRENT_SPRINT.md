@@ -51,9 +51,9 @@ The approved baseline contains **28 Acceptance Criteria**:
 - 3 database criteria: `AC-S9-DB-01` through `AC-S9-DB-03`
 - 3 regression criteria: `AC-S9-REG-01` through `AC-S9-REG-03`
 
-The API Contract defines exactly ten operations. These are two public reads and eight Organizer
-operations. The implementation must preserve the approved routes, DTOs, errors, authorization,
-transactions, lifecycle rules and `expectedUpdatedAt` concurrency contract.
+The amended API Contract defines thirteen operations: two public content reads, eight Organizer content
+operations, one Organizer upload, one temporary-upload delete and one public uploaded-image read. The
+implementation preserves the approved lifecycle and `expectedUpdatedAt` concurrency contract.
 
 ## Ownership
 
@@ -106,7 +106,7 @@ reuse the same Flyway version.
 - Heritage Feedback, rating, comments or moderation queue
 - Heritage ownership per Organizer
 - Heritage localization, version history or approval workflow
-- media upload, image processing or asset storage changes
+- external media storage, image processing or a general asset library
 - categories, tags, search engine integration or recommendation behavior
 - Admin Heritage API or UI
 - Notification delivery caused by Heritage changes

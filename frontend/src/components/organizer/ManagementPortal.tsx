@@ -113,6 +113,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   // Modal State
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OrganizerEvent | null>(null);
+  const [focusEventPublishIssues, setFocusEventPublishIssues] = useState(false);
   const [eventPendingPublish, setEventPendingPublish] = useState<OrganizerEvent | null>(null);
   const [isPublishingEvent, setIsPublishingEvent] = useState(false);
   const [publishFailure, setPublishFailure] = useState<EventPublishFailure | null>(null);
@@ -487,8 +488,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
               void refreshOrganizerData();
             }}
             onSelectEvent={(eventId: string) => navigateToTab('event_detail', eventId)}
-            onOpenCreateEvent={() => { setEditingEvent(null); setIsCreateEventOpen(true); }}
-            onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
+            onOpenCreateEvent={() => { setFocusEventPublishIssues(false); setEditingEvent(null); setIsCreateEventOpen(true); }}
+            onEditEvent={(event) => { setFocusEventPublishIssues(false); setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={requestPublishEvent}
             onCancelEvent={(event) => requestEventLifecycleAction(event, 'cancel')}
             onDeleteEvent={(event) => requestEventLifecycleAction(event, 'delete')}
@@ -522,7 +523,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
                 setActionError(error instanceof Error ? error.message : 'Không tải lại được cấu hình gian hàng.');
               }
             }}
-            onEditEvent={(event) => { setEditingEvent(event); setIsCreateEventOpen(true); }}
+            onEditEvent={(event) => { setFocusEventPublishIssues(false); setEditingEvent(event); setIsCreateEventOpen(true); }}
             onPublishEvent={requestPublishEvent}
             onCancelEvent={(event) => requestEventLifecycleAction(event, 'cancel')}
             onDeleteEvent={(event) => requestEventLifecycleAction(event, 'delete')}
@@ -613,6 +614,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         onEdit={(event) => {
           setEventPendingPublish(null);
           setPublishFailure(null);
+          setFocusEventPublishIssues(true);
           setEditingEvent(event);
           setIsCreateEventOpen(true);
         }}
@@ -635,7 +637,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         language={language}
         isOpen={isCreateEventOpen}
         event={editingEvent}
-        onClose={() => { setIsCreateEventOpen(false); setEditingEvent(null); }}
+        focusPublishIssues={focusEventPublishIssues}
+        onClose={() => { setIsCreateEventOpen(false); setFocusEventPublishIssues(false); setEditingEvent(null); }}
         onSave={handleSaveEvent}
       />
 

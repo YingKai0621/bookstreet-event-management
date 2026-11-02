@@ -24,6 +24,11 @@ public interface HeritageContentRepository extends JpaRepository<HeritageContent
 
     boolean existsByPublicCode(String publicCode);
 
+    boolean existsByImageUrl(String imageUrl);
+
+    @Query(value = "select 1 from pg_advisory_xact_lock(hashtext(:namespace))", nativeQuery = true)
+    Integer lockPublicCodeNamespace(@Param("namespace") String namespace);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update HeritageContent heritage

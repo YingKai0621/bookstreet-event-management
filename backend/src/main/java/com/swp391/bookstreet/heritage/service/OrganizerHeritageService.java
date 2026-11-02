@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -74,14 +75,12 @@ public class OrganizerHeritageService {
     @Transactional
     public OrganizerHeritageDetailResponse create(CreateHeritageRequest request) {
         if (request == null) throw malformed();
-        String publicCode = validation.publicCode(request.publicCode());
         String title = validation.title(request.title());
+        String publicCode = generatePublicCode(title);
         String summary = validation.summary(request.summary());
         String content = validation.content(request.content());
         String imageUrl = validation.imageUrl(request.imageUrl());
         String locationText = validation.locationText(request.locationText());
-        if (repository.existsByPublicCode(publicCode)) throw publicCodeConflict();
-
         Instant operationTime = now();
         try {
             HeritageContent created = repository.saveAndFlush(HeritageContent.createDraft(
@@ -98,6 +97,36 @@ public class OrganizerHeritageService {
             if (isPublicCodeViolation(exception)) throw publicCodeConflict();
             throw exception;
         }
+    }
+
+    private String generatePublicCode(String title) {
+        String ascii = Normalizer.normalize(
+                        title.replace('đ', 'd').replace('Đ', 'D'),
+                        Normalizer.Form.NFD
+                )
+                .replaceAll("\\p{M}+", "")
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (ascii.isEmpty()) ascii = "DI-SAN";
+        else if (ascii.length() < 3) ascii = "DI-SAN-" + ascii;
+        if (ascii.length() > 100) ascii = ascii.substring(0, 100).replaceAll("-+$", "");
+        String baseCode = validation.publicCode(ascii);
+
+        repository.lockPublicCodeNamespace("heritage-public-code:" + baseCode);
+        if (!repository.existsByPublicCode(baseCode)) return baseCode;
+
+        for (int suffix = 2; suffix < 10000; suffix++) {
+            String suffixText = "-" + suffix;
+            int baseLength = Math.min(baseCode.length(), 100 - suffixText.length());
+            String candidate = baseCode.substring(0, baseLength).replaceAll("-+$", "") + suffixText;
+            if (!repository.existsByPublicCode(candidate)) return candidate;
+        }
+        throw new HeritageApiException(
+                HttpStatus.CONFLICT,
+                "HERITAGE_PUBLIC_CODE_GENERATION_FAILED",
+                "Không thể tạo đường dẫn công khai duy nhất. Vui lòng đổi tiêu đề và thử lại."
+        );
     }
 
     @Transactional

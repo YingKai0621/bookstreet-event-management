@@ -300,13 +300,21 @@ Then the Event status becomes PUBLISHED
 And public Event endpoints can return it
 ```
 
-Additional publication acceptance cases (policy clarified 2026-10-04):
+Additional publication acceptance cases (policy updated 2026-11-02):
 
-- A Draft may omit any deadline/cutoff while being edited.
-- Publishing with any of the seven deadlines/cutoffs missing returns 422
-  EVENT_INCOMPLETE_FOR_PUBLISH and leaves the Event DRAFT.
-- Publishing at/after startAt or at/after any deadline/cutoff returns 422
+- A Draft may omit active deadlines or retain a contradictory timeline while being edited.
+- Partner application and Participant registration deadlines are always required to publish.
+  Booth request and Activity proposal deadlines are required only when their corresponding quota
+  is greater than zero. A missing required field returns 422 EVENT_INCOMPLETE_FOR_PUBLISH and
+  leaves the Event DRAFT.
+- Publishing at/after startAt or at/after any active required deadline returns 422
   EVENT_TIME_INVALID and leaves the Event DRAFT.
+- Publishing returns 422 EVENT_TIME_INVALID when an enabled Booth request or Activity proposal
+  deadline is less than 24 hours after the Partner application deadline, when the Participant
+  registration deadline is not strictly before Event start, or when the Booth request deadline plus
+  payment window does not leave at least 24 hours before Event start for Booth setup. The response
+  identifies the field that must be corrected and the Event remains DRAFT.
+- Legacy withdrawal/cancellation cutoff fields are not required and do not determine publication.
 - Complete future schedules satisfying the deadline ordering in the API Contract
   can be published; description/banner are optional.
 
