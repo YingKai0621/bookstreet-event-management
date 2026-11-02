@@ -3,6 +3,7 @@ import {
   Check,
   ExternalLink,
   FilePenLine,
+  Upload,
   Image as ImageIcon,
   Plus,
   RefreshCw,
@@ -33,7 +34,6 @@ interface OrganizerPublicContentViewProps {
 }
 
 interface HeritageForm {
-  publicCode: string;
   title: string;
   summary: string;
   content: string;
@@ -49,7 +49,6 @@ type HeritageSort = 'updatedAt,desc' | 'updatedAt,asc' | 'title,asc' | 'title,de
 type HeritageAction = 'publish' | 'archive' | 'republish' | 'delete';
 
 const EMPTY_FORM: HeritageForm = {
-  publicCode: '',
   title: '',
   summary: '',
   content: '',
@@ -73,7 +72,8 @@ function friendlyError(cause: unknown, fallback: string): string {
   }
 
   const messages: Record<string, string> = {
-    HERITAGE_PUBLIC_CODE_CONFLICT: 'Mã công khai đã được sử dụng. Vui lòng chọn mã khác.',
+    HERITAGE_PUBLIC_CODE_GENERATION_FAILED: 'Không thể tạo đường dẫn công khai. Vui lòng đổi tiêu đề và thử lại.',
+    HERITAGE_IMAGE_INVALID: 'Ảnh phải là tệp JPG, PNG hoặc WebP hợp lệ và không vượt quá 5 MB.',
     HERITAGE_STALE_WRITE: 'Nội dung vừa được Organizer khác cập nhật.',
     HERITAGE_TRANSITION_CONFLICT: 'Trạng thái hiện tại không cho phép thao tác này.',
     HERITAGE_DELETE_CONFLICT: 'Chỉ có thể xóa nội dung đang ở trạng thái bản nháp.',
@@ -86,24 +86,19 @@ function friendlyError(cause: unknown, fallback: string): string {
   return cause.message;
 }
 
-function validateForm(form: HeritageForm, creating: boolean): string {
-  const code = form.publicCode.trim().toUpperCase();
+function validateForm(form: HeritageForm): string {
   const title = form.title.trim().replace(/\s+/g, ' ');
   const content = form.content.replace(/\r\n?/g, '\n').trim();
-  if (creating && (code.length < 3 || code.length > 100 || !/^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$/.test(code))) {
-    return 'Mã công khai phải có 3–100 ký tự, bắt đầu bằng chữ cái và chỉ dùng A–Z, 0–9 hoặc dấu gạch ngang.';
-  }
   if (title.length < 2 || title.length > 200) return 'Tiêu đề phải có từ 2 đến 200 ký tự.';
   if (form.summary.trim().length > 1000) return 'Tóm tắt không được vượt quá 1.000 ký tự.';
   if (content.length < 20 || content.length > 20000) return 'Nội dung phải có từ 20 đến 20.000 ký tự.';
-  if (form.locationText.trim().length > 255) return 'Địa điểm hiển thị không được vượt quá 255 ký tự.';
+  if (form.locationText.trim().length > 255) return 'Địa chỉ hoặc vị trí không được vượt quá 255 ký tự.';
   if (form.imageUrl.trim().length > 2048) return 'Đường dẫn ảnh không được vượt quá 2.048 ký tự.';
   return '';
 }
 
 function formFromDetail(detail: OrganizerHeritageDetail): HeritageForm {
   return {
-    publicCode: detail.publicCode,
     title: detail.title,
     summary: detail.summary || '',
     content: detail.content,
@@ -132,14 +127,38 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
   const [saving, setSaving] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [mutatingId, setMutatingId] = useState<number | null>(null);
+  const [confirming, setConfirming] = useState<{ item: OrganizerHeritageListItem; action: HeritageAction } | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [temporaryImageUrl, setTemporaryImageUrl] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const confirmDialog = useRef<HTMLDialogElement>(null);
   const detailRequest = useRef(0);
 
-  useModalDismiss(Boolean(editor), () => {
-    if (!saving) {
-      detailRequest.current += 1;
-      setEditor(null);
+  const deleteUploadedImageQuietly = async (imageUrl: string | null) => {
+    if (!imageUrl) return;
+    try {
+      await organizerApi.deleteUploadedHeritageImage(imageUrl);
+    } catch {
+      // A later cleanup can remove an unreferenced local upload.
     }
+  };
+
+  const discardEditor = () => {
+    if (saving || imageUploading) return;
+    detailRequest.current += 1;
+    void deleteUploadedImageQuietly(temporaryImageUrl);
+    setTemporaryImageUrl(null);
+    setEditor(null);
+    setFormError('');
+    setLoadingDetail(false);
+  };
+
+  useModalDismiss(Boolean(editor), () => {
+    discardEditor();
+  });
+
+  useModalDismiss(Boolean(confirming), () => {
+    if (mutatingId === null) setConfirming(null);
   });
 
   useEffect(() => {
@@ -178,12 +197,25 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
     else dialog.current?.close();
   }, [editor]);
 
+  useEffect(() => {
+    if (confirming) confirmDialog.current?.showModal();
+    else confirmDialog.current?.close();
+  }, [confirming]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
   const setField = <K extends keyof HeritageForm>(field: K, value: HeritageForm[K]) => {
     setForm(current => ({ ...current, [field]: value }));
     setFormError('');
   };
 
   const openCreate = () => {
+    void deleteUploadedImageQuietly(temporaryImageUrl);
+    setTemporaryImageUrl(null);
     setForm(EMPTY_FORM);
     setFormError('');
     setActionError('');
@@ -192,6 +224,8 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
   };
 
   const openEdit = async (item: OrganizerHeritageListItem) => {
+    void deleteUploadedImageQuietly(temporaryImageUrl);
+    setTemporaryImageUrl(null);
     const requestId = detailRequest.current + 1;
     detailRequest.current = requestId;
     setEditor({ kind: 'edit', heritageContentId: item.heritageContentId, detail: null });
@@ -213,11 +247,41 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
   };
 
   const closeEditor = () => {
-    if (saving) return;
-    detailRequest.current += 1;
-    setEditor(null);
+    discardEditor();
+  };
+
+  const uploadImage = async (file: File | undefined) => {
+    if (!file || imageUploading) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setFormError('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('Ảnh di sản không được vượt quá 5 MB.');
+      return;
+    }
+
+    setImageUploading(true);
     setFormError('');
-    setLoadingDetail(false);
+    const previousTemporary = temporaryImageUrl;
+    try {
+      const uploaded = await organizerApi.uploadHeritageImage(file);
+      setTemporaryImageUrl(uploaded.imageUrl);
+      setField('imageUrl', uploaded.imageUrl);
+      if (previousTemporary && previousTemporary !== uploaded.imageUrl) {
+        void deleteUploadedImageQuietly(previousTemporary);
+      }
+    } catch (cause) {
+      setFormError(friendlyError(cause, 'Không thể tải ảnh lên. Vui lòng thử lại.'));
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    void deleteUploadedImageQuietly(temporaryImageUrl);
+    setTemporaryImageUrl(null);
+    setField('imageUrl', '');
   };
 
   const reloadLatestToken = async (heritageContentId: number) => {
@@ -234,8 +298,8 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!editor || saving || loadingDetail) return;
-    const validationError = validateForm(form, editor.kind === 'new');
+    if (!editor || saving || loadingDetail || imageUploading) return;
+    const validationError = validateForm(form);
     if (validationError) {
       setFormError(validationError);
       return;
@@ -246,7 +310,6 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
     try {
       if (editor.kind === 'new') {
         const request: CreateHeritageRequest = {
-          publicCode: form.publicCode.trim().toUpperCase(),
           title: form.title.trim().replace(/\s+/g, ' '),
           summary: normalizeOptional(form.summary),
           content: form.content.replace(/\r\n?/g, '\n').trim(),
@@ -268,6 +331,12 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
         await organizerApi.updateHeritage(editor.heritageContentId, request);
         setNotice('Đã cập nhật nội dung di sản.');
       }
+      const replacedImageUrl = editor.kind === 'edit' ? editor.detail?.imageUrl || null : null;
+      const committedImageUrl = normalizeOptional(form.imageUrl);
+      setTemporaryImageUrl(null);
+      if (replacedImageUrl && replacedImageUrl !== committedImageUrl) {
+        void deleteUploadedImageQuietly(replacedImageUrl);
+      }
       setEditor(null);
       setRevision(value => value + 1);
     } catch (cause) {
@@ -286,14 +355,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
 
   const runAction = async (item: OrganizerHeritageListItem, action: HeritageAction) => {
     if (mutatingId !== null) return;
-    const confirmations: Record<HeritageAction, string> = {
-      publish: `Công bố “${item.title}” trên trang công khai?`,
-      archive: `Lưu trữ “${item.title}” và gỡ khỏi trang công khai?`,
-      republish: `Công bố lại “${item.title}” trên trang công khai?`,
-      delete: `Xóa vĩnh viễn bản nháp “${item.title}”?`,
-    };
-    if (!window.confirm(confirmations[action])) return;
-
+    setConfirming(null);
     setMutatingId(item.heritageContentId);
     setActionError('');
     setNotice('');
@@ -344,7 +406,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
         <button type="button" className="btn-org-primary" onClick={openCreate}><Plus size={18} />{vi ? 'Thêm nội dung' : 'Add content'}</button>
       </header>
 
-      {notice && <div className="heritage-management-notice" role="status"><Check size={18} />{notice}</div>}
+      {notice && <div className="heritage-management-notice" role="status"><Check size={18} /><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Đóng thông báo"><X size={16} /></button></div>}
       {actionError && <div className="heritage-management-error" role="alert">{actionError}</div>}
 
       <div className="org-dashboard-panel heritage-management-panel" aria-busy={loading}>
@@ -354,7 +416,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
         </div>
 
         <div className="heritage-management-toolbar">
-          <label className="heritage-management-search"><Search size={18} /><input aria-label="Tìm nội dung di sản" maxLength={100} placeholder="Tìm theo mã, tiêu đề hoặc địa điểm…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
+          <label className="heritage-management-search"><Search size={18} /><input aria-label="Tìm nội dung di sản" maxLength={100} placeholder="Tìm theo tiêu đề hoặc địa chỉ…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
           <label className="heritage-management-filter"><span>Trạng thái</span><select aria-label="Lọc trạng thái di sản" value={status} onChange={event => { setStatus(event.target.value as HeritageStatus | ''); setPage(0); }}><option value="">Tất cả trạng thái</option><option value="DRAFT">Bản nháp</option><option value="PUBLISHED">Đã công bố</option><option value="ARCHIVED">Đã lưu trữ</option></select></label>
           <label className="heritage-management-filter"><span>Sắp xếp</span><select aria-label="Sắp xếp di sản" value={sort} onChange={event => { setSort(event.target.value as HeritageSort); setPage(0); }}><option value="updatedAt,desc">Mới cập nhật</option><option value="updatedAt,asc">Cũ cập nhật</option><option value="title,asc">Tiêu đề A–Z</option><option value="title,desc">Tiêu đề Z–A</option></select></label>
           <button type="button" className="btn-org-secondary" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Tải lại danh sách"><RefreshCw size={17} /></button>
@@ -375,16 +437,16 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
                   <span className={`heritage-management-status is-${item.status.toLowerCase()}`}>{STATUS_LABELS[item.status]}</span>
                 </div>
                 <div className="heritage-management-card-body">
-                  <div className="heritage-management-card-title"><h3>{item.title}</h3><code>{item.publicCode}</code></div>
+                  <div className="heritage-management-card-title"><h3>{item.title}</h3></div>
                   {item.locationText && <p className="heritage-management-location">{item.locationText}</p>}
                   <p className="heritage-management-summary">{item.summary || 'Chưa có phần tóm tắt.'}</p>
                   <small>Cập nhật {new Date(item.updatedAt).toLocaleString('vi-VN')}</small>
                   <div className="heritage-management-actions">
                     <button type="button" className="org-dashboard-text-action" disabled={mutatingId !== null} onClick={() => void openEdit(item)}><FilePenLine size={15} />Xem và chỉnh sửa</button>
-                    {item.status === 'DRAFT' && <button type="button" className="org-dashboard-text-action is-positive" disabled={mutatingId !== null} onClick={() => void runAction(item, 'publish')}><Send size={15} />Công bố</button>}
-                    {item.status === 'PUBLISHED' && <><a className="org-dashboard-text-action" href={`/di-san/${encodeURIComponent(item.publicCode)}`} target="_blank" rel="noreferrer"><ExternalLink size={15} />Trang công khai</a><button type="button" className="org-dashboard-text-action" disabled={mutatingId !== null} onClick={() => void runAction(item, 'archive')}><Archive size={15} />Lưu trữ</button></>}
-                    {item.status === 'ARCHIVED' && <button type="button" className="org-dashboard-text-action is-positive" disabled={mutatingId !== null} onClick={() => void runAction(item, 'republish')}><RotateCcw size={15} />Công bố lại</button>}
-                    {item.status === 'DRAFT' && <button type="button" className="org-dashboard-text-action is-danger" disabled={mutatingId !== null} onClick={() => void runAction(item, 'delete')}><Trash2 size={15} />Xóa</button>}
+                    {item.status === 'DRAFT' && <button type="button" className="org-dashboard-text-action is-positive" disabled={mutatingId !== null} onClick={() => setConfirming({ item, action: 'publish' })}><Send size={15} />Công bố</button>}
+                    {item.status === 'PUBLISHED' && <><a className="org-dashboard-text-action" href={`/di-san/${encodeURIComponent(item.publicCode)}`} target="_blank" rel="noreferrer"><ExternalLink size={15} />Trang công khai</a><button type="button" className="org-dashboard-text-action" disabled={mutatingId !== null} onClick={() => setConfirming({ item, action: 'archive' })}><Archive size={15} />Lưu trữ</button></>}
+                    {item.status === 'ARCHIVED' && <button type="button" className="org-dashboard-text-action is-positive" disabled={mutatingId !== null} onClick={() => setConfirming({ item, action: 'republish' })}><RotateCcw size={15} />Công bố lại</button>}
+                    {item.status === 'DRAFT' && <button type="button" className="org-dashboard-text-action is-danger" disabled={mutatingId !== null} onClick={() => setConfirming({ item, action: 'delete' })}><Trash2 size={15} />Xóa</button>}
                   </div>
                 </div>
               </article>
@@ -397,20 +459,28 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
 
       <dialog ref={dialog} className="heritage-management-dialog" aria-labelledby="heritage-dialog-title" onCancel={event => { event.preventDefault(); closeEditor(); }}>
         <form noValidate onSubmit={save}>
-          <div className="org-dashboard-panel-heading heritage-management-dialog-heading"><div><h2 id="heritage-dialog-title">{editor?.kind === 'new' ? 'Thêm nội dung di sản' : 'Chi tiết nội dung di sản'}</h2><p>{editor?.kind === 'new' ? 'Nội dung mới luôn được tạo ở trạng thái bản nháp.' : 'Mã công khai và trạng thái được hệ thống quản lý.'}</p></div><button type="button" className="heritage-management-close" disabled={saving} onClick={closeEditor} aria-label="Đóng"><X size={20} /></button></div>
+          <div className="org-dashboard-panel-heading heritage-management-dialog-heading"><div><h2 id="heritage-dialog-title">{editor?.kind === 'new' ? 'Thêm nội dung di sản' : 'Chi tiết nội dung di sản'}</h2><p>{editor?.kind === 'new' ? 'Nội dung mới luôn được tạo ở trạng thái bản nháp. Đường dẫn công khai được hệ thống tự tạo từ tiêu đề.' : 'Đường dẫn công khai và trạng thái được hệ thống quản lý.'}</p></div><button type="button" className="heritage-management-close" disabled={saving || imageUploading} onClick={closeEditor} aria-label="Đóng"><X size={20} /></button></div>
           {loadingDetail ? <div className="heritage-management-dialog-loading" role="status">Đang tải chi tiết…</div> : (
             <div className="heritage-management-fields">
-              <label>Mã công khai <span>*</span><input autoFocus={editor?.kind === 'new'} required disabled={editor?.kind === 'edit'} maxLength={100} value={form.publicCode} onChange={event => setField('publicCode', event.target.value.toUpperCase())} placeholder="Ví dụ: BUU-DIEN-TP-HCM" /><small>Dùng cho đường dẫn công khai và không thể đổi sau khi tạo.</small></label>
-              <label>Địa điểm hiển thị<input maxLength={255} value={form.locationText} onChange={event => setField('locationText', event.target.value)} placeholder="Ví dụ: Công xã Paris, Quận 1" /></label>
-              <label className="heritage-management-wide">Tiêu đề <span>*</span><input required minLength={2} maxLength={200} value={form.title} onChange={event => setField('title', event.target.value)} /></label>
+              <label>Địa chỉ hoặc vị trí (không bắt buộc)<input maxLength={255} value={form.locationText} onChange={event => setField('locationText', event.target.value)} placeholder="Ví dụ: Công xã Paris, Quận 1" /><small>Thông tin này sẽ xuất hiện trên thẻ và trang chi tiết.</small></label>
+              <label className="heritage-management-wide">Tiêu đề <span>*</span><input autoFocus={editor?.kind === 'new'} required minLength={2} maxLength={200} value={form.title} onChange={event => setField('title', event.target.value)} /></label>
               <label className="heritage-management-wide">Tóm tắt<textarea maxLength={1000} rows={3} value={form.summary} onChange={event => setField('summary', event.target.value)} /><small>{form.summary.length}/1000</small></label>
               <label className="heritage-management-wide">Nội dung <span>*</span><textarea required minLength={20} maxLength={20000} rows={10} value={form.content} onChange={event => setField('content', event.target.value)} placeholder="Viết câu chuyện di sản bằng văn bản thuần…" /><small>{form.content.length}/20000</small></label>
-              <label className="heritage-management-wide">Đường dẫn ảnh<input maxLength={2048} value={form.imageUrl} onChange={event => setField('imageUrl', event.target.value)} placeholder="https://… hoặc /assets/heritage/…" /><small>Chấp nhận HTTP, HTTPS hoặc đường dẫn bắt đầu bằng /assets/heritage/.</small></label>
+              <div className="heritage-management-wide heritage-image-upload">
+                <span>Ảnh minh họa (không bắt buộc)</span>
+                {form.imageUrl ? <img src={form.imageUrl} alt="Xem trước ảnh di sản" /> : <div className="heritage-image-placeholder"><ImageIcon size={32} /><span>Chưa có ảnh</span></div>}
+                <div><label className="btn-org-secondary"><Upload size={16} />{imageUploading ? 'Đang tải ảnh…' : form.imageUrl ? 'Thay ảnh' : 'Chọn ảnh từ máy'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={imageUploading || saving} onChange={event => { void uploadImage(event.target.files?.[0]); event.currentTarget.value = ''; }} /></label>{form.imageUrl && <button type="button" className="org-dashboard-text-action is-danger" disabled={imageUploading || saving} onClick={removeImage}><Trash2 size={15} />Bỏ ảnh</button>}</div>
+                <small>JPG, PNG hoặc WebP; tối đa 5 MB.</small>
+              </div>
             </div>
           )}
           {formError && <p className="heritage-management-form-error" role="alert">{formError}</p>}
-          <div className="heritage-management-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={closeEditor}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving || loadingDetail || Boolean(editor?.kind === 'edit' && !editor.detail)}>{saving ? 'Đang lưu…' : editor?.kind === 'new' ? 'Tạo bản nháp' : 'Lưu cập nhật'}</button></div>
+          <div className="heritage-management-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving || imageUploading} onClick={closeEditor}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving || imageUploading || loadingDetail || Boolean(editor?.kind === 'edit' && !editor.detail)}>{saving ? 'Đang lưu…' : imageUploading ? 'Đang tải ảnh…' : editor?.kind === 'new' ? 'Tạo bản nháp' : 'Lưu cập nhật'}</button></div>
         </form>
+      </dialog>
+
+      <dialog ref={confirmDialog} className="heritage-confirm-dialog" aria-labelledby="heritage-confirm-title" onCancel={event => { event.preventDefault(); if (mutatingId === null) setConfirming(null); }}>
+        {confirming && <div><h2 id="heritage-confirm-title">{confirming.action === 'publish' ? 'Công bố nội dung di sản?' : confirming.action === 'archive' ? 'Lưu trữ nội dung di sản?' : confirming.action === 'republish' ? 'Công bố lại nội dung di sản?' : 'Xóa vĩnh viễn bản nháp?'}</h2><p>{confirming.action === 'archive' ? `“${confirming.item.title}” sẽ được gỡ khỏi trang công khai.` : confirming.action === 'delete' ? `“${confirming.item.title}” sẽ bị xóa và không thể khôi phục.` : `Xác nhận thực hiện với “${confirming.item.title}”.`}</p><div><button type="button" className="btn-org-secondary" disabled={mutatingId !== null} onClick={() => setConfirming(null)}>Hủy</button><button type="button" className={confirming.action === 'delete' ? 'btn-org-danger' : 'btn-org-primary'} disabled={mutatingId !== null} onClick={() => void runAction(confirming.item, confirming.action)}>{mutatingId !== null ? 'Đang xử lý…' : confirming.action === 'publish' ? 'Công bố' : confirming.action === 'archive' ? 'Lưu trữ' : confirming.action === 'republish' ? 'Công bố lại' : 'Xóa bản nháp'}</button></div></div>}
       </dialog>
     </section>
   );

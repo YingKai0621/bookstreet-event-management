@@ -22,7 +22,7 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockPublicHeritage(page: Page, detailStatus = 200) {
+async function mockPublicHeritage(page: Page, detailStatus = 200, list = [heritageListItem]) {
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -31,7 +31,7 @@ async function mockPublicHeritage(page: Page, detailStatus = 200) {
     if (path.endsWith('/auth/csrf')) {
       return json(route, { headerName: 'X-CSRF-TOKEN', token: 'heritage-csrf' });
     }
-    if (path === '/api/v1/heritages') return json(route, pageResponse([heritageListItem]));
+    if (path === '/api/v1/heritages') return json(route, pageResponse(list));
     if (path === '/api/v1/heritages/NVB-BOOK-STREET') {
       if (detailStatus === 404) {
         return json(route, { code: 'HERITAGE_NOT_FOUND', message: 'Not found.', fieldErrors: [] }, 404);
@@ -41,6 +41,39 @@ async function mockPublicHeritage(page: Page, detailStatus = 200) {
     return json(route, pageResponse([]));
   });
 }
+
+test('landing carousel keeps navigation available for exactly three heritage stories', async ({ page }) => {
+  const stories = [
+    heritageListItem,
+    { ...heritageListItem, publicCode: 'NHA-THO-DUC-BA', title: 'Nhà thờ Đức Bà Sài Gòn' },
+    { ...heritageListItem, publicCode: 'BUU-DIEN-THANH-PHO', title: 'Bưu điện Thành phố Hồ Chí Minh' },
+  ];
+  await mockPublicHeritage(page, 200, stories);
+  await page.goto('/');
+
+  const next = page.getByRole('button', { name: 'Di tích tiếp theo' });
+  await expect(next).toBeVisible();
+  await expect(page.getByText(/\/ 3 di sản$/)).toBeVisible();
+  const currentCard = page.locator('.heritage-fan-card[aria-current="true"]');
+  await expect(currentCard).toHaveCount(1);
+  const firstHref = await currentCard.getAttribute('href');
+
+  await next.click();
+
+  await expect.poll(() => currentCard.getAttribute('href')).not.toBe(firstHref);
+  await expect(page).toHaveURL(/\/$/);
+
+  const sideCard = page.locator('.heritage-fan-card:not([aria-current="true"])').first();
+  const sideHref = await sideCard.getAttribute('href');
+  expect(sideHref).toBeTruthy();
+  await sideCard.click({ force: true });
+  await expect(page).toHaveURL(/\/$/);
+
+  const newlyCenteredCard = page.locator(`.heritage-fan-card[href="${sideHref}"]`);
+  await expect(newlyCenteredCard).toHaveAttribute('aria-current', 'true');
+  await newlyCenteredCard.click({ force: true });
+  await expect(page).toHaveURL(new RegExp(`${sideHref}$`));
+});
 
 test('public heritage collection opens a story backed by the Heritage API', async ({ page }) => {
   await mockPublicHeritage(page);
@@ -53,7 +86,8 @@ test('public heritage collection opens a story backed by the Heritage API', asyn
   await expect(page).toHaveURL(/\/di-san\/NVB-BOOK-STREET$/);
   await expect(page.getByRole('heading', { name: heritageDetail.title, level: 1 })).toBeVisible();
   await expect(page.getByText('Đường Sách là nơi kết nối bạn đọc, tác giả và các đơn vị xuất bản.')).toBeVisible();
-  await expect(page.locator('.heritage-qr-code svg')).toBeVisible();
+  await expect(page.locator('.heritage-qr-code')).toHaveCount(0);
+  await expect(page.getByText('NVB-BOOK-STREET')).toHaveCount(0);
 });
 
 test('direct heritage links load independently and unpublished content has a clear state', async ({ page }) => {

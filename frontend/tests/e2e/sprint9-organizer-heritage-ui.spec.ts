@@ -56,6 +56,7 @@ async function mockOrganizerShell(page: Page, handler: (route: Route) => Promise
 }
 
 test('Organizer creates a draft then publishes it with the raw concurrency token', async ({ page }) => {
+  await page.clock.install();
   let rows: ReturnType<typeof heritageItem>[] = [];
   let createPayload: Record<string, unknown> | null = null;
   let publishPayload: Record<string, unknown> | null = null;
@@ -74,6 +75,10 @@ test('Organizer creates a draft then publishes it with the raw concurrency token
       await json(route, heritageDetail(21, 'DRAFT', rows[0].title), 201);
       return true;
     }
+    if (path === '/api/v1/organizer/heritage-images' && method === 'POST') {
+      await json(route, { imageUrl: '/assets/heritage/uploads/00000000-0000-0000-0000-000000000009.png' }, 201);
+      return true;
+    }
     if (path.endsWith('/organizer/heritages/21/publish') && method === 'POST') {
       publishPayload = route.request().postDataJSON() as Record<string, unknown>;
       rows = [heritageItem(21, 'PUBLISHED', rows[0].title)];
@@ -87,24 +92,37 @@ test('Organizer creates a draft then publishes it with the raw concurrency token
   await expect(page.getByRole('heading', { name: 'Nội dung di sản', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Thêm nội dung' }).first().click();
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
-  await expect(page.getByRole('alert')).toContainText('Mã công khai phải có 3–100 ký tự');
-  await page.getByLabel('Mã công khai *').fill('buu-dien-tp-hcm');
-  await page.getByLabel('Địa điểm hiển thị').fill('Công xã Paris, Quận 1');
+  await expect(page.getByRole('alert')).toContainText('Tiêu đề phải có từ 2 đến 200 ký tự');
+  await page.getByLabel('Địa chỉ hoặc vị trí (không bắt buộc)').fill('Công xã Paris, Quận 1');
   await page.getByLabel('Tiêu đề *').fill('Bưu điện Thành phố Hồ Chí Minh');
   await page.getByLabel('Tóm tắt').fill('Một công trình kiến trúc tiêu biểu bên cạnh Đường Sách.');
   await page.getByLabel('Nội dung *').fill('Công trình được xây dựng vào cuối thế kỷ XIX và gắn với không gian trung tâm thành phố.');
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'buu-dien.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  });
+  await expect(page.getByAltText('Xem trước ảnh di sản')).toBeVisible();
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
-  await expect(page.getByText('Đã tạo nội dung di sản ở trạng thái bản nháp.')).toBeVisible();
+  const createNotice = page.getByText('Đã tạo nội dung di sản ở trạng thái bản nháp.');
+  await expect(createNotice).toBeVisible();
+  await page.clock.fastForward(5000);
+  await expect(createNotice).not.toBeVisible();
   expect(createPayload).toMatchObject({
-    publicCode: 'BUU-DIEN-TP-HCM',
     title: 'Bưu điện Thành phố Hồ Chí Minh',
     locationText: 'Công xã Paris, Quận 1',
+    imageUrl: '/assets/heritage/uploads/00000000-0000-0000-0000-000000000009.png',
   });
+  expect(createPayload).not.toHaveProperty('publicCode');
 
-  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Công bố' }).click();
+  const publishDialog = page.getByRole('dialog');
+  await expect(publishDialog.getByRole('heading', { name: 'Công bố nội dung di sản?' })).toBeVisible();
+  await publishDialog.getByRole('button', { name: 'Công bố', exact: true }).click();
   await expect(page.getByText('Đã công bố nội dung di sản.')).toBeVisible();
+  await page.getByRole('button', { name: 'Đóng thông báo' }).click();
+  await expect(page.getByText('Đã công bố nội dung di sản.')).not.toBeVisible();
   expect(publishPayload).toEqual({ expectedUpdatedAt: '2026-11-01T03:00:00.0000021Z' });
   await expect(page.getByRole('link', { name: 'Trang công khai' })).toHaveAttribute('href', '/di-san/DI-SAN-21');
 });
@@ -155,16 +173,16 @@ test('Organizer lifecycle actions use only legal actions for each status', async
   await expect(published.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
   await expect(archived.getByRole('button', { name: 'Công bố lại' })).toBeVisible();
 
-  page.once('dialog', dialog => dialog.accept());
   await published.getByRole('button', { name: 'Lưu trữ' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Lưu trữ', exact: true }).click();
   await expect(page.getByText('Đã lưu trữ nội dung di sản.')).toBeVisible();
 
-  page.once('dialog', dialog => dialog.accept());
   await page.locator('.heritage-management-card').filter({ hasText: 'Nội dung lưu trữ' }).getByRole('button', { name: 'Công bố lại' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Công bố lại', exact: true }).click();
   await expect(page.getByText('Đã công bố lại nội dung di sản.')).toBeVisible();
 
-  page.once('dialog', dialog => dialog.accept());
   await page.locator('.heritage-management-card').filter({ hasText: 'Bản nháp một' }).getByRole('button', { name: 'Xóa' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xóa bản nháp', exact: true }).click();
   await expect(page.getByText('Đã xóa bản nháp di sản.')).toBeVisible();
   expect(calls).toContain('POST /api/v1/organizer/heritages/2/archive');
   expect(calls).toContain('POST /api/v1/organizer/heritages/3/republish');

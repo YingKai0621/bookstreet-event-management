@@ -29,9 +29,10 @@
 - Successful mutation responses represent committed durable state.
 - Every Heritage response uses `Cache-Control: no-store` so archive takes effect without an API cache
   exposing previously published content.
-- No Heritage response or request introduces Feedback, ownership, upload, QR persistence, or analytics.
+- No Heritage response or request introduces Feedback, ownership, QR presentation/persistence, or analytics.
+- Organizer image upload is limited to validated local JPG, PNG, and WebP files up to 5 MB.
 
-Sprint 09 adds exactly ten backend operations:
+The amended Heritage contract defines thirteen backend operations:
 
 ```text
 GET    /heritages
@@ -44,10 +45,13 @@ POST   /organizer/heritages/{heritageContentId}/publish
 POST   /organizer/heritages/{heritageContentId}/archive
 POST   /organizer/heritages/{heritageContentId}/republish
 DELETE /organizer/heritages/{heritageContentId}
+POST   /organizer/heritage-images
+DELETE /organizer/heritage-images/{fileName}
+GET    /assets/heritage/uploads/{fileName}
 ```
 
-There is no Admin Heritage API, public create or mutation, upload, bulk operation, Feedback target,
-QR endpoint, analytics endpoint, or mock fallback operation.
+There is no Admin Heritage API, public content mutation, bulk operation, Feedback target, QR endpoint,
+analytics endpoint, external storage-provider operation, or mock fallback operation.
 
 ### 1.1 Common paged response
 
@@ -115,8 +119,8 @@ Clients branch on HTTP status and stable `code`, never on localized `message` te
 - `403 Forbidden` means effective verified Organizer authority is missing or CSRF proof is invalid.
 - `404 Not Found` covers an unknown Organizer record and the public-safe result for a private,
   unknown, or malformed public code.
-- `409 Conflict` covers duplicate public code, stale write, illegal lifecycle transition, and
-  ineligible hard delete.
+- `409 Conflict` covers an exhausted generated-code namespace, stale write, illegal lifecycle transition,
+  ineligible hard delete, and deletion of a referenced uploaded image.
 - `422 Unprocessable Entity` covers bound request fields that fail content, URI, relationship, or
   concurrency-token validation.
 - `500 Internal Server Error` covers an unexpected persistence or system failure.
@@ -124,7 +128,7 @@ Clients branch on HTTP status and stable `code`, never on localized `message` te
 ### 1.4 Mutation and retry semantics
 
 - Create accepts no `Idempotency-Key`. The UI disables duplicate submission while one request is pending.
-- A second create with the same normalized `publicCode` returns conflict and creates no additional row.
+- A second create whose title yields an existing base code receives the next available numeric suffix.
 - Update, publish, archive, republish, and delete are state-sensitive and concurrency-sensitive.
 - Repeating a successful command with the old token returns `409 HERITAGE_STALE_WRITE`.
 - Repeating a lifecycle command with the current token but an illegal current state returns
@@ -170,25 +174,25 @@ Normalization occurs before length and format validation.
 
 ### 3.1 Public code
 
-- Required on create.
-- Trim surrounding whitespace.
-- Convert to uppercase using locale-independent rules.
+- Server-generated from the normalized title; it is never accepted from Organizer input.
+- Vietnamese diacritics are removed before uppercase conversion.
+- Non-alphanumeric runs become one hyphen and surrounding hyphens are removed.
+- A numeric suffix (`-2`, `-3`, and so on) is added when required for uniqueness.
 - Normalized length is from 3 through 100 characters.
 - Must match `^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$`.
 - Must be unique after canonical normalization.
 - Cannot be supplied by update or lifecycle requests.
 
-Examples:
+Generated examples:
 
 ```text
-Accepted input       Canonical stored value
-ds-01                DS-01
-  buu-dien-tp-hcm    BUU-DIEN-TP-HCM
-A01                  A01
+Normalized title                  Canonical stored value
+Bưu điện TP HCM                   BUU-DIEN-TP-HCM
+Bưu điện TP HCM (second record)   BUU-DIEN-TP-HCM-2
+Đường Sách Nguyễn Văn Bình        DUONG-SACH-NGUYEN-VAN-BINH
 ```
 
-Blank, too short, too long, accented, spaced, underscore, leading-hyphen, trailing-hyphen, or
-repeated-hyphen values fail validation.
+The generated value is validated against the unchanged V15 canonical constraint before persistence.
 
 ### 3.2 Title
 
@@ -261,7 +265,7 @@ repeated-hyphen values fail validation.
 Unknown JSON properties return `400 UNKNOWN_FIELD`. In particular, callers cannot supply:
 
 ```text
-heritageContentId, status, publishedAt, createdAt, updatedAt,
+heritageContentId, publicCode, status, publishedAt, createdAt, updatedAt,
 createdBy, updatedBy, ownerId, reviewerId, approverId,
 titleEn, summaryEn, contentEn, category, period, province,
 latitude, longitude, mapX, mapY, imageBytes,
@@ -527,7 +531,6 @@ Request: `CreateHeritageRequest`.
 
 ```json
 {
-  "publicCode": "buu-dien-tp-hcm",
   "title": "Bưu điện Thành phố Hồ Chí Minh",
   "summary": "Một công trình kiến trúc tiêu biểu bên cạnh Đường Sách.",
   "content": "Công trình được xây dựng vào cuối thế kỷ XIX và là một phần quen thuộc của không gian trung tâm thành phố.",
@@ -540,7 +543,6 @@ Fields:
 
 | Field | Type | Required | Rules |
 | --- | --- | --- | --- |
-| `publicCode` | string | Yes | Section 3.1. |
 | `title` | string | Yes | Section 3.2. |
 | `summary` | string or null | No | Section 3.3. |
 | `content` | string | Yes | Section 3.4. |
@@ -561,6 +563,7 @@ Success:
 - `201 Created` with `OrganizerHeritageDetailResponse`.
 - `Location: /api/v1/organizer/heritages/{heritageContentId}`.
 - Returned `publicCode` is canonical uppercase.
+- Returned `publicCode` is generated by the server and is not a request field.
 
 Errors:
 
@@ -569,12 +572,12 @@ Errors:
 - `401 AUTHENTICATION_REQUIRED`
 - `403 ACCESS_DENIED`
 - `403 CSRF_INVALID`
-- `409 HERITAGE_PUBLIC_CODE_CONFLICT`
+- `409 HERITAGE_PUBLIC_CODE_GENERATION_FAILED` only when a unique generated code cannot be reserved
 - `422 VALIDATION_FAILED`
 - `500 INTERNAL_ERROR`
 
-Duplicate detection is race-safe. A database unique violation for the canonical public code maps to the
-same `409 HERITAGE_PUBLIC_CODE_CONFLICT` without exposing constraint names.
+Title-derived code generation is race-safe. Creation serializes allocation for the same base code and
+selects the first available numeric suffix without exposing constraints or asking the Organizer for a code.
 
 ### 8.2 PATCH `/organizer/heritages/{heritageContentId}`
 
@@ -765,6 +768,33 @@ Errors:
 Conflict classification uses unknown identity, stale token, then delete eligibility in that order.
 `PUBLISHED` and `ARCHIVED` records return `409 HERITAGE_DELETE_CONFLICT` and remain durable.
 
+## 10.2 Heritage image media APIs
+
+### 10.2.1 POST `/organizer/heritage-images`
+
+Full path: `POST /api/v1/organizer/heritage-images`.
+
+- Requires effective verified Organizer authority and CSRF.
+- Consumes `multipart/form-data` with one `file` part.
+- Accepts signature-validated JPG, PNG, or WebP content up to 5 MB.
+- Ignores the caller filename and stores a server-generated UUID filename.
+- Success is `201` with `{ "imageUrl": "/assets/heritage/uploads/{generatedFileName}" }`.
+- Invalid, empty, mismatched, or oversized content returns `422 HERITAGE_IMAGE_INVALID`.
+- Storage failure returns `500 HERITAGE_IMAGE_STORAGE_FAILED`.
+
+### 10.2.2 GET `/assets/heritage/uploads/{fileName}`
+
+- Anonymous read for server-generated filenames only.
+- Returns the stored image with its validated media type and immutable public cache headers.
+- Unsafe, malformed, or missing filenames return `404 HERITAGE_IMAGE_NOT_FOUND`.
+
+### 10.2.3 DELETE `/organizer/heritage-images/{fileName}`
+
+- Requires effective verified Organizer authority and CSRF.
+- Deletes an abandoned uploaded image only when no Heritage row references its URL.
+- Referenced images return `409 HERITAGE_IMAGE_IN_USE`.
+- The Organizer UI uses this operation after canceling an unsaved upload or replacing a committed image.
+
 ## 11. Canonical error codes
 
 ### 11.1 Common request and security
@@ -785,10 +815,14 @@ Conflict classification uses unknown identity, stale token, then delete eligibil
 ### 11.2 Heritage-specific
 
 - `HERITAGE_NOT_FOUND` maps to 404.
-- `HERITAGE_PUBLIC_CODE_CONFLICT` maps to 409.
 - `HERITAGE_STALE_WRITE` maps to 409.
 - `HERITAGE_TRANSITION_CONFLICT` maps to 409.
 - `HERITAGE_DELETE_CONFLICT` maps to 409.
+- `HERITAGE_PUBLIC_CODE_GENERATION_FAILED` maps to 409.
+- `HERITAGE_IMAGE_INVALID` maps to 422.
+- `HERITAGE_IMAGE_NOT_FOUND` maps to 404.
+- `HERITAGE_IMAGE_IN_USE` maps to 409.
+- `HERITAGE_IMAGE_STORAGE_FAILED` and `HERITAGE_IMAGE_DELETE_FAILED` map to 500.
 
 Field validation uses these `fieldErrors.field` values where applicable:
 
@@ -824,13 +858,14 @@ authorized Organizer Session
   -> CSRF
   -> JSON binding and unknown-field rejection
   -> normalization and validation
-  -> canonical public-code uniqueness check
+  -> title-derived public-code generation and serialized uniqueness allocation
   -> Heritage insert
   -> flush and commit
   -> committed detail response
 ```
 
-- Unique enforcement remains race-safe through the database constraint.
+- Generated-code allocation remains race-safe through a transaction-scoped namespace lock and the
+  database unique constraint.
 - One `operationTime` is reused for `createdAt` and `updatedAt`.
 - A failed insert cannot return `201`.
 
@@ -957,12 +992,13 @@ No production or demo Heritage rows belong in the schema migration. There is no 
 - On `HERITAGE_STALE_WRITE`, reload durable detail and do not replay the stale mutation.
 - Never apply an optimistic success that the backend did not confirm.
 
-### 15.3 Derived public QR
+### 15.3 Public presentation and image upload
 
-- Construct the QR value from `window.location.origin`, `/di-san/`, and URL-encoded canonical `publicCode`.
-- The QR contains no internal id, Session data, token, or tracking value.
-- Scanning follows the same public detail visibility rule.
-- No QR API request or persistence is introduced.
+- Public cards and detail pages use `publicCode` only in links and do not render it as a technical label.
+- Heritage pages render no QR block.
+- Organizer forms hide `publicCode`; the server returns it after create.
+- Organizer forms upload local image files, show a preview and allow replacement or removal.
+- Abandoned temporary uploads are deleted when possible; persisted rows store only the returned URL.
 
 ## 16. Acceptance Criteria traceability
 
@@ -996,7 +1032,7 @@ No production or demo Heritage rows belong in the schema migration. There is no 
 | `AC-G01-S9-05` | Section 15.1 real loading, empty, not-found, and failure states. |
 | `AC-G01-S9-06` | Sections 5.2 and 15.1 direct detail loading. |
 | `AC-G01-S9-07` | Sections 4.1, 4.2, and 15.1 optional fields. |
-| `AC-G01-S9-08` | Sections 2.3 and 15.3 derived QR. |
+| `AC-G01-S9-08` | Sections 2.3 and 15.3 omission of QR and technical-code labels. |
 
 ### 16.3 Persistence and regression
 
@@ -1031,8 +1067,8 @@ Explicitly excluded:
 - public search or category filter
 - map coordinates or marker editing
 - rich text or executable HTML
-- image upload or storage-provider integration
-- persisted QR data or scan analytics
+- external storage-provider integration or a general asset library
+- QR presentation, persisted QR data or scan analytics
 - view count, reports, or dashboards
 - notifications, comments, likes, or subscriptions
 - scheduled publish, expiration, or rollback
@@ -1069,7 +1105,8 @@ Focused frontend evidence must cover:
 - direct `/di-san/:publicCode` load in a fresh browser context
 - public detail not-found and failure states
 - optional image, summary, and location rendering
-- derived QR value
+- absence of Heritage QR and technical public-code labels
+- Organizer local image upload, preview, replacement, removal, validation and abandoned-upload cleanup
 - Organizer route resolution
 - Organizer list search, filter, sort, page, and empty states
 - create, edit, publish, archive, republish, and eligible delete UI
@@ -1083,7 +1120,7 @@ suite is not required for this slice. Backend and frontend CI remain required.
 
 Before migration or application implementation begins, reviewers must confirm:
 
-- all ten routes and exact DTO field names
+- all thirteen routes and exact DTO field names
 - public and Organizer response separation
 - canonical immutable `publicCode`
 - exact normalization and validation limits
@@ -1095,7 +1132,7 @@ Before migration or application implementation begins, reviewers must confirm:
 - microsecond precision and strictly increasing update time
 - stable error codes and conflict precedence
 - public-safe not-found behavior
-- no Feedback, upload, Admin, QR persistence, analytics, or mock scope
+- no Feedback, Admin, QR presentation/persistence, external storage provider, analytics, or mock scope
 - complete traceability to all 28 Sprint 09 Acceptance Criteria
 
 Approval of this contract is followed by the implementation and ownership plan, then the requested full

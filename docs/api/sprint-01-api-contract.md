@@ -239,36 +239,38 @@ Errors:
 
 Acceptance Criteria: AC-O01-01 through AC-O01-05.
 
-### Event deadline policy (2026-10-04)
+### Event deadline policy (updated 2026-11-02)
 
 Concrete scheduling policy selected for the requested realistic deadline validation,
 supporting UC-O01 alternative A2 and AC-O01-01/03/04:
 
-- Every supplied Event deadline/cutoff must be at or before `startAt`.
-- When both are supplied, `boothRequestDeadlineAt` and `activityProposalDeadlineAt`
-  must each be at or after `partnerApplicationDeadlineAt`, allowing the Partner
-  application stage to precede downstream requests.
-- Equality is allowed; timestamps are compared as instants, independently of their UTC offset.
-- Sprint 4 adds the publish/operational-update invariant
-  `boothRequestDeadlineAt + boothPaymentWindowMinutes <= startAt`; equality with `startAt` is valid.
-  This guarantees that a selection made by the request deadline can receive its full payment window
-  before the Event starts.
-- Cancellation/withdrawal cutoff fields are independent of application deadlines and retained for
-  Post-MVP compatibility. The active MVP does not calculate Booth/Partner refund eligibility from
-  them; Sprint 4 cancellation safety follows its own contract.
-- These checks apply to create, the merged state after PATCH, and publish. Invalid
-  values return `422 EVENT_TIME_INVALID` with the offending field; no changes persist.
-- Draft create/PATCH may omit deadlines. Null means unfinished configuration, not unlimited acceptance.
-- Before publish, all seven deadline/cutoff fields are required (including when a
-  quota is zero); missing fields return `422 EVENT_INCOMPLETE_FOR_PUBLISH`.
-- Publication requires `startAt` and every deadline/cutoff to be strictly later
-  than one server UTC timestamp captured for that validation. Equal-to-now or
-  past values return `422 EVENT_TIME_INVALID`. Equality with `startAt` remains valid.
+- Every supplied active Event deadline must be at or before `startAt`.
+- Draft create/PATCH may retain an unfinished or contradictory publication timeline so the
+  Organizer can save work in progress. Publication and operational updates enforce the full policy.
+- `partnerApplicationDeadlineAt` and `participantRegistrationDeadlineAt` are always required to publish.
+- When `maxBoothsPerPartner > 0`, `boothRequestDeadlineAt` and a valid
+  `boothPaymentWindowMinutes` are required. When the quota is zero, the deadline may be null.
+- When `maxActivitiesPerPartner > 0`, `activityProposalDeadlineAt` is required. When the quota is zero,
+  the deadline may be null.
+- Each enabled downstream deadline (`boothRequestDeadlineAt` and `activityProposalDeadlineAt`) must be
+  at least 24 hours after `partnerApplicationDeadlineAt`. Equality at exactly 24 hours is valid.
+- `participantRegistrationDeadlineAt` must be strictly before `startAt`.
+- When Booth is enabled, the invariant is
+  `boothRequestDeadlineAt + boothPaymentWindowMinutes + 24 hours <= startAt`.
+  The final 24 hours are reserved for Booth setup after payment closes.
+- Missing required publication fields return `422 EVENT_INCOMPLETE_FOR_PUBLISH`. Contradictory
+  publication timing returns `422 EVENT_TIME_INVALID` with the field that must be corrected.
+- Publication requires `startAt` and every active required deadline to be strictly later than one
+  server UTC timestamp captured for that validation. Equal-to-now or past values return
+  `422 EVENT_TIME_INVALID`.
+- The legacy `partnerWithdrawalCutoffAt`, `boothCancellationCutoffAt`, and
+  `activityCancellationCutoffAt` fields remain compatibility data. They are not configured by the
+  current Organizer Event form, are not required, and do not decide publication eligibility.
 - Description and banner remain optional. Existing name/time/non-negative quota
   requirements still apply. Failed publication leaves the Event DRAFT.
 - Drafts may retain past dates while being edited; this does not permit publication.
-- This publication policy was concretized on 2026-10-04 at the user's request.
-  It does not implement Partner submission, late cancellation, or refund APIs.
+- This publication policy does not change Partner withdrawal, Booth withdrawal, Activity cancellation,
+  or refund workflows.
 
 ## 6 Partner Organization APIs
 

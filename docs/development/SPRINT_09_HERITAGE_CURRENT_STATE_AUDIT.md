@@ -254,8 +254,9 @@ lifecycle commands described by the Sprint baseline and later API Contract.
 
 ### Decision 4: Public identity
 
-Sprint 09 draft baseline choice: use one case-insensitively unique and immutable `publicCode` for public
-URLs. Internal numeric IDs remain private persistence and Organizer-operation identities.
+Amended baseline choice: the backend generates one case-insensitively unique and immutable `publicCode`
+from title for public URLs. Organizer input never contains this technical identity. Internal numeric IDs
+remain private persistence and Organizer-operation identities.
 
 ### Decision 5: Delete policy
 
@@ -264,13 +265,13 @@ record that has never been published may be deleted permanently.
 
 ### Decision 6: Image handling
 
-Sprint 09 draft baseline choice: persist one optional validated image URL or approved local public asset
-path. Do not add a Heritage upload endpoint, base64 persistence, storage provider, or asset library.
+Amended baseline choice: accept bounded local JPG, PNG and WebP upload, persist only the approved generated
+URL, and keep base64, external storage providers, and a general asset library out of scope.
 
 ### Decision 7: QR behavior
 
-Sprint 09 draft baseline choice: derive any displayed Heritage QR from the stable public URL. Do not persist
-QR status, tokens, images, or scan counters.
+Amended baseline choice: display no Heritage QR or technical code labels. Do not persist QR status, tokens,
+images, or scan counters.
 
 ## 8. Main implementation risks
 

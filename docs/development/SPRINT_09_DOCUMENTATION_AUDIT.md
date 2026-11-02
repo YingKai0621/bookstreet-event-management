@@ -176,7 +176,7 @@ Audit result: `PASS`.
 - Heritage remains supporting public content rather than a conservation or artifact-management domain.
 - Every verified Organizer sees the same collection without an owner or Event filter.
 - Admin management, approval workflow, ownership assignment, reporting, analytics, bulk operations,
-  scheduling, uploads, map editing, and version history remain out of scope.
+  scheduling, external asset libraries, map editing, and version history remain out of scope.
 - General Feedback stays limited to `BOOK_STREET` and `EVENT` under BR-65.
 - No Sprint 9 document introduces a Feedback foreign key, target, selector, filter, or detail branch for
   Heritage.
@@ -200,7 +200,7 @@ and implementation plan:
 The Physical ERD overlay intentionally traces only criteria with persistence consequences. The short
 handoff references the complete 28-criterion obligation without duplicating all acceptance text.
 
-The API Contract, implementation plan, and handoff agree on exactly ten operations:
+The amended API Contract, implementation plan, and handoff agree on thirteen operations:
 
 ```text
 GET    /api/v1/heritages
@@ -213,6 +213,9 @@ POST   /api/v1/organizer/heritages/{heritageContentId}/publish
 POST   /api/v1/organizer/heritages/{heritageContentId}/archive
 POST   /api/v1/organizer/heritages/{heritageContentId}/republish
 DELETE /api/v1/organizer/heritages/{heritageContentId}?expectedUpdatedAt={encodedInstant}
+POST   /api/v1/organizer/heritage-images
+DELETE /api/v1/organizer/heritage-images/{fileName}
+GET    /assets/heritage/uploads/{fileName}
 ```
 
 The Use Case Specifications correctly freeze behavior without prematurely redefining transport details.
@@ -310,7 +313,8 @@ The delivery plan correctly requires:
 - direct refresh without preloaded list state
 - removal of unsupported public search and category behavior
 - safe optional image, summary, and location rendering
-- a QR derived from the current origin and canonical public route
+- direct canonical public routes without QR or technical-code labels
+- bounded local image upload with generated filenames and URL-only persistence
 - real Organizer list, detail, create, update, lifecycle, and eligible delete operations
 - loading, initial empty, filtered empty, not-found, forbidden, validation, conflict, failure, and success
   states where applicable

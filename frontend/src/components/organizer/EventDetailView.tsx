@@ -173,36 +173,40 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
   const registrationDeadlines = [
     {
-      label: language === 'vi' ? 'Đăng ký đối tác' : 'Partner applications',
+      label: language === 'vi' ? 'Nhận hồ sơ đối tác đến' : 'Partner applications close',
       value: event.partnerApplicationDeadlineAt,
     },
     {
-      label: language === 'vi' ? 'Đăng ký người tham gia' : 'Participant registration',
+      label: language === 'vi' ? 'Nhận đăng ký người tham gia đến' : 'Participant registration closes',
       value: event.participantRegistrationDeadlineAt,
     },
   ];
 
   const otherDeadlines = [
-    {
-      label: language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth requests',
+    ...(event.maxBoothsPerPartner > 0 ? [{
+      label: language === 'vi' ? 'Nhận yêu cầu gian hàng đến' : 'Booth requests close',
       value: event.boothRequestDeadlineAt,
-    },
-    {
-      label: language === 'vi' ? 'Đề xuất hoạt động' : 'Activity proposals',
+    }] : []),
+    ...(event.maxActivitiesPerPartner > 0 ? [{
+      label: language === 'vi' ? 'Nhận đề xuất hoạt động đến' : 'Activity proposals close',
       value: event.activityProposalDeadlineAt,
-    },
-    {
-      label: language === 'vi' ? 'Rút hồ sơ đối tác' : 'Partner withdrawal',
-      value: event.partnerWithdrawalCutoffAt,
-    },
-    {
-      label: language === 'vi' ? 'Hủy gian hàng' : 'Booth cancellation',
-      value: event.boothCancellationCutoffAt,
-    },
-    {
-      label: language === 'vi' ? 'Hủy hoạt động' : 'Activity cancellation',
-      value: event.activityCancellationCutoffAt,
-    },
+    }] : []),
+  ];
+
+  const configurationRows = [
+    ['Hạn cuối đăng ký đối tác', event.partnerApplicationDeadlineAt],
+    ...(event.maxBoothsPerPartner > 0
+      ? [['Hạn cuối yêu cầu gian hàng', event.boothRequestDeadlineAt]]
+      : []),
+    ...(event.maxActivitiesPerPartner > 0
+      ? [['Hạn cuối đề xuất hoạt động', event.activityProposalDeadlineAt]]
+      : []),
+    ['Hạn cuối đăng ký người tham gia', event.participantRegistrationDeadlineAt],
+    ...(event.maxBoothsPerPartner > 0
+      ? [['Thời gian thanh toán gian hàng', formatHoldWindow(event.boothPaymentWindowMinutes, language)]]
+      : []),
+    ['Số gian hàng tối đa / đối tác', String(event.maxBoothsPerPartner)],
+    ['Số hoạt động tối đa / đối tác', String(event.maxActivitiesPerPartner)],
   ];
 
   const deadlineLabel = (state: DeadlineState) => {
@@ -399,9 +403,9 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </dl>
             </section>
 
-            <section className="org-event-overview-card">
+            {otherDeadlines.length > 0 && <section className="org-event-overview-card">
               <div className="org-event-card-title">
-                <h2>{language === 'vi' ? 'Mốc thời hạn khác' : 'Other deadlines'}</h2>
+                <h2>{language === 'vi' ? 'Thời hạn dành cho đối tác' : 'Partner deadlines'}</h2>
               </div>
               <div className="org-event-deadline-list">
                 {otherDeadlines.map((deadline) => {
@@ -417,7 +421,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   );
                 })}
               </div>
-            </section>
+            </section>}
           </div>
         </div>
       )}
@@ -521,7 +525,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <h2 style={{ margin: 0 }}>Cấu hình sự kiện</h2>
-              <p style={{ margin: '0.35rem 0 0', color: '#556B65', fontSize: '0.82rem' }}>Các giá trị đang được lưu trên backend.</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
               <button type="button" className="btn-org-secondary" onClick={onNavigateToBoothsMap}>
@@ -532,18 +535,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             </div>
           </div>
           <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '0.75rem 1rem', margin: 0 }}>
-            {[
-              ['Hạn đối tác đăng ký', event.partnerApplicationDeadlineAt],
-              ['Hạn yêu cầu gian hàng', event.boothRequestDeadlineAt],
-              ['Hạn đề xuất hoạt động', event.activityProposalDeadlineAt],
-              ['Hạn người tham gia đăng ký', event.participantRegistrationDeadlineAt],
-              ['Hạn đối tác rút hồ sơ', event.partnerWithdrawalCutoffAt],
-              ['Hạn hủy gian hàng', event.boothCancellationCutoffAt],
-              ['Hạn hủy hoạt động', event.activityCancellationCutoffAt],
-              ['Thời hạn thanh toán gian hàng', `${event.boothPaymentWindowMinutes} phút`],
-              ['Số gian hàng tối đa / đối tác', String(event.maxBoothsPerPartner)],
-              ['Số hoạt động tối đa / đối tác', String(event.maxActivitiesPerPartner)],
-            ].map(([label, value]) => <React.Fragment key={label}><dt style={{ fontWeight: 650, color: '#445752' }}>{label}</dt><dd style={{ margin: 0 }}>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN') : value || 'Chưa thiết lập'}</dd></React.Fragment>)}
+            {configurationRows.map(([label, value]) => <React.Fragment key={label}><dt style={{ fontWeight: 650, color: '#445752' }}>{label}</dt><dd style={{ margin: 0 }}>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN') : value || 'Chưa thiết lập'}</dd></React.Fragment>)}
           </dl>
         </div>
       )}

@@ -2102,7 +2102,8 @@
   min-width: 0;
 }
 
-.org-event-form-field > label {
+.org-event-form-field > label,
+.org-event-form-label {
   display: flex;
   min-height: 19px;
   align-items: center;
@@ -2114,14 +2115,9 @@
   font-weight: 700;
 }
 
-.org-event-form-field > label > span:not(.org-event-optional-label) {
+.org-event-form-field > label > span,
+.org-event-form-label > span {
   color: #A52A2A;
-}
-
-.org-event-optional-label {
-  color: #7B8D86;
-  font-size: 0.78rem;
-  font-weight: 600;
 }
 
 .org-event-form-field input,
@@ -2164,6 +2160,116 @@
 .org-event-form-field textarea[aria-invalid="true"] {
   border-color: #C24141;
   box-shadow: 0 0 0 2px rgba(194, 65, 65, 0.08);
+}
+
+.org-local-datetime {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(112px, 0.65fr);
+  gap: 0.5rem;
+}
+
+.org-local-date-control,
+.org-local-time-control {
+  position: relative;
+  min-width: 0;
+}
+
+.org-local-date-control {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  color: #172421;
+  background: #fff;
+  border: 1px solid #c9d5cf;
+  border-radius: 5px;
+  box-sizing: border-box;
+  font-size: 0.96rem;
+  cursor: pointer;
+}
+
+.org-local-date-control .is-placeholder {
+  color: #71817b;
+}
+
+.org-local-date-control svg,
+.org-local-time-control svg {
+  flex: 0 0 auto;
+  color: #5f756c;
+  pointer-events: none;
+}
+
+.org-local-date-control input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.org-local-date-control:focus-within,
+.org-local-time-control:focus-within {
+  border-color: #17382e;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(23, 56, 46, 0.09);
+}
+
+.org-local-time-control {
+  display: flex;
+  align-items: center;
+}
+
+.org-local-time-control svg {
+  position: absolute;
+  left: 0.72rem;
+  z-index: 1;
+}
+
+.org-event-form-field .org-local-time-control input {
+  padding-left: 2.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.org-local-datetime[data-invalid="true"] .org-local-date-control,
+.org-local-datetime[data-invalid="true"] .org-local-time-control input {
+  border-color: #c24141;
+  box-shadow: 0 0 0 2px rgba(194, 65, 65, 0.08);
+}
+
+.org-local-datetime[data-warning="true"] .org-local-date-control,
+.org-local-datetime[data-warning="true"] .org-local-time-control input {
+  border-color: #c18a22;
+  box-shadow: 0 0 0 2px rgba(193, 138, 34, 0.09);
+}
+
+.org-event-custom-end {
+  margin-top: 0.55rem;
+}
+
+.org-event-end-preview {
+  display: flex;
+  min-height: 18px;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-top: 0.28rem;
+}
+
+.org-event-end-preview span {
+  color: #5f756c;
+  font-size: 0.82rem;
+}
+
+.org-event-end-preview strong {
+  color: #36564b;
+  font-size: 0.82rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .org-event-field-meta {
@@ -2345,6 +2451,13 @@
   gap: 0;
 }
 
+.org-event-section-issue-count {
+  margin-top: 0.18rem;
+  color: #8a5b10;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
 .org-event-form-section-toggle > svg {
   color: #60756D;
   transition: transform 160ms ease;
@@ -2357,6 +2470,74 @@
 .org-event-deadline-content {
   padding: 0 1.2rem 1.2rem;
   border-top: 1px solid #EDF1EF;
+}
+
+.org-event-deadline-assistant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.85rem;
+  background: #f7faf8;
+  border: 1px solid #d8e4de;
+  border-radius: 6px;
+}
+
+.org-event-deadline-assistant strong {
+  flex: 0 0 auto;
+  color: #243e35;
+  font-size: 0.9rem;
+}
+
+.org-event-deadline-assistant-actions {
+  display: grid;
+  width: min(100%, 430px);
+  grid-template-columns: minmax(230px, 1fr) auto;
+  gap: 0.55rem;
+}
+
+.org-event-deadline-assistant-actions select,
+.org-event-deadline-assistant-actions button {
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.org-event-deadline-assistant-actions select {
+  min-width: 0;
+  color: #1f3930;
+  background: #fff;
+  border: 1px solid #b9cbc2;
+}
+
+.org-event-deadline-assistant-actions button {
+  justify-self: start;
+  color: #fff;
+  background: #234b3d;
+  border: 1px solid #234b3d;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.org-event-deadline-assistant-actions button:disabled {
+  color: #75857f;
+  background: #e7ece9;
+  border-color: #d6dfda;
+  cursor: not-allowed;
+}
+
+.org-event-deadline-assistant > small {
+  flex-basis: 100%;
+  color: #3f6657;
+  font-size: 0.78rem;
+}
+
+.org-event-deadline-assistant > small.org-event-deadline-template-unavailable {
+  color: #8a5b10;
 }
 
 .org-event-deadline-content fieldset {
@@ -2373,6 +2554,21 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.org-event-publish-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.42rem;
+  color: #765514;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.org-event-publish-issue svg {
+  flex: 0 0 auto;
+  margin-top: 0.08rem;
 }
 
 .org-event-rule-grid {
@@ -2510,10 +2706,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .org-event-deadline-assistant-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .org-event-deadline-assistant {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .org-event-deadline-assistant-actions button {
+    width: 100%;
+  }
+
   .org-event-banner-field img,
   .org-event-banner-error {
     width: 100%;
     height: 96px;
+  }
+}
+
+@media (max-width: 480px) {
+  .org-local-datetime {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -49,12 +49,15 @@ export interface OrganizerHeritageQuery {
 }
 
 export interface CreateHeritageRequest {
-  publicCode: string;
   title: string;
   summary?: string | null;
   content: string;
   imageUrl?: string | null;
   locationText?: string | null;
+}
+
+export interface HeritageImageUploadResponse {
+  imageUrl: string;
 }
 
 export interface UpdateHeritageRequest {

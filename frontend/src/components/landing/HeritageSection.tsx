@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Image as ImageIcon, MapPin } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Language } from '../../types';
@@ -14,21 +14,24 @@ interface HeritageSectionProps {
   error?: string;
 }
 
-const VISIBLE_LANDMARKS = 7;
-const HALF_FAN = 3;
+const VISIBLE_LANDMARKS = 3;
+const HALF_FAN = 1;
 const FAN_SLOTS = [
-  { rotation: -20, scale: 0.79, y: 3.9, zIndex: 4 },
-  { rotation: -13, scale: 0.86, y: 2.25, zIndex: 6 },
-  { rotation: -6.5, scale: 0.94, y: 0.8, zIndex: 8 },
+  { rotation: -7, scale: 0.94, y: 0.9, zIndex: 8 },
   { rotation: 0, scale: 1, y: 0, zIndex: 10 },
-  { rotation: 6.5, scale: 0.94, y: 0.8, zIndex: 8 },
-  { rotation: 13, scale: 0.86, y: 2.25, zIndex: 6 },
-  { rotation: 20, scale: 0.79, y: 3.9, zIndex: 4 },
+  { rotation: 7, scale: 0.94, y: 0.9, zIndex: 8 },
 ];
 
-const imageFor = (item: HeritageProfile) => item.imageUrl || '';
 const imageAlt = (item: HeritageProfile) => `Ảnh minh họa: ${item.title}`;
 const EMPTY_HERITAGE_LIST: HeritageProfile[] = [];
+
+function FanImage({ item, vi }: { item: HeritageProfile; vi: boolean }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!item.imageUrl || failedSrc === item.imageUrl) {
+    return <span className="heritage-fan-image-fallback"><ImageIcon size={34} />{vi ? 'Chưa có ảnh' : 'No image yet'}</span>;
+  }
+  return <img src={item.imageUrl} alt={imageAlt(item)} loading="eager" decoding="async" onError={() => setFailedSrc(item.imageUrl)} />;
+}
 
 export const HeritageSection: React.FC<HeritageSectionProps> = ({
   language,
@@ -38,7 +41,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
 }) => {
   const vi = language === 'vi';
   const landmarks = heritageList || EMPTY_HERITAGE_LIST;
-  const [centerIndex, setCenterIndex] = useState(HALF_FAN);
+  const [centerIndex, setCenterIndex] = useState(Math.min(HALF_FAN, Math.max(0, landmarks.length - 1)));
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const cardRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const hasEntered = useRef(false);
@@ -46,6 +49,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
   const travelDirection = useRef<-1 | 1>(1);
   const swipeStartX = useRef<number | null>(null);
   const didSwipe = useRef(false);
+  const activeIndex = landmarks.length ? centerIndex % landmarks.length : 0;
 
   const getVisibleMap = useCallback(() => {
     const visible = new Map<number, number>();
@@ -53,16 +57,23 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
     if (!total) return visible;
 
     if (total <= VISIBLE_LANDMARKS) {
-      landmarks.forEach((_, index) => visible.set(index, index));
+      visible.set(activeIndex, HALF_FAN);
+      if (total === 2) {
+        const otherIndex = (activeIndex + 1) % total;
+        visible.set(otherIndex, activeIndex === 0 ? 2 : 0);
+      } else if (total === 3) {
+        visible.set((activeIndex - 1 + total) % total, 0);
+        visible.set((activeIndex + 1) % total, 2);
+      }
       return visible;
     }
 
     for (let slot = 0; slot < VISIBLE_LANDMARKS; slot += 1) {
-      const cardIndex = (centerIndex + slot - HALF_FAN + total) % total;
+      const cardIndex = (activeIndex + slot - HALF_FAN + total) % total;
       visible.set(cardIndex, slot);
     }
     return visible;
-  }, [centerIndex, landmarks]);
+  }, [activeIndex, landmarks]);
 
   const previousHoveredSlot = useRef<number | undefined>(undefined);
 
@@ -71,7 +82,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
     const wasVisible = previousVisible.current;
     const isMobile = window.innerWidth <= 760;
     // Spacing between cards
-    const spacing = Math.min(window.innerWidth * 0.13, isMobile ? 72 : 185);
+    const spacing = Math.min(window.innerWidth * 0.16, isMobile ? 72 : 230);
     const verticalUnit = isMobile ? 8 : 16;
     const hoveredSlot = hoveredIndex === null ? undefined : visibleMap.get(hoveredIndex);
     const offsetFor = (slotIndex: number) => (slotIndex - HALF_FAN) * spacing;
@@ -214,9 +225,10 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
       didSwipe.current = false;
       return;
     }
-    if (index === centerIndex) return;
+    if (index === activeIndex) return;
     event.preventDefault();
-    travelDirection.current = index > centerIndex ? 1 : -1;
+    const selectedSlot = getVisibleMap().get(index);
+    travelDirection.current = selectedSlot !== undefined && selectedSlot < HALF_FAN ? -1 : 1;
     setHoveredIndex(null);
     setCenterIndex(index);
   };
@@ -243,7 +255,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
               {FAN_SLOTS.map((slot, index) => {
                 const isCenter = index === HALF_FAN;
                 const isMobile = typeof window !== 'undefined' && window.innerWidth <= 760;
-                const spacing = isMobile ? 60 : 160;
+                const spacing = isMobile ? 60 : 205;
                 const xOffset = (index - HALF_FAN) * spacing;
                 return (
                   <div
@@ -346,20 +358,15 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
                 ref={element => { cardRefs.current[index] = element; }}
                 className="heritage-fan-card"
                 aria-label={`${vi ? 'Khám phá' : 'Explore'} ${heritage.title}`}
+                aria-current={index === activeIndex ? 'true' : undefined}
                 tabIndex={visibleCards.has(index) ? 0 : -1}
                 onClick={event => focusCard(event, index)}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onFocus={() => setHoveredIndex(index)}
                 onBlur={() => setHoveredIndex(null)}
               >
-                <img
-                  src={imageFor(heritage) || undefined}
-                  alt={imageAlt(heritage)}
-                  loading="eager"
-                  decoding="async"
-                />
+                <FanImage item={heritage} vi={vi} />
                 <span className="heritage-fan-shade" aria-hidden="true" />
-                <span className="heritage-fan-code">{heritage.publicCode}</span>
                 <span className="heritage-fan-copy">
                   {heritage.locationText && (
                     <span className="heritage-fan-place"><MapPin size={13} /> {heritage.locationText}</span>
@@ -375,8 +382,13 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({
         {landmarks.length > 1 && (
           <div className="heritage-fan-controls" aria-label={vi ? 'Điều hướng di tích' : 'Heritage navigation'}>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(-1)} aria-label={vi ? 'Di tích trước' : 'Previous landmark'}><ChevronLeft size={20} /></button>
-            <div className="heritage-fan-dots" aria-label={vi ? `${centerIndex + 1} trên ${landmarks.length}` : `${centerIndex + 1} of ${landmarks.length}`}>
-              {landmarks.map((heritage, index) => <span key={heritage.publicCode} className={index === centerIndex ? 'is-active' : ''} />)}
+            <div className="heritage-fan-progress" aria-live="polite" aria-atomic="true">
+              {landmarks.length <= 8 && (
+                <div className="heritage-fan-dots" aria-hidden="true">
+                  {landmarks.map((heritage, index) => <span key={heritage.publicCode} className={index === activeIndex ? 'is-active' : ''} />)}
+                </div>
+              )}
+              <span className="heritage-fan-counter"><strong>{activeIndex + 1}</strong> / {landmarks.length} {vi ? 'di sản' : 'stories'}</span>
             </div>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(1)} aria-label={vi ? 'Di tích tiếp theo' : 'Next landmark'}><ChevronRight size={20} /></button>
           </div>

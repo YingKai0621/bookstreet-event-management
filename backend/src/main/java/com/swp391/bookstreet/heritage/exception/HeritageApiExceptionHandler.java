@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.heritage.exception;
 
 import com.swp391.bookstreet.common.response.ApiErrorResponse;
+import com.swp391.bookstreet.common.response.FieldValidationError;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackages = "com.swp391.bookstreet.heritage.controller")
@@ -49,6 +51,23 @@ public class HeritageApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .cacheControl(CacheControl.noStore())
                 .body(new ApiErrorResponse(code, message, List.of(), Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> oversizedUpload(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        String message = "Ảnh di sản không được vượt quá 5 MB.";
+        return ResponseEntity.unprocessableContent()
+                .cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(
+                        "HERITAGE_IMAGE_INVALID",
+                        message,
+                        List.of(new FieldValidationError("file", message)),
+                        Instant.now(),
+                        request.getRequestURI()
+                ));
     }
 
     @ExceptionHandler(DataAccessException.class)

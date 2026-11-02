@@ -51,6 +51,12 @@ function futureDateTimeLocal(daysFromNow: number, hour: number): string {
   ].join('');
 }
 
+async function fillDateTime(page: Page, label: string, value: string): Promise<void> {
+  const [date, time] = value.split('T');
+  await page.getByLabel(`${label} - ngày`).fill(date);
+  await page.getByLabel(`${label} - giờ`).fill(time);
+}
+
 async function loginOrganizer(page: Page, credentials: Credentials): Promise<void> {
   await page.goto('/portal');
   await page.locator('#portal-username').fill(credentials.username);
@@ -74,15 +80,12 @@ async function createPublishedEvent(page: Page, eventName: string): Promise<void
 
   await page.getByLabel('Tên sự kiện *').fill(eventName);
   await page.getByLabel('Mô tả').fill('Sự kiện kiểm thử luồng đăng ký của Partner.');
-  await page.getByLabel('Bắt đầu *').fill(futureDateTimeLocal(90, 9));
-  await page.getByLabel('Kết thúc *').fill(futureDateTimeLocal(91, 17));
-  await page.getByLabel('Hạn đối tác đăng ký').fill(futureDateTimeLocal(10, 9));
-  await page.getByLabel('Hạn yêu cầu gian hàng').fill(futureDateTimeLocal(20, 9));
-  await page.getByLabel('Hạn đề xuất hoạt động').fill(futureDateTimeLocal(20, 10));
-  await page.getByLabel('Hạn người tham gia đăng ký').fill(futureDateTimeLocal(50, 9));
-  await page.getByLabel('Hạn đối tác rút hồ sơ').fill(futureDateTimeLocal(30, 9));
-  await page.getByLabel('Hạn hủy gian hàng').fill(futureDateTimeLocal(40, 9));
-  await page.getByLabel('Hạn hủy hoạt động').fill(futureDateTimeLocal(40, 10));
+  await fillDateTime(page, 'Bắt đầu', futureDateTimeLocal(90, 9));
+  await page.getByLabel('Thời lượng sự kiện').selectOption('PLUS_ONE_DAY');
+  await fillDateTime(page, 'Hạn đối tác đăng ký', futureDateTimeLocal(10, 9));
+  await fillDateTime(page, 'Hạn yêu cầu gian hàng', futureDateTimeLocal(20, 9));
+  await fillDateTime(page, 'Hạn đề xuất hoạt động', futureDateTimeLocal(20, 10));
+  await fillDateTime(page, 'Hạn người tham gia đăng ký', futureDateTimeLocal(50, 9));
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   await expect(page.getByRole('heading', { name: eventName })).toBeVisible();

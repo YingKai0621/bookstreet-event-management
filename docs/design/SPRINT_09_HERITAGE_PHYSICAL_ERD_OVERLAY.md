@@ -37,7 +37,7 @@ The overlay follows these current decisions:
 - lifecycle statuses are exactly `DRAFT`, `PUBLISHED`, and `ARCHIVED`
 - only a never-published draft may be hard-deleted
 - `publicCode` is the stable immutable public identity
-- optional QR display is derived from the public URL and is never persisted
+- Heritage QR is neither displayed nor persisted
 
 The existing target Physical ERD already proposes the minimal Heritage field set. This overlay locks the
 constraints, indexes, lifecycle invariants, and migration behavior that the target diagram leaves open.
@@ -87,8 +87,8 @@ The database stores only canonical uppercase `public_code` values and rejects no
 regular unique constraint therefore enforces the approved case-insensitive identity without adding a
 redundant functional unique index.
 
-The application normalizes accepted input before persistence. The database constraint remains the final
-guard against direct or defective writes.
+The application generates the code from the normalized title before persistence. The database constraint
+remains the final guard against direct or defective writes.
 
 Historical immutability cannot be expressed by a row-level CHECK without a trigger. Sprint 09 therefore
 enforces `public_code` immutability through a non-updatable ORM mapping and content-update commands that never
@@ -602,4 +602,4 @@ one primary key, one canonical unique public identity, nine named check constrai
 indexes.
 
 The design is intentionally small. It supports shared Organizer CRUD and publication, published-only public
-reads, stable public URLs, derived QR navigation, safe draft deletion, and no Heritage Feedback coupling.
+reads, stable public URLs without QR presentation, safe draft deletion, and no Heritage Feedback coupling.

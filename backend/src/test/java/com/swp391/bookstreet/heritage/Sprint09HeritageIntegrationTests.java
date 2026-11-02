@@ -121,12 +121,12 @@ class Sprint09HeritageIntegrationTests {
     }
 
     @Test
-    void createNormalizesDataRejectsUnknownFieldsAndDuplicateCode() throws Exception {
+    void createNormalizesDataGeneratesUniqueCodesAndRejectsCallerSuppliedCode() throws Exception {
         String createdBody = mvc.perform(post(ORGANIZER)
                         .with(user("organizer").roles("ORGANIZER"))
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validCreate("  buu-dien-tp-hcm  ")))
+                        .content(validCreate("  Bưu   điện TP HCM  ")))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(header().exists("Location"))
@@ -147,15 +147,15 @@ class Sprint09HeritageIntegrationTests {
                         .with(user("organizer").roles("ORGANIZER"))
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validCreate("buu-dien-tp-hcm")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("HERITAGE_PUBLIC_CODE_CONFLICT"));
+                        .content(validCreate("Bưu điện TP HCM")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.publicCode").value("BUU-DIEN-TP-HCM-2"));
 
         mvc.perform(post(ORGANIZER)
                         .with(user("organizer").roles("ORGANIZER"))
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validCreate("OTHER-CODE").replace("}", ",\"status\":\"PUBLISHED\"}")))
+                        .content(validCreate("Nội dung khác").replace("}", ",\"publicCode\":\"TU-NHAP\"}")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
     }
@@ -308,13 +308,14 @@ class Sprint09HeritageIntegrationTests {
         assertThat(storedTitle).isIn("Tiêu đề Alpha", "Tiêu đề Beta");
     }
 
-    private String create(String publicCode) throws Exception {
+    private String create(String expectedPublicCode) throws Exception {
         return mvc.perform(post(ORGANIZER)
                         .with(user("organizer").roles("ORGANIZER"))
                         .with(csrf().asHeader())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validCreate(publicCode)))
+                        .content(validCreate(expectedPublicCode.replace('-', ' '))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.publicCode").value(expectedPublicCode))
                 .andReturn().getResponse().getContentAsString();
     }
 
@@ -347,17 +348,16 @@ class Sprint09HeritageIntegrationTests {
                 .andReturn().getResponse().getStatus();
     }
 
-    private String validCreate(String publicCode) {
+    private String validCreate(String title) {
         return """
                 {
-                  "publicCode":"%s",
-                  "title":"  Bưu   điện Thành phố  ",
+                  "title":"%s",
                   "summary":"  Công trình kiến trúc tiêu biểu.  ",
                   "content":"  Nội dung di sản đủ dài để phục vụ kiểm thử.  ",
                   "imageUrl":"/assets/heritage/buu-dien.webp",
                   "locationText":"  Công xã Paris  "
                 }
-                """.formatted(publicCode);
+                """.formatted(title);
     }
 
     private long insert(String code, String title, String status, Instant publishedAt) {

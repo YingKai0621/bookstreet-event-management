@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const organizerUsername = process.env.E2E_ORGANIZER_USERNAME;
 const organizerPassword = process.env.E2E_ORGANIZER_PASSWORD;
@@ -43,6 +43,12 @@ function futureDateTimeLocal(daysFromNow: number, hour: number): string {
   ].join('');
 }
 
+async function fillDateTime(page: Page, label: string, value: string): Promise<void> {
+  const [date, time] = value.split('T');
+  await page.getByLabel(`${label} - ngày`).fill(date);
+  await page.getByLabel(`${label} - giờ`).fill(time);
+}
+
 test('organizer creates, completes, and publishes an event', async ({ page }) => {
   const credentials = requireOrganizerCredentials();
   const uniqueEventName = `Playwright E2E ${Date.now()}`;
@@ -65,13 +71,14 @@ test('organizer creates, completes, and publishes an event', async ({ page }) =>
 
   await page.getByLabel('Tên sự kiện *').fill(uniqueEventName);
   await page.getByLabel('Mô tả').fill('Sự kiện được tạo tự động để kiểm thử luồng Organizer.');
-  await page.getByLabel('Bắt đầu *').fill(startAt);
-  await page.getByLabel('Kết thúc *').fill(invalidEndAt);
+  await fillDateTime(page, 'Bắt đầu', startAt);
+  await page.getByLabel('Thời lượng sự kiện').selectOption('CUSTOM');
+  await fillDateTime(page, 'Kết thúc', invalidEndAt);
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   await expect(page.getByText('Thời gian kết thúc phải sau thời gian bắt đầu.')).toBeVisible();
 
-  await page.getByLabel('Kết thúc *').fill(endAt);
+  await fillDateTime(page, 'Kết thúc', endAt);
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   await expect(page.getByRole('heading', { name: uniqueEventName })).toBeVisible();
@@ -85,13 +92,10 @@ test('organizer creates, completes, and publishes an event', async ({ page }) =>
   await incompletePublishDialog.getByRole('button', { name: 'Chỉnh sửa bản nháp' }).click();
   await expect(page.getByRole('heading', { name: 'Chỉnh sửa bản nháp' })).toBeVisible();
 
-  await page.getByLabel('Hạn đối tác đăng ký').fill(futureDateTimeLocal(10, 9));
-  await page.getByLabel('Hạn yêu cầu gian hàng').fill(futureDateTimeLocal(20, 9));
-  await page.getByLabel('Hạn đề xuất hoạt động').fill(futureDateTimeLocal(20, 10));
-  await page.getByLabel('Hạn người tham gia đăng ký').fill(futureDateTimeLocal(50, 9));
-  await page.getByLabel('Hạn đối tác rút hồ sơ').fill(futureDateTimeLocal(30, 9));
-  await page.getByLabel('Hạn hủy gian hàng').fill(futureDateTimeLocal(40, 9));
-  await page.getByLabel('Hạn hủy hoạt động').fill(futureDateTimeLocal(40, 10));
+  await fillDateTime(page, 'Hạn đối tác đăng ký', futureDateTimeLocal(10, 9));
+  await fillDateTime(page, 'Hạn yêu cầu gian hàng', futureDateTimeLocal(20, 9));
+  await fillDateTime(page, 'Hạn đề xuất hoạt động', futureDateTimeLocal(20, 10));
+  await fillDateTime(page, 'Hạn người tham gia đăng ký', futureDateTimeLocal(50, 9));
   await page.getByLabel('Thời hạn giữ chỗ gian hàng').fill('24');
   await page.getByLabel('Đơn vị thời hạn giữ chỗ').selectOption('HOURS');
   await page.getByLabel('Số gian hàng tối đa / đối tác').fill('2');

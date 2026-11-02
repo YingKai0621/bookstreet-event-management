@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('Organizer uploads a local banner before creating the Event', async ({ page }) => {
   let uploaded = false;
   let createdBannerUrl: string | null | undefined;
+  let createdRequest: Record<string, unknown> | null = null;
 
   await page.route('**/api/v1/**', async route => {
     const request = route.request();
@@ -25,6 +26,7 @@ test('Organizer uploads a local banner before creating the Event', async ({ page
     }
     if (path.endsWith('/organizer/events') && method === 'POST') {
       const body = request.postDataJSON() as { bannerUrl?: string | null; name: string };
+      createdRequest = body;
       createdBannerUrl = body.bannerUrl;
       return fulfill({
         ...body,
@@ -44,17 +46,62 @@ test('Organizer uploads a local banner before creating the Event', async ({ page
   await page.goto('/organizer/events');
   await page.getByRole('button', { name: 'Tạo sự kiện mới' }).first().click();
   await page.getByLabel('Tên sự kiện *').fill('Sự kiện có banner tải lên');
-  const startAtInput = page.getByLabel('Bắt đầu *');
-  await expect(startAtInput).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-  await startAtInput.fill('2020-01-01T09:00');
+  const startAtInput = page.getByLabel('Bắt đầu - ngày');
+  await page.locator('.org-event-form-label').filter({ hasText: 'Bắt đầu' }).click();
+  await expect(startAtInput).not.toBeFocused();
+  await expect(startAtInput).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}/);
+  await startAtInput.locator('..').click();
+  await expect(startAtInput).toBeFocused();
+  await startAtInput.fill('2020-01-01');
   await expect(startAtInput).toHaveJSProperty('validity.rangeUnderflow', true);
-  await startAtInput.fill('2027-05-10T09:00');
-  await page.getByLabel('Kết thúc *').fill('2027-05-11T17:00');
+  await startAtInput.fill('2027-05-10');
+  const startTimeInput = page.getByLabel('Bắt đầu - giờ');
+  await startTimeInput.fill('09:17');
+  await startTimeInput.fill('50:00');
+  await expect(startTimeInput).toHaveValue('09:17');
+  await page.locator('.org-event-form-label').filter({ hasText: 'Thời lượng sự kiện' }).click();
+  await expect(page.getByLabel('Thời lượng sự kiện')).not.toBeFocused();
+  await page.getByLabel('Thời lượng sự kiện').selectOption('PLUS_ONE_DAY');
+  await expect(page.getByText('11/05/2027 lúc 09:17')).toBeVisible();
   await page.getByRole('button', { name: /Mốc thời hạn/ }).click();
-  const partnerDeadlineInput = page.getByLabel('Hạn đối tác đăng ký');
-  await expect(partnerDeadlineInput).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-  await expect(partnerDeadlineInput).toHaveAttribute('max', '2027-05-10T09:00');
-  await page.getByLabel('Ảnh banner').setInputFiles({
+  const partnerDeadlineInput = page.getByLabel('Hạn đối tác đăng ký - ngày');
+  await page.locator('.org-event-form-label').filter({ hasText: 'Hạn đối tác đăng ký' }).click();
+  await expect(partnerDeadlineInput).not.toBeFocused();
+  await expect(partnerDeadlineInput).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}/);
+  await expect(partnerDeadlineInput).toHaveAttribute('max', '2027-05-10');
+  await expect(page.getByLabel('Mẫu lịch trình')).toHaveValue('STANDARD');
+  await page.getByLabel('Mẫu lịch trình').selectOption('COMPACT');
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await expect(partnerDeadlineInput).toHaveValue('2027-04-30');
+  await page.getByLabel('Mẫu lịch trình').selectOption('EXTENDED');
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await expect(partnerDeadlineInput).toHaveValue('2027-03-15');
+  await page.getByLabel('Mẫu lịch trình').selectOption('STANDARD');
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await expect(partnerDeadlineInput).toHaveValue('2027-04-12');
+  await expect(partnerDeadlineInput.locator('..').getByText('12/04/2027')).toBeVisible();
+  await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toHaveValue('2027-04-19');
+
+  await page.getByLabel('Số gian hàng tối đa / đối tác').fill('0');
+  await page.getByLabel('Số hoạt động tối đa / đối tác').fill('0');
+  await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toHaveCount(0);
+  await expect(page.getByLabel('Hạn đề xuất hoạt động - ngày')).toHaveCount(0);
+  await expect(page.getByLabel('Thời hạn giữ chỗ gian hàng')).toHaveCount(0);
+  await page.getByLabel('Số gian hàng tối đa / đối tác').fill('1');
+  await page.getByLabel('Số hoạt động tối đa / đối tác').fill('1');
+
+  await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toHaveAttribute('min', '2027-04-13');
+  await expect(page.getByLabel('Hạn đề xuất hoạt động - ngày')).toHaveAttribute('min', '2027-04-13');
+  await page.getByLabel('Hạn yêu cầu gian hàng - ngày').fill('2027-04-12');
+  await expect(page.getByText('Phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức có thời gian duyệt hồ sơ.')).toBeVisible();
+  await expect(page.getByText('1 mốc cần sửa trước khi công bố')).toBeVisible();
+  await partnerDeadlineInput.fill('2027-04-15');
+  await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toHaveValue('2027-04-16');
+  await expect(page.getByLabel('Hạn yêu cầu gian hàng - ngày')).toHaveAttribute('min', '2027-04-16');
+  await partnerDeadlineInput.fill('2027-04-12');
+  await page.getByLabel('Hạn yêu cầu gian hàng - ngày').fill('2027-04-19');
+  await expect(page.getByText('Phải sau hạn đối tác đăng ký ít nhất 24 giờ để Ban tổ chức có thời gian duyệt hồ sơ.')).toHaveCount(0);
+  await page.getByLabel('Ảnh banner', { exact: true }).setInputFiles({
     name: 'banner-demo.png',
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
@@ -70,10 +117,20 @@ test('Organizer uploads a local banner before creating the Event', async ({ page
   await expect(cropDialog).toBeVisible();
   await expect(cropDialog.getByRole('alert')).toHaveCount(0);
   await cropDialog.getByRole('button', { name: 'Hủy', exact: true }).click();
+
+  await page.getByLabel('Hạn yêu cầu gian hàng - ngày').fill('2027-05-10');
+  await page.getByLabel('Hạn yêu cầu gian hàng - giờ').fill('09:17');
+  await expect(page.getByText('Hạn yêu cầu gian hàng cộng thời gian thanh toán phải kết thúc trước sự kiện ít nhất 24 giờ để chuẩn bị gian hàng.')).toBeVisible();
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   await expect.poll(() => uploaded).toBe(true);
   await expect.poll(() => createdBannerUrl).toBe('/api/v1/media/event-banners/11111111-1111-4111-8111-111111111111.png');
+  expect(createdRequest).toMatchObject({
+    startAt: new Date('2027-05-10T09:17').toISOString(),
+    endAt: new Date('2027-05-11T09:17').toISOString(),
+    partnerApplicationDeadlineAt: new Date('2027-04-12T09:17').toISOString(),
+    boothRequestDeadlineAt: new Date('2027-05-10T09:17').toISOString(),
+  });
 });
 
 test('Organizer can save non-schedule changes on a legacy draft with past dates', async ({ page }) => {
@@ -84,7 +141,7 @@ test('Organizer can save non-schedule changes on a legacy draft with past dates'
     name: 'Sự kiện đã có banner tải lên',
     description: 'Mô tả ban đầu',
     startAt: '2020-06-10T02:00:00Z',
-    endAt: '2020-06-11T10:00:00Z',
+    endAt: '2020-06-22T02:00:00Z',
     partnerApplicationDeadlineAt: null,
     boothRequestDeadlineAt: null,
     activityProposalDeadlineAt: null,
@@ -143,8 +200,10 @@ test('Organizer can save non-schedule changes on a legacy draft with past dates'
   await page.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
 
   const bannerInput = page.locator('#event-banner-url');
-  await expect(page.getByLabel('Bắt đầu *')).not.toHaveAttribute('min');
-  await expect(page.getByLabel('Kết thúc *')).not.toHaveAttribute('min');
+  await expect(page.getByLabel('Thời lượng sự kiện')).toHaveValue('CUSTOM');
+  await expect(page.getByLabel('Thời lượng sự kiện').locator('option:checked')).toHaveText('Tùy chỉnh · 12 ngày');
+  await expect(page.getByLabel('Bắt đầu - ngày')).not.toHaveAttribute('min');
+  await expect(page.getByLabel('Kết thúc - ngày')).not.toHaveAttribute('min');
   await expect(bannerInput).toHaveValue(bannerUrl);
   await expect(bannerInput).toHaveAttribute('type', 'text');
   await expect(bannerInput).toHaveJSProperty('validity.valid', true);

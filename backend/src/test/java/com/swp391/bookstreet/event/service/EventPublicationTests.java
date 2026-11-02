@@ -14,24 +14,21 @@ class EventPublicationTests {
     private final EventValidation validation = new EventValidation();
     private static final Instant NOW = Instant.parse("2030-01-01T00:00:00Z");
     record Deadline(String field, BiConsumer<Event, Instant> set) {}
-    static Stream<Deadline> deadlines() {
+    static Stream<Deadline> requiredDeadlines() {
         return Stream.of(
             new Deadline("partnerApplicationDeadlineAt", Event::setPartnerApplicationDeadlineAt),
             new Deadline("boothRequestDeadlineAt", Event::setBoothRequestDeadlineAt),
             new Deadline("activityProposalDeadlineAt", Event::setActivityProposalDeadlineAt),
-            new Deadline("participantRegistrationDeadlineAt", Event::setParticipantRegistrationDeadlineAt),
-            new Deadline("partnerWithdrawalCutoffAt", Event::setPartnerWithdrawalCutoffAt),
-            new Deadline("boothCancellationCutoffAt", Event::setBoothCancellationCutoffAt),
-            new Deadline("activityCancellationCutoffAt", Event::setActivityCancellationCutoffAt));
+            new Deadline("participantRegistrationDeadlineAt", Event::setParticipantRegistrationDeadlineAt));
     }
-    @ParameterizedTest @MethodSource("deadlines")
+    @ParameterizedTest @MethodSource("requiredDeadlines")
     void missingDeadlineIsAllowedInDraftButNotPublication(Deadline d) {
         Event e = complete();
         d.set().accept(e, null);
         assertThatCode(() -> validation.validate(e)).doesNotThrowAnyException();
         assertError(e, "EVENT_INCOMPLETE_FOR_PUBLISH", d.field());
     }
-    @ParameterizedTest @MethodSource("deadlines")
+    @ParameterizedTest @MethodSource("requiredDeadlines")
     void expiredAndExactNowDeadlineCannotBePublished(Deadline d) {
         Event e = complete();
         d.set().accept(e, NOW.minusSeconds(1));
@@ -44,16 +41,16 @@ class EventPublicationTests {
         assertThatCode(() -> validation.validateForPublish(complete(), NOW)).doesNotThrowAnyException();
     }
     @Test
-    void boothPaymentWindowMayEndExactlyAtEventStart() {
+    void paymentWindowMayEndExactlyOneDayBeforeEventStart() {
         Event event = complete();
-        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(3600));
+        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(25 * 3600));
 
         assertThatCode(() -> validation.validateForPublish(event, NOW)).doesNotThrowAnyException();
     }
     @Test
-    void boothPaymentWindowCannotExtendPastEventStart() {
+    void paymentWindowMustLeaveOneFullSetupDayBeforeEventStart() {
         Event event = complete();
-        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(3599));
+        event.setBoothRequestDeadlineAt(event.getStartAt().minusSeconds(25 * 3600 - 1));
 
         assertError(event, "EVENT_TIME_INVALID", "boothPaymentWindowMinutes");
     }
@@ -61,8 +58,21 @@ class EventPublicationTests {
     void timePassingBetweenDraftSaveAndPublishClosesPublication() {
         Event e = complete();
         validation.validate(e);
-        assertThatThrownBy(() -> validation.validateForPublish(e, NOW.plusSeconds(3600)))
+        assertThatThrownBy(() -> validation.validateForPublish(e, NOW.plusSeconds(24 * 3600)))
             .isInstanceOf(EventException.class);
+    }
+    @Test
+    void legacyCutoffsAreOptionalAndDisabledFlowsDoNotRequireTheirDeadlines() {
+        Event e = complete();
+        e.setPartnerWithdrawalCutoffAt(null);
+        e.setBoothCancellationCutoffAt(null);
+        e.setActivityCancellationCutoffAt(null);
+        e.setMaxBoothsPerPartner(0);
+        e.setMaxActivitiesPerPartner(0);
+        e.setBoothRequestDeadlineAt(null);
+        e.setActivityProposalDeadlineAt(null);
+
+        assertThatCode(() -> validation.validateForPublish(e, NOW)).doesNotThrowAnyException();
     }
     private void assertError(Event e, String code, String field) {
         assertThatThrownBy(() -> validation.validateForPublish(e, NOW))
@@ -75,12 +85,15 @@ class EventPublicationTests {
     private Event complete() {
         Event e = new Event();
         e.setName("Publication test");
-        e.setStartAt(NOW.plusSeconds(7200));
-        e.setEndAt(NOW.plusSeconds(10800));
+        e.setStartAt(NOW.plusSeconds(10 * 24 * 3600));
+        e.setEndAt(NOW.plusSeconds(11 * 24 * 3600));
         e.setBoothPaymentWindowMinutes(60);
         e.setMaxBoothsPerPartner(1);
         e.setMaxActivitiesPerPartner(1);
-        deadlines().forEach(d -> d.set().accept(e, NOW.plusSeconds(1800)));
+        e.setPartnerApplicationDeadlineAt(NOW.plusSeconds(24 * 3600));
+        e.setBoothRequestDeadlineAt(NOW.plusSeconds(2 * 24 * 3600));
+        e.setActivityProposalDeadlineAt(NOW.plusSeconds(2 * 24 * 3600));
+        e.setParticipantRegistrationDeadlineAt(NOW.plusSeconds(9 * 24 * 3600));
         return e;
     }
 }
