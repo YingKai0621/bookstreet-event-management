@@ -204,11 +204,13 @@ export function App() {
 
   const [heritageList, setHeritageList] = useState<HeritageProfile[]>([]);
   const [heritageError, setHeritageError] = useState('');
-  const [booths, setBooths] = useState<Booth[]>([]);
+  const [loadedBooths, setLoadedBooths] = useState<{
+    eventId: string;
+    rows: Booth[];
+    error: string;
+  }>({ eventId: '', rows: [], error: '' });
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
-  const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
-  const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
   const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
   const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
@@ -222,6 +224,10 @@ export function App() {
     : publicContextEvents.some(event => event.id === selectedPublicEventId)
       ? selectedPublicEventId
       : defaultPublicEventId;
+  const hasCurrentBooths = Boolean(publicEventId && loadedBooths.eventId === publicEventId);
+  const booths = hasCurrentBooths ? loadedBooths.rows : [];
+  const publicBoothsError = hasCurrentBooths ? loadedBooths.error : '';
+  const isPublicBoothsLoading = Boolean(isPublicRoute && publicEventId && !hasCurrentBooths);
 
   const selectPublicEvent = (eventId: string) => {
     if (!publicContextEvents.some(event => event.id === eventId)) return;
@@ -265,7 +271,6 @@ export function App() {
       } else {
         console.warn('Could not fetch public events', eventsRes.reason);
         setEvents([]);
-        setBooths([]);
       }
 
       if (heritagesRes.status === 'fulfilled') {
@@ -289,20 +294,20 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    if (!isPublicRoute || !publicEventId) {
-      setBooths([]);
-      return () => { active = false; };
-    }
-    setIsPublicBoothsLoading(true);
-    setPublicBoothsError('');
-    publicApi.getBooths(publicEventId)
-      .then(rows => { if (active) setBooths(rows); })
+    if (!isPublicRoute || !publicEventId) return () => { active = false; };
+    const requestedEventId = publicEventId;
+    publicApi.getBooths(requestedEventId)
+      .then(rows => {
+        if (active) setLoadedBooths({ eventId: requestedEventId, rows, error: '' });
+      })
       .catch(error => {
         if (!active) return;
-        setBooths([]);
-        setPublicBoothsError(error instanceof Error ? error.message : 'Không tải được gian hàng.');
-      })
-      .finally(() => { if (active) setIsPublicBoothsLoading(false); });
+        setLoadedBooths({
+          eventId: requestedEventId,
+          rows: [],
+          error: error instanceof Error ? error.message : 'Không tải được gian hàng.',
+        });
+      });
     return () => { active = false; };
   }, [isPublicRoute, publicEventId]);
 
@@ -335,6 +340,7 @@ export function App() {
     : EMPTY_PARTICIPANT_PROFILE;
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Account changes must synchronously discard all participant data from the previous session.
     setParticipantProfile(EMPTY_PARTICIPANT_PROFILE);
     setParticipantProfileError('');
     setParticipantEvents([]);

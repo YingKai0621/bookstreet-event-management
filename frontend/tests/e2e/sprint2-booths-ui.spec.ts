@@ -96,6 +96,7 @@ async function mockOrganizer(page: Page, options: { multipleEvents?: boolean } =
       return json(route, { content: events, page: 0, size: 100, totalElements: events.length, totalPages: 1 });
     }
     if (path.endsWith('/organizer/booths') && method === 'GET') return json(route, { content: physicalBooths, page: 0, size: 200, totalElements: physicalBooths.length, totalPages: 1 });
+    if (path.endsWith('/organizer/locations') && method === 'GET') return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
     if (path.endsWith('/organizer/booths') && method === 'POST') {
       const body = route.request().postDataJSON();
       expect(body).toMatchObject({ code: 'B01', name: 'Gian văn học', maxCapacity: 1 });
@@ -366,7 +367,7 @@ async function mockPublicMap(page: Page): Promise<void> {
     if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, eventWithoutPositions], page: 0, size: 100, totalElements: 2, totalPages: 1 });
     if (path.endsWith('/events/101/booths') && method === 'GET') return json(route, { content: booths, page: 0, size: 100, totalElements: booths.length, totalPages: 1 });
     if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: booths.slice(1), page: 0, size: 100, totalElements: 2, totalPages: 1 });
-    if (path.endsWith('/public/heritages')) return json(route, []);
+    if (path.endsWith('/heritages')) return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
     return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
   });
 }
@@ -386,7 +387,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByRole('status')).toContainText('Đã thêm mới thành công gian hàng');
   await expect(page.getByText('B01', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  await page.getByRole('button', { name: 'Sơ đồ Không gian Đường Sách' }).click();
   const mapLayer = page.locator('.booth-map-image-layer');
   const newBoothMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(newBoothMarker).toBeVisible();
@@ -394,7 +395,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   const mapPopover = page.locator('.booth-marker-popover');
   await expect(mapPopover.getByText('Đang hoạt động', { exact: true })).toBeVisible();
   await expect(mapPopover.getByLabel('Trạng thái vật lý')).toHaveCount(0);
-  await mapPopover.getByRole('button', { name: 'Hoàn tất & Đồng bộ' }).click();
+  await mapPopover.getByRole('button', { name: 'Lưu thay đổi' }).click();
   expect(getConfigurationRequests()).toHaveLength(0);
 
   const mapBox = await mapLayer.boundingBox();
@@ -406,7 +407,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.mouse.move(mapBox!.x + mapBox!.width * 0.625, mapBox!.y + mapBox!.height * 0.48, { steps: 8 });
   await page.mouse.up();
   await page.getByRole('button', { name: 'Lưu sơ đồ' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 vị trí');
 
   await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
   await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click();
@@ -470,7 +471,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByText(/5.500.000/)).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
-  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  await page.getByRole('button', { name: 'Sơ đồ Không gian Đường Sách' }).click();
   const persistedMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(persistedMarker).toBeVisible();
   const savedBoothPosition = getSavedBoothPosition();
@@ -800,7 +801,7 @@ test('Public Event card synchronizes Booths and Map context with valid coordinat
   await expect(page).toHaveURL(/\?eventId=102$/);
   await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
-  await expect(page.getByText('Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.')).toBeVisible();
+  await expect(page.getByText('Sự kiện này chưa có gian hàng hoặc địa điểm với đủ tọa độ để hiển thị trên bản đồ.')).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
