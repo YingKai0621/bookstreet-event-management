@@ -260,8 +260,9 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           tabIndex={0}
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
+          aria-busy={isLoading || undefined}
         >
-          {isLoading ? (
+          {isLoading && booths.length === 0 ? (
             <div className="booths-carousel-page" style={{ opacity: 1 }} aria-busy="true">
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
@@ -287,25 +288,25 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
             </div>
           ) : booths.length === 0 ? (
             error ? null : (
-              <div className="booths-carousel-page" role="status" style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
+              <div className="booths-carousel-page booths-empty-state" role="status">
                 <p>{language === 'vi' ? 'Sự kiện này chưa có gian hàng được công bố.' : 'This event has no published bookstalls yet.'}</p>
               </div>
             )
           ) : displayedBooths.length === 0 ? (
-            <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
+            <div className="booths-carousel-page booths-empty-state" role="status">
               <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
             <motion.div
-              key={activeCarouselPage}
-              className="booths-carousel-page"
+              key={`${selectedEventId || 'default'}-${activeCarouselPage}`}
+              className={`booths-carousel-page ${isLoading ? 'is-updating' : ''}`}
               custom={carouselDirection}
               variants={carouselMotion}
               initial={isMobileCarousel ? false : 'enter'}
               animate={isMobileCarousel ? false : 'center'}
               exit={isMobileCarousel ? undefined : 'exit'}
-              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
             >
             {displayedBooths.map((booth, idx) => {
               const isFocused = focusedBoothId === booth.id;

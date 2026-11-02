@@ -1941,3 +1941,17 @@
   .s2-partner-request-card .s3-invoice-row.s3-total-row { align-items: flex-start; flex-direction: column; border-top: 1px solid #e5ebe8; }
   .s2-partner-request-card .s3-checkout-actions .s3-btn-checkout { width: 100%; }
 }
+
+/* Partner requests: event / all-events scope switch. */
+.s2-request-scope { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; flex: 0 0 auto; }
+.s2-request-scope > strong { padding: 0.42rem 0.62rem; border: 1px solid #ced9d4; border-radius: 2px; background: #fff; color: #355148; font-size: 0.76rem; }
+.s2-request-scope-toggle { display: inline-flex; border: 1px solid #bdccc5; border-radius: 2px; background: #fff; overflow: hidden; }
+.s2-request-scope-toggle button { min-height: 34px; padding: 0.4rem 0.75rem; border: 0; background: transparent; color: #50665d; font: inherit; font-size: 0.76rem; font-weight: 750; cursor: pointer; }
+.s2-request-scope-toggle button + button { border-left: 1px solid #bdccc5; }
+.s2-request-scope-toggle button:hover:not(.is-active) { background: #f2f6f4; }
+.s2-request-scope-toggle button.is-active { background: #17382e; color: #fff; }
+.s2-request-scope-toggle button:focus-visible { outline: 3px solid rgba(196, 154, 72, 0.45); outline-offset: -3px; }
+.s2-partner-request-event { display: inline-block; margin-top: 0.3rem; padding: 0.18rem 0.45rem; border: 1px solid #e4d3a8; border-radius: 2px; background: #fff9e9; color: #7a5a12; font-size: 0.72rem; font-weight: 750; }
+@media (max-width: 640px) {
+  .s2-request-scope { justify-content: flex-start; width: 100%; }
+}

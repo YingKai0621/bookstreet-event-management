@@ -484,7 +484,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                     disabled={popoverSaving}
                   >
                     <Check size={15} />
-                    <span>{popoverSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                    <span>{popoverSaving ? 'Đang lưu...' : 'Hoàn tất & Đồng bộ'}</span>
                   </button>
                 </div>
               </form>

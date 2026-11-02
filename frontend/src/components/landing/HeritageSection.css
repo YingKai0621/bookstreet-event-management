@@ -27,12 +27,62 @@
 .heritage-fan-counter { color: #51675e; font: 600 .72rem var(--font-sans); letter-spacing: .02em; }
 .heritage-fan-counter strong { color: #1b4137; font-size: .9rem; }
 
-.heritage-section-more-row { display: flex; justify-content: center; margin-top: .25rem; }
-.heritage-btn-see-more-borderless { display: inline-flex; align-items: center; gap: .45rem; color: #1b4137; font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; text-decoration: none; padding: .6rem .85rem; position: relative; }
-.heritage-btn-see-more-borderless::after { content: ''; position: absolute; bottom: 4px; left: .85rem; right: .85rem; height: 1.5px; background: #c78b27; transform: scaleX(0); transform-origin: right; transition: transform 260ms ease; }
-.heritage-btn-see-more-borderless:hover::after, .heritage-btn-see-more-borderless:focus-visible::after { transform: scaleX(1); transform-origin: left; }
-.heritage-more-icon { color: #b97623; transition: transform 200ms ease; }
-.heritage-btn-see-more-borderless:hover .heritage-more-icon { transform: translateX(4px); }
+.heritage-section-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+.heritage-btn-see-more-borderless {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #1b4137;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 0.6rem 0.85rem;
+  position: relative;
+  transition: color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.heritage-btn-see-more-borderless span {
+  transition: color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.heritage-btn-see-more-borderless::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 0.85rem;
+  right: 0.85rem;
+  height: 1.5px;
+  background: var(--figma-gold, #c78b27);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 260ms ease, background-color 220ms ease;
+}
+.heritage-btn-see-more-borderless:hover,
+.heritage-btn-see-more-borderless:focus-visible {
+  color: #C84C32 !important;
+}
+.heritage-btn-see-more-borderless:hover span,
+.heritage-btn-see-more-borderless:focus-visible span {
+  color: #C84C32 !important;
+}
+.heritage-btn-see-more-borderless .heritage-more-icon {
+  color: var(--figma-gold, #b97623);
+  transition: transform 200ms ease, color 200ms ease;
+}
+.heritage-btn-see-more-borderless:hover .heritage-more-icon,
+.heritage-btn-see-more-borderless:focus-visible .heritage-more-icon {
+  color: #C84C32 !important;
+  transform: translateX(5px);
+}
+.heritage-btn-see-more-borderless:hover::after,
+.heritage-btn-see-more-borderless:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+  background-color: #C84C32;
+}
 
 @media (max-width: 760px) { .figma-heritage-section { padding: 3.7rem 0; } .heritage-fan-shell { min-height: 39rem; padding: 0; } .heritage-fan-stage { width: 100%; height: 35rem; } .heritage-fan-card { width: clamp(10.2rem, 45.6vw, 12.6rem); top: 2rem; } .heritage-fan-copy { left: .8rem; right: .8rem; bottom: .9rem; } .heritage-fan-copy strong { font-size: .9rem; } .heritage-fan-place { font-size: .68rem; } .heritage-fan-open { display: none; } .heritage-fan-controls { margin-top: -1rem; } }
 @media (max-width: 390px) { .heritage-fan-card { width: clamp(9.6rem, 45.6vw, 11.1rem); } }

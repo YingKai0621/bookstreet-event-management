@@ -5,7 +5,7 @@ import {
   PublicHeritageListItem,
 } from '../types/heritage';
 import { apiClient } from './apiClient';
-import { boothApi } from './boothApi';
+import { boothApi, getCachedPublicEventBooths } from './boothApi';
 
 const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
 
@@ -254,8 +254,18 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
   };
 }
 
+const publicActivitiesCache = new Map<string, { rows?: PublicActivity[]; inflight?: Promise<PublicActivity[]> }>();
+
 export const publicApi = {
   getEvents: getPublishedEvents,
+  getCachedBooths(eventId: string): Booth[] | undefined {
+    if (!eventId) return [];
+    const rows = getCachedPublicEventBooths(eventId);
+    return rows ? rows.filter(row => row.enabled).map(toPublicBooth) : undefined;
+  },
+  getCachedActivities(eventId?: string): PublicActivity[] | undefined {
+    return publicActivitiesCache.get(eventId ?? '__all__')?.rows;
+  },
   async getBooths(eventId: string): Promise<Booth[]> {
     if (!eventId) return [];
     const rows = await boothApi.listAllPublicEventBooths(eventId);
@@ -265,31 +275,45 @@ export const publicApi = {
     const first = await apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
       '/heritages?page=0&size=100',
     );
-    const remaining = first.totalPages > 1
+    const remaining = (first.totalPages ?? 0) > 1
       ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
         apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
           `/heritages?page=${index + 1}&size=100`,
         )))
       : [];
     return [first, ...remaining]
-      .sort((left, right) => left.page - right.page)
-      .flatMap(page => page.content);
+      .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
+      .flatMap(page => Array.isArray(page?.content) ? page.content : Array.isArray(page) ? page : []);
   },
   async getActivities(eventId?: string): Promise<PublicActivity[]> {
+    const cacheKey = eventId ?? '__all__';
+    const cached = publicActivitiesCache.get(cacheKey);
+    if (cached?.rows) return cached.rows;
+    if (cached?.inflight) return cached.inflight;
+
     const endpoint = (page: number) => {
       const params = new URLSearchParams({ page: String(page), size: '100', sort: 'startAt,asc' });
       if (eventId) params.set('eventId', eventId);
       return `/activities?${params.toString()}`;
     };
-    const first = await apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(0));
-    const remaining = first.totalPages > 1
-      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
-        apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(index + 1))))
-      : [];
-    return [first, ...remaining]
-      .sort((left, right) => left.page - right.page)
-      .flatMap(page => page.content)
-      .map(toPublicActivity);
+    const inflight = (async () => {
+      const first = await apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(0));
+      const remaining = (first.totalPages ?? 0) > 1
+        ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+          apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(index + 1))))
+        : [];
+      const rows = [first, ...remaining]
+        .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
+        .flatMap(page => Array.isArray(page?.content) ? page.content : Array.isArray(page) ? page : [])
+        .map(toPublicActivity);
+      publicActivitiesCache.set(cacheKey, { rows });
+      return rows;
+    })().catch(error => {
+      publicActivitiesCache.delete(cacheKey);
+      throw error;
+    });
+    publicActivitiesCache.set(cacheKey, { inflight });
+    return inflight;
   },
   getHeritage: (publicCode: string) =>
     apiClient.get<PublicHeritageDetail>(`/heritages/${encodeURIComponent(publicCode)}`),

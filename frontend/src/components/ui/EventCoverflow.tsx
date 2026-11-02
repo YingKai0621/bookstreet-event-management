@@ -170,10 +170,12 @@ export function EventCoverflow({
                     suppressClick.current = false;
                     return;
                   }
-                  if (index === selectedIndex) onDetails(event);
-                  else selectIndex(index);
+                  if (index !== selectedIndex) {
+                    selectIndex(index);
+                  }
+                  onDetails(event);
                 }}
-                aria-label={`${language === 'vi' ? event.title : event.titleEn}${index === selectedIndex ? '' : language === 'vi' ? ', chọn sự kiện' : ', select event'}`}
+                aria-label={`${language === 'vi' ? event.title : event.titleEn}, ${language === 'vi' ? 'xem chi tiết sự kiện' : 'view event details'}`}
                 aria-current={index === selectedIndex ? 'true' : undefined}
                 tabIndex={visible ? 0 : -1}
               >

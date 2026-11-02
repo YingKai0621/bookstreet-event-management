@@ -325,3 +325,31 @@ test('failed leave keeps the confirmation open and shows the backend reason', as
   await expect(modal).toHaveCount(0);
   await expect(page.getByRole('heading', { name: publicEvent.name })).toBeVisible();
 });
+
+test('calendar modal for a registered event shows cancel registration button and persists via leave API', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2027-01-10T03:00:00Z'));
+  const registrationState = { joined: true };
+  await mockParticipantRegistration(page, false, false, registrationState);
+  let leaveCount = 0;
+  await page.route('**/api/v1/participant/events/744/leave', async route => {
+    leaveCount += 1;
+    expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
+    registrationState.joined = false;
+    await json(route, { eventRegistrationId: 301, event: publicEvent, status: 'LEFT', seatActiveActivityCount: 0 });
+  });
+
+  await page.goto('/participant');
+  const entry = page.locator('.participant-calendar-entry[data-calendar-id="event-744"]').first();
+  await expect(entry).toHaveAttribute('data-registered', 'true');
+  await entry.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Đăng ký trên lịch' });
+  const cancelBtn = dialog.getByRole('button', { name: 'Hủy đăng ký', exact: true });
+  await expect(cancelBtn).toBeVisible();
+  await cancelBtn.click();
+
+  await expect(dialog).not.toBeVisible();
+  expect(leaveCount).toBe(1);
+  await expect(entry).toHaveAttribute('data-registered', 'false');
+  await expect(entry).toContainText('Chưa đăng ký');
+});

@@ -181,7 +181,7 @@ test('participant creates a rating from an eligible completed activity', async (
   await dialog.getByRole('button', { name: 'Lưu đánh giá' }).click();
 
   await expect(page.getByText('Đã lưu đánh giá cho “Workshop làm sách”.')).toBeVisible();
-  await expect(workshop.getByText('Đã đánh giá')).toBeVisible();
+  await expect(workshop.getByText('Có thể đánh giá')).toHaveCount(0);
   await expect(workshop.getByText('4/5')).toBeVisible();
   await expect(workshop.getByText('Tổ chức rõ ràng và nội dung thực tế.')).toBeVisible();
   expect(requests).toContain('PUT /api/v1/participant/activities/91/rating');
@@ -221,7 +221,7 @@ test('rating list and save failures remain recoverable', async ({ page }) => {
   await expect(dialog.getByRole('alert')).toContainText('Hoạt động chưa hoàn thành nên chưa thể đánh giá.');
   await dialog.getByRole('button', { name: 'Lưu đánh giá' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(workshop.getByText('Đã đánh giá')).toBeVisible();
+  await expect(workshop.getByText('5/5')).toBeVisible();
 });
 
 for (const viewport of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
