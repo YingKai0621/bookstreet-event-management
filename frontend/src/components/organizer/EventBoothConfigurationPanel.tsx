@@ -126,6 +126,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
   }, [event.id]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The generation-guarded loader synchronizes this panel with the selected event.
     void loadData();
     return () => {
       generationRef.current += 1;

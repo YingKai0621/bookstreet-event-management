@@ -385,6 +385,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   }, [eventId]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The generation-guarded loader resets and fetches data for the selected event.
     void loadData(true);
     return () => {
       loadGenerationRef.current += 1;
@@ -452,6 +453,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
     if (!row) return;
     handledDeepLinkRef.current = deepLinkKey;
     setTab('browse');
+    // oxlint-disable-next-line react/set-state-in-effect -- A validated URL deep link selects its booth exactly once after data arrives.
     setSelectedBooth(row);
     setRequestNote('');
   }, [booths, eventId, loading, searchParams, setTab]);

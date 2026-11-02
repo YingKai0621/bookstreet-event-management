@@ -9,7 +9,7 @@ import {
   Shield,
   Users
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AdminPermissionItem,
   AdminRolePermissionConfig,
@@ -51,9 +51,10 @@ const DEFAULT_ROLE_CONFIGS: Record<AdminRoleType, AdminRolePermissionConfig> = {
 };
 
 const ALL_ROLES: AdminRoleType[] = ['participant', 'partner', 'organizer', 'admin'];
+const EMPTY_ROLE_CONFIGS = {} as Record<AdminRoleType, AdminRolePermissionConfig>;
 
 export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps> = ({
-  roleConfigs = {} as Record<AdminRoleType, AdminRolePermissionConfig>,
+  roleConfigs = EMPTY_ROLE_CONFIGS,
   permissions = [],
   onSaveRolePermissions,
   onResetDefaults
@@ -68,18 +69,17 @@ export const AdminRolesPermissionsView: React.FC<AdminRolesPermissionsViewProps>
 
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+  const [roleConfigsSource, setRoleConfigsSource] = useState(roleConfigs);
 
-  // Sync state when roleConfigs is loaded asynchronously
-  useEffect(() => {
-    if (roleConfigs && Object.keys(roleConfigs).length > 0) {
-      setCurrentPermissions({
-        participant: roleConfigs.participant?.assignedPermissionCodes || [],
-        partner: roleConfigs.partner?.assignedPermissionCodes || [],
-        organizer: roleConfigs.organizer?.assignedPermissionCodes || [],
-        admin: roleConfigs.admin?.assignedPermissionCodes || []
-      });
-    }
-  }, [roleConfigs]);
+  if (roleConfigsSource !== roleConfigs && Object.keys(roleConfigs).length > 0) {
+    setRoleConfigsSource(roleConfigs);
+    setCurrentPermissions({
+      participant: roleConfigs.participant?.assignedPermissionCodes || [],
+      partner: roleConfigs.partner?.assignedPermissionCodes || [],
+      organizer: roleConfigs.organizer?.assignedPermissionCodes || [],
+      admin: roleConfigs.admin?.assignedPermissionCodes || []
+    });
+  }
 
   const activeRoleConfig = roleConfigs?.[selectedRoleId] || DEFAULT_ROLE_CONFIGS[selectedRoleId];
   const activeAssignedCodes = currentPermissions[selectedRoleId] || [];

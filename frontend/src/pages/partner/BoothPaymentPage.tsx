@@ -271,7 +271,6 @@ export function BoothPaymentPage() {
                     {history.content.map(item => {
                       const isPendingItem = item.status === 'PENDING';
                       const isSuccessItem = item.status === 'SUCCESS';
-                      const isFailedItem = item.status === 'FAILED' || item.status === 'TIMEOUT';
                       return (
                         <tr key={item.boothPaymentId} className={focused?.boothPaymentId === item.boothPaymentId ? 'is-focused' : ''}>
                           <td>

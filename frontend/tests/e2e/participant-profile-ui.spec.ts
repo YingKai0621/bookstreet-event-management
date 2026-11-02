@@ -11,6 +11,8 @@ async function setup(page: Page, failSave = false) {
     let status = 200;
     if (path.endsWith('/auth/me')) body = { userId: 42, username: 'newreader', fullName: profile.fullName, email: null, emailVerified: false, status: 'ACTIVE', roles: ['PARTICIPANT'] };
     else if (path.endsWith('/auth/csrf')) body = { headerName: 'X-XSRF-TOKEN', token: 'test-token' };
+    else if (path.endsWith('/participant/notifications')) body = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
+    else if (path.endsWith('/participant/notifications/unread-count')) body = { unreadCount: 0 };
     else if (path.endsWith('/events')) body = { content: [], totalElements: 0, totalPages: 0 };
     else if (path.endsWith('/auth/profile')) {
       if (route.request().method() === 'PUT') {

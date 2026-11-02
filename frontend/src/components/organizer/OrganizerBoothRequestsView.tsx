@@ -139,6 +139,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   }, [eventId]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The generation-guarded loader resets and fetches requests for the selected event.
     void loadData(true);
     return () => {
       loadGenerationRef.current += 1;

@@ -13,7 +13,6 @@ import {
   Clock,
   MapPin,
   Star,
-  Sparkles,
   Tag,
   X
 } from 'lucide-react';

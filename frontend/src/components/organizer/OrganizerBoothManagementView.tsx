@@ -179,6 +179,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- This effect starts the catalog's initial guarded remote-data load.
     void loadBoothData();
   }, [loadBoothData]);
 

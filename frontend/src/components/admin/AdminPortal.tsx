@@ -121,10 +121,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Admin chrome data is synchronized with the active route by this async loader.
     void refreshAdminChrome();
   }, [refreshAdminChrome]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Route-specific admin data is loaded by this async boundary.
     void refreshAdminData();
   }, [refreshAdminData]);
 

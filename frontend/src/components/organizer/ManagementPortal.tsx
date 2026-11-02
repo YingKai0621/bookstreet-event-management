@@ -161,6 +161,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   }, [navigateToTab]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Organizer data is synchronized with the current route by this async loader.
     void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); setIsLoadingEvents(false); });
   }, [refreshOrganizerData]);
 
@@ -169,6 +170,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     let active = true;
     const requestedEventId = selectedEventId;
 
+    // oxlint-disable-next-line react/set-state-in-effect -- Changing events intentionally resets the event-scoped operation panel before fetching.
     setIsLoadingEventOperations(true);
     setEventOperationsError('');
     setBoothsList([]);
