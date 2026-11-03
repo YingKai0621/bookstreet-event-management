@@ -1,13 +1,16 @@
 # Sprint 10 Role-Scoped Notifications Documentation Audit
 
 - Audit date: `2026-11-03`
-- Result: `PASS WITH ACTIVATION GATES`
-- Repository baseline inspected: `main` at `0deac77`
+- Result: `PASS - ACTIVATED FOR FOUNDATION`
+- Repository baseline inspected during review: `main` at `0deac77`
+- Approved documentation merge: PR #116, merge commit `3a0a76b`
+- Activation date: `2026-11-03`
 - Applied schema baseline: immutable Flyway `V1` through `V15`
 - Production code or migration changed by this documentation audit: no
 
-This verdict means the candidate Sprint 10 documents are mutually consistent and ready for Project Owner
-approval. It does not activate Sprint 10 or reserve a Flyway version.
+The original review found the candidate documents mutually consistent. PR #116 then approved and merged
+them. The activation update promotes the reviewed scope into the active project context and reserves V16
+for Developer A without creating application code or a migration file.
 
 ## 1. Reviewed set
 
@@ -21,8 +24,8 @@ approval. It does not activate Sprint 10 or reserve a Flyway version.
 8. current Business Rules, Use Case List, MVP Scope, Physical ERD report, Flyway V1–V15, security,
    Notification/domain code, role frontend routes/adapters, and relevant tests
 
-`CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and the active Business Rules/Use Case/MVP baseline remain unchanged
-while this candidate is under review.
+At review time, `CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and the active Business Rules/Use Case/MVP baseline
+remained unchanged. The 2026-11-03 activation update promotes the approved scope into those active files.
 
 ## 2. Final scope
 
@@ -117,29 +120,35 @@ overlay preserves all Participant rows by backfilling `PARTICIPANT`, keeps V1–
 - 23/23 Security and Notification unit tests passed during Admin review
 - `git diff --check` passed; only line-ending conversion warnings were emitted
 - no conflict markers and no changed file outside `docs/`
-- active Business Rules, Use Case List, and MVP Scope are byte-equivalent to their pre-candidate baseline
+- at review time, active Business Rules, Use Case List, and MVP Scope were byte-equivalent to their
+  pre-candidate baseline; the activation update intentionally promotes the approved decisions
 
 Database integration suites were not run because `EVENT_TEST_DATABASE_URL` is not configured. The demo
 database in `.env` was intentionally not used as automated-test storage. Migration, Hibernate, integration,
 frontend build, and Playwright evidence remain implementation gates rather than documentation claims.
 
-## 7. Open activation gates
+## 7. Activation outcome and remaining delivery gates
 
-1. Project Owner approves and merges this candidate documentation.
-2. The project/context owner promotes the approved cross-role Notification baseline into the active
-   Business Rules/Use Case/MVP context, updates `CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and `docs/README.MD`.
-3. Developer A updates from merged `main`, lists all migrations, and reserves the next free version after
-   V15. This document does not assume that version is V16.
-4. The BR-81 wording permits selection at exact deadline equality while current code rejects equality.
-   Sprint 10 must reuse the actual canonical selection predicate and must not silently widen it; any domain
-   correction is approved separately before implementing `AC-O-S10-06`.
-5. Actual team member names replace Developer A/B/C at activation without changing ownership boundaries.
+1. Completed: PR #116 approved and merged the candidate documentation at `3a0a76b`.
+2. Completed by the activation update: Business Rules, Use Case List, MVP Scope, `CURRENT_SPRINT.md`,
+   `AI_CONTEXT.md`, and `docs/README.MD` promote Sprint 10 as active.
+3. Completed: Developer A (`YingKai0621`) updated from merged `main`, confirmed V1 through V15, found no
+   competing production migration and reserved V16 exclusively. No V16 file exists under the configured
+   Flyway location `db/migration`; the pre-existing `db/demo/V16__seed_event_deadline_and_registration_scenarios.sql`
+   is a manually run demo seed outside Flyway's configured location.
+4. Remaining before PR 1 code: merge this activation update, refresh from `main`, and reconfirm no branch
+   has claimed V16 or shared Notification/security files.
+5. Before PR 2/PR 3: teammates agree who takes the documented Developer B and C work packages and
+   coordinate branch ownership. Personal names do not need to be persisted in project documentation.
+6. Remaining before `AC-O-S10-06`: resolve the BR-81 exact-deadline equality discrepancy separately.
+   Sprint 10 must reuse the canonical selection predicate and must not silently widen it. This does not
+   block PR 1 foundation.
 
 ## 8. Verdict
 
-`PASS WITH ACTIVATION GATES`.
+`PASS - ACTIVATED FOR FOUNDATION`.
 
-The candidate documentation is bounded, role-safe, traceable across all 52 criteria, and implementable
-without inventing Admin alerts or a generic messaging platform. No further document-by-document product
-audit is needed unless the Project Owner changes scope. Coding remains blocked until the gates above are
-completed.
+The active documentation is bounded, role-safe and traceable across all 52 criteria. Developer A may begin
+the reviewed foundation only after this activation update merges and the pre-code ownership check passes.
+Partner/Organizer delivery remains subject to the role, branch and merge-order coordination above. No
+further document-by-document product audit is needed unless scope changes.

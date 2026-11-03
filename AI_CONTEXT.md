@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-01`
+Last updated: `2026-11-03`
 
 ## Current implementation status
 
@@ -108,12 +108,23 @@ Last updated: `2026-11-01`
   storage and General Feedback has no rating/score.
 - Sprint 9 Heritage Public Content completed on 2026-11-01. PR #105 (merge commit `7e46809`)
   approved its documentation baseline. PR #107 (merge commit `7ed4e0e`) delivered V15, the
-  PostgreSQL-backed Heritage domain, exactly ten approved API operations, the real public
-  list/detail/QR experience, shared Organizer management and focused automated coverage for all
+  PostgreSQL-backed Heritage domain, thirteen approved API operations, the real public
+  list/detail experience, shared Organizer management and focused automated coverage for all
   28 Acceptance Criteria.
 - Sprint 9 delivers one shared Organizer-managed Heritage collection plus public reads for
   published content. Its statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`. Heritage remains
   independent from General Feedback and is not a Feedback target.
+- Sprint 10 Role-Scoped In-App Notifications was activated on 2026-11-03 after PR #116 (merge commit
+  `3a0a76b`) approved its 52-Acceptance-Criteria baseline, Use Case Specifications, 16-operation API
+  Contract, Physical ERD overlay, implementation plan and three-developer ownership model.
+- Sprint 10 keeps the existing `notifications` table as the only durable inbox store. It preserves the
+  six Participant types, adds only the approved Partner outcome and Organizer work-item families, and
+  provides Admin with real role-isolated list/read infrastructure but no type or producer.
+- Developer A is `YingKai0621` and exclusively owns the shared Notification foundation, Participant/Admin
+  integration and reserved migration V16. Developer B and Developer C are stable work-package labels;
+  teammates claim and coordinate the documented Partner or Organizer role before starting its branch.
+- V16 is reserved but not implemented. The applied database baseline remains immutable V1 through V15
+  until the foundation PR is reviewed and merged.
 - The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
   free version. One assigned Heritage Owner consumes that migration and owns the entity,
   repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
@@ -247,21 +258,29 @@ indexes. V1 through V15 are now immutable.
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- General Feedback reporting, map data and broad Organizer/Partner/Admin notifications outside
-  the approved Sprint 8 and Sprint 9 slices
+- General Feedback reporting and map data
+- Notification behavior outside the approved Sprint 10 type/reference/producer matrices, including any
+  Admin producer, combined inbox, composer, polling or real-time delivery
 
 ## Next implementation task
 
-- Keep Sprint 9 closed and use its closure report as the latest completed-Sprint evidence baseline.
-- Select and document the next Sprint baseline before starting another schema or feature slice.
-- General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT` in the current
-  business baseline. Heritage content is independent and must not be added as a Feedback target.
-- Reports, Guest replies and distributed throttling still require separately approved scope and,
-  where required, a new Flyway migration.
+- Merge the Sprint 10 activation/context update before application implementation.
+- Developer A then updates from `main`, reconfirms exclusive ownership of reserved V16 and implements only
+  PR 1: role-scoped persistence, shared backend APIs/security/read concurrency, Participant compatibility
+  and real producer-free Admin foundation.
+- Before Partner PR 2 or Organizer PR 3 begins, each teammate claims the corresponding Developer B or C
+  role and follows its documented scope, shared-file boundaries, Acceptance Criteria and merge order.
+- The BR-81 exact-deadline equality discrepancy must be resolved separately before Organizer Booth
+  re-selection implementation; it does not block the shared PR 1 foundation.
+- General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
+  independent and creates no Notification broadcast.
 
 ## Latest completed Sprint
 
 Sprint 09 Heritage Public Content is the latest completed Sprint as of 2026-11-01.
+
+Sprint 10 Role-Scoped In-App Notifications is the active Sprint as of 2026-11-03. It is not yet complete
+and has no applied migration or implementation merge.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -280,7 +299,7 @@ Sprint 9 includes these completed Use Case slices:
 ## Current approved baselines
 
 - Requirement baseline: active MVP rules plus completed Sprint 7 reward, completed Sprint 8 General
-  Feedback refinements and completed Sprint 9 Heritage decisions
+  Feedback, completed Sprint 9 Heritage and active Sprint 10 role-scoped Notification decisions
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
@@ -289,22 +308,21 @@ Sprint 9 includes these completed Use Case slices:
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
   approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
   the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay.
-- Latest completed Sprint baseline: `docs/sprints/sprint-09.md`
-- Latest completed Sprint Use Cases: `docs/use-cases/sprint-09-use-case-specifications.md`
-- Latest completed Sprint API Contract: `docs/api/sprint-09-api-contract.md`
-- Latest completed Sprint Physical ERD overlay:
-  `docs/design/SPRINT_09_HERITAGE_PHYSICAL_ERD_OVERLAY.md`
-- Latest completed Sprint implementation/ownership plan:
-  `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
-- Latest completed Sprint developer handoff:
-  `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
-- Latest closure evidence: `docs/development/SPRINT_09_CLOSURE_REPORT.md`
+- Active Sprint baseline: `docs/sprints/sprint-10.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-10-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-10-api-contract.md`
+- Active Sprint Physical ERD overlay:
+  `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
+- Active Sprint implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
+- Active Sprint assignment: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
+- Latest completed Sprint remains Sprint 9 with closure evidence in
+  `docs/development/SPRINT_09_CLOSURE_REPORT.md`
 - Active MVP Use Case count: 26
 
-Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
-source. Use immutable V1–V15 and the current Physical ERD report as the physical implementation
-truth. Use the approved Sprint 9 Heritage overlay and API Contract as the completed
-feature-specific interpretation sources.
+Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation source.
+Use immutable V1–V15 and the current Physical ERD report as current physical truth. For Sprint 10 use the
+active Sprint 10 baseline, Use Case Specifications, API Contract and approved overlay; V16 remains a
+reserved target until its implementation PR merges.
 
 ## Authentication baseline
 

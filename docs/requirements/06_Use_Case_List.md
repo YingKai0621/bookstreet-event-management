@@ -1,7 +1,7 @@
-**USE CASE LIST - COMPACT v6**
+**USE CASE LIST - COMPACT v7**
 
-Active MVP baseline updated 19/10/2026 for the Sprint 6 Participant participation planning
-baseline; Post-MVP references are listed separately
+Active MVP baseline updated 03/11/2026 for Sprint 10 role-scoped Notification delivery;
+Post-MVP references are listed separately
 
 # 1. Quy tắc đặt tên Use Case
 
@@ -123,3 +123,16 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 - `UC-P03` chỉ giao Activity registration status, self-scan Attendance, No-show, Certificate và participation Notification trong Sprint 6. BoothVisit, Points và Badge vẫn là active MVP scope nhưng được triển khai ở slice khác.
 - Organizer correction là alternative/authorized flow của `UC-O07`; `attendance_adjustments` là technical audit, không phải Actor-facing entity/Use Case.
 - Automatic lifecycle, No-show, Certificate metadata và Notification persistence là System behavior kích hoạt từ các Use Case trên, không phải cron/scheduler Actor trên diagram.
+
+# 5. Sprint 10 traceability note
+
+- Sprint 10 không thêm Actor hoặc top-level Use Case; tổng số active MVP Use Case vẫn là 26.
+- Participant Notification tiếp tục refine `UC-P01` và `UC-P03` với sáu producer hiện hành.
+- Partner outcome Notification hỗ trợ `UC-E01`–`UC-E06` theo workflow bị tác động; self-action thông thường
+  không tạo inbox echo.
+- Organizer work-item Notification hỗ trợ `UC-O03`–`UC-O06`; Event cancellation vẫn thuộc `UC-O01`.
+- Admin inbox là hạ tầng role-isolated cho workspace hiện có, không thêm Admin goal, type hoặc producer.
+- Notification creation là System behavior trong transaction nghiệp vụ, không phải một Use Case tạo thông
+  báo độc lập và không cho client chọn recipient hoặc audience.
+- Exact role isolation, transition matrix, suppression và read semantics tuân theo `BR-102`–`BR-109` và
+  Sprint 10 Use Case Specifications.
