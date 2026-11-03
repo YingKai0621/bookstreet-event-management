@@ -371,7 +371,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   onClose,
   onSave,
 }) => {
-  const basicInfoOnly = Boolean(event) && !focusPublishIssues;
+  const basicInfoOnly = Boolean(event) && event?.apiStatus !== 'DRAFT';
   const [initialForm] = useState<EventFormState>(() => formFromEvent(event));
   const [form, setForm] = useState<EventFormState>(() => ({ ...initialForm }));
   const [minimumFutureAt] = useState(nextLocalMinute);
