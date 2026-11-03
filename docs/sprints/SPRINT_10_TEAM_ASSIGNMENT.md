@@ -1,27 +1,29 @@
 # Sprint 10 Role-Scoped Notifications — Three-Developer Assignment
 
-- Status: `PROPOSED - REVIEW COMPLETE; NAMES ASSIGNED AT ACTIVATION`
+- Status: `ACTIVE - WORK-PACKAGE OWNERSHIP DEFINED`
 - Prepared date: `2026-11-03`
 - Team size: exactly three developers
 - Scope baseline: `docs/sprints/sprint-10.md`
 - API contract: `docs/api/sprint-10-api-contract.md`
 - Implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
 
-The labels Developer A, B, and C are stable ownership roles. The Project Owner records the three actual
-names when Sprint 10 is activated; changing a name does not change file or Acceptance Criteria ownership.
+The labels Developer A, B, and C are stable work packages. Developer A is assigned to `YingKai0621`.
+The other two teammates may take Developer B or Developer C by coordinating that role before branch work
+begins. Personal names do not need to be stored here; the role description, files, Acceptance Criteria and
+merge order are the instructions that each teammate and their AI must follow.
 
 ## 1. Shared rules
 
-1. Developer A is the only migration and shared Notification-core owner.
-2. No developer reserves a Flyway version before activation and an updated `main` check.
+1. Developer A is the only V16 migration and shared Notification-core owner.
+2. V16 was reserved only after activation and an updated `main` check; B/C must not create or renumber it.
 3. Developers B and C consume the writer/DTO contract from Developer A and do not create competing shared
    abstractions, migrations, or security matchers.
 4. A domain Notification is inserted inside the owning transaction. Existing email remains after commit.
 5. Each developer tests both the approved transition and its no-notification/retry/rollback cases.
-6. Shared files are edited by their named owner or through a deliberately handed-off commit; they are not
-   concurrently rewritten on separate branches.
+6. Shared files are edited by their assigned role owner or through a deliberately handed-off commit; they
+   are not concurrently rewritten on separate branches.
 
-## 2. Developer A — foundation, Participant/Admin, and integration owner
+## 2. Developer A — `YingKai0621` — foundation, Participant/Admin, and integration owner
 
 Primary delivery:
 
@@ -119,10 +121,10 @@ explicit commit. Copying logic into another package is not an acceptable conflic
 
 ## 6. Merge order
 
-1. Documentation is approved and merged; Sprint 10 is activated.
-2. Developer A reserves the next free migration version and completes PR 1.
-3. Developers B and C may prepare role-local tests/UI, but producer branches rebase on merged PR 1 before
-   final integration.
+1. Documentation PR #116 is approved and merged; the activation update is merged next.
+2. Developer A uses the exclusively reserved V16 and completes PR 1.
+3. After teammates coordinate who takes Developer B and Developer C, they may prepare role-local tests/UI,
+   but producer branches rebase on merged PR 1 before final integration.
 4. PR 2 merges before the PR 3 Booth re-selection portion because Payment/Hold/Assignment paths overlap.
 5. PR 3 merges Organizer behavior.
 6. Developer A rebases PR 4 on PR 2 and PR 3, completes Admin/shared frontend wiring, and resolves only

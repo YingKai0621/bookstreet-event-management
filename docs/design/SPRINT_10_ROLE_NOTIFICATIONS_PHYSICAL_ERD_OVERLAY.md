@@ -1,9 +1,9 @@
 # Sprint 10 Role-Scoped Notifications Physical ERD Overlay
 
-- Status: `PROPOSED - REVIEW COMPLETE; MIGRATION VERSION NOT RESERVED`
+- Status: `APPROVED - V16 RESERVED; NOT YET IMPLEMENTED`
 - Prepared date: `2026-11-02`
 - Current applied baseline: immutable Flyway `V1` through `V15`
-- Candidate migration: next free version after V15; not reserved by this document
+- Reserved migration: `V16`, exclusively owned by Developer A (`YingKai0621`)
 - Related Sprint baseline: `docs/sprints/sprint-10.md`
 - Reviewed API contract: `docs/api/sprint-10-api-contract.md`
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`

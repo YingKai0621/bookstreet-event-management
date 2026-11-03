@@ -1,6 +1,8 @@
 # Sprint 10 Role-Scoped Notification Use Case Specifications
 
-- Status: `PROPOSED - ACCEPTANCE CRITERIA REVIEW COMPLETE`
+- Status: `APPROVED - ACTIVE`
+- Activation date: `2026-11-03`
+- Approved documentation merge: PR #116, merge commit `3a0a76b`
 - Prepared date: `2026-11-02`
 - Last use-case revision: `2026-11-03`
 - Last Acceptance Criteria revision: `2026-11-03`
@@ -12,21 +14,20 @@
 
 ## 1. Source and traceability
 
-This specification is a candidate refinement of existing Use Cases and must be read with:
+This specification is the active Sprint 10 refinement of existing Use Cases and must be read with:
 
 - `docs/requirements/05_Business_Rules.md`, especially active BR-53 and BR-99
 - `docs/requirements/06_Use_Case_List.md`
 - `docs/requirements/08_MVP_Scope_v2.md`
-- sections 1 through 8 of `docs/sprints/sprint-10.md`, especially candidate rules `PBR-S10-01`
-  through `PBR-S10-08`
+- sections 1 through 8 of `docs/sprints/sprint-10.md`, especially active rules `BR-102` through `BR-109`
 - `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
 - the current Physical ERD as evidence of the implemented V1–V15 baseline
 
-The Sprint 10 API Contract and ERD overlay currently on this branch are downstream drafts, not sources for
-this review. They must conform to the accepted Use Case behavior later rather than defining it now.
+The approved Sprint 10 API Contract and ERD overlay are downstream implementation contracts. They conform
+to this accepted Use Case behavior and do not override higher-priority Business Rules.
 
-If a candidate `PBR-S10-*` rule conflicts with an active Business Rule, the active Business Rule governs
-and the candidate must be revised. This specification does not silently override the active baseline.
+If this specification conflicts with an active Business Rule, the active Business Rule governs and the
+Sprint document must be corrected. This specification does not silently override the active baseline.
 
 This specification creates no new top-level Use Case:
 
@@ -36,7 +37,8 @@ This specification creates no new top-level Use Case:
 - Admin inbox foundation is shared infrastructure for the existing Admin workspace. Without an Admin
   producer, it does not add an actor goal to `UC-A01` through `UC-A03`.
 
-The API Contract may freeze transport details only after these actor outcomes and invariants are accepted.
+The active API Contract freezes transport details without widening these accepted actor outcomes and
+invariants.
 
 ## 2. Shared actors and preconditions
 
@@ -575,7 +577,7 @@ placeholder arrays and no-op mutations must be removed rather than retained as f
 
 ## 11. Acceptance Criteria inventory — reviewed 2026-11-03
 
-The candidate set currently contains **52 Acceptance Criteria** matching `docs/sprints/sprint-10.md`:
+The active set contains **52 Acceptance Criteria** matching `docs/sprints/sprint-10.md`:
 
 - 11 reviewed shared-foundation criteria
 - 7 reviewed Participant criteria
@@ -584,7 +586,8 @@ The candidate set currently contains **52 Acceptance Criteria** matching `docs/s
 - 5 reviewed Admin criteria
 - 6 reviewed regression criteria
 
-All 52 candidate Acceptance Criteria have completed review, but they do not authorize implementation until
-the remaining ERD, implementation-plan, assignment, activation, and ownership
-gates are complete. No later draft may add a producer, role, type, reference, delivery channel, or combined
-inbox outside the accepted actor flows in sections 1 through 7.
+All 52 Acceptance Criteria are approved. Developer A may implement the shared foundation after the
+activation update is merged. Teammates may implement Partner or Organizer delivery by claiming the
+documented Developer B or C work package and coordinating its branch and merge order. No later change may
+add a producer, role, type, reference, delivery channel, or combined inbox
+outside the accepted actor flows in sections 1 through 7 without a new documentation review.

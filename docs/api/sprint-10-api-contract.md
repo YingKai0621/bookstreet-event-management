@@ -1,10 +1,10 @@
 # Sprint 10 Role-Scoped Notification API Contract
 
-> Status: `PROPOSED - REVIEW COMPLETE; ACTIVATION PENDING`.
+> Status: `APPROVED - FROZEN FOR IMPLEMENTATION`.
 >
-> Sources in precedence order: Business Rules, Use Case List, accepted Sprint 10 scope and Acceptance
-> Criteria, current Physical ERD, then this contract. Candidate Sprint 10 API and ERD changes are downstream
-> design artifacts and are not treated as their own source of truth.
+> Sources in precedence order: Business Rules, Use Case List, active Sprint 10 scope and Acceptance
+> Criteria, current Physical ERD, then this contract. Sprint 10 API and ERD changes are downstream design
+> artifacts and are not treated as their own source of truth.
 >
 > Review progress: the shared inbox foundation in sections 1, 2, 4 through 8, and 10 plus the Participant
 > type/reference/producer contract in sections 3.2 and 9.1 were reviewed against the accepted Acceptance
@@ -13,7 +13,8 @@
 > 9.4, and the producer-free Admin foundation in sections 3.5 and 9.5 were also reviewed on 2026-11-03.
 > Cross-role frontend integration, traceability, exclusions, and verification completed review on
 > 2026-11-03. The downstream ERD overlay, implementation plan, and three-developer assignment have also
-> completed review. This contract does not by itself activate implementation.
+> completed review. PR #116 approved the contract; Sprint 10 activation on 2026-11-03 froze it for
+> implementation.
 
 ## 1. Scope and conventions
 

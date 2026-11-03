@@ -1,21 +1,23 @@
 # Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `PROPOSED - DOCUMENTATION REVIEW COMPLETE; ACTIVATION PENDING`
+- Status: `ACTIVE - FOUNDATION IMPLEMENTATION AUTHORIZED`
 - Prepared date: `2026-11-02`
+- Activation date: `2026-11-03`
+- Approved documentation merge: PR #116, merge commit `3a0a76b`
 - Last product-scope revision: `2026-11-03`
 - Last Acceptance Criteria revision: `2026-11-03`
 - Previous completed Sprint: Sprint 09 Heritage Public Content
 - Current production schema baseline: immutable Flyway migrations `V1` through `V15`
-- Candidate schema change: one new migration after V15; version is not reserved by this document
+- Reserved schema change: `V16`, owned exclusively by Developer A (`YingKai0621`)
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
-- Current review stage: all 52 Acceptance Criteria, API contract, Physical ERD overlay, implementation
-  plan, and three-developer assignment have completed review
-- Remaining gates: final documentation evidence, Project Owner approval/merge, Sprint activation, and
-  migration-version reservation.
+- Current review stage: the 52 Acceptance Criteria, API contract, Physical ERD overlay, implementation
+  plan, and three-developer assignment are approved and active
+- Current implementation authorization: Developer A may begin PR 1 foundation work after this activation
+  update is merged; teammates may take PR 2 or PR 3 by claiming the documented Developer B or C role and
+  coordinating its branch and shared-file boundaries.
 
-This document is a candidate baseline. It does not activate Sprint 10, reserve a Flyway version, or
-authorize implementation until the documentation set is reviewed and `CURRENT_SPRINT.md` is updated by
-the project/context owner.
+This document is the active Sprint 10 baseline. It authorizes only the reviewed implementation units and
+does not authorize code, producer, type, role, reference, or delivery-channel changes outside this scope.
 
 ## 1. Goal
 
@@ -73,31 +75,30 @@ stays at 26.
 - changing Event, Booth, Payment, Activity, Feedback, Heritage, Certificate, or Badge lifecycle semantics
 - modifying Flyway V1 through V15
 
-## 4. Proposed business-rule lock
+## 4. Approved business-rule lock
 
-The rules in this section are candidate rules for review, identified as `PBR-S10-*`. They are not active
-Business Rules and must not be copied into `05_Business_Rules.md`, `06_Use_Case_List.md`, or
-`08_MVP_Scope_v2.md` until this product scope is approved and Sprint 10 is activated.
+The rules in this section are defined by active `BR-102` through `BR-109` in
+`docs/requirements/05_Business_Rules.md`:
 
-1. `PBR-S10-01 — Audience boundary`: every Notification belongs to one User and one exact role audience.
+1. `BR-102 — Audience boundary`: every Notification belongs to one User and one exact role audience.
    List, unread count, mark-one, and mark-all use both values. Possessing another role never exposes or
    mutates that role's inbox through the current endpoint.
-2. `PBR-S10-02 — Participant compatibility`: the six implemented Participant types, recipients,
+2. `BR-103 — Participant compatibility`: the six implemented Participant types, recipients,
    references, and producing transitions remain unchanged. Existing Participant rows become
    `PARTICIPANT` rows without losing `readAt`.
-3. `PBR-S10-03 — Partner outcomes`: only the transitions in section 5 create `PARTNER` rows. The recipient
+3. `BR-104 — Partner outcomes`: only the transitions in section 5 create `PARTNER` rows. The recipient
    is the representative User of the affected Partner organization at the committed transition.
-4. `PBR-S10-04 — Organizer work items`: only the transitions in section 6 create `ORGANIZER` rows. The
+4. `BR-105 — Organizer work items`: only the transitions in section 6 create `ORGANIZER` rows. The
    recipient is the owning `events.organizer_user_id` at the committed transition.
-5. `PBR-S10-05 — Atomicity and deduplication`: the domain transition and its in-app Notification commit in
+5. `BR-106 — Atomicity and deduplication`: the domain transition and its in-app Notification commit in
    one transaction. A retry of the same persisted transition creates no duplicate, while a later legitimate
    transition cycle has a distinct stable identity.
-6. `PBR-S10-06 — First-read semantics`: unread means `readAt` is null. A read command updates only an
+6. `BR-107 — First-read semantics`: unread means `readAt` is null. A read command updates only an
    unread row for the authenticated User and endpoint role. The first committed timestamp is preserved
    under retries and concurrent mark-one/mark-all commands.
-7. `PBR-S10-07 — Cascade suppression`: a parent cancellation or terminal workflow outcome must not create
+7. `BR-108 — Cascade suppression`: a parent cancellation or terminal workflow outcome must not create
    both a summary and redundant intermediate/child outcomes. The exact precedence rules are in section 5.2.
-8. `PBR-S10-08 — Channel and noise boundary`: Sprint 10 adds no email behavior, SMS, push, WebSocket,
+8. `BR-109 — Channel and noise boundary`: Sprint 10 adds no email behavior, SMS, push, WebSocket,
    Server-Sent Events, polling, preferences, composer, sender, NotificationType entity, or outbox. General
    Feedback remains a shared queue. Existing email behavior remains unchanged and after commit. Admin has
    a real empty inbox foundation but no producer or fabricated type.
@@ -137,7 +138,7 @@ Each approved notification has one domain target. The frontend maps an approved 
 role-owned route; notification text never stores a navigable URL. Exact response fields and unavailable
 target presentation are defined by the reviewed API/UI contract, not promoted to Business Rules here.
 
-### 4.4 Candidate refresh policy
+### 4.4 Approved refresh policy
 
 Sprint 10 has no real-time transport or background polling. At minimum, a workspace fetches current data
 on workspace entry, when the User opens the inbox or notification popover, and after a read mutation.
@@ -476,7 +477,7 @@ security, migration, frontend, Feedback, email, and scope-exclusion regression b
     composer, NotificationType table, sender User, delivery-attempt table, transactional outbox, or change
     to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate, or Badge lifecycle meaning.
 
-The candidate baseline currently contains **52 Acceptance Criteria**. All 11 shared-foundation, 7
+The active baseline contains **52 Acceptance Criteria**. All 11 shared-foundation, 7
 Participant, 13 Partner, 10 Organizer, 5 Admin, and 6 regression criteria in sections 9.1 through 9.6 have
 completed Acceptance Criteria review.
 
@@ -492,14 +493,16 @@ completed Acceptance Criteria review.
 Each unit requires a focused staged-diff audit and evidence mapped to the criteria it owns. Migration
 ownership is exclusive and the version is rechecked immediately before implementation.
 
-## 11. Activation gate
+## 11. Activation result
 
-Implementation must not begin until:
+The documentation activation completed on `2026-11-03`:
 
-1. the Project Owner reviews this complete documentation set
-2. documentation is merged through the normal PR path
-3. `docs/sprints/CURRENT_SPRINT.md` explicitly activates Sprint 10
-4. the project/context owner updates `AI_CONTEXT.md`
-5. the migration owner updates from `main`, lists V1 through the current latest migration, and reserves
-   the next free version
-6. no competing migration owns the same number
+1. PR #116 merged the approved documentation at `3a0a76b`.
+2. `docs/sprints/CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and the active requirement context were promoted.
+3. Developer A (`YingKai0621`) confirmed V1 through V15 on updated `main` and reserved `V16` exclusively.
+4. No competing migration existed at reservation time.
+5. PR 1 foundation work is authorized after this activation update merges.
+6. PR 2 and PR 3 use the stable Developer B and C work-package labels. Teammates claim and coordinate the
+   relevant role before starting; the assignment document requires no personal-name registry.
+7. The BR-81 exact-deadline equality discrepancy remains a separately recorded decision gate before
+   implementing Organizer Booth re-selection; it does not block the shared PR 1 foundation.

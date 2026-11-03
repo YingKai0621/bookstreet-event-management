@@ -1,122 +1,104 @@
 # Current Sprint
 
-## Sprint 09 Heritage Public Content
+## Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `COMPLETED`
-- Activation date: `2026-11-01`
-- Completion date: `2026-11-01`
-- Latest completed Sprint: `Sprint 09 Heritage Public Content`
-- Approved documentation merge: PR #105, merge commit `7e46809`
-- Implementation merge: PR #107, merge commit `7ed4e0e`
-- Implemented schema baseline: immutable Flyway migrations `V1` through `V15`
-- Sprint baseline: `docs/sprints/sprint-09.md`
-- Current-state audit: `docs/development/SPRINT_09_HERITAGE_CURRENT_STATE_AUDIT.md`
-- Documentation audit: `docs/development/SPRINT_09_DOCUMENTATION_AUDIT.md`
-- Use Case Specifications: `docs/use-cases/sprint-09-use-case-specifications.md`
-- API Contract: `docs/api/sprint-09-api-contract.md`
+- Status: `ACTIVE - FOUNDATION IMPLEMENTATION NEXT`
+- Activation date: `2026-11-03`
+- Previous completed Sprint: `Sprint 09 Heritage Public Content`
+- Approved documentation: PR #116, merge commit `3a0a76b`
+- Current implemented schema: immutable Flyway migrations `V1` through `V15`
+- Reserved Sprint 10 migration: `V16`, exclusively owned by Developer A (`YingKai0621`)
+- Sprint baseline: `docs/sprints/sprint-10.md`
+- Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
+- Documentation audit: `docs/development/SPRINT_10_DOCUMENTATION_AUDIT.md`
+- Use Case Specifications: `docs/use-cases/sprint-10-use-case-specifications.md`
+- API Contract: `docs/api/sprint-10-api-contract.md`
 - Physical ERD source: `docs/design/12_Physical_ERD_Report.md` plus
-  `docs/design/SPRINT_09_HERITAGE_PHYSICAL_ERD_OVERLAY.md`
-- Implementation and ownership plan: `docs/sprints/SPRINT_09_IMPLEMENTATION_PLAN.md`
-- Developer handoff: `docs/development/SPRINT_09_HERITAGE_IMPLEMENTATION_HANDOFF.md`
-- Latest closure evidence: `docs/development/SPRINT_09_CLOSURE_REPORT.md`
+  `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
+- Implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
+- Three-developer assignment: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
 
 ## Sprint goal
 
-Deliver Heritage as one coherent PostgreSQL-backed content-management slice:
+Extend the implemented Participant Notification foundation into one durable role-scoped inbox:
 
-1. A Guest can browse a public Heritage list and open public Heritage detail.
-2. Public reads expose only published Heritage content and never leak Draft or Archived records.
-3. Every verified Organizer manages the same shared Heritage collection.
-4. Organizer commands provide create, list, detail, update, publish, archive and republish behavior
-   with the approved lifecycle and optimistic concurrency contract.
-5. Existing General Feedback, Event ownership, Session, CSRF and completed Sprint behavior remain
-   unchanged.
+1. Preserve the six existing Participant types and behavior.
+2. Deliver approved committed outcomes to the affected Partner representative.
+3. Deliver approved actionable work items to the owning Event Organizer.
+4. Provide Admin with real role-isolated list/read infrastructure but no type or producer.
+5. Keep multi-role accounts isolated by both authenticated User and current workspace role.
 
 ## Scope and acceptance baseline
 
 The active implementation is limited to:
 
-- `UC-G01 Browse Heritage Content`
-- `UC-O09 Manage Heritage Content`
-- one `heritage_contents` table with the approved 11 columns, nine checks and two indexes
-- the exact `DRAFT`, `PUBLISHED` and `ARCHIVED` lifecycle
-- one shared Organizer collection without per-Organizer ownership
-- real public and Organizer frontend integration
-- focused migration, backend, frontend and browser verification
+- one existing PostgreSQL `notifications` table extended by reserved migration V16
+- exact audiences `PARTICIPANT`, `PARTNER`, `ORGANIZER`, and `ADMIN`
+- four endpoint families with list, unread count, mark-one, and mark-all operations
+- the closed Participant, Partner, and Organizer type/reference/transition matrices
+- Admin genuine empty/failure behavior with no producer
+- atomic producer writes, stable deduplication and first-read concurrency semantics
+- real role-local frontend preview/full inbox, filters, read state and allowlisted navigation
+- bounded refresh on workspace entry, inbox/popover open and confirmed read mutation
 
-The approved baseline contains **28 Acceptance Criteria**:
+The approved baseline contains **52 Acceptance Criteria**:
 
-- 14 Organizer criteria: `AC-O09-S9-01` through `AC-O09-S9-14`
-- 8 public criteria: `AC-G01-S9-01` through `AC-G01-S9-08`
-- 3 database criteria: `AC-S9-DB-01` through `AC-S9-DB-03`
-- 3 regression criteria: `AC-S9-REG-01` through `AC-S9-REG-03`
-
-The amended API Contract defines thirteen operations: two public content reads, eight Organizer content
-operations, one Organizer upload, one temporary-upload delete and one public uploaded-image read. The
-implementation preserves the approved lifecycle and `expectedUpdatedAt` concurrency contract.
+- 11 shared foundation criteria: `AC-N-S10-01` through `AC-N-S10-11`
+- 7 Participant criteria: `AC-P-S10-01` through `AC-P-S10-07`
+- 13 Partner criteria: `AC-E-S10-01` through `AC-E-S10-13`
+- 10 Organizer criteria: `AC-O-S10-01` through `AC-O-S10-10`
+- 5 Admin criteria: `AC-A-S10-01` through `AC-A-S10-05`
+- 6 regression criteria: `AC-S10-REG-01` through `AC-S10-REG-06`
 
 ## Ownership
 
-The **Project Owner** exclusively owns the Heritage Flyway migration SQL after updating from
-`main`, listing every existing migration and reserving the next free version.
+- Developer A is `YingKai0621` and exclusively owns V16, the shared Notification foundation,
+  Participant compatibility, Admin foundation, shared frontend wiring and final integration evidence.
+- Developer B is the Partner work-package label and owns Partner producers and Partner frontend. The
+  teammate taking this package coordinates its branch before PR 2 begins; no personal name is required.
+- Developer C is the Organizer work-package label and owns Organizer producers and Organizer frontend.
+  The teammate taking this package coordinates its branch before PR 3 begins; no personal name is required.
+- Developer B's payment/settlement work merges before Developer C adds Booth re-selection integration.
 
-One assigned **Sprint 09 Heritage Owner** owns the application slice and evidence for all 28
-Acceptance Criteria, including:
+## Immediate implementation unit
 
-- Heritage entity, repository and persistence integration
-- backend public and Organizer APIs
-- security, CSRF, lifecycle and concurrency behavior
-- public and Organizer Heritage UI integration
-- focused backend, frontend and browser tests
-- implementation traceability and closure evidence
+Developer A implements PR 1 only after this activation update is merged and a fresh `main` check confirms
+that V16 and the shared Notification/security files have no competing owner. PR 1 includes:
 
-The Heritage Owner consumes the migration supplied by the Project Owner and does not independently
-create or edit a competing migration. Notification work remains separate and must not reserve or
-reuse the same Flyway version.
-
-## Completed delivery order
-
-1. The Project Owner updates from `main`, confirms the next free Flyway version, reserves it and
-   creates the single Heritage migration.
-2. `S9-H1 Heritage domain foundation` integrates the supplied migration with the entity,
-   repository and focused schema tests.
-3. `S9-H2 Heritage backend APIs` implements all approved public and Organizer operations.
-4. `S9-H3 Public Heritage frontend` connects the real public list and detail experience.
-5. `S9-H4 Organizer Heritage frontend` connects the real management workflow.
-6. `S9-H5 Verification and closure` completes focused regression, traceability and closure
-   evidence.
+- V16 role-scoped Notification migration and clean/V15-upgrade verification
+- shared Notification entity, repository, writer, query/read services and DTO mapping
+- all 16 role endpoint contracts with exact authority
+- atomic mark-one and role-aware mark-all behavior
+- Participant compatibility and Admin real database-backed empty behavior
+- focused migration, Hibernate, repository, service, controller, security and concurrency tests
 
 ## Non-negotiable implementation rules
 
-- PostgreSQL is durable truth. Redis stores server-side Session only.
+- PostgreSQL remains durable truth; Redis remains Session-only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`. V1 through V15 are immutable.
-- V15 is the applied Sprint 9 Heritage migration and must not be edited.
-- The Heritage schema has exactly the approved columns, constraints and indexes.
-- Heritage statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`.
-- Public list and detail expose only `PUBLISHED` records.
-- Every verified Organizer manages the same collection. Admin-only access is denied.
-- Heritage remains independent from General Feedback and is not a Feedback target.
-- Published content is not hard deleted. The approved removal behavior is archive.
-- Mutating existing Heritage records uses `expectedUpdatedAt` to detect stale writes.
-- Do not commit `.env`, credentials, local IPs, local scripts or demo-only content.
+- Hibernate remains `ddl-auto: validate`; V1 through V15 are immutable.
+- Only Developer A may create or edit V16.
+- Clients cannot create Notification rows or supply recipient/audience.
+- Every approved producer joins the owning domain transaction; existing email remains after commit.
+- No Admin producer, combined inbox, NotificationType table, sender, preference, outbox, SMS, push,
+  WebSocket, SSE, polling, mock fallback or localStorage read truth is allowed.
+- The BR-81 exact-deadline equality discrepancy must be resolved separately before implementing
+  Organizer Booth re-selection; it does not block PR 1 foundation.
+- Do not commit `.env`, credentials, local database URLs, demo-only data or local scripts.
 
 ## Explicitly out of scope
 
-- Heritage Feedback, rating, comments or moderation queue
-- Heritage ownership per Organizer
-- Heritage localization, version history or approval workflow
-- external media storage, image processing or a general asset library
-- categories, tags, search engine integration or recommendation behavior
-- Admin Heritage API or UI
-- Notification delivery caused by Heritage changes
-- reports, analytics, map integration or unrelated frontend refactors
+- notification deletion, archive, pin, snooze, reply or assignment
+- generic broadcast/composer behavior
+- email behavior changes, SMS, mobile push or real-time transport
+- General Feedback broadcast
+- Participant-volume Organizer alerts
+- Admin security/account/system alert producers
+- lifecycle changes to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate or Badge
 
-## Completion result
+## Activation result
 
-PR #105 approved the Sprint 9 documentation baseline at merge commit `7e46809`. PR #107 then
-delivered V15, the domain and APIs, the public experience, the shared Organizer management
-workflow and focused automated coverage at merge commit `7ed4e0e`.
-
-All 28 Acceptance Criteria have implementation and verification evidence in
-`docs/development/SPRINT_09_CLOSURE_REPORT.md`. Sprint 9 is closed as `COMPLETED` on `2026-11-01`.
+Sprint 10 documentation was reviewed and merged through PR #116. The active Business Rules, Use Case List,
+MVP Scope, Sprint pointer and AI context were promoted on `2026-11-03`. Developer A reserved V16 after
+confirming updated `main` contains only immutable migrations V1 through V15. No application code or
+migration is part of the activation change.

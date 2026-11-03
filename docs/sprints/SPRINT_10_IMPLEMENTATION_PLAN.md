@@ -1,13 +1,13 @@
 # Sprint 10 Role-Scoped Notifications Implementation Plan
 
-- Status: `PROPOSED - REVIEW COMPLETE; BLOCKED UNTIL DOCUMENTATION ACTIVATION`
+- Status: `ACTIVE - PR 1 FOUNDATION AUTHORIZED`
 - Prepared date: `2026-11-02`
 - Scope baseline: `docs/sprints/sprint-10.md`
 - API contract: `docs/api/sprint-10-api-contract.md`
 - Physical ERD overlay: `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
 - Three-developer ownership: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
 - Schema baseline: immutable Flyway `V1` through `V15`
-- Candidate migration version: not reserved
+- Reserved migration version: `V16`, exclusively owned by Developer A (`YingKai0621`)
 
 ## 1. Delivery principles
 
@@ -25,13 +25,15 @@
 
 ## 2. Pre-implementation gates
 
-1. Project Owner approves and merges the complete Sprint 10 documentation set.
-2. Project/context owner activates Sprint 10 in `CURRENT_SPRINT.md` and updates `AI_CONTEXT.md`.
-3. Migration owner updates from `main` and lists every migration.
-4. Migration owner reserves the next free version after V15 and announces it to the team.
-5. Implementer rereads the required sources in `AGENTS.md` order.
-6. Implementer confirms no competing branch edits the migration, notification core, or shared security
-   matcher.
+1. Completed: PR #116 merged the complete Sprint 10 documentation set at `3a0a76b`.
+2. Completed by this activation change: Sprint 10 is promoted in `CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and
+   the active requirement context.
+3. Completed: Developer A updated from `main` and listed immutable migrations V1 through V15.
+4. Completed: Developer A reserved `V16`; no competing migration existed at reservation time.
+5. Required before PR 1 code: reread the required sources in `AGENTS.md` order from merged activation main.
+6. Required before PR 1 code: confirm no competing branch edits V16, Notification core, or shared security.
+7. Before PR 2 or PR 3 begins, the teammate taking it claims the corresponding Developer B or C role and
+   confirms branch ownership, shared-file boundaries and the documented merge order with the team.
 
 ## 3. Proposed PR sequence
 
@@ -198,7 +200,7 @@ The migration owner implements only the Sprint 10 overlay:
 
 Required migration tests:
 
-- clean V1 through candidate version
+- clean V1 through V16
 - V15 upgrade with unread Participant row
 - V15 upgrade with read Participant row preserving exact `read_at`
 - exact role backfill regardless of current advanced User roles
