@@ -30,6 +30,7 @@ export interface MapPopoverData {
 interface BoothMapCanvasProps {
   markers: BoothMapMarker[];
   selectedMarkerId?: string | null;
+  newlyCreatedMarkerId?: string | null;
   onSelectMarker?: (marker: BoothMapMarker) => void;
   activePopoverData?: MapPopoverData | null;
   onOpenPopover?: (marker: BoothMapMarker) => void;
@@ -52,6 +53,7 @@ interface BoothMapCanvasProps {
 export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
   markers,
   selectedMarkerId,
+  newlyCreatedMarkerId,
   onSelectMarker,
   activePopoverData,
   onOpenPopover,
@@ -376,6 +378,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
             const statusClass = `status-${marker.status.toLowerCase()}`;
 
             const isSelected = activePopoverData?.markerId === marker.id || selectedMarkerId === marker.id;
+            const isNewlyCreated = newlyCreatedMarkerId === marker.id;
             const isDraggingThis = draggingMarkerId === marker.id;
             const kindClass = `kind-${(marker.kind || 'BOOTH').toLowerCase()}`;
 
@@ -383,7 +386,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
               <button
                 type="button"
                 key={marker.id}
-                className={`booth-map-marker ${statusClass} ${kindClass} ${marker.status === 'PHYSICAL_INACTIVE' ? 'is-inactive' : ''} ${isSelected ? 'is-selected' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
+                className={`booth-map-marker ${statusClass} ${kindClass} ${marker.status === 'PHYSICAL_INACTIVE' ? 'is-inactive' : ''} ${isSelected ? 'is-selected' : ''} ${isNewlyCreated ? 'is-newly-created' : ''} ${isDraggingThis ? 'is-active-dragging' : ''}`}
                 style={{
                   left: `${marker.x}%`,
                   top: `${marker.y}%`,
@@ -395,6 +398,7 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                 title={`${marker.code}: ${marker.name} (${markerStatusLabel(marker.status)}) - Kéo để đổi vị trí, Click để chỉnh sửa`}
               >
                 <span>{marker.code}</span>
+                {isNewlyCreated && <span className="newly-created-badge" aria-hidden="true">★ Mới</span>}
                 {(marker.status === 'ASSIGNED' || marker.status === 'OWNED') && <Lock size={11} className="booth-marker-lock" />}
               </button>
             );
@@ -482,9 +486,11 @@ export const BoothMapCanvas: React.FC<BoothMapCanvasProps> = ({
                     type="submit"
                     className="btn-popover-save"
                     disabled={popoverSaving}
+                    aria-label="Lưu thay đổi"
+                    title="Lưu thay đổi"
                   >
                     <Check size={15} />
-                    <span>{popoverSaving ? 'Đang lưu...' : 'Hoàn tất & Đồng bộ'}</span>
+                    <span>{popoverSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                   </button>
                 </div>
               </form>

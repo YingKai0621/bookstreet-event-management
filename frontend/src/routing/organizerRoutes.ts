@@ -97,6 +97,11 @@ export function normalizeOrganizerSearch(tab: OrganizerTab, search: string): URL
   }
 
   if (EVENT_SCOPED_TABS.includes(tab)) copyNonEmpty('eventId');
+  if (tab === 'booths') {
+    if (source.get('view') === 'map') normalized.set('view', 'map');
+    const locationId = source.get('locationId');
+    if (locationId && /^[1-9]\d*$/.test(locationId)) normalized.set('locationId', locationId);
+  }
   if (tab === 'activities') {
     const view = source.get('view') || source.get('activityView');
     if (view && ACTIVITY_VIEWS.has(view) && view !== 'activities') normalized.set('view', view);

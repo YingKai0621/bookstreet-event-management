@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { organizerApi } from '../../services/organizerApi';
 import type {
@@ -66,6 +67,7 @@ function truncateCardDescription(value: string): string {
 }
 
 export function OrganizerLocationManagementView() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<OrganizerLocationResponse[]>([]);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
@@ -178,13 +180,14 @@ export function OrganizerLocationManagementView() {
         maxCapacity: Number(form.maxCapacity),
       };
       if (editing === 'new') {
-        await organizerApi.createActivityLocation({
+        const created = await organizerApi.createActivityLocation({
           ...common,
           locationType: form.locationType,
           mapX: null,
           mapY: null,
         } satisfies CreateOrganizerLocationRequest);
         setNotice('Đã thêm địa điểm tổ chức mới.');
+        navigate(`/organizer/booths?view=map&locationId=${created.locationId}`);
       } else {
         await organizerApi.updateActivityLocation(editing.locationId, {
           ...common,
@@ -251,7 +254,10 @@ export function OrganizerLocationManagementView() {
             <label className="organizer-location-wide">Mô tả<textarea rows={4} maxLength={DESCRIPTION_CHARACTER_LIMIT} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length.toLocaleString('vi-VN')}/{DESCRIPTION_CHARACTER_LIMIT.toLocaleString('vi-VN')} ký tự</small></label>
           </div>
           {formError && <p className="venue-error" role="alert">{formError}</p>}
-          <div className="venue-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>
+          <div className="venue-dialog-footer">
+            {editing && editing !== 'new' && <button type="button" className="btn-org-secondary" disabled={saving} onClick={() => navigate(`/organizer/booths?view=map&locationId=${editing.locationId}`)}><MapPin size={16} />Đặt vị trí trên bản đồ</button>}
+            <button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button>
+          </div>
         </form>
       </dialog>
     </section>

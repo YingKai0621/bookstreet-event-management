@@ -381,8 +381,6 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
   await page.getByPlaceholder('Ví dụ: A01, B02, C10').fill('B01');
   await page.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill('Gian văn học');
-  await page.getByLabel('Tọa độ X trên sơ đồ (%)').fill('50');
-  await page.getByLabel('Tọa độ Y trên sơ đồ (%)').fill('50');
   await page.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Đã thêm mới thành công gian hàng');
   await expect(page.getByText('B01', { exact: true })).toBeVisible();
@@ -497,6 +495,37 @@ test('Organizer event selector keeps the selected event in the URL and after rel
   await page.reload();
   await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('102');
   await expect(page.getByText('NXB Mùa xuân')).toBeVisible();
+});
+
+test('Partner opens booth details as a viewport overlay on a direct map visit', async ({ page }) => {
+  await mockPartner(page);
+  await page.goto('/partner/booth-requests');
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByRole('button', { name: /B02.*Còn trống/ }).click();
+    const backdrop = page.locator('.booth-modal-backdrop');
+    await expect(backdrop).toHaveCSS('position', 'fixed');
+    const box = await backdrop.boundingBox();
+    expect(box!.x).toBe(0);
+    expect(box!.y).toBe(0);
+    // A stable scrollbar gutter can reserve up to 20px beside the overlay.
+    expect(box!.width).toBeGreaterThanOrEqual(viewport.width - 20);
+    expect(box!.width).toBeLessThanOrEqual(viewport.width);
+    expect(box!.height).toBe(viewport.height);
+    const modal = page.locator('.s2-booth-request-modal');
+    await expect(modal).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(modal.getByRole('heading', { name: 'Gian văn học' })).toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Gửi yêu cầu thuê gian' })).toBeVisible();
+    const modalBox = await modal.boundingBox();
+    expect(modalBox!.x).toBeGreaterThanOrEqual(0);
+    expect(modalBox!.x + modalBox!.width).toBeLessThanOrEqual(viewport.width);
+    await page.keyboard.press('Escape');
+    await expect(backdrop).toHaveCount(0);
+    await page.getByRole('button', { name: /A05.*Đang giữ chỗ/ }).click();
+    await expect(page.locator('.s2-booth-request-modal')).toContainText('Gian hàng hiện đang giữ chỗ.');
+    await expect(page.locator('.s2-booth-request-modal').getByRole('button', { name: 'Gửi yêu cầu thuê gian' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+  }
 });
 
 test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request', async ({ page }) => {

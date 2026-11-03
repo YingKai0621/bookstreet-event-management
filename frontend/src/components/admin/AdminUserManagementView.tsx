@@ -313,12 +313,12 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                       <div className="adm-contact-cell">
                         <div className="adm-contact-item">
                           <Mail size={13} />
-                          <span>{user.email}</span>
+                          <span title={user.email}>{user.email || 'Chưa có email'}</span>
                         </div>
-                        <div className="adm-contact-item">
+                        {user.phone && <div className="adm-contact-item">
                           <Phone size={13} />
                           <span>{user.phone}</span>
-                        </div>
+                        </div>}
                       </div>
                     </td>
 

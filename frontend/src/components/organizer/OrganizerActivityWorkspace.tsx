@@ -672,7 +672,6 @@ interface CreateActivityForm {
   startAt: string;
   endAt: string;
   capacity: string;
-  imageUrl: string;
   registrationRequired: boolean;
   registrationDeadlineAt: string;
   certificateEnabled: boolean;
@@ -687,7 +686,6 @@ const EMPTY_ACTIVITY_FORM: CreateActivityForm = {
   startAt: '',
   endAt: '',
   capacity: '',
-  imageUrl: '',
   registrationRequired: false,
   registrationDeadlineAt: '',
   certificateEnabled: false,
@@ -943,15 +941,6 @@ function CreateActivityModal({
     if (startAt <= new Date()) return 'Thời gian bắt đầu phải ở tương lai.';
     if (startAt < new Date(event.startDate) || endAt > new Date(event.endDate)) return 'Thời gian hoạt động phải nằm hoàn toàn trong thời gian sự kiện.';
     if (form.description.trim().length > 5000) return 'Mô tả không được vượt quá 5.000 ký tự.';
-    if (form.imageUrl.trim()) {
-      try {
-        const url = new URL(form.imageUrl.trim());
-        if (!['http:', 'https:'].includes(url.protocol)) return 'URL hình ảnh phải dùng HTTP hoặc HTTPS.';
-      } catch {
-        return 'URL hình ảnh không hợp lệ.';
-      }
-    }
-    if (form.imageUrl.trim().length > 2048) return 'URL hình ảnh không được vượt quá 2.048 ký tự.';
     if (form.registrationRequired) {
       if (form.attendanceEarlyScanMinutes !== '' && (!Number.isInteger(Number(form.attendanceEarlyScanMinutes)) || Number(form.attendanceEarlyScanMinutes) < 0 || Number(form.attendanceEarlyScanMinutes) > 1440)) return 'Thời gian mở QR phải là số phút từ 0 đến 1440.';
       if (!form.registrationDeadlineAt) return 'Hoạt động yêu cầu đăng ký phải có hạn đăng ký.';
@@ -980,7 +969,7 @@ function CreateActivityModal({
         startAt: vietnamLocalToIso(form.startAt),
         endAt: vietnamLocalToIso(form.endAt),
         capacity: Number(form.capacity),
-        imageUrl: form.imageUrl.trim() || null,
+        imageUrl: null,
         registrationRequired: form.registrationRequired,
         registrationDeadlineAt: form.registrationRequired ? vietnamLocalToIso(form.registrationDeadlineAt) : null,
         certificateEnabled: form.registrationRequired && form.certificateEnabled,
@@ -1012,7 +1001,6 @@ function CreateActivityModal({
               <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={minimumFutureAt} onChange={value => setField('startAt', value)} />
               <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={form.startAt ? (vietnamLocalToIso(form.startAt) > minimumFutureAt ? vietnamLocalToIso(form.startAt) : minimumFutureAt) : minimumFutureAt} onChange={value => setField('endAt', value)} />
               <label className="oaw-field"><span>Sức chứa <b>*</b></span><input type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={e => setField('capacity', e.target.value)} placeholder={selectedLocation ? `Tối đa ${selectedLocation.maxCapacity}` : 'Số người'} /></label>
-              <label className="oaw-field"><span>URL hình ảnh</span><input type="url" value={form.imageUrl} onChange={e => setField('imageUrl', e.target.value)} maxLength={2048} placeholder="https://..." /></label>
               <label className="oaw-field oaw-field--wide"><span>Mô tả</span><textarea value={form.description} onChange={e => setField('description', e.target.value)} maxLength={5000} rows={4} placeholder="Mô tả nội dung hoạt động..." /><small>{form.description.length}/5000</small></label>
             </div>
             <div className="oaw-registration-box">
@@ -1478,7 +1466,6 @@ function editFormFromActivity(activity: OrganizerActivityResponse): CreateActivi
     startAt: isoToVietnamLocal(activity.startAt),
     endAt: isoToVietnamLocal(activity.endAt),
     capacity: String(activity.capacity),
-    imageUrl: activity.imageUrl || '',
     registrationRequired: activity.registrationRequired,
     registrationDeadlineAt: activity.registrationDeadlineAt
       ? isoToVietnamLocal(activity.registrationDeadlineAt)
@@ -1545,7 +1532,6 @@ function EditActivityModal({
     const normalizedTitle = form.title.trim().replace(/\s+/g, ' ');
     const normalizedType = form.activityType.trim().replace(/\s+/g, ' ');
     const description = form.description.trim() || null;
-    const imageUrl = form.imageUrl.trim() || null;
     if (coreEditable && normalizedTitle !== activity.title) payload.title = normalizedTitle;
     if (coreEditable && description !== activity.description) payload.description = description;
     if (coreEditable && normalizedType !== activity.activityType) payload.activityType = normalizedType;
@@ -1555,7 +1541,6 @@ function EditActivityModal({
       payload.endAt = vietnamLocalToIso(form.endAt);
     }
     if (coreEditable && Number(form.capacity) !== activity.capacity) payload.capacity = Number(form.capacity);
-    if (imageUrl !== activity.imageUrl) payload.imageUrl = imageUrl;
     if (form.registrationRequired !== activity.registrationRequired) payload.registrationRequired = form.registrationRequired;
     const deadline = form.registrationRequired && form.registrationDeadlineAt
       ? vietnamLocalToIso(form.registrationDeadlineAt)
@@ -1581,12 +1566,6 @@ function EditActivityModal({
     if (coreEditable && (!form.startAt || !form.endAt || new Date(vietnamLocalToIso(form.startAt)) >= new Date(vietnamLocalToIso(form.endAt)))) return 'Thời gian kết thúc phải sau thời gian bắt đầu.';
     if (payload.startAt && new Date(payload.startAt).getTime() <= Date.now()) return 'Thời gian bắt đầu mới phải ở tương lai.';
     if (coreEditable && (new Date(vietnamLocalToIso(form.startAt)) < new Date(event.startDate) || new Date(vietnamLocalToIso(form.endAt)) > new Date(event.endDate))) return 'Thời gian hoạt động phải nằm hoàn toàn trong sự kiện.';
-    if (form.imageUrl.trim()) {
-      try {
-        const url = new URL(form.imageUrl.trim());
-        if (!['http:', 'https:'].includes(url.protocol)) return 'URL hình ảnh phải dùng HTTP hoặc HTTPS.';
-      } catch { return 'URL hình ảnh không hợp lệ.'; }
-    }
     if (form.registrationRequired) {
       if (!form.registrationDeadlineAt) return 'Hoạt động yêu cầu đăng ký phải có hạn đăng ký.';
       const deadline = new Date(vietnamLocalToIso(form.registrationDeadlineAt));
@@ -1631,7 +1610,6 @@ function EditActivityModal({
               {coreEditable ? <EventDateTimeField label="Bắt đầu" value={form.startAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={minimumFutureAt} allowExistingPastValue={initialForm.startAt} onChange={value => setField('startAt', value)} /> : <label className="oaw-field"><span>Bắt đầu</span><input disabled value={formatDateTime(activity.startAt)} /></label>}
               {coreEditable ? <EventDateTimeField label="Kết thúc" value={form.endAt} eventStartAt={event.startDate} eventEndAt={event.endDate} minimumAt={form.startAt ? (vietnamLocalToIso(form.startAt) > minimumFutureAt ? vietnamLocalToIso(form.startAt) : minimumFutureAt) : minimumFutureAt} allowExistingPastValue={initialForm.endAt} onChange={value => setField('endAt', value)} /> : <label className="oaw-field"><span>Kết thúc</span><input disabled value={formatDateTime(activity.endAt)} /></label>}
               <label className="oaw-field"><span>Sức chứa</span><input disabled={!coreEditable} type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={e => setField('capacity', e.target.value)} /></label>
-              <label className="oaw-field"><span>URL hình ảnh</span><input type="url" maxLength={2048} value={form.imageUrl} onChange={e => setField('imageUrl', e.target.value)} placeholder="https://..." /></label>
               <label className="oaw-field oaw-field--wide"><span>Mô tả</span><textarea disabled={!coreEditable} rows={4} maxLength={5000} value={form.description} onChange={e => setField('description', e.target.value)} /></label>
             </div>
             <div className="oaw-registration-box">

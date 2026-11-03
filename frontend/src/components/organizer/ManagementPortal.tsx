@@ -49,6 +49,7 @@ import {
   OrganizerBoothItem,
   OrganizerEvent,
   OrganizerEventRequest,
+  OrganizerEventUpdateRequest,
   OrganizerNotificationItem,
   OrganizerProfile,
   OrganizerTab,
@@ -59,6 +60,31 @@ import './OrganizerPortal.css';
 export interface ManagementPortalProps {
   language: Language;
   onLogout?: () => void;
+}
+
+function sameInstant(left: string | null, right: string | null): boolean {
+  if (left === null || right === null) return left === right;
+  return new Date(left).getTime() === new Date(right).getTime();
+}
+
+function changedEventFields(event: OrganizerEvent, request: OrganizerEventRequest): OrganizerEventUpdateRequest {
+  const patch: OrganizerEventUpdateRequest = {};
+  if (request.name !== event.title) patch.name = request.name;
+  if (request.description !== (event.description || null)) patch.description = request.description;
+  if (!sameInstant(request.startAt, event.startDate)) patch.startAt = request.startAt;
+  if (!sameInstant(request.endAt, event.endDate)) patch.endAt = request.endAt;
+  if (!sameInstant(request.partnerApplicationDeadlineAt, event.partnerApplicationDeadlineAt)) patch.partnerApplicationDeadlineAt = request.partnerApplicationDeadlineAt;
+  if (!sameInstant(request.boothRequestDeadlineAt, event.boothRequestDeadlineAt)) patch.boothRequestDeadlineAt = request.boothRequestDeadlineAt;
+  if (!sameInstant(request.activityProposalDeadlineAt, event.activityProposalDeadlineAt)) patch.activityProposalDeadlineAt = request.activityProposalDeadlineAt;
+  if (!sameInstant(request.participantRegistrationDeadlineAt, event.participantRegistrationDeadlineAt)) patch.participantRegistrationDeadlineAt = request.participantRegistrationDeadlineAt;
+  if (!sameInstant(request.partnerWithdrawalCutoffAt, event.partnerWithdrawalCutoffAt)) patch.partnerWithdrawalCutoffAt = request.partnerWithdrawalCutoffAt;
+  if (!sameInstant(request.boothCancellationCutoffAt, event.boothCancellationCutoffAt)) patch.boothCancellationCutoffAt = request.boothCancellationCutoffAt;
+  if (!sameInstant(request.activityCancellationCutoffAt, event.activityCancellationCutoffAt)) patch.activityCancellationCutoffAt = request.activityCancellationCutoffAt;
+  if (request.boothPaymentWindowMinutes !== event.boothPaymentWindowMinutes) patch.boothPaymentWindowMinutes = request.boothPaymentWindowMinutes;
+  if (request.maxBoothsPerPartner !== event.maxBoothsPerPartner) patch.maxBoothsPerPartner = request.maxBoothsPerPartner;
+  if (request.maxActivitiesPerPartner !== event.maxActivitiesPerPartner) patch.maxActivitiesPerPartner = request.maxActivitiesPerPartner;
+  if (request.bannerUrl !== event.bannerUrl) patch.bannerUrl = request.bannerUrl;
+  return patch;
 }
 
 export const ManagementPortal: React.FC<ManagementPortalProps> = ({
@@ -304,8 +330,14 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   };
 
   const handleSaveEvent = async (request: OrganizerEventRequest, eventId?: string) => {
+    const currentEvent = eventId ? eventsList.find(event => event.id === eventId) || editingEvent : null;
+    const changes = currentEvent ? changedEventFields(currentEvent, request) : request;
+    const basicChanges: OrganizerEventUpdateRequest = {};
+    if ('name' in changes) basicChanges.name = changes.name;
+    if ('description' in changes) basicChanges.description = changes.description;
+    if ('bannerUrl' in changes) basicChanges.bannerUrl = changes.bannerUrl;
     const savedEvent = eventId
-      ? await organizerApi.updateEvent(eventId, request)
+      ? await organizerApi.updateEvent(eventId, focusEventPublishIssues ? changes : basicChanges)
       : await organizerApi.createEvent(request);
     setEventsList(current => {
       const alreadyExists = current.some(event => event.id === savedEvent.id);

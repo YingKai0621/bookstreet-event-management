@@ -1630,7 +1630,7 @@
 
 .org-event-row-image {
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   background: #EFF3F1;
 }
 
@@ -3099,7 +3099,8 @@
 }
 
 .org-dashboard-event-thumb {
-  object-fit: cover;
+  object-fit: contain;
+  background: #f7f4eb;
 }
 
 .org-dashboard-event-date {
@@ -6100,4 +6101,52 @@
   .org-booth-select-wrap select {
     width: 100%;
   }
+}
+/* Event settings: compact, readable operational summary. */
+.organizer-card.org-event-settings { width: 100%; max-width: 1120px; padding: 24px; box-sizing: border-box; }
+.org-event-settings-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #dce6e2; }
+.org-event-settings-header h2 { margin: 0; font-size: 24px; line-height: 1.3; font-weight: 700; color: #193b32; }
+.org-event-settings-header p { margin: 6px 0 0; color: #637771; font-size: 14px; line-height: 1.5; }
+.org-event-settings-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.org-event-settings-actions button { white-space: nowrap; }
+.org-event-settings-list { margin: 8px 0 0; }
+.org-event-settings-row { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(180px, 1fr); align-items: baseline; gap: 24px; padding: 15px 0; border-bottom: 1px solid #edf1ef; font-size: 15px; line-height: 1.5; }
+.org-event-settings-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.org-event-settings-row dt { color: #52665e; font-weight: 500; }
+.org-event-settings-row dd { margin: 0; color: #193b32; font-weight: 600; font-variant-numeric: tabular-nums; }
+.org-modal-box.org-event-basic-modal { max-width: 720px; }
+.org-event-basic-modal .org-event-form-section-heading { display: none; }
+.org-event-basic-modal .org-event-form-section { border: 0; padding: 0; }
+.org-event-basic-modal .org-event-form-body { padding: 24px; }
+@media (max-width: 800px) {
+  .org-event-settings-header { align-items: flex-start; flex-direction: column; }
+  .org-event-settings-actions { width: 100%; }
+}
+@media (max-width: 520px) {
+  .organizer-card.org-event-settings { padding: 18px; }
+  .org-event-settings-row { grid-template-columns: 1fr; gap: 4px; padding: 13px 0; }
+  .org-event-settings-actions button { flex: 1; }
+  .org-event-basic-modal .org-event-form-body { padding: 18px; }
+}
+@keyframes org-chart-ring-reveal {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes org-chart-bar-reveal {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes org-chart-value-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.org-dashboard-donut-reveal { animation: org-chart-ring-reveal 1000ms cubic-bezier(.22, 1, .36, 1) both; }
+.org-dashboard-column-bar { transform-origin: bottom; animation: org-chart-bar-reveal 700ms cubic-bezier(.22, 1, .36, 1) both; }
+.org-dashboard-column:nth-child(2) .org-dashboard-column-bar { animation-delay: 100ms; }
+.org-dashboard-column:nth-child(3) .org-dashboard-column-bar { animation-delay: 200ms; }
+.org-dashboard-column-value { animation: org-chart-value-reveal 300ms ease-out 500ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .org-dashboard-donut-reveal,
+  .org-dashboard-column-bar,
+  .org-dashboard-column-value { animation: none; }
 }

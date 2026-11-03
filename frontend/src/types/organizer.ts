@@ -55,6 +55,9 @@ export interface OrganizerEventRequest {
   bannerUrl: string | null;
 }
 
+/** PATCH payload: only changed fields are sent, preserving lifecycle-locked settings. */
+export type OrganizerEventUpdateRequest = Partial<OrganizerEventRequest>;
+
 export interface OrganizerEventResponse extends OrganizerEventRequest {
   eventId: number;
   organizerUserId: number;

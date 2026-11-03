@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { useListPagination } from '../../hooks/useListPagination';
@@ -64,8 +65,8 @@ const INITIAL_FORM: BoothFormData = {
   code: '',
   name: '',
   categoryCode: 'LITERATURE',
-  mapX: '',
-  mapY: '',
+  mapX: '50',
+  mapY: '50',
   description: '',
   note: '',
   imageUrl: '',
@@ -88,6 +89,9 @@ function getCategoryLabel(categoryCode: string | null | undefined, language: Lan
 export const OrganizerBoothManagementView: React.FC<Props> = ({
   language,
 }) => {
+  const [mapSearchParams] = useSearchParams();
+  const targetLocationId = Number(mapSearchParams.get('locationId')) || null;
+  const mapPanelRef = useRef<HTMLDivElement>(null);
   const [booths, setBooths] = useState<PhysicalBooth[]>([]);
   const [locations, setLocations] = useState<OrganizerLocationResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +105,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   // View Modes: activeMode ('list' | 'map') and listLayout ('table' | 'grid')
-  const [activeMode, setActiveMode] = useState<'list' | 'map'>('list');
+  const [activeMode, setActiveMode] = useState<'list' | 'map'>(() => mapSearchParams.get('view') === 'map' ? 'map' : 'list');
   const [listLayout, setListLayout] = useState<'table' | 'grid'>('table');
 
   // Physical map state. Event availability and pricing deliberately do not live here.
@@ -109,6 +113,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   const [locationDraftCoords, setLocationDraftCoords] = useState<Record<number, { x: number; y: number }>>({});
   const [activePopover, setActivePopover] = useState<MapPopoverData | null>(null);
   const [isSavingMap, setIsSavingMap] = useState(false);
+  const [newlyCreatedBoothId, setNewlyCreatedBoothId] = useState<number | null>(null);
   const [customMapUrl, setCustomMapUrl] = useState<string | undefined>();
 
   // Modal States
@@ -162,12 +167,17 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     try {
       const [physicalBooths, locationPage] = await Promise.all([
         boothApi.listAllPhysicalBooths(),
-        organizerApi.listActivityLocations({ page: 0, size: 100, sort: 'code,asc' }).catch(() => ({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 })),
+        organizerApi.listActivityLocations({ page: 0, size: 100, sort: 'code,asc' }),
       ]);
+      const remainingPages = await Promise.all(Array.from({ length: Math.max(0, locationPage.totalPages - 1) }, (_, index) =>
+        organizerApi.listActivityLocations({ page: index + 1, size: 100, sort: 'code,asc' })));
+      const allLocations = [locationPage, ...remainingPages].flatMap(result => result.content);
       setBooths(physicalBooths);
-      setLocations(locationPage.content);
+      setLocations(allLocations);
       setDraftCoords({});
-      setLocationDraftCoords({});
+      const target = allLocations.find(location => location.locationId === targetLocationId);
+      setLocationDraftCoords(target && (target.mapX === null || target.mapY === null)
+        ? { [target.locationId]: { x: 50, y: 50 } } : {});
       setActivePopover(null);
     } catch (err) {
       console.warn('Could not load booth catalog data', err);
@@ -176,12 +186,18 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [targetLocationId]);
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- This effect starts the catalog's initial guarded remote-data load.
     void loadBoothData();
   }, [loadBoothData]);
+
+  useEffect(() => {
+    if (!loading && activeMode === 'map' && (targetLocationId || newlyCreatedBoothId)) {
+      mapPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [loading, targetLocationId, newlyCreatedBoothId, activeMode]);
 
   // Auto-dismiss success message
   useEffect(() => {
@@ -376,6 +392,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     }
 
     setFormSubmitting(true);
+    let createdBooth: PhysicalBooth | null = null;
     try {
       if (editingBooth) {
         // UPDATE
@@ -402,10 +419,11 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           note: formData.note.trim() || null,
           imageUrl: formData.imageUrl.trim() || null,
           maxCapacity: 1,
-          mapX: mapXVal,
-          mapY: mapYVal,
+          mapX: mapXVal ?? 50,
+          mapY: mapYVal ?? 50,
         };
-        await boothApi.createPhysicalBooth(createPayload);
+        const created = await boothApi.createPhysicalBooth(createPayload);
+        createdBooth = created;
         setSuccessMessage(`Đã thêm mới thành công gian hàng "${createPayload.code}".`);
       }
 
@@ -420,6 +438,11 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
         void deleteUploadedImageQuietly(replacedImageUrl);
       }
       await loadBoothData();
+
+      if (createdBooth) {
+        setActiveMode('map');
+        setNewlyCreatedBoothId(createdBooth.boothId);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.fieldErrors.map(f => f.message).join(' ') || err.message);
@@ -546,7 +569,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       setSuccessMessage(
         locationIds.length > 0 && boothIds.length === 0
           ? `Đã lưu tọa độ của ${locationIds.length} địa điểm.`
-          : `Đã lưu tọa độ của ${boothIds.length} gian hàng.`
+          : `Đã lưu tọa độ của ${boothIds.length} vị trí.`
       );
       await loadBoothData();
     } catch (err) {
@@ -592,6 +615,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               type="button"
               className={`booth-mode-btn ${activeMode === 'map' ? 'is-active' : ''}`}
               onClick={handleSwitchToMapView}
+              aria-label={language === 'vi' ? 'Sơ đồ Không gian Đường Sách' : 'Book Street Space Map'}
               aria-pressed={activeMode === 'map'}
             >
               <MapPin size={16} />
@@ -661,7 +685,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       )}
 
       {activeMode === 'map' ? (
-        <div className="booth-physical-map-panel">
+        <div ref={mapPanelRef} className="booth-physical-map-panel">
           <div className="booth-physical-map-heading">
             <div>
               <h2>Sơ đồ không gian Đường Sách</h2>
@@ -671,6 +695,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
           </div>
           <BoothMapCanvas
             markers={mapMarkers}
+            selectedMarkerId={targetLocationId ? `location-${targetLocationId}` : undefined}
+            newlyCreatedMarkerId={targetLocationId && locationDraftCoords[targetLocationId] ? `location-${targetLocationId}` : newlyCreatedBoothId ? `booth-${newlyCreatedBoothId}` : undefined}
             activePopoverData={activePopover}
             onOpenPopover={handleOpenMapPopover}
             onClosePopover={() => setActivePopover(null)}
@@ -690,17 +716,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
       ) : (
         <>
           {/* 3. TOOLBAR & FILTERS */}
-          {!loading && !loadError && (
-            <div className="booth-catalog-caption">
-              <div>
-                <h2>{language === 'vi' ? 'Danh mục gian hàng' : 'Booth catalog'}</h2>
-                <p>{language === 'vi' ? 'Tìm kiếm, xem thông tin và quản lý trạng thái từng gian hàng.' : 'Search, inspect and manage physical booths.'}</p>
-              </div>
-              <span>{filteredBooths.length} / {booths.length} {language === 'vi' ? 'gian hàng' : 'booths'}</span>
-            </div>
-          )}
-
-          {!loadError && (
+                    {!loadError && (
             <div className="booth-crud-toolbar">
               <div className="booth-toolbar-left">
                 {/* Search Box */}
@@ -1069,36 +1085,6 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                     <small>{language === 'vi' ? 'JPG, PNG hoặc WebP · tối đa 5 MB' : 'JPG, PNG or WebP · up to 5 MB'}</small>
                   </div>
                 </div>
-              </div>
-
-              <div className="booth-form-group">
-                <label htmlFor="physical-booth-map-x">Tọa độ X trên sơ đồ (%)</label>
-                <input
-                  id="physical-booth-map-x"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="0–100"
-                  value={formData.mapX}
-                  onChange={e => setFormData({ ...formData, mapX: e.target.value })}
-                  disabled={formSubmitting || imageUploading}
-                />
-              </div>
-
-              <div className="booth-form-group">
-                <label htmlFor="physical-booth-map-y">Tọa độ Y trên sơ đồ (%)</label>
-                <input
-                  id="physical-booth-map-y"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="0–100"
-                  value={formData.mapY}
-                  onChange={e => setFormData({ ...formData, mapY: e.target.value })}
-                  disabled={formSubmitting}
-                />
               </div>
 
               {/* Status Switch (Edit only) */}

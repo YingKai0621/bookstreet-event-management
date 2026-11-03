@@ -1,3 +1,5 @@
+@import '../booth-map/BoothModal.css';
+
 .s2-booth-page { display: grid; gap: 1.25rem; color: #172421; }
 .s2-booth-header, .s2-panel-heading, .s2-event-bar, .s2-modal-header, .s2-modal-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .s2-booth-header h1, .s2-panel-heading h2, .s2-modal h2 { margin: 0; font-family: var(--font-serif, "Cinzel", "Playfair Display", Georgia, serif); color: #172421; }
@@ -1954,4 +1956,17 @@
 .s2-partner-request-event { display: inline-block; margin-top: 0.3rem; padding: 0.18rem 0.45rem; border: 1px solid #e4d3a8; border-radius: 2px; background: #fff9e9; color: #7a5a12; font-size: 0.72rem; font-weight: 750; }
 @media (max-width: 640px) {
   .s2-request-scope { justify-content: flex-start; width: 100%; }
+}
+.s2-partner-map-panel .booth-map-shell.s2-partner-booth-map-canvas,
+.s2-partner-map-panel .booth-map-viewport,
+.s2-partner-map-panel .booth-map-image-layer,
+.s2-partner-map-panel .booth-map-image-layer > img {
+  border-radius: 0;
+}
+.s2-panel.s2-partner-map-panel {
+  border-radius: 0;
+}
+.s2-partner-map-panel .booth-map-shell {
+  border: 0;
+  box-shadow: none;
 }
