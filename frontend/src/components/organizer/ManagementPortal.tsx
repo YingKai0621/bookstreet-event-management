@@ -337,7 +337,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     if ('description' in changes) basicChanges.description = changes.description;
     if ('bannerUrl' in changes) basicChanges.bannerUrl = changes.bannerUrl;
     const savedEvent = eventId
-      ? await organizerApi.updateEvent(eventId, focusEventPublishIssues ? changes : basicChanges)
+      ? await organizerApi.updateEvent(eventId, currentEvent?.apiStatus === 'DRAFT' ? changes : basicChanges)
       : await organizerApi.createEvent(request);
     setEventsList(current => {
       const alreadyExists = current.some(event => event.id === savedEvent.id);

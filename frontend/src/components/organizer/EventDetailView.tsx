@@ -521,24 +521,21 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
       )}
 
       {activeTab === 'settings' && (
-        <section className="organizer-card org-event-settings" aria-labelledby="event-settings-title">
-          <div className="org-event-settings-header">
+        <section className="organizer-card org-event-config" aria-labelledby="event-config-title">
+          <div className="org-event-config-header">
             <div>
-              <h2 id="event-settings-title">Cấu hình sự kiện</h2>
-              <p>Các mốc thời gian và giới hạn tổ chức của sự kiện.</p>
+              <h2 id="event-config-title">Cấu hình sự kiện</h2>
             </div>
-            <div className="org-event-settings-actions">
+            <div className="org-event-config-actions">
               <button type="button" className="btn-org-secondary" onClick={onNavigateToBoothsMap}>
                 <Store size={15} />
                 {language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth map'}
               </button>
-              {(event.apiStatus === 'DRAFT' || event.apiStatus === 'PUBLISHED' || event.apiStatus === 'ONGOING') && (
-                <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa thông tin</button>
-              )}
+              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
             </div>
           </div>
-          <dl className="org-event-settings-list">
-            {configurationRows.map(([label, value]) => <div className="org-event-settings-row" key={label}><dt>{label}</dt><dd>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : value || 'Chưa thiết lập'}</dd></div>)}
+          <dl className="org-event-config-list">
+            {configurationRows.map(([label, value]) => <div className="org-event-config-row" key={label}><dt>{label}</dt><dd>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : value || 'Chưa thiết lập'}</dd></div>)}
           </dl>
         </section>
       )}

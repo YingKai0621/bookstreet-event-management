@@ -265,18 +265,7 @@ test.describe('Organizer event detail overview', () => {
     await expect(page.getByText('Hạn cuối yêu cầu gian hàng')).toBeVisible();
     await expect(page.getByText('Hạn rút khỏi sự kiện')).toHaveCount(0);
     await expect(page.getByText('Hạn gửi yêu cầu hủy hoạt động')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Chỉnh sửa thông tin' }).click();
-    await expect(page.getByRole('heading', { name: 'Chỉnh sửa thông tin sự kiện' })).toBeVisible();
-    const editDialog = page.getByRole('dialog', { name: 'Chỉnh sửa thông tin sự kiện' });
-    await expect(editDialog.getByRole('textbox', { name: 'Mô tả', exact: true })).toBeVisible();
-    await expect(editDialog.getByLabel('Ảnh banner', { exact: true })).toBeAttached();
-    await expect(editDialog.locator('#event-start-at')).toHaveCount(0);
-    await expect(editDialog.locator('#event-max-booths')).toHaveCount(0);
-    await expect(editDialog.getByText('Hạn đăng ký & lịch trình')).toHaveCount(0);
-    await editDialog.getByRole('textbox', { name: 'Tên sự kiện *', exact: true }).fill('Tên sự kiện đã cập nhật');
-    const savedRequest = page.waitForRequest(request => request.url().endsWith('/organizer/events/501') && request.method() === 'PATCH');
-    await editDialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
-    expect((await savedRequest).postDataJSON()).toEqual({ name: 'Tên sự kiện đã cập nhật' });
+    await expect(page.getByRole('region', { name: 'Cấu hình sự kiện' }).getByRole('button', { name: 'Chỉnh sửa', exact: true })).toHaveCount(0);
   });
 
   test('cancels a published event with a validated reason and updates the screen', async ({ page }) => {
@@ -298,6 +287,20 @@ test.describe('Organizer event detail overview', () => {
     await expect(page.getByText('Đã hủy').first()).toBeVisible();
     await expect(page.getByRole('status')).toContainText('Đã hủy sự kiện');
     expect(state.actions).toEqual([`cancel:${reason}`]);
+  });
+
+  test('edits draft operational settings directly without attempting publication', async ({ page }) => {
+    await setupEventDetail(page, { eventStatus: 'DRAFT' });
+    await page.goto(`${BASE_URL}/organizer/events/501?section=settings`);
+    await page.getByRole('region', { name: 'Cấu hình sự kiện' }).getByRole('button', { name: 'Chỉnh sửa', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Chỉnh sửa bản nháp' });
+    await expect(dialog.getByLabel('Bắt đầu - ngày', { exact: true })).toBeVisible();
+    await expect(dialog.getByLabel('Hạn yêu cầu gian hàng - ngày', { exact: true })).toBeVisible();
+    await dialog.getByRole('spinbutton', { name: 'Số gian hàng tối đa / đối tác', exact: true }).fill('5');
+    const savedRequest = page.waitForRequest(request => request.url().endsWith('/organizer/events/501') && request.method() === 'PATCH');
+    await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    expect((await savedRequest).postDataJSON()).toEqual({ maxBoothsPerPartner: 5 });
+    await expect(dialog).toBeHidden();
   });
 
   test('deletes a draft event only after confirmation', async ({ page }) => {
