@@ -521,23 +521,26 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
       )}
 
       {activeTab === 'settings' && (
-        <div className="organizer-card" style={{ maxWidth: '760px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <section className="organizer-card org-event-settings" aria-labelledby="event-settings-title">
+          <div className="org-event-settings-header">
             <div>
-              <h2 style={{ margin: 0 }}>Cấu hình sự kiện</h2>
+              <h2 id="event-settings-title">Cấu hình sự kiện</h2>
+              <p>Các mốc thời gian và giới hạn tổ chức của sự kiện.</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <div className="org-event-settings-actions">
               <button type="button" className="btn-org-secondary" onClick={onNavigateToBoothsMap}>
                 <Store size={15} />
                 {language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth map'}
               </button>
-              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
+              {(event.apiStatus === 'DRAFT' || event.apiStatus === 'PUBLISHED' || event.apiStatus === 'ONGOING') && (
+                <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa thông tin</button>
+              )}
             </div>
           </div>
-          <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '0.75rem 1rem', margin: 0 }}>
-            {configurationRows.map(([label, value]) => <React.Fragment key={label}><dt style={{ fontWeight: 650, color: '#445752' }}>{label}</dt><dd style={{ margin: 0 }}>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN') : value || 'Chưa thiết lập'}</dd></React.Fragment>)}
+          <dl className="org-event-settings-list">
+            {configurationRows.map(([label, value]) => <div className="org-event-settings-row" key={label}><dt>{label}</dt><dd>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : value || 'Chưa thiết lập'}</dd></div>)}
           </dl>
-        </div>
+        </section>
       )}
     </div>
   );

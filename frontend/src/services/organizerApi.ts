@@ -4,6 +4,7 @@ import {
   OrganizerEvent,
   OrganizerEventPageResponse,
   OrganizerEventRequest,
+  OrganizerEventUpdateRequest,
   OrganizerEventResponse,
   OrganizerEventStatus,
   OrganizerNotificationItem,
@@ -536,7 +537,7 @@ export const organizerApi = {
     );
     return response.url;
   },
-  async updateEvent(id: string, data: OrganizerEventRequest): Promise<OrganizerEvent> {
+  async updateEvent(id: string, data: OrganizerEventUpdateRequest): Promise<OrganizerEvent> {
     const event = await apiClient.patch<OrganizerEventResponse>(`/organizer/events/${encodeURIComponent(id)}`, data);
     return toOrganizerEvent(event);
   },

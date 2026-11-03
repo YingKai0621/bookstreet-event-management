@@ -371,6 +371,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   onClose,
   onSave,
 }) => {
+  const basicInfoOnly = Boolean(event) && !focusPublishIssues;
   const [initialForm] = useState<EventFormState>(() => formFromEvent(event));
   const [form, setForm] = useState<EventFormState>(() => ({ ...initialForm }));
   const [minimumFutureAt] = useState(nextLocalMinute);
@@ -589,6 +590,11 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   const validate = (): ValidationIssue | null => {
     if (!form.name.trim()) return { field: 'name', message: language === 'vi' ? 'Vui lòng nhập tên sự kiện.' : 'Event name is required.' };
     if (Array.from(form.name.trim()).length > 150) return { field: 'name', message: language === 'vi' ? 'Tên sự kiện không được vượt quá 150 ký tự.' : 'Event name must not exceed 150 characters.' };
+    if (basicInfoOnly) {
+      return !bannerFile && !isValidBannerUrl(form.bannerUrl)
+        ? { field: 'bannerUrl', message: 'Liên kết ảnh phải bắt đầu bằng http:// hoặc https://.' }
+        : null;
+    }
     if (!form.startAt) return { field: 'startAt', message: language === 'vi' ? 'Vui lòng nhập thời gian bắt đầu.' : 'Start time is required.' };
     if (!form.endAt) return { field: 'endAt', message: language === 'vi' ? 'Vui lòng nhập thời gian kết thúc.' : 'End time is required.' };
 
@@ -757,7 +763,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
   return createPortal(
     <div className="org-modal-backdrop" {...backdropHandlers}>
       <div
-        className="org-modal-box org-event-form-modal"
+        className={`org-modal-box org-event-form-modal${basicInfoOnly ? ' org-event-basic-modal' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="organizer-event-form-title"
@@ -766,9 +772,13 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
       >
         <div className="org-modal-header org-event-form-header">
           <div>
-            <h3 id="organizer-event-form-title">{event ? 'Chỉnh sửa bản nháp' : 'Tạo sự kiện mới'}</h3>
+            <h3 id="organizer-event-form-title">{basicInfoOnly ? 'Chỉnh sửa thông tin sự kiện' : event ? 'Chỉnh sửa bản nháp' : 'Tạo sự kiện mới'}</h3>
             <p id="organizer-event-form-description">
-              {event ? 'Cập nhật thông tin trước khi công bố sự kiện.' : 'Tạo bản nháp trước, bạn có thể hoàn thiện và công bố sau.'}
+              {basicInfoOnly ? 'Cập nhật tên sự kiện, mô tả và ảnh banner.' : event
+                ? (event.apiStatus === 'DRAFT'
+                  ? 'Cập nhật thông tin trước khi công bố sự kiện.'
+                  : 'Chỉ các trường thay đổi mới được gửi để giữ nguyên cấu hình vận hành đã khóa.')
+                : 'Tạo bản nháp trước, bạn có thể hoàn thiện và công bố sau.'}
             </p>
           </div>
           <button type="button" className="organizer-icon-button" onClick={onClose} disabled={isSaving} aria-label="Đóng"><X size={20} /></button>
@@ -780,7 +790,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
 
             <section className="org-event-form-section" aria-labelledby="event-basic-heading">
               <div className="org-event-form-section-heading">
-                <span className="org-event-form-section-number">1</span>
+                {!basicInfoOnly && <span className="org-event-form-section-number">1</span>}
                 <div><h4 id="event-basic-heading">Thông tin cơ bản</h4></div>
               </div>
 
@@ -796,7 +806,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                   <textarea id="event-description" aria-label="Mô tả" rows={3} value={form.description} onChange={changeEvent => updateField('description', changeEvent.target.value)} placeholder="Mô tả ngắn về nội dung và mục tiêu của sự kiện" />
                 </div>
 
-                <div className="org-event-form-field">
+                {!basicInfoOnly && <><div className="org-event-form-field">
                   <div className="org-event-form-label">Bắt đầu <span aria-hidden="true">*</span></div>
                   <OrganizerDateTimeField
                     id="event-start-at"
@@ -842,7 +852,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                     </div>
                   )}
                   {renderFieldError('endAt')}
-                </div>
+                </div></>}
 
                 <div className="org-event-form-field org-event-form-field-full">
                   <div className="org-event-form-label">Ảnh banner</div>
@@ -937,7 +947,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
               </div>
             </section>
 
-            <section className="org-event-form-section org-event-deadline-section" aria-labelledby="event-deadlines-heading">
+            {!basicInfoOnly && <><section className="org-event-form-section org-event-deadline-section" aria-labelledby="event-deadlines-heading">
               <button type="button" className="org-event-form-section-toggle" aria-expanded={isDeadlinesOpen} onClick={() => setIsDeadlinesOpen(open => !open)}>
                 <span className="org-event-form-section-number">2</span>
                 <span className="org-event-form-section-toggle-copy">
@@ -1050,6 +1060,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                 </div>
               </div>
             </section>
+            </>}
           </div>
 
           <div className="org-modal-footer org-event-form-footer">

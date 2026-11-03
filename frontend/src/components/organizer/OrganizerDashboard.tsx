@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Store,
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import type {
   OrganizerDashboardSummary,
   OrganizerDashboardTask,
@@ -229,6 +229,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     { key: 'CANCELLED' as const, label: copy.eventStatuses.CANCELLED, count: eventStatusCounts.CANCELLED, color: '#e0443e' },
   ];
   const eventTotal = eventChartSeries.reduce((sum, item) => sum + item.count, 0);
+  const donutMaskId = useId();
   const donutRadius = 43;
   const donutCircumference = 2 * Math.PI * donutRadius;
   let donutOffset = 0;
@@ -357,7 +358,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   <div className="org-dashboard-donut-layout">
                     <div className="org-dashboard-donut">
                       <svg viewBox="0 0 120 120" role="img" aria-label={`${copy.eventStatusChart}: ${eventTotal} ${copy.totalEvents}`}>
+                        <defs><mask id={donutMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
+                          <circle className="org-dashboard-donut-reveal" cx="60" cy="60" r={donutRadius} fill="none" stroke="white" strokeWidth="24" pathLength="1" strokeDasharray="1" transform="rotate(-90 60 60)" />
+                        </mask></defs>
                         <circle cx="60" cy="60" r={donutRadius} fill="none" stroke="#e8eeeb" strokeWidth="22" />
+                        <g mask={`url(#${donutMaskId})`}>
                         {eventChartSeries.map(item => {
                           const segmentLength = (item.count / eventTotal) * donutCircumference;
                           const segmentOffset = donutOffset;
@@ -366,6 +371,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           const segmentGap = Math.min(1.4, segmentLength * 0.25);
                           return <circle key={item.key} cx="60" cy="60" r={donutRadius} fill="none" stroke={item.color} strokeWidth="22" strokeDasharray={`${segmentLength - segmentGap} ${donutCircumference - segmentLength + segmentGap}`} strokeDashoffset={-segmentOffset} transform="rotate(-90 60 60)"><title>{item.label}: {item.count}</title></circle>;
                         })}
+                        </g>
                       </svg>
                       <span><strong>{eventTotal}</strong><small>{copy.totalEvents}</small></span>
                     </div>

@@ -672,13 +672,14 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
       ) : tab === 'browse' ? (
         <div
           id="partner-booth-map-panel"
-          className="s2-panel"
+          className="s2-panel s2-partner-map-panel"
           role="tabpanel"
           aria-labelledby="partner-booth-map-tab"
           style={{ padding: 0, overflow: 'hidden' }}
         >
           <div className="s2-partner-map">
             <BoothMapCanvas
+              className="s2-partner-booth-map-canvas"
               markers={mapMarkers}
               selectedMarkerId={selectedBooth ? `booth-${selectedBooth.booth.boothId}` : null}
               onSelectMarker={marker => {

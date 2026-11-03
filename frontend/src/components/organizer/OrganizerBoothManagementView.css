@@ -1,3 +1,5 @@
+@import '../booth-map/BoothModal.css';
+
 /* ==========================================================================
    ORGANIZER BOOTH MANAGEMENT VIEW (CRUD BOOTHS)
    Theme: Dark Forest Green (#14241F), Antique Gold (#E9BC63), Clean Light (#F8FAF9)
@@ -712,72 +714,6 @@
 }
 
 /* 6. MODALS & DRAWER */
-.booth-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
-  background: rgba(14, 30, 24, 0.65);
-  backdrop-filter: blur(4px);
-  animation: fadeIn 160ms ease;
-}
-
-.booth-modal-box {
-  width: min(680px, 100%);
-  max-height: 90vh;
-  overflow-y: auto;
-  background: #FFFFFF;
-  border-radius: 18px;
-  padding: 1.75rem;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
-  border: 1px solid #E2EAE5;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  animation: modalPop 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalPop {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.booth-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #EAEFEA;
-}
-
-.booth-modal-header h2 {
-  margin: 0;
-  font-family: var(--font-serif, 'Playfair Display', serif);
-  font-size: 1.35rem;
-  font-weight: 750;
-  color: #14241F;
-}
-
-.booth-modal-close-btn {
-  background: transparent;
-  border: none;
-  color: #71847D;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: all 140ms ease;
-}
-
-.booth-modal-close-btn:hover {
-  background: #F0F4F2;
-  color: #172421;
-}
-
 .booth-form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -837,15 +773,6 @@
   font-size: 0.74rem;
   color: #71847D;
   margin-top: 0.15rem;
-}
-
-.booth-modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid #EAEFEA;
 }
 
 /* Empty & Loading states */
@@ -971,4 +898,99 @@
   .booth-image-upload-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* NEWLY CREATED BOOTH GUIDE CALLOUT */
+.newly-created-guide-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FEF9EE 0%, #FFFDF7 100%);
+  border: 1.5px solid #F59E0B;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+  margin-bottom: 1rem;
+  animation: fadeIn 250ms ease;
+}
+
+.newly-created-guide-content {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.newly-created-guide-content .guide-icon {
+  color: #D97706;
+  flex-shrink: 0;
+}
+
+.newly-created-guide-content strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #92400E;
+  margin-bottom: 0.15rem;
+}
+
+.newly-created-guide-content span {
+  font-size: 0.85rem;
+  color: #78350F;
+  line-height: 1.4;
+}
+
+.guide-dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  background: #F59E0B;
+  border: none;
+  color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 140ms ease;
+}
+
+.guide-dismiss-btn:hover {
+  background: #D97706;
+  transform: translateY(-1px);
+}
+
+/* BOOTH MAP DEFAULT NOTE IN MODAL */
+.booth-map-position-note {
+  grid-column: 1 / -1;
+  background: #F4FAF7;
+  border: 1px solid #D5E8DF;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.booth-map-position-note-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.booth-map-note-icon {
+  color: #D97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.booth-map-position-note-content strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #17382E;
+  margin-bottom: 0.2rem;
+}
+
+.booth-map-position-note-content p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #52665C;
+  line-height: 1.4;
 }
