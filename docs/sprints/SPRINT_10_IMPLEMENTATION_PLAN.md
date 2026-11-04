@@ -1,20 +1,21 @@
 # Sprint 10 Role-Scoped Notifications Implementation Plan
 
-- Status: `ACTIVE - PR 1 FOUNDATION AUTHORIZED`
+- Status: `ACTIVE - PR 1 MERGED; PR 2 NEXT`
 - Prepared date: `2026-11-02`
 - Scope baseline: `docs/sprints/sprint-10.md`
 - API contract: `docs/api/sprint-10-api-contract.md`
 - Physical ERD overlay: `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
 - Three-developer ownership: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
-- Schema baseline: immutable Flyway `V1` through `V15`
-- Reserved migration version: `V16`, exclusively owned by Developer A (`YingKai0621`)
+- Schema baseline: immutable Flyway `V1` through `V16`
+- Implemented migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
+- Foundation delivery: PR #122, merge commit `280588c`, merged `2026-11-04`
 
 ## 1. Delivery principles
 
 - Start implementation only from updated `main` after Sprint 10 activation.
 - Use one implementation branch or one explicitly coordinated branch per focused PR.
 - The Project Owner or assigned migration owner exclusively reserves and authors the next migration.
-- Never modify V1 through V15.
+- Never modify V1 through V16.
 - Keep PostgreSQL as durable truth and Redis Session-only.
 - Preserve existing Participant response compatibility.
 - Add no producer or delivery channel outside the approved baseline.
@@ -30,14 +31,20 @@
    the active requirement context.
 3. Completed: Developer A updated from `main` and listed immutable migrations V1 through V15.
 4. Completed: Developer A reserved `V16`; no competing migration existed at reservation time.
-5. Required before PR 1 code: reread the required sources in `AGENTS.md` order from merged activation main.
-6. Required before PR 1 code: confirm no competing branch edits V16, Notification core, or shared security.
+5. Completed before PR 1 code: required sources were reread in `AGENTS.md` order from merged activation
+   `main`.
+6. Completed before PR 1 code: no competing branch edited V16, Notification core, or shared security.
 7. Before PR 2 or PR 3 begins, the teammate taking it claims the corresponding Developer B or C role and
    confirms branch ownership, shared-file boundaries and the documented merge order with the team.
+8. Completed: PR #122 merged V16 and the shared role-scoped backend foundation at `280588c`.
+9. Current gate: Developer B starts PR 2 from updated `main`; Developer C does not integrate Booth
+   re-selection until PR 2 is merged.
 
-## 3. Proposed PR sequence
+## 3. Delivery sequence
 
-### PR 1 — Role-scoped persistence and shared backend foundation
+### PR 1 — Role-scoped persistence and shared backend foundation — MERGED
+
+Merged through PR #122 at `280588c` on `2026-11-04`.
 
 Owns:
 
@@ -365,7 +372,7 @@ Before every commit:
 - inspect `git status` and staged diff
 - stage no `.env`, credential, local database URL, local script, or unrelated file
 - verify no applied migration changed
-- verify migration version uniqueness when implementation reaches PR 1
+- verify migration version uniqueness for any future approved migration; Sprint 10 V16 is immutable
 - run relevant focused tests
 - confirm no placeholder/fallback survives in the changed path
 - map behavior to literal Acceptance Criteria ids

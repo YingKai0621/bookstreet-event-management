@@ -1,21 +1,22 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-03`
+Last updated: `2026-11-04`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V15. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V16. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
   Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
   schema; V11 adds the configurable Activity Attendance early-scan window; V12 owns the Sprint 7
   BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay. V13
   adds the Booth image URL used by the demo/public experience. V14 owns the Sprint 8 General
-  Feedback schema. V15 owns the Sprint 9 Heritage schema.
+  Feedback schema. V15 owns the Sprint 9 Heritage schema. V16 owns the Sprint 10 role-scoped
+  Notification schema overlay and backfill.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover the immutable migration chain through V15 and the relevant prior
+- Flyway migration tests cover the immutable migration chain through V16 and the relevant prior
   Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
@@ -121,10 +122,13 @@ Last updated: `2026-11-03`
   six Participant types, adds only the approved Partner outcome and Organizer work-item families, and
   provides Admin with real role-isolated list/read infrastructure but no type or producer.
 - Developer A is `YingKai0621` and exclusively owns the shared Notification foundation, Participant/Admin
-  integration and reserved migration V16. Developer B and Developer C are stable work-package labels;
+  integration and implemented migration V16. Developer B and Developer C are stable work-package labels;
   teammates claim and coordinate the documented Partner or Organizer role before starting its branch.
-- V16 is reserved but not implemented. The applied database baseline remains immutable V1 through V15
-  until the foundation PR is reviewed and merged.
+- Sprint 10 PR #122 merged at `280588c` on 2026-11-04. It implements V16, role-aware Notification
+  persistence and constraints, the shared writer/query/read foundation, all four role endpoint families,
+  Participant backend compatibility, producer-free Admin operations, exact-role security, no-store
+  handling and focused migration/concurrency coverage. Partner and Organizer domain producers and their
+  real frontend inboxes remain assigned to PR 2 and PR 3.
 - The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
   free version. One assigned Heritage Owner consumes that migration and owns the entity,
   repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
@@ -251,6 +255,11 @@ through V14 are now immutable.
 11-column shape, exact Draft/Published/Archived lifecycle constraints and public/Organizer query
 indexes. V1 through V15 are now immutable.
 
+`V16__role_scope_notifications.sql` extends the existing `notifications` table with exact recipient-role
+scope and approved Partner/Organizer references, backfills existing rows as `PARTICIPANT`, replaces the
+type/reference/deduplication constraints with role-aware equivalents and adds role-local inbox indexes.
+V1 through V16 are now immutable.
+
 ## Not yet implemented
 
 - Forgot/Reset Password
@@ -264,14 +273,14 @@ indexes. V1 through V15 are now immutable.
 
 ## Next implementation task
 
-- Merge the Sprint 10 activation/context update before application implementation.
-- Developer A then updates from `main`, reconfirms exclusive ownership of reserved V16 and implements only
-  PR 1: role-scoped persistence, shared backend APIs/security/read concurrency, Participant compatibility
-  and real producer-free Admin foundation.
-- Before Partner PR 2 or Organizer PR 3 begins, each teammate claims the corresponding Developer B or C
-  role and follows its documented scope, shared-file boundaries, Acceptance Criteria and merge order.
+- Developer B implements PR 2 from updated `main`: approved Partner outcome producers plus the real Partner
+  preview/full inbox, focused transaction/suppression tests and Partner browser evidence.
+- Developer C follows the documented Organizer PR 3 scope. Its Booth re-selection integration starts from
+  merged PR 2 because Payment/Hold/Assignment paths overlap Developer B ownership.
+- After PR 2 and PR 3 merge, Developer A rebases PR 4 for Admin/shared frontend integration; PR 5 then
+  consolidates all 52 Acceptance Criteria and closure evidence.
 - The BR-81 exact-deadline equality discrepancy must be resolved separately before Organizer Booth
-  re-selection implementation; it does not block the shared PR 1 foundation.
+  re-selection implementation; it does not block Partner PR 2 work outside that decision.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
   independent and creates no Notification broadcast.
 
@@ -280,7 +289,8 @@ indexes. V1 through V15 are now immutable.
 Sprint 09 Heritage Public Content is the latest completed Sprint as of 2026-11-01.
 
 Sprint 10 Role-Scoped In-App Notifications is the active Sprint as of 2026-11-03. It is not yet complete
-and has no applied migration or implementation merge.
+and now has its V16/shared backend foundation merged through PR #122 at `280588c`. Partner, Organizer,
+shared frontend and final closure units remain open.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -304,10 +314,11 @@ Sprint 9 includes these completed Use Case slices:
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
   interpretations
-- Physical implementation source: immutable Flyway V1–V15. V10 implements the Sprint 6
+- Physical implementation source: immutable Flyway V1–V16. V10 implements the Sprint 6
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
   approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
-  the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay.
+  the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay and V16 applies the
+  Sprint 10 role-scoped Notification overlay.
 - Active Sprint baseline: `docs/sprints/sprint-10.md`
 - Active Sprint Use Cases: `docs/use-cases/sprint-10-use-case-specifications.md`
 - Active Sprint API Contract: `docs/api/sprint-10-api-contract.md`
@@ -320,9 +331,9 @@ Sprint 9 includes these completed Use Case slices:
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation source.
-Use immutable V1–V15 and the current Physical ERD report as current physical truth. For Sprint 10 use the
-active Sprint 10 baseline, Use Case Specifications, API Contract and approved overlay; V16 remains a
-reserved target until its implementation PR merges.
+Use immutable V1–V16 and the current Physical ERD report as current physical truth. For remaining Sprint
+10 work use the active Sprint 10 baseline, Use Case Specifications, API Contract, implemented V16 and
+approved overlay.
 
 ## Authentication baseline
 

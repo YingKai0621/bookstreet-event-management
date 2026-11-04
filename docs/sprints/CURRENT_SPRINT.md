@@ -2,12 +2,13 @@
 
 ## Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `ACTIVE - FOUNDATION IMPLEMENTATION NEXT`
+- Status: `ACTIVE - PR 1 MERGED; PARTNER PR 2 NEXT`
 - Activation date: `2026-11-03`
 - Previous completed Sprint: `Sprint 09 Heritage Public Content`
 - Approved documentation: PR #116, merge commit `3a0a76b`
-- Current implemented schema: immutable Flyway migrations `V1` through `V15`
-- Reserved Sprint 10 migration: `V16`, exclusively owned by Developer A (`YingKai0621`)
+- Current implemented schema: immutable Flyway migrations `V1` through `V16`
+- Sprint 10 foundation: PR #122, merge commit `280588c`
+- Implemented Sprint 10 migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
 - Sprint baseline: `docs/sprints/sprint-10.md`
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
 - Documentation audit: `docs/development/SPRINT_10_DOCUMENTATION_AUDIT.md`
@@ -32,7 +33,7 @@ Extend the implemented Participant Notification foundation into one durable role
 
 The active implementation is limited to:
 
-- one existing PostgreSQL `notifications` table extended by reserved migration V16
+- one existing PostgreSQL `notifications` table extended by implemented migration V16
 - exact audiences `PARTICIPANT`, `PARTNER`, `ORGANIZER`, and `ADMIN`
 - four endpoint families with list, unread count, mark-one, and mark-all operations
 - the closed Participant, Partner, and Organizer type/reference/transition matrices
@@ -52,7 +53,7 @@ The approved baseline contains **52 Acceptance Criteria**:
 
 ## Ownership
 
-- Developer A is `YingKai0621` and exclusively owns V16, the shared Notification foundation,
+- Developer A is `YingKai0621`, authored V16 and owns the shared Notification foundation,
   Participant compatibility, Admin foundation, shared frontend wiring and final integration evidence.
 - Developer B is the Partner work-package label and owns Partner producers and Partner frontend. The
   teammate taking this package coordinates its branch before PR 2 begins; no personal name is required.
@@ -60,30 +61,33 @@ The approved baseline contains **52 Acceptance Criteria**:
   The teammate taking this package coordinates its branch before PR 3 begins; no personal name is required.
 - Developer B's payment/settlement work merges before Developer C adds Booth re-selection integration.
 
-## Immediate implementation unit
+## Current implementation unit
 
-Developer A implements PR 1 only after this activation update is merged and a fresh `main` check confirms
-that V16 and the shared Notification/security files have no competing owner. PR 1 includes:
+PR #122 merged the Developer A foundation into `main` at `280588c`. The delivered foundation includes:
 
-- V16 role-scoped Notification migration and clean/V15-upgrade verification
+- immutable V16 role-scoped Notification migration with clean/V15-upgrade verification
 - shared Notification entity, repository, writer, query/read services and DTO mapping
 - all 16 role endpoint contracts with exact authority
 - atomic mark-one and role-aware mark-all behavior
-- Participant compatibility and Admin real database-backed empty behavior
-- focused migration, Hibernate, repository, service, controller, security and concurrency tests
+- Participant backend compatibility and real database-backed Admin operations with no producer
+- focused migration, repository, service, controller, security and concurrency tests
+
+The next implementation unit is Developer B's PR 2 for Partner producers and the real Partner inbox.
+Developer C may prepare role-local work but must base the Booth re-selection integration on merged PR 2.
+After PR 2 and PR 3 merge, Developer A owns PR 4 shared/Admin frontend integration and PR 5 closure.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL remains durable truth; Redis remains Session-only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`; V1 through V15 are immutable.
-- Only Developer A may create or edit V16.
+- Hibernate remains `ddl-auto: validate`; V1 through V16 are immutable.
+- V16 is applied history. Developers B and C must not edit or replace it.
 - Clients cannot create Notification rows or supply recipient/audience.
 - Every approved producer joins the owning domain transaction; existing email remains after commit.
 - No Admin producer, combined inbox, NotificationType table, sender, preference, outbox, SMS, push,
   WebSocket, SSE, polling, mock fallback or localStorage read truth is allowed.
 - The BR-81 exact-deadline equality discrepancy must be resolved separately before implementing
-  Organizer Booth re-selection; it does not block PR 1 foundation.
+  Organizer Booth re-selection; it does not block Partner PR 2 work outside that decision.
 - Do not commit `.env`, credentials, local database URLs, demo-only data or local scripts.
 
 ## Explicitly out of scope
@@ -100,5 +104,6 @@ that V16 and the shared Notification/security files have no competing owner. PR 
 
 Sprint 10 documentation was reviewed and merged through PR #116. The active Business Rules, Use Case List,
 MVP Scope, Sprint pointer and AI context were promoted on `2026-11-03`. Developer A reserved V16 after
-confirming updated `main` contains only immutable migrations V1 through V15. No application code or
-migration is part of the activation change.
+confirming updated `main` contained only immutable migrations V1 through V15. PR #122 subsequently
+implemented V16 and the shared role-scoped Notification backend foundation and merged it at `280588c` on
+`2026-11-04`. V1 through V16 are now immutable; Partner PR 2 is the next delivery unit.
