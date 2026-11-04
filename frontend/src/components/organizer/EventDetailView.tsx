@@ -129,6 +129,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   const pendingPartnerCount = partnerApplications.filter((application) => application.status === 'pending').length;
   const pendingBoothRequestCount = boothRequests.filter((request) => request.status === 'PENDING').length;
   const activeHoldCount = boothRequests.filter((request) => request.hold?.status === 'ACTIVE').length;
+  const canEditEvent = event.apiStatus === 'DRAFT'
+    || event.apiStatus === 'PUBLISHED'
+    || event.apiStatus === 'ONGOING';
+  const editEventLabel = event.apiStatus === 'DRAFT'
+    ? (language === 'vi' ? 'Chỉnh sửa' : 'Edit')
+    : (language === 'vi' ? 'Chỉnh sửa thông tin' : 'Edit information');
 
   const operationMetrics = [
     {
@@ -229,10 +235,10 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             <OrganizerEventStatusChip language={language} status={event.apiStatus} />
           </div>
           <div className="org-event-detail-actions">
-            {event.apiStatus === 'DRAFT' && (
+            {canEditEvent && (
               <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}>
                 <Edit3 size={16} />
-                {language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
+                {editEventLabel}
               </button>
             )}
             {event.apiStatus === 'DRAFT' && (
@@ -531,7 +537,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <Store size={15} />
                 {language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth map'}
               </button>
-              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
+              {canEditEvent && (
+                <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}>
+                  <Edit3 size={15} />
+                  {editEventLabel}
+                </button>
+              )}
             </div>
           </div>
           <dl className="org-event-config-list">
