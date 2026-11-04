@@ -240,9 +240,10 @@ class ParticipantNotificationIntegrationTests {
     private long insertNotification(long recipientUserId, String type, Long eventId, Long activityId, Long certificateId,
                                    String dedupKey, String title, String message, Instant createdAt) {
         return jdbc.queryForObject("""
-                insert into notifications(recipient_user_id, notification_type, event_id, activity_id, certificate_id,
+                insert into notifications(recipient_user_id, recipient_role, notification_type,
+                                          event_id, activity_id, certificate_id,
                                           deduplication_key, title, message, created_at, read_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, null)
+                values (?, 'PARTICIPANT', ?, ?, ?, ?, ?, ?, ?, ?, null)
                 returning notification_id
                 """, Long.class, recipientUserId, type, eventId, activityId, certificateId, dedupKey, title, message, Timestamp.from(createdAt));
     }

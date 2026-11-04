@@ -259,9 +259,9 @@ class BadgeUnlockedNotificationIntegrationTests {
             String message, Instant createdAt) {
         return jdbc.queryForObject("""
                 insert into %s(
-                    recipient_user_id, notification_type, badge_id,
+                    recipient_user_id, recipient_role, notification_type, badge_id,
                     deduplication_key, title, message, created_at, read_at)
-                values (?, 'BADGE_UNLOCKED', ?, ?, 'Bạn vừa mở khóa huy hiệu', ?, ?, null)
+                values (?, 'PARTICIPANT', 'BADGE_UNLOCKED', ?, ?, 'Bạn vừa mở khóa huy hiệu', ?, ?, null)
                 returning notification_id
                 """.formatted(table("notifications")), Long.class,
                 participantId, badgeId, "badge-unlocked:user-badge:" + userBadgeId,

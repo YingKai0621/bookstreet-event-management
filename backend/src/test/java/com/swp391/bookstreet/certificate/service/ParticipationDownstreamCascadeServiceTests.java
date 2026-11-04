@@ -11,7 +11,7 @@ import com.swp391.bookstreet.auth.repository.UserRepository;
 import com.swp391.bookstreet.certificate.entity.Certificate;
 import com.swp391.bookstreet.certificate.entity.CertificateStatus;
 import com.swp391.bookstreet.certificate.repository.CertificateRepository;
-import com.swp391.bookstreet.notification.entity.ParticipantNotification;
+import com.swp391.bookstreet.notification.entity.Notification;
 import com.swp391.bookstreet.notification.entity.ParticipantNotificationType;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationCommand;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationWriter;
@@ -67,7 +67,7 @@ class ParticipationDownstreamCascadeServiceTests {
     @Mock EventRegistration eventRegistration;
     @Mock Activity activity;
     @Mock User user;
-    @Mock ParticipantNotification notification;
+    @Mock Notification notification;
 
     ParticipationDownstreamCascadeService service;
 

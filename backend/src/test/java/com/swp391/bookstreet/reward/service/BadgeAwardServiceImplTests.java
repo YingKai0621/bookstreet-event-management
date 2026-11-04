@@ -1,6 +1,6 @@
 package com.swp391.bookstreet.reward.service;
 
-import com.swp391.bookstreet.notification.entity.ParticipantNotification;
+import com.swp391.bookstreet.notification.entity.Notification;
 import com.swp391.bookstreet.notification.entity.ParticipantNotificationType;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationCommand;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationWriter;
@@ -52,7 +52,7 @@ class BadgeAwardServiceImplTests {
             return saved;
         });
         when(notificationWriter.write(any(ParticipantNotificationCommand.class)))
-                .thenReturn(mock(ParticipantNotification.class));
+                .thenReturn(mock(Notification.class));
     }
 
     @Test
