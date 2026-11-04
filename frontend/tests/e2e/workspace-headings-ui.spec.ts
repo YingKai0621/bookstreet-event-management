@@ -148,3 +148,35 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
     await page.screenshot({ path: test.info().outputPath('workspace-headings.png'), fullPage: true });
   });
 }
+
+for (const workspace of workspaces) for (const width of [1440, 390]) {
+  test(`${workspace.role} square components at ${width}px`, async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width, height: 900 });
+    await mockWorkspace(page, workspace.role);
+    for (const route of workspace.routes) {
+      await page.goto(route);
+      await expect(page.locator('h1.workspace-page-title').first()).toBeVisible();
+      await expect(page.locator('.role-sidebar-item').first()).toHaveCSS('border-top-left-radius', '10px');
+      // Resolved styles catch lazy route CSS and inline radius overrides.
+      const roundedBoxes = await page.locator(
+        '.participant-app-shell *, .partner-app-shell *, .organizer-app-shell *, .admin-app-shell *'
+      ).evaluateAll(elements =>
+        elements.filter(element => {
+          if (!(element instanceof HTMLElement) || !element.getClientRects().length) return false;
+          if (element.closest('.role-sidebar, .participant-top-bar, .partner-top-bar, .organizer-topbar, .admin-topbar, .reader-profile-page, .partner-profile-page, .org-profile-container, .adm-profile-view')) return false;
+          return [null, '::before', '::after'].some(pseudo => {
+            const style = getComputedStyle(element, pseudo);
+            return [style.borderTopLeftRadius, style.borderTopRightRadius,
+              style.borderBottomLeftRadius, style.borderBottomRightRadius]
+              .some(radius => radius !== '0px');
+          });
+        }).map(element => `${element.tagName}.${element.className}`).slice(0, 12)
+      );
+      expect(roundedBoxes, `Rounded components at ${route}`).toEqual([]);
+      if (route === workspace.routes[0]) {
+        await page.screenshot({ path: test.info().outputPath('square-dashboard.png'), fullPage: true });
+      }
+    }
+  });
+}

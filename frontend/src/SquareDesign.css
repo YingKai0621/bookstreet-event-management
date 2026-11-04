@@ -1,0 +1,153 @@
+/* Presentation changes belong only to authenticated role content and its portals.
+   Public/landing/auth pages and shared navigation retain their original CSS. */
+@scope (.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell, .leave-event-dialog, .org-modal-backdrop, .org-crop-modal-backdrop, .org-booth-drawer-backdrop, .org-partner-drawer-backdrop) to (.role-sidebar, .participant-top-bar, .partner-top-bar, .organizer-topbar, .admin-topbar, .reader-profile-page, .partner-profile-page, .org-profile-container, .adm-profile-view) {
+/* BookStreet's shared visual contract. Keep geometry authoritative even when
+   route CSS is lazy-loaded or a component supplies an inline radius. */
+:scope {
+  --workspace-canvas: #f3f6f4;
+  --workspace-paper: #ffffff;
+  --workspace-ink: #182924;
+  --workspace-muted: #5c7069;
+  --workspace-line: #d7e2dc;
+  --workspace-soft: #edf3ef;
+  --workspace-accent: #e9bc63;
+  --workspace-shadow: 0 3px 12px rgb(24 41 36 / 4%);
+  --workspace-floating-shadow: 0 16px 48px rgb(24 41 36 / 16%);
+}
+
+/* Include portals mounted outside the role shell, pseudo-elements and inline
+   styles. SVG geometry and icon paths retain their original meaning. */
+@layer square-geometry {
+  *:not(:where(.role-sidebar, .role-sidebar *, .participant-top-bar, .participant-top-bar *, .partner-top-bar, .partner-top-bar *, .organizer-topbar, .organizer-topbar *, .admin-topbar, .admin-topbar *)),
+  *:not(:where(.role-sidebar, .role-sidebar *, .participant-top-bar, .participant-top-bar *, .partner-top-bar, .partner-top-bar *, .organizer-topbar, .organizer-topbar *, .admin-topbar, .admin-topbar *))::before,
+  *:not(:where(.role-sidebar, .role-sidebar *, .participant-top-bar, .participant-top-bar *, .partner-top-bar, .partner-top-bar *, .organizer-topbar, .organizer-topbar *, .admin-topbar, .admin-topbar *))::after {
+    border-radius: 0 !important;
+  }
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) {
+  background-color: var(--workspace-canvas);
+  color: var(--workspace-ink);
+}
+
+/* Existing card owners across the four workspaces retain their own layout. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-card, .admin-card, .organizer-card, .org-dashboard-panel,
+      .org-dashboard-chart-card, .org-event-overview-card, .org-booth-management-panel,
+      .partner-workspace-panel, .partner-workspace-stat, .partner-card, .summary-stat-card, .partner-stat-card,
+      .participant-event-card, .participant-rating-card, .participant-event-overview-card,
+      .booth-kpi-card, .booth-card, .adm-badge-item-card, .adm-kpi-card, .org-metric-card, .adm-profile-card,
+      .adm-profile-sec-card, .booth-detail-card, .booth-selection-summary-card) {
+  border: 1px solid var(--workspace-line);
+  box-shadow: var(--workspace-shadow);
+}
+
+:is(.summary-stat-card, .partner-stat-card, .booth-kpi-card,
+    .adm-kpi-card, .org-metric-card, .partner-workspace-stat) {
+  border-top: 3px solid var(--workspace-accent) !important;
+  background: var(--workspace-paper);
+}
+
+:is(.participant-event-card, .participant-rating-card, .partner-card,
+    .summary-stat-card, .partner-stat-card, .booth-kpi-card):hover {
+  transform: none;
+  border-color: #a9beb2;
+  box-shadow: 0 5px 18px rgb(24 41 36 / 7%);
+}
+
+/* Form rhythm is shared; checkboxes, radios, sliders and upload controls keep
+   their native dimensions and semantics. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input:not([type]), input[type="text"], input[type="email"], input[type="password"],
+      input[type="search"], input[type="tel"], input[type="number"], input[type="url"],
+      input[type="date"], input[type="datetime-local"], input[type="time"], select, textarea) {
+  border: 1px solid var(--workspace-line);
+  background-color: var(--workspace-paper);
+  color: var(--workspace-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  min-height: 42px;
+  box-shadow: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea):focus-visible {
+  outline: 2px solid #33745b;
+  outline-offset: 2px;
+  border-color: #33745b;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea):disabled {
+  background-color: var(--workspace-soft);
+  color: var(--workspace-muted);
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: #b33d32;
+}
+
+/* Keep all status colors and action variants owned by their feature. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(button, a):not(:where(.role-sidebar *, .participant-top-bar *, .partner-top-bar *, .organizer-topbar *, .admin-topbar *)):focus-visible {
+  outline: 2px solid #33745b;
+  outline-offset: 3px;
+}
+
+:is(.btn-part-primary, .btn-part-secondary, .btn-part-gold, .btn-part-danger,
+    .adm-btn-primary, .adm-btn-secondary, .btn-org-primary, .btn-org-secondary) {
+  min-height: 42px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+
+/* Tables use quiet header bands and clear row separation instead of elevation. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) th {
+  background: var(--workspace-soft);
+  border-bottom: 1px solid var(--workspace-line);
+  color: #405c4e;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) td {
+  border-bottom: 1px solid #e5ece7;
+  line-height: 1.55;
+}
+
+:is(.adm-table, .org-table, .booth-table, .partner-table) tbody tr:hover {
+  background-color: #f6f9f7;
+}
+
+.compact-pagination button {
+  border-color: var(--workspace-line);
+  min-height: 40px;
+  box-shadow: none;
+}
+
+.compact-pagination button:not(:disabled):hover {
+  background: var(--workspace-soft);
+  border-color: #a9beb2;
+}
+
+:is(.adm-modal-content, .booth-modal-box, .org-modal-content) {
+  border: 1px solid var(--workspace-line);
+  box-shadow: var(--workspace-floating-shadow);
+}
+
+
+}

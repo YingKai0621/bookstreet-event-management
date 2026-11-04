@@ -1,0 +1,41 @@
+# Square component refresh
+
+Scope: existing Participant, Partner, Organizer and Admin UI, with shared public/auth components following the same square geometry. Presentation only; no backend, API, authorization, routes or business-state changes.
+
+## Design
+
+- Preserve BookStreet forest `#14241f` and gold `#e9bc63` branding.
+- Use white `#ffffff` surfaces, canvas `#f3f6f4`, text `#182924`, muted text `#5c7069` and borders `#d7e2dc`.
+- Preserve Be Vietnam Pro body text and existing Noto Serif page headings.
+- Keep existing responsive layouts and content hierarchy. Left-aligned forms and tables retain their feature-specific dimensions.
+- All CSS boxes, including buttons, badges, avatars, images, dialogs, tooltips and pseudo-elements, have square corners. SVG icon paths retain their meaning.
+- Quiet borders and restrained shadows define cards; gold top rules distinguish summary metrics. A gold navigation marker indicates the active task.
+- Inputs share clear focus, disabled and invalid states; semantic status and destructive-action colors remain feature-owned.
+- Organizer/Admin phone headers compact the account name and keep the brand on one line.
+
+## Execution
+
+1. Trace role layouts and shared owners; inventory hardcoded and inline radii.
+2. Load one shared visual contract from bootstrap. An authoritative radius rule must survive lazy route styles, inline radii and dialogs outside role shells.
+3. Refine existing card, navigation, form, button, table, pagination and modal owners without changing their DOM or behavior.
+4. Verify computed square geometry across all existing workspace-heading regression routes at desktop and mobile widths. Run FE lint/build and relevant UI regression suites.
+
+This user-authorized visual work supplements the active Sprint scope. Preserve Sprint 10 role isolation and genuine loading/empty/error states (AC-S10-REG-01 through AC-S10-REG-06); it does not implement pending Notification foundation work.
+
+## Review
+
+The chosen geometry directly follows the user's explicit square-corner brief. Existing brand colors and typography remain recognizable; no new ornamental labels, content or feature behavior are introduced. The shared owner avoids editing dozens of unrelated feature styles and keeps geometry consistent after navigation.
+
+## Validation evidence
+
+- FE lint and production build pass.
+- Eight square-component browser scenarios pass: 31 routes in each of two viewport sizes (1440px and 390px). These inspect all four resolved corner radii, including pseudo-elements, on rendered HTML elements.
+- Public modal dismissal and genuine empty-state regression scenarios pass.
+- Dashboard screenshots reviewed for desktop and phone layouts.
+- Existing Participant mobile-layout tests fail on a 692px calendar versus a <650px expectation. A control run with SquareDesign.css disabled reproduces the same 692px result.
+- The existing Participant phone heading test also expects 18px/16px page insets and 24px type, while current ParticipantMobile.css/WorkspacePageHeading.css specify 16px/14px and 1.4rem. Its typography expectations were preserved; independent square-component scenarios still cover those routes.
+- No BE, service, request, schema, authentication or business logic files changed.
+
+User revision: restore the original sidebar and top bar for all four roles, including rounded corners, active/hover/focus styles and mobile header layout. Keep the square design in the remaining content. Geometry regression checks exclude these restored regions.
+
+Final scope revision: landing, public and auth pages are fully excluded. All refresh rules and tokens are scoped to the four role workspaces and their existing role-owned portal dialogs. Sidebar and header remain excluded.

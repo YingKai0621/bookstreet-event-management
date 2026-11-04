@@ -4,6 +4,7 @@ import { ApiError } from '../../services/apiClient';
 import { Language, PartnerOrganization } from '../../types';
 import '../participant/ParticipantPages.css';
 import './PartnerPages.css';
+import '../../components/ui/RoleProfileDesign.css';
 
 interface PartnerProfilePageProps {
   language: Language;
