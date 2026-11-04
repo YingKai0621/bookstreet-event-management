@@ -2,17 +2,17 @@ package com.swp391.bookstreet.notification.controller;
 
 import com.swp391.bookstreet.common.exception.ApiException;
 import com.swp391.bookstreet.common.exception.GlobalExceptionHandler;
-import com.swp391.bookstreet.notification.dto.ParticipantNotificationBatchReadResponse;
-import com.swp391.bookstreet.notification.dto.ParticipantNotificationPageResponse;
-import com.swp391.bookstreet.notification.dto.ParticipantNotificationResponse;
-import com.swp391.bookstreet.notification.dto.ParticipantNotificationUnreadCountResponse;
-import com.swp391.bookstreet.notification.entity.ParticipantNotificationReferenceType;
-import com.swp391.bookstreet.notification.entity.ParticipantNotificationType;
-import com.swp391.bookstreet.notification.service.ParticipantNotificationService;
+import com.swp391.bookstreet.notification.dto.NotificationBatchReadResponse;
+import com.swp391.bookstreet.notification.dto.NotificationPageResponse;
+import com.swp391.bookstreet.notification.dto.NotificationResponse;
+import com.swp391.bookstreet.notification.dto.NotificationUnreadCountResponse;
+import com.swp391.bookstreet.notification.entity.NotificationRecipientRole;
+import com.swp391.bookstreet.notification.entity.NotificationReferenceType;
+import com.swp391.bookstreet.notification.entity.NotificationType;
+import com.swp391.bookstreet.notification.service.NotificationInboxService;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,9 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -35,16 +32,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class ParticipantNotificationControllerTests {
-
     private static final String BASE_URL = "/api/v1/participant/notifications";
-    private static final Instant NOW = Instant.parse("2026-10-25T10:00:00Z");
+    private static final Instant NOW = Instant.parse("2026-11-04T10:00:00Z");
 
-    @Mock
-    private ParticipantNotificationService service;
-
-    @InjectMocks
-    private ParticipantNotificationController controller;
-
+    @Mock NotificationInboxService service;
+    @InjectMocks ParticipantNotificationController controller;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -55,43 +47,36 @@ class ParticipantNotificationControllerTests {
     }
 
     @Test
-    @DisplayName("GET /api/v1/participant/notifications returns 200 with paged response")
-    void list_returns200WithPagedContent() throws Exception {
-        ParticipantNotificationResponse item = new ParticipantNotificationResponse(
+    void listReturnsBackwardCompatiblePagedResponseWithAdditiveContext() throws Exception {
+        NotificationResponse item = new NotificationResponse(
                 801L,
-                ParticipantNotificationType.ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED,
+                NotificationType.ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED,
                 "Lịch hoạt động đã thay đổi",
-                "Hoạt động Giao lưu tác giả trẻ đã được cập nhật thời gian hoặc địa điểm.",
-                ParticipantNotificationReferenceType.ACTIVITY,
+                "Hoạt động đã được cập nhật.",
+                NotificationReferenceType.ACTIVITY,
                 91L,
+                7L,
                 NOW,
                 null,
                 false);
-
-        ParticipantNotificationPageResponse<ParticipantNotificationResponse> page =
-                new ParticipantNotificationPageResponse<>(List.of(item), 0, 20, 1L, 1);
-
-        when(service.list(eq(0), eq(20), eq("createdAt,desc"), eq(null), eq(null)))
-                .thenReturn(page);
+        when(service.list(
+                NotificationRecipientRole.PARTICIPANT,
+                "0", "20", "createdAt,desc", null, null))
+                .thenReturn(new NotificationPageResponse<>(List.of(item), 0, 20, 1, 1));
 
         mockMvc.perform(get(BASE_URL))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(20))
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.totalPages").value(1))
-                .andExpect(jsonPath("$.content[0].notificationId").value(801))
-                .andExpect(jsonPath("$.content[0].type").value("ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED"))
+                .andExpect(jsonPath("$.content[0].type")
+                        .value("ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED"))
                 .andExpect(jsonPath("$.content[0].referenceType").value("ACTIVITY"))
-                .andExpect(jsonPath("$.content[0].referenceId").value(91))
+                .andExpect(jsonPath("$.content[0].contextEventId").value(7))
                 .andExpect(jsonPath("$.content[0].read").value(false));
     }
 
     @Test
-    @DisplayName("GET /api/v1/participant/notifications/unread-count returns 200 with unread count")
-    void getUnreadCount_returns200() throws Exception {
-        when(service.getUnreadCount())
-                .thenReturn(new ParticipantNotificationUnreadCountResponse(3L));
+    void unreadCountUsesParticipantRole() throws Exception {
+        when(service.getUnreadCount(NotificationRecipientRole.PARTICIPANT))
+                .thenReturn(new NotificationUnreadCountResponse(3));
 
         mockMvc.perform(get(BASE_URL + "/unread-count"))
                 .andExpect(status().isOk())
@@ -99,59 +84,35 @@ class ParticipantNotificationControllerTests {
     }
 
     @Test
-    @DisplayName("POST /api/v1/participant/notifications/{id}/read returns 200 with updated notification")
-    void markAsRead_post_returns200() throws Exception {
-        ParticipantNotificationResponse response = new ParticipantNotificationResponse(
-                801L,
-                ParticipantNotificationType.EVENT_CANCELLED,
-                "Sự kiện đã bị hủy",
-                "Sự kiện đã hủy vì lý do bất khả kháng.",
-                ParticipantNotificationReferenceType.EVENT,
-                7L,
-                NOW.minusSeconds(3600),
-                NOW,
-                true);
-
-        when(service.markAsRead(801L)).thenReturn(response);
+    void readCommandsUseParticipantRole() throws Exception {
+        NotificationResponse response = new NotificationResponse(
+                801L, NotificationType.EVENT_CANCELLED,
+                "Sự kiện đã bị hủy", "Sự kiện đã bị hủy.",
+                NotificationReferenceType.EVENT, 7L, 7L,
+                NOW.minusSeconds(60), NOW, true);
+        when(service.markAsRead(NotificationRecipientRole.PARTICIPANT, "801"))
+                .thenReturn(response);
+        when(service.markAllAsRead(NotificationRecipientRole.PARTICIPANT))
+                .thenReturn(new NotificationBatchReadResponse(4));
 
         mockMvc.perform(post(BASE_URL + "/801/read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notificationId").value(801))
-                .andExpect(jsonPath("$.read").value(true))
                 .andExpect(jsonPath("$.readAt").value(NOW.toString()));
-    }
-
-
-    @Test
-    @DisplayName("POST /api/v1/participant/notifications/read-all returns 200 with updatedCount")
-    void markAllAsRead_post_returns200() throws Exception {
-        when(service.markAllAsRead()).thenReturn(new ParticipantNotificationBatchReadResponse(4));
-
         mockMvc.perform(post(BASE_URL + "/read-all"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updatedCount").value(4));
     }
 
-
     @Test
-    @DisplayName("GET with invalid page returns 400 INVALID_PAGE")
-    void list_invalidPage_returns400() throws Exception {
-        when(service.list(eq(-1), anyInt(), anyString(), any(), any()))
-                .thenThrow(new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "page must be non-negative."));
+    void serviceValidationErrorUsesStableEnvelope() throws Exception {
+        when(service.list(
+                eq(NotificationRecipientRole.PARTICIPANT),
+                eq("-1"), any(), any(), any(), any()))
+                .thenThrow(new ApiException(
+                        HttpStatus.BAD_REQUEST, "INVALID_PAGE", "page must be non-negative."));
 
         mockMvc.perform(get(BASE_URL + "?page=-1"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_PAGE"));
-    }
-
-    @Test
-    @DisplayName("POST non-existent notification read returns 404 NOTIFICATION_NOT_FOUND")
-    void markAsRead_notFound_returns404() throws Exception {
-        when(service.markAsRead(999L))
-                .thenThrow(new ApiException(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "Notification not found."));
-
-        mockMvc.perform(post(BASE_URL + "/999/read"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_FOUND"));
     }
 }

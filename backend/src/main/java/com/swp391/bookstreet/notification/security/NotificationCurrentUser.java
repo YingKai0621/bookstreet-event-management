@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.notification.security;
 
 import com.swp391.bookstreet.common.exception.ApiException;
+import com.swp391.bookstreet.notification.entity.NotificationRecipientRole;
 import com.swp391.bookstreet.security.authentication.AuthenticatedPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -12,11 +13,15 @@ import org.springframework.stereotype.Component;
 public class NotificationCurrentUser {
 
     public Long requireParticipantId() {
+        return requireUserId(NotificationRecipientRole.PARTICIPANT);
+    }
+
+    public Long requireUserId(NotificationRecipientRole role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
                 || authentication.getAuthorities().stream().noneMatch(
-                        authority -> "ROLE_PARTICIPANT".equals(authority.getAuthority()))
+                        authority -> ("ROLE_" + role.name()).equals(authority.getAuthority()))
                 || !(authentication.getPrincipal() instanceof AuthenticatedPrincipal principal)
                 || principal.userId() == null || principal.userId() <= 0) {
             throw new ApiException(HttpStatus.FORBIDDEN, "ACCESS_DENIED",
