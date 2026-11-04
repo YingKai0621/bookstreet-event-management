@@ -16,6 +16,7 @@ import {
 import React, { useRef, useState } from 'react';
 import { AdminProfile } from '../../types/admin';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import '../ui/RoleProfileDesign.css';
 
 interface AdminProfileViewProps {
   profile: AdminProfile;

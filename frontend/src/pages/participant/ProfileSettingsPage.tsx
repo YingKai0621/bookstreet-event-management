@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 import './ProfileSettingsPage.css';
+import '../../components/ui/RoleProfileDesign.css';
 import { authApi } from '../../services/authApi';
 
 interface ProfileSettingsPageProps {

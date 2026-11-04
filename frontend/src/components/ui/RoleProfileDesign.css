@@ -1,0 +1,235 @@
+/* Shared profile composition for the four role workspaces. Data ownership and
+   edit handlers stay inside each role component. */
+:is(.reader-profile-page, .partner-profile-page, .org-profile-container, .adm-profile-view) {
+  --profile-paper: #ffffff;
+  --profile-line: #e1e9e4;
+  --profile-ink: #10251f;
+  --profile-muted: #5c7069;
+  --profile-green: #185e48;
+  --profile-wash: linear-gradient(115deg, #edf5ef, #fffaf0);
+}
+
+:is(.reader-profile-page, .partner-profile-page, .org-profile-container, .adm-profile-view)
+  :is(.profile-card-container, .organizer-card, .adm-profile-card) {
+  background: var(--profile-paper) !important;
+  border: 1px solid var(--profile-line) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 26px rgb(24 41 36 / 6%) !important;
+}
+
+/* Partner already uses the shared Participant component names. */
+.partner-profile-page .profile-card-container {
+  overflow: hidden;
+}
+
+.partner-profile-page .profile-card-header {
+  margin: 0;
+  padding: 28px 36px;
+  background: var(--profile-wash);
+  border-bottom: 1px solid var(--profile-line);
+}
+
+.partner-profile-page .profile-details-table {
+  max-width: 900px;
+  padding: 22px 36px 26px;
+  margin: 0;
+}
+
+/* Organizer: promote the existing summary into the same full-width profile
+   header while retaining the existing notification and session controls. */
+.org-profile-container {
+  max-width: 100% !important;
+}
+
+.org-profile-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 16px !important;
+}
+
+.org-profile-layout > div:first-child,
+.org-profile-layout > div:last-child {
+  display: contents !important;
+}
+
+.org-profile-layout > div:first-child > .organizer-card:first-child {
+  display: grid !important;
+  grid-template-columns: 76px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 22px !important;
+  padding: 28px 36px !important;
+  text-align: left !important;
+  background: var(--profile-wash) !important;
+  order: -2;
+}
+
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:first-child {
+  width: 76px !important;
+  height: 76px !important;
+  margin: 0 !important;
+  grid-row: 1 / span 3;
+}
+
+.org-profile-layout > div:first-child > .organizer-card:first-child h2 {
+  align-self: end;
+  margin: 0 !important;
+  font-size: clamp(1.45rem, 2.2vw, 1.8rem) !important;
+}
+
+.org-profile-layout > div:first-child > .organizer-card:first-child > p {
+  grid-column: 2;
+  align-self: start;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  text-align: right !important;
+}
+
+.org-profile-layout > div:last-child > .organizer-card:first-child {
+  order: -1;
+  padding: 24px 36px !important;
+}
+
+/* Admin: regroup its existing avatar, identity and details in one profile card. */
+.adm-profile-container {
+  display: block !important;
+  max-width: 100% !important;
+}
+
+.adm-profile-card {
+  overflow: hidden;
+}
+
+.adm-profile-header-band {
+  display: none;
+}
+
+.adm-profile-body {
+  display: grid !important;
+  grid-template-columns: 76px minmax(0, 1fr) auto !important;
+  gap: 0 22px !important;
+  padding: 28px 36px 26px !important;
+}
+
+.adm-profile-top-bar {
+  display: contents !important;
+}
+
+.adm-profile-avatar-wrapper {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+
+.adm-profile-avatar-large {
+  width: 76px !important;
+  height: 76px !important;
+}
+
+.adm-profile-actions {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+}
+
+.adm-profile-info-block {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.adm-profile-name {
+  margin: 0 0 6px !important;
+  color: var(--profile-ink) !important;
+  font-size: clamp(1.45rem, 2.2vw, 1.8rem) !important;
+}
+
+.adm-profile-dept {
+  margin: 8px 0 0 !important;
+  color: var(--profile-muted) !important;
+}
+
+.adm-profile-divider {
+  display: none;
+}
+
+:is(.adm-profile-details-grid, .adm-profile-form) {
+  grid-column: 1 / -1;
+  margin-top: 26px;
+  max-width: 900px;
+}
+
+.adm-profile-details-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+
+.adm-profile-field-box {
+  min-height: 0 !important;
+  padding: 13px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--profile-line) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.adm-profile-field-icon {
+  display: none !important;
+}
+
+.adm-profile-field-content {
+  display: grid !important;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.adm-field-label {
+  color: var(--profile-muted) !important;
+  font-weight: 600 !important;
+}
+
+.adm-field-val {
+  color: var(--profile-ink) !important;
+  font-weight: 600 !important;
+}
+
+@media (max-width: 700px) {
+  .partner-profile-page .profile-card-header,
+  .partner-profile-page .profile-details-table,
+  .org-profile-layout > div:first-child > .organizer-card:first-child,
+  .org-profile-layout > div:last-child > .organizer-card:first-child,
+  .adm-profile-body {
+    padding: 20px !important;
+  }
+
+  .org-profile-layout > div:first-child > .organizer-card:first-child,
+  .adm-profile-body {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .org-profile-layout > div:first-child > .organizer-card:first-child > div:first-child,
+  .adm-profile-avatar-wrapper {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .org-profile-layout > div:first-child > .organizer-card:first-child > div:last-child,
+  .adm-profile-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left !important;
+  }
+
+  .adm-profile-field-content {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 10px;
+  }
+}

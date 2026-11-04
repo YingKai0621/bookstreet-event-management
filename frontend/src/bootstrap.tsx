@@ -5,6 +5,7 @@ import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import { ChatWidget } from './components/chat/ChatWidget';
 import './index.css';
+import './SquareDesign.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -15,6 +15,7 @@ import {
 import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerProfile } from '../../types/organizer';
+import '../ui/RoleProfileDesign.css';
 
 interface OrganizerProfileViewProps {
   language: Language;
