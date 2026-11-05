@@ -329,6 +329,9 @@ class OrganizerActivityRequestIntegrationTests {
                 .isEqualTo("A valid request reason for review.");
         assertThat(revision.get("old_title")).isEqualTo("Original title");
         assertThat(revision.get("new_title")).isEqualTo("Approved requested title");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, requestId, partnerUserId)).isOne();
         verify(partnerMailService).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.CHANGE_REQUEST_APPROVED
                         && event.referenceId().equals(requestId)));
