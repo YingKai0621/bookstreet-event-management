@@ -84,6 +84,51 @@
   background-color: #C84C32;
 }
 
-@media (max-width: 760px) { .figma-heritage-section { padding: 3.7rem 0; } .heritage-fan-shell { min-height: 39rem; padding: 0; } .heritage-fan-stage { width: 100%; height: 35rem; } .heritage-fan-card { width: clamp(10.2rem, 45.6vw, 12.6rem); top: 2rem; } .heritage-fan-copy { left: .8rem; right: .8rem; bottom: .9rem; } .heritage-fan-copy strong { font-size: .9rem; } .heritage-fan-place { font-size: .68rem; } .heritage-fan-open { display: none; } .heritage-fan-controls { margin-top: -1rem; } }
+@media (max-width: 760px) {
+  .figma-heritage-section {
+    padding: 2.25rem 0 2.5rem;
+  }
+  .heritage-fan-shell {
+    min-height: 35rem;
+    padding: 0;
+  }
+  .heritage-fan-stage {
+    width: 100%;
+    height: 32rem;
+  }
+  .heritage-fan-card {
+    width: clamp(10.2rem, 45.6vw, 12.6rem);
+    top: 1.5rem;
+  }
+  .heritage-fan-copy {
+    left: .8rem;
+    right: .8rem;
+    bottom: .9rem;
+  }
+  .heritage-fan-copy strong {
+    font-size: .9rem;
+  }
+  .heritage-fan-place {
+    font-size: .68rem;
+  }
+  .heritage-fan-open {
+    display: none;
+  }
+  .heritage-fan-controls {
+    margin-top: -1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .figma-heritage-section {
+    padding: 1.85rem 0 2rem;
+  }
+  .heritage-fan-shell {
+    min-height: 31rem;
+  }
+  .heritage-fan-stage {
+    height: 28rem;
+  }
+}
 @media (max-width: 390px) { .heritage-fan-card { width: clamp(9.6rem, 45.6vw, 11.1rem); } }
 @media (prefers-reduced-motion: reduce) { .heritage-fan-card, .heritage-fan-open, .heritage-more-icon, .heritage-fan-control, .heritage-fan-dots span { transition: none; } }

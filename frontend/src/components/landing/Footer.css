@@ -432,7 +432,7 @@
 
 @media (max-width: 768px) {
   .yg-footer {
-    padding: 3.5rem 0 0 0;
+    padding: 2.25rem 0 0 0;
   }
 
   .yg-footer-main-grid {
@@ -467,6 +467,10 @@
 }
 
 @media (max-width: 480px) {
+  .yg-footer {
+    padding: 1.85rem 0 0 0;
+  }
+
   .yg-traffic-metrics-grid {
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem 1rem;

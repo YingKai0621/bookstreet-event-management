@@ -40,7 +40,7 @@ interface HeaderProps {
   selectedPublicEventId?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
+const HeaderComponent: React.FC<HeaderProps> = ({ 
   language, 
   onLanguageChange,
   isManagementPortal: _isManagementPortal = false,
@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
         return;
       }
 
-      if (Math.abs(scrollDelta) >= 8) {
+      if (Math.abs(scrollDelta) >= 28) {
         setIsHeaderVisible(scrollDelta < 0);
         lastScrollYRef.current = currentScrollY;
       }
@@ -558,3 +558,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export const Header = React.memo(HeaderComponent);

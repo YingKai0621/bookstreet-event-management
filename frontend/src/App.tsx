@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import './App.css';
 import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
@@ -367,7 +368,10 @@ export function App() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const [publicEventSwitchNotice, setPublicEventSwitchNotice] = useState<string | null>(null);
+  const [publicEventSwitchNotice, setPublicEventSwitchNotice] = useState<{
+    label: string;
+    eventName: string;
+  } | null>(null);
   const [isNoticeClosing, setIsNoticeClosing] = useState(false);
   const publicEventSwitchTimerRef = useRef<number | null>(null);
   const publicEventSwitchCloseTimerRef = useRef<number | null>(null);
@@ -378,10 +382,10 @@ export function App() {
     || publicContextEvents.find(event => event.status === 'upcoming')?.id
     || publicContextEvents[0]?.id
     || '';
-  const publicEventId = publicContextEvents.some(event => event.id === publicEventIdFromUrl)
-    ? publicEventIdFromUrl as string
-    : publicContextEvents.some(event => event.id === selectedPublicEventId)
-      ? selectedPublicEventId
+  const publicEventId = (selectedPublicEventId && publicContextEvents.some(event => event.id === selectedPublicEventId))
+    ? selectedPublicEventId
+    : (publicEventIdFromUrl && publicContextEvents.some(event => event.id === publicEventIdFromUrl))
+      ? (publicEventIdFromUrl as string)
       : defaultPublicEventId;
   const hasCurrentBooths = Boolean(publicEventId && loadedBooths.eventId === publicEventId);
   const booths = hasCurrentBooths ? loadedBooths.rows : [];
@@ -419,16 +423,14 @@ export function App() {
     navigate({
       pathname: location.pathname,
       search: `?${params.toString()}`,
-      hash: location.hash,
     }, { replace: true, preventScrollReset: true });
 
     if (isSwitchingEvent) {
       const eventName = language === 'vi' ? targetEvent.title : (targetEvent.titleEn || targetEvent.title);
-      setPublicEventSwitchNotice(
-        language === 'vi'
-          ? `Đang hiển thị gian hàng & sơ đồ của sự kiện: ${eventName}`
-          : `Showing booths & map for event: ${eventName}`,
-      );
+      setPublicEventSwitchNotice({
+        label: language === 'vi' ? 'Đang lọc gian hàng & bản đồ' : 'Filtering booths & map',
+        eventName,
+      });
       setIsNoticeClosing(false);
       if (publicEventSwitchTimerRef.current !== null) window.clearTimeout(publicEventSwitchTimerRef.current);
       if (publicEventSwitchCloseTimerRef.current !== null) window.clearTimeout(publicEventSwitchCloseTimerRef.current);
@@ -452,9 +454,8 @@ export function App() {
     navigate({
       pathname: location.pathname,
       search: `?${params.toString()}`,
-      hash: location.hash,
     }, { replace: true, preventScrollReset: true });
-  }, [isPublicDataLoading, isPublicRoute, location.hash, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
+  }, [isPublicDataLoading, isPublicRoute, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
 
   // Load real data from Backend REST API
   useEffect(() => {
@@ -1281,14 +1282,28 @@ export function App() {
 
       {publicEventSwitchNotice && (
         <div
-          key={publicEventSwitchNotice}
+          key={`${publicEventSwitchNotice.label}-${publicEventSwitchNotice.eventName}`}
           className={`public-event-switch-toast ${isNoticeClosing ? 'is-leaving' : ''}`}
           aria-live="polite"
           onClick={dismissPublicEventSwitchNotice}
           title={language === 'vi' ? 'Bấm để ẩn thông báo' : 'Click to dismiss'}
         >
           <span className="public-event-switch-toast-dot" aria-hidden="true" />
-          <span>{publicEventSwitchNotice}</span>
+          <div className="public-event-switch-toast-content">
+            <span className="public-event-switch-toast-label">{publicEventSwitchNotice.label}</span>
+            <span className="public-event-switch-toast-name">{publicEventSwitchNotice.eventName}</span>
+          </div>
+          <button
+            type="button"
+            className="public-event-switch-toast-close"
+            onClick={(e) => {
+              e.stopPropagation();
+              dismissPublicEventSwitchNotice();
+            }}
+            aria-label={language === 'vi' ? 'Đóng thông báo' : 'Close notification'}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
 

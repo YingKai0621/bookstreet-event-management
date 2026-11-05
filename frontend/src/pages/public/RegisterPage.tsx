@@ -16,6 +16,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { Language } from '../../types';
+import './LoginPage.css';
 import './RegisterPage.css';
 
 interface RegisterPageProps {

@@ -582,7 +582,7 @@
 
   .sk05-right-col {
     order: 1; /* Prioritize interactive feedback form on mobile */
-    padding: 1.5rem 1.15rem;
+    padding: 1.5rem 1.15rem 2.25rem 1.15rem;
     border-right: none;
   }
 
@@ -593,7 +593,7 @@
 
 @media (max-width: 768px) {
   .sk05-feedback-section {
-    padding: 3.5rem 0 4rem;
+    padding: 2.25rem 0 2.5rem;
   }
 
   .sk05-feedback-screen-wrapper {
@@ -616,16 +616,26 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 
   .sk05-submit-btn {
     width: 100%;
     min-height: 48px;
     justify-content: center;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
   }
 
   .sk05-status-demo-hint {
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .sk05-feedback-section {
+    padding: 1.85rem 0 2rem;
   }
 }
 

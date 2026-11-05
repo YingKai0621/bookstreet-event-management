@@ -241,6 +241,18 @@ button {
   margin: 0 auto 3.5rem auto;
 }
 
+@media (max-width: 768px) {
+  .figma-section-header {
+    margin: 0 auto 1.6rem auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .figma-section-header {
+    margin: 0 auto 1.35rem auto;
+  }
+}
+
 .figma-section-title {
   margin-bottom: 0.85rem;
   color: var(--figma-text-dark);

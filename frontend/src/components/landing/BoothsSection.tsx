@@ -198,7 +198,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 language === 'vi'
-                  ? 'Tìm kiếm ki-ốt, nhà xuất bản, tên sách...'
+                  ? 'Tìm ki-ốt, NXB, tựa sách...'
                   : 'Search stalls, publishers, titles...'
               }
               className="figma-search-input"
