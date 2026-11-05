@@ -28,16 +28,23 @@ export function EventCoverflow({
   onDetails,
   onRegister,
 }: EventCoverflowProps) {
-  const [selected, setSelected] = useState(0);
-  const dragStart = useRef<number | null>(null);
-  const suppressClick = useRef(false);
   const count = events.length;
   const controlledIndex = selectedEventId
     ? events.findIndex(event => event.id === selectedEventId)
     : -1;
-  const selectedIndex = controlledIndex >= 0
-    ? controlledIndex
-    : count > 0 ? Math.min(selected, count - 1) : 0;
+  const [selected, setSelected] = useState(() => (controlledIndex >= 0 ? controlledIndex : 0));
+  const [prevControlledIndex, setPrevControlledIndex] = useState(controlledIndex);
+  if (controlledIndex !== prevControlledIndex) {
+    setPrevControlledIndex(controlledIndex);
+    if (controlledIndex >= 0) {
+      setSelected(controlledIndex);
+    }
+  }
+
+  const selectedIndex = count > 0 ? Math.min(Math.max(selected, 0), count - 1) : 0;
+  const dragStart = useRef<number | null>(null);
+  const dragStartY = useRef<number | null>(null);
+  const suppressClick = useRef(false);
   const current = events[selectedIndex];
   const registrationNow = useDeadlineClock([current?.registrationDeadlineAt]);
 
@@ -136,18 +143,27 @@ export function EventCoverflow({
             if (event.key === 'ArrowLeft') { event.preventDefault(); move(-1); }
             if (event.key === 'ArrowRight') { event.preventDefault(); move(1); }
           }}
-          onPointerDown={(event) => { dragStart.current = event.clientX; suppressClick.current = false; }}
+          onPointerDown={(event) => {
+            dragStart.current = event.clientX;
+            dragStartY.current = event.clientY;
+            suppressClick.current = false;
+          }}
           onPointerUp={(event) => {
             if (dragStart.current !== null) {
-              const distance = event.clientX - dragStart.current;
-              if (Math.abs(distance) > 35) {
+              const distanceX = event.clientX - dragStart.current;
+              const distanceY = dragStartY.current !== null ? Math.abs(event.clientY - dragStartY.current) : 0;
+              if (Math.abs(distanceX) > 30 && Math.abs(distanceX) > distanceY) {
                 suppressClick.current = true;
-                move(distance < 0 ? 1 : -1);
+                move(distanceX < 0 ? 1 : -1);
               }
             }
             dragStart.current = null;
+            dragStartY.current = null;
           }}
-          onPointerCancel={() => { dragStart.current = null; }}
+          onPointerCancel={() => {
+            dragStart.current = null;
+            dragStartY.current = null;
+          }}
         >
           {events.map((event, index) => {
             const offset = offsetFor(index);
@@ -179,7 +195,14 @@ export function EventCoverflow({
                 aria-current={index === selectedIndex ? 'true' : undefined}
                 tabIndex={visible ? 0 : -1}
               >
-                <img src={event.image.url || undefined} alt={event.image.alt} draggable={false} loading={distance > 1 ? 'lazy' : 'eager'} />
+                {event.image.url ? (
+                  <img src={event.image.url} alt={event.image.alt} draggable={false} loading={distance > 1 ? 'lazy' : 'eager'} />
+                ) : (
+                  <div className="event-coverflow-slide-placeholder">
+                    <CalendarDays size={38} className="placeholder-calendar-icon" />
+                    <span className="placeholder-event-title">{language === 'vi' ? event.title : event.titleEn}</span>
+                  </div>
+                )}
                 {registeredEventIds.has(event.id) && (
                   <span className="event-coverflow-registered-badge" data-event-id={event.id}>
                     <CheckCircle2 size={15} aria-hidden="true" />{language === 'vi' ? 'Đã đăng ký' : 'Registered'}
@@ -213,7 +236,9 @@ export function EventCoverflow({
                 <span><Clock3 size={16} />{current.timeStr}</span>
               </>
             )}
-            <span><MapPin size={16} />{language === 'vi' ? current.location : current.locationEn}</span>
+            {Boolean(((language === 'vi' ? current.location : current.locationEn) || '').trim()) && (
+              <span><MapPin size={16} />{language === 'vi' ? current.location : current.locationEn}</span>
+            )}
           </div>
         </div>
         <div className="event-coverflow-actions">

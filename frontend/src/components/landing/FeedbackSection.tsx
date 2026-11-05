@@ -275,7 +275,7 @@ export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ language, even
 
                   <div className="sk05-action-row">
                     <button type="submit" disabled={isSubmitting} className="sk05-submit-btn">
-                      <span>{isSubmitting ? (isVi ? 'Đang gửi...' : 'Sending...') : (isVi ? '[Gửi góp ý]' : '[Submit feedback]')}</span>
+                      <span>{isSubmitting ? (isVi ? 'Đang gửi...' : 'Sending...') : (isVi ? 'Gửi góp ý' : 'Submit feedback')}</span>
                     </button>
                   </div>
                 </form>
