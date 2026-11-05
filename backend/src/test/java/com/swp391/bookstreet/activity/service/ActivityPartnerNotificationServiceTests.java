@@ -3,6 +3,7 @@ package com.swp391.bookstreet.activity.service;
 import com.swp391.bookstreet.activity.repository.ActivityPartnerNotificationContext;
 import com.swp391.bookstreet.activity.repository.ActivityProposalRepository;
 import com.swp391.bookstreet.activity.repository.ActivityRepository;
+import com.swp391.bookstreet.activity.repository.ActivityRequestRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,8 @@ class ActivityPartnerNotificationServiceTests {
         when(context.getActivityTitle()).thenReturn("Author Talk");
         when(proposals.findPartnerNotificationContext(42L))
                 .thenReturn(Optional.of(context));
-        var service = new ActivityPartnerNotificationService(proposals, activities, publisher);
+        var service = new ActivityPartnerNotificationService(proposals, activities,
+                mock(ActivityRequestRepository.class), mock(ActivityPartnerOutcomeService.class), publisher);
         Instant occurredAt = Instant.parse("2026-10-17T04:00:00Z");
 
         service.proposalChanged(42L, ActivityPartnerMessageType.PROPOSAL_APPROVED,
@@ -52,7 +54,8 @@ class ActivityPartnerNotificationServiceTests {
         ActivityRepository activities = mock(ActivityRepository.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         when(activities.findPartnerNotificationContext(91L)).thenReturn(Optional.empty());
-        var service = new ActivityPartnerNotificationService(proposals, activities, publisher);
+        var service = new ActivityPartnerNotificationService(proposals, activities,
+                mock(ActivityRequestRepository.class), mock(ActivityPartnerOutcomeService.class), publisher);
 
         service.activityChanged(91L, 91L,
                 ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER,

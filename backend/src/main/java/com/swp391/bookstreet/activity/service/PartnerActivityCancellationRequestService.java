@@ -12,6 +12,7 @@ import com.swp391.bookstreet.activity.exception.ActivityApiException;
 import com.swp391.bookstreet.activity.repository.ActivityRepository;
 import com.swp391.bookstreet.activity.repository.ActivityRequestRepository;
 import com.swp391.bookstreet.activity.security.ActivityCurrentUser;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -31,6 +32,7 @@ public class PartnerActivityCancellationRequestService {
     private final ActivityLifecycleService lifecycleService;
     private final ActivityValidationService validation;
     private final ActivityConstraintTranslator constraintTranslator;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
     private final Clock clock;
 
     public PartnerActivityCancellationRequestService(ActivityRepository activityRepository,
@@ -38,7 +40,8 @@ public class PartnerActivityCancellationRequestService {
             ActivityLockService lockService,
             ActivityLifecycleCoordinator lifecycleCoordinator,
             ActivityLifecycleService lifecycleService, ActivityValidationService validation,
-            ActivityConstraintTranslator constraintTranslator, Clock clock) {
+            ActivityConstraintTranslator constraintTranslator,
+            OrganizerWorkItemNotificationService organizerNotifications, Clock clock) {
         this.activityRepository = activityRepository;
         this.requestRepository = requestRepository;
         this.currentUser = currentUser;
@@ -47,6 +50,7 @@ public class PartnerActivityCancellationRequestService {
         this.lifecycleService = lifecycleService;
         this.validation = validation;
         this.constraintTranslator = constraintTranslator;
+        this.organizerNotifications = organizerNotifications;
         this.clock = clock;
     }
 
@@ -75,6 +79,7 @@ public class PartnerActivityCancellationRequestService {
             constraintTranslator.rethrow(error);
             throw error;
         }
+        organizerNotifications.activityCancellationRequestSubmitted(locks.event(), cancellation);
         return ActivityCancellationRequestResponse.from(cancellation);
     }
 

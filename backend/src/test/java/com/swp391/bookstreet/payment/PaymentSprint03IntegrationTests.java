@@ -118,6 +118,8 @@ class PaymentSprint03IntegrationTests {
 
     @AfterEach
     void cleanUp() {
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?)",
+                organizer, partner);
         jdbc.update("""
                 delete from booth_assignments where booth_hold_id in (
                     select hold.booth_hold_id from booth_holds hold
@@ -175,6 +177,9 @@ class PaymentSprint03IntegrationTests {
                 join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
                 where hold.booth_request_id = ?
                 """, Integer.class, fixture.requestId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId(), partner)).isOne();
         assertThat(jdbc.queryForObject("""
                 select count(*) from booth_payments payment
                 join booth_holds hold on hold.booth_hold_id = payment.booth_hold_id
@@ -375,11 +380,16 @@ class PaymentSprint03IntegrationTests {
                 join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
                 where hold.booth_request_id = ?
                 """, Integer.class, fixture.requestId())).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId(), partner)).isOne();
 
         mvc.perform(get("/api/v1/payments/vnpay/ipn").param("vnp_TxnRef",
                         "BSP" + paymentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("02"));
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ?", Integer.class, fixture.requestId())).isOne();
     }
 
     @Test

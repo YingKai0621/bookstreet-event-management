@@ -37,7 +37,6 @@ import {
   ParticipantEvent,
   ParticipantProfile,
   PartnerEventApplication,
-  PartnerNotification,
   PartnerOrganization,
   PartnerTodoItem
 } from './types';
@@ -127,6 +126,9 @@ const PartnerActivityWorkspacePage = lazy(() => import('./pages/partner/PartnerA
 })));
 const PartnerAssignedBoothsPage = lazy(() => import('./pages/partner/PartnerAssignedBoothsPage').then(module => ({
   default: module.PartnerAssignedBoothsPage,
+})));
+const PartnerNotificationsPage = lazy(() => import('./pages/partner/PartnerNotificationsPage').then(module => ({
+  default: module.PartnerNotificationsPage,
 })));
 const PartnerBoothDetailPage = lazy(() => import('./pages/partner/PartnerBoothDetailPage').then(module => ({
   default: module.PartnerBoothDetailPage,
@@ -308,7 +310,6 @@ export function App() {
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
-  const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
@@ -678,7 +679,6 @@ export function App() {
     setPartnerOverviewLoading(true);
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
-    setPartnerNotifications([]);
     const refreshPartnerData = () => {
       const profileRequest = partnerApi.getProfile();
       void Promise.allSettled([
@@ -1108,16 +1108,6 @@ export function App() {
     );
   }
 
-  const handleMarkAllPartnerNotifsRead = async () => {
-    await partnerApi.markAllNotificationsRead();
-    setPartnerNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-  };
-
-  const handleMarkPartnerNotifRead = async (id: string) => {
-    await partnerApi.markNotificationRead(id);
-    setPartnerNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, isRead: true } : notification));
-  };
-
   const handlePartnerLogout = () => {
     void handleLogout();
   };
@@ -1152,10 +1142,6 @@ export function App() {
         <PartnerLayout
           language={language}
           organization={visiblePartnerOrg}
-          unreadNotificationsCount={partnerNotifications.filter(n => !n.isRead).length}
-          notifications={partnerNotifications}
-          onMarkAllAsRead={handleMarkAllPartnerNotifsRead}
-          onMarkItemAsRead={handleMarkPartnerNotifRead}
           onLogout={handlePartnerLogout}
         >
           <Routes>
@@ -1218,7 +1204,7 @@ export function App() {
             />
           } />
           <Route path="/partner/reports" element={<Navigate to="/partner" replace />} />
-          <Route path="/partner/notifications" element={<Navigate to="/partner" replace />} />
+          <Route path="/partner/notifications" element={<PartnerNotificationsPage language={language} />} />
           <Route path="/partner/organization" element={<Navigate to="/partner/profile" replace />} />
           <Route path="/partner/profile" element={
             <PartnerProfilePage

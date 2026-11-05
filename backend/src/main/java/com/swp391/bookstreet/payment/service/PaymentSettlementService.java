@@ -8,6 +8,7 @@ import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
+import com.swp391.bookstreet.booth.service.BoothReselectionNotificationService;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.service.EventRootLockService;
@@ -18,6 +19,7 @@ import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.gateway.VnPayGatewayAdapter;
 import com.swp391.bookstreet.payment.gateway.VnPayResult;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
@@ -37,18 +39,25 @@ public class PaymentSettlementService {
     private final BoothRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
     private final EventRootLockService eventRootLockService;
+    private final BoothReselectionNotificationService reselectionNotifications;
     private final VnPayProperties properties;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
 
     public PaymentSettlementService(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
             BoothAssignmentRepository assignmentRepository,
-            EventRootLockService eventRootLockService, VnPayProperties properties) {
+            EventRootLockService eventRootLockService,
+            BoothReselectionNotificationService reselectionNotifications,
+            VnPayProperties properties,
+            PartnerOutcomeNotificationService outcomeNotifications) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
         this.eventRootLockService = eventRootLockService;
+        this.reselectionNotifications = reselectionNotifications;
         this.properties = properties;
+        this.outcomeNotifications = outcomeNotifications;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -91,7 +100,7 @@ public class PaymentSettlementService {
         if (payment.getStatus() != BoothPaymentStatus.PENDING) {
             return VnPayAcknowledgement.alreadyConfirmed();
         }
-        applyNonSuccessCallback(payment, hold, result, now);
+        applyNonSuccessCallback(event, payment, hold, result, now);
         return VnPayAcknowledgement.success();
     }
 
@@ -140,7 +149,7 @@ public class PaymentSettlementService {
         payment.fail("CHECKOUT_NOT_CREATED",
                 "The checkout was not durably created and no VNPay session exists.",
                 null, null, null, now);
-        hold.expire(now);
+        expireHoldAndNotify(locked.event(), hold, now);
     }
 
     private void applyQuery(Long paymentId, VnPayResult result, Instant now,
@@ -189,14 +198,14 @@ public class PaymentSettlementService {
                     result.transactionStatus(), result.transactionNo(), now);
             if (payment.getTrustedIncompleteQueryCount() >= 2) {
                 payment.timeout(now);
-                hold.expire(now);
+                expireHoldAndNotify(event, hold, now);
             }
             return;
         }
         if (TERMINAL_FAILURE_STATUSES.contains(result.transactionStatus())) {
             payment.fail("VNPAY_" + result.transactionStatus(), providerMessage(result),
                     result.responseCode(), result.transactionStatus(), result.transactionNo(), now);
-            hold.expire(now);
+            expireHoldAndNotify(event, hold, now);
             return;
         }
         payment.recordProviderEvidence(result.responseCode(), result.transactionStatus(),
@@ -227,10 +236,14 @@ public class PaymentSettlementService {
         hold.consume(now);
         request.complete(now);
         assignmentRepository.save(BoothAssignment.create(hold, now));
+        outcomeNotifications.boothChanged(request);
         requestRepository.findCompetingForUpdate(
                         request.getApplication().getEventId(), request.getBooth().getBoothId(),
                         BoothRequestStatus.PENDING)
-                .forEach(competing -> competing.notSelected(now));
+                .forEach(competing -> {
+                    competing.notSelected(now);
+                    outcomeNotifications.boothChanged(competing);
+                });
     }
 
     private LockedPayment lockPayment(Long paymentId) {
@@ -250,7 +263,7 @@ public class PaymentSettlementService {
                 || event.getStatus() == EventStatus.ONGOING;
     }
 
-    private void applyNonSuccessCallback(BoothPayment payment, BoothHold hold,
+    private void applyNonSuccessCallback(Event event, BoothPayment payment, BoothHold hold,
             VnPayResult result, Instant now) {
         if ("01".equals(result.transactionStatus())) {
             payment.recordProviderEvidence(result.responseCode(), result.transactionStatus(),
@@ -264,12 +277,19 @@ public class PaymentSettlementService {
             payment.fail(cancelled ? "VNPAY_CANCELLED" : "VNPAY_" + result.transactionStatus(),
                     providerMessage(result), result.responseCode(), result.transactionStatus(),
                     result.transactionNo(), now);
-            hold.expire(now);
+            expireHoldAndNotify(event, hold, now);
             return;
         }
         payment.recordProviderEvidence(result.responseCode(), result.transactionStatus(),
                 result.transactionNo(), now);
         payment.requireReconciliation("UNMAPPED_VNPAY_CALLBACK", now);
+    }
+
+    private void expireHoldAndNotify(Event event, BoothHold hold, Instant now) {
+        if (hold.expire(now)) {
+            holdRepository.flush();
+            reselectionNotifications.notifyIfEligible(event, hold.getBoothRequest(), now);
+        }
     }
 
     private boolean canSafelySettleLate(BoothPayment payment, BoothHold hold) {
