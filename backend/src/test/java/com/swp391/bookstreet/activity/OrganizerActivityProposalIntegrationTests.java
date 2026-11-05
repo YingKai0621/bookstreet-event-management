@@ -98,6 +98,7 @@ class OrganizerActivityProposalIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
         jdbc.update("delete from activities where event_id in "
                 + "(select event_id from events where organizer_user_id in (?, ?))",
                 organizerId, otherOrganizerId);
@@ -248,6 +249,9 @@ class OrganizerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject(
                 "select count(*) from activities where source_proposal_id in (?, ?)",
                 Integer.class, changesId, rejectId)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_proposal_id in (?, ?) and recipient_role = 'PARTNER'",
+                Integer.class, changesId, rejectId)).isEqualTo(2);
         verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_NEEDS_CHANGES));
         verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->

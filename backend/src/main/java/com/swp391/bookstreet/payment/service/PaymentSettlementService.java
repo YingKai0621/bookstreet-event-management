@@ -19,6 +19,7 @@ import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.gateway.VnPayGatewayAdapter;
 import com.swp391.bookstreet.payment.gateway.VnPayResult;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
@@ -40,13 +41,15 @@ public class PaymentSettlementService {
     private final EventRootLockService eventRootLockService;
     private final BoothReselectionNotificationService reselectionNotifications;
     private final VnPayProperties properties;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
 
     public PaymentSettlementService(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
             BoothAssignmentRepository assignmentRepository,
             EventRootLockService eventRootLockService,
             BoothReselectionNotificationService reselectionNotifications,
-            VnPayProperties properties) {
+            VnPayProperties properties,
+            PartnerOutcomeNotificationService outcomeNotifications) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
@@ -54,6 +57,7 @@ public class PaymentSettlementService {
         this.eventRootLockService = eventRootLockService;
         this.reselectionNotifications = reselectionNotifications;
         this.properties = properties;
+        this.outcomeNotifications = outcomeNotifications;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -232,10 +236,14 @@ public class PaymentSettlementService {
         hold.consume(now);
         request.complete(now);
         assignmentRepository.save(BoothAssignment.create(hold, now));
+        outcomeNotifications.boothChanged(request);
         requestRepository.findCompetingForUpdate(
                         request.getApplication().getEventId(), request.getBooth().getBoothId(),
                         BoothRequestStatus.PENDING)
-                .forEach(competing -> competing.notSelected(now));
+                .forEach(competing -> {
+                    competing.notSelected(now);
+                    outcomeNotifications.boothChanged(competing);
+                });
     }
 
     private LockedPayment lockPayment(Long paymentId) {

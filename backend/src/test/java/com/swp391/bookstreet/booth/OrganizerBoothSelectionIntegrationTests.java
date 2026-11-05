@@ -106,6 +106,16 @@ class OrganizerBoothSelectionIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
+        jdbc.update("""
+                delete from booth_assignments where booth_hold_id in (
+                    select hold.booth_hold_id from booth_holds hold
+                    join booth_requests request on request.booth_request_id = hold.booth_request_id
+                    join partner_event_applications application
+                      on application.application_id = request.application_id
+                    where application.event_id in (
+                        select event_id from events where organizer_user_id in (?, ?)))
+                """, organizer, otherOrganizer);
         jdbc.update("""
                 delete from booth_holds
                 where booth_request_id in (
@@ -225,6 +235,12 @@ class OrganizerBoothSelectionIntegrationTests {
         assertThat(jdbc.queryForObject(
                 "select status from booth_requests where booth_request_id = ?",
                 String.class, competingRequest)).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = 'PARTNER_BOOTH_REQUEST_STATUS_CHANGED'",
+                Integer.class, selectedRequest, partnerOne)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ?", Integer.class, competingRequest)).isZero();
 
         jdbc.update("update event_booth_configs set rental_price = 3500000 "
                 + "where event_booth_config_id = ?", configId);
@@ -312,12 +328,37 @@ class OrganizerBoothSelectionIntegrationTests {
         assertThat(jdbc.queryForObject(
                 "select status from booth_requests where booth_request_id = ?",
                 String.class, requestId)).isEqualTo("PAYMENT_EXPIRED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, requestId, partnerOne)).isOne();
         assertThat(jdbc.queryForObject(
                 "select released_at from booth_holds where booth_request_id = ?",
                 Timestamp.class, requestId).toInstant()).isEqualTo(processedAt);
         mvc.perform(get("/api/v1/events/{eventId}/booths/{boothId}", eventId, boothId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.availability").value("AVAILABLE"));
+    }
+
+    @Test
+    void freeAssignmentNotifiesWinnerAndCompetingPartnerOnlyAfterCompletion() throws Exception {
+        long eventId = insertEvent(organizer, futureRange(30), 90, 2);
+        long boothId = insertBooth("FREE-NOTIFY");
+        configure(eventId, boothId, 0);
+        long winner = insertRequest(approve(partnerOne, eventId), boothId, "PENDING");
+        long competitor = insertRequest(approve(partnerTwo, eventId), boothId, "PENDING");
+
+        selectExpecting(eventId, winner, 200, null);
+
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, winner)).isEqualTo("COMPLETED");
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, competitor)).isEqualTo("NOT_SELECTED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, winner, partnerOne)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, competitor, partnerTwo)).isOne();
     }
 
     @Test

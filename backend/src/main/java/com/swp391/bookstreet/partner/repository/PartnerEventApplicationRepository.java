@@ -108,6 +108,15 @@ public interface PartnerEventApplicationRepository
             """, nativeQuery = true)
     List<String> findEventCancellationRecipientEmails(@Param("eventId") Long eventId);
 
+    @Query("""
+            select distinct application.partnerOrganization.representativeUserId
+            from PartnerEventApplication application
+            where application.eventId = :eventId
+              and application.status in :statuses
+            """)
+    List<Long> findAffectedRepresentativeIds(@Param("eventId") Long eventId,
+            @Param("statuses") java.util.Collection<PartnerEventApplication.ApplicationStatus> statuses);
+
     @Query(value = """
             SELECT a.application_id AS applicationId,
                    a.event_id AS eventId,

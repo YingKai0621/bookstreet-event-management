@@ -5,6 +5,7 @@ import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
 import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import java.time.Instant;
@@ -22,18 +23,21 @@ public class BoothHoldExpiryTransactions {
     private final BoothRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
     private final BoothReselectionNotificationService reselectionNotifications;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
 
     public BoothHoldExpiryTransactions(EventRootLockService eventRootLockService,
             BoothHoldRepository holdRepository, BoothPaymentRepository paymentRepository,
             BoothRequestRepository requestRepository,
             BoothAssignmentRepository assignmentRepository,
-            BoothReselectionNotificationService reselectionNotifications) {
+            BoothReselectionNotificationService reselectionNotifications,
+            PartnerOutcomeNotificationService outcomeNotifications) {
         this.eventRootLockService = eventRootLockService;
         this.holdRepository = holdRepository;
         this.paymentRepository = paymentRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
         this.reselectionNotifications = reselectionNotifications;
+        this.outcomeNotifications = outcomeNotifications;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -55,6 +59,7 @@ public class BoothHoldExpiryTransactions {
             if (!blockedHolds.contains(hold.getBoothHoldId())
                     && !assignmentRepository.existsByBoothHoldBoothHoldId(hold.getBoothHoldId())
                     && hold.expire(now)) {
+                outcomeNotifications.boothChanged(hold.getBoothRequest());
                 expired++;
                 holdRepository.flush();
                 reselectionNotifications.notifyIfEligible(

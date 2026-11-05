@@ -95,6 +95,7 @@ class PartnerActivityProposalIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
         jdbc.update("delete from activity_revisions where activity_id in "
                 + "(select activity_id from activities where event_id in "
                 + "(select event_id from events where organizer_user_id = ?))", organizerId);
