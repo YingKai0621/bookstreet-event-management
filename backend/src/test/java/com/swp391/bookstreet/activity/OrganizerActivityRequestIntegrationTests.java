@@ -95,7 +95,8 @@ class OrganizerActivityRequestIntegrationTests {
 
     @AfterEach
     void cleanup() {
-        jdbc.update("delete from notifications where recipient_user_id = ?", partnerUserId);
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?, ?)",
+                organizerId, otherOrganizerId, partnerUserId);
         jdbc.update("delete from attendances where activity_registration_id in (select activity_registration_id from activity_registrations where event_registration_id in (select event_registration_id from event_registrations where user_id=?))", partnerUserId);
         jdbc.update("delete from activity_registrations where event_registration_id in (select event_registration_id from event_registrations where user_id=?)", partnerUserId);
         jdbc.update("delete from event_registrations where user_id=?", partnerUserId);

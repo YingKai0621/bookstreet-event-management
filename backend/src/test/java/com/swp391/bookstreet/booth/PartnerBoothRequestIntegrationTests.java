@@ -78,6 +78,8 @@ class PartnerBoothRequestIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?, ?)",
+                organizer, partnerOne, partnerTwo);
         jdbc.update("""
                 delete from booth_holds
                 where booth_request_id in (

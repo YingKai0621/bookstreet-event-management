@@ -118,7 +118,8 @@ class PaymentSprint03IntegrationTests {
 
     @AfterEach
     void cleanUp() {
-        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?)",
+                organizer, partner);
         jdbc.update("""
                 delete from booth_assignments where booth_hold_id in (
                     select hold.booth_hold_id from booth_holds hold
