@@ -19,6 +19,8 @@ import {
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../../components/ui/WorkspaceFieldLabel';
 import { partnerApi } from '../../services/partnerApi';
 import type { Language, PartnerEventApplication } from '../../types';
 import type {
@@ -421,14 +423,15 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
             {VIEW_CONFIG.map(item => { const Icon = item.icon; return <button type="button" key={item.id} className={view === item.id ? 'is-active' : ''} onClick={() => changeView(item.id)}><Icon size={20} /><span><strong>{item.label}</strong><small>{item.hint}</small></span></button>; })}
           </nav>
 
-          <div className="paw-toolbar">
-            <label className="paw-search"><Search size={18} /><input value={search} onChange={event => updateWorkspaceParams({ search: event.target.value, page: null }, true)} placeholder="Tìm theo tên hoạt động..." /></label>
-            <select aria-label="Lọc trạng thái" value={status} onChange={event => updateWorkspaceParams({ status: event.target.value, page: null })}>{VIEW_STATUS_OPTIONS[view].map(value => <option value={value} key={value || 'all'}>{value ? activityStatusLabel(viewKind(view), value) : 'Tất cả trạng thái'}</option>)}</select>
-            {view === 'cancellations' && <label className="paw-check"><input type="checkbox" checked={lateOnly} onChange={event => updateWorkspaceParams({ late: event.target.checked, page: null })} /> Chỉ yêu cầu trễ hạn</label>}
-            <span>{meta.totalElements} kết quả</span>
-          </div>
+          <section className="paw-records-panel" aria-label="Tìm kiếm và danh sách hoạt động">
+            <div className="paw-toolbar">
+              <SearchFieldLabel className="paw-search-group"><label className="paw-search"><Search size={18} /><input value={search} onChange={event => updateWorkspaceParams({ search: event.target.value, page: null }, true)} placeholder="Tìm theo tên hoạt động..." /></label></SearchFieldLabel>
+              <WorkspaceFieldLabel className="paw-status-field" label="Trạng thái"><select aria-label="Lọc trạng thái" value={status} onChange={event => updateWorkspaceParams({ status: event.target.value, page: null })}>{VIEW_STATUS_OPTIONS[view].map(value => <option value={value} key={value || 'all'}>{value ? activityStatusLabel(viewKind(view), value) : 'Tất cả trạng thái'}</option>)}</select></WorkspaceFieldLabel>
+              {view === 'cancellations' && <label className="paw-check"><input type="checkbox" checked={lateOnly} onChange={event => updateWorkspaceParams({ late: event.target.checked, page: null })} /> Chỉ yêu cầu trễ hạn</label>}
+              <span>{meta.totalElements} kết quả</span>
+            </div>
 
-          <div className="paw-list" aria-busy={loading}>
+            <div className="paw-list" aria-busy={loading}>
             {loading && records.length === 0 && Array.from({ length: 4 }, (_, index) => <div className="paw-skeleton" key={index}><i /><i /><i /></div>)}
             {!loading && error && <div className="paw-empty paw-empty--error"><AlertCircle size={30} /><strong>Chưa tải được dữ liệu</strong><p>{error}</p><button type="button" onClick={() => setReload(value => value + 1)}>Thử lại</button></div>}
             {!loading && !error && records.length === 0 && <div className="paw-empty"><CalendarDays size={30} /><strong>Chưa có dữ liệu phù hợp</strong><p>Thử đổi trạng thái, từ khóa hoặc chọn một sự kiện khác.</p></div>}
@@ -453,9 +456,10 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
                 <div className="paw-card-actions"><StatusBadge kind={recordKind(record)} status={record.status} />{!isProposal(record) && !isActivity(record) && 'late' in record && record.late && <span className="paw-late">Trễ hạn</span>}<button type="button" onClick={() => setSelected(record)}><Eye size={16} /> Xem chi tiết</button></div>
               </article>;
             })}
-          </div>
+            </div>
 
-          {getPageCount(meta.totalElements, PAGE_SIZE) > 1 && <ListPagination page={page + 1} pages={getPageCount(meta.totalElements, PAGE_SIZE)} disabled={loading} onPage={value => updateWorkspaceParams({ page: value })} />}
+            {getPageCount(meta.totalElements, PAGE_SIZE) > 1 && <div className="paw-records-pagination"><ListPagination page={page + 1} pages={getPageCount(meta.totalElements, PAGE_SIZE)} disabled={loading} onPage={value => updateWorkspaceParams({ page: value })} /></div>}
+          </section>
         </>
       )}
 

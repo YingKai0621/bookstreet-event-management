@@ -1,4 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
+import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import {
   AlertCircle,
   ArrowRight,
@@ -233,7 +235,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
       {notice && <div className="my-booths-alert" role="status"><AlertCircle size={18} />{notice}</div>}
 
       <div className="my-booths-toolbar">
-        <div className="my-booths-search">
+        <SearchFieldLabel className="my-booths-search-group"><div className="my-booths-search">
           <Search size={17} />
           <input
             type="search"
@@ -243,18 +245,8 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             aria-label="Tìm gian hàng đã được cấp"
           />
           {search && <button type="button" onClick={() => setSearch('')} aria-label="Xóa từ khóa tìm kiếm"><X size={15} /></button>}
-        </div>
-        <label className="my-booths-time-filter">
-          <span>Thời gian sự kiện</span>
-          <select
-            aria-label="Lọc theo thời gian sự kiện"
-            value={filter}
-            onChange={event => setFilter(event.target.value as PhaseFilter)}
-          >
-            <option value="all">Tất cả thời gian</option>
-            {timedPhases.map(phase => <option value={phase} key={phase}>{phaseMeta[phase].label}</option>)}
-          </select>
-        </label>
+        </div></SearchFieldLabel>
+        <PartnerFilterSelect label="Thời gian sự kiện" ariaLabel="Lọc theo thời gian sự kiện" icon={CalendarDays} value={filter} options={[{ value: 'all', label: 'Tất cả thời gian' }, ...timedPhases.map(phase => ({ value: phase, label: phaseMeta[phase].label }))]} onChange={setFilter} />
       </div>
 
       <div className="my-booths-list-heading">

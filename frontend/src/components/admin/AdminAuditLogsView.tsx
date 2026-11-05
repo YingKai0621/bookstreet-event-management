@@ -13,6 +13,8 @@ import React, { useMemo, useState } from 'react';
 import { AdminAuditLogItem } from '../../types/admin';
 import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 
 interface AdminAuditLogsViewProps {
@@ -119,7 +121,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
       </div>
       <div className="adm-card adm-filter-card">
         <div className="adm-filter-bar">
-          <div className="adm-search-input-wrap">
+          <SearchFieldLabel className="adm-search-group"><div className="adm-search-input-wrap">
             <Search size={16} className="adm-search-icon" />
             <input 
               type="text"
@@ -136,7 +138,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
                 <X size={14} />
               </button>
             )}
-          </div>
+          </div></SearchFieldLabel>
 
           <div className="adm-select-wrap">
             <Filter size={14} />
@@ -154,7 +156,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
             </select>
           </div>
 
-          <div className="adm-select-wrap">
+          <WorkspaceFieldLabel className="adm-status-field" label="Trạng thái"><div className="adm-select-wrap">
             <Shield size={14} />
             <select 
               value={filterStatus}
@@ -166,7 +168,7 @@ export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) 
               <option value="warning">Cảnh báo</option>
               <option value="failed">Thất bại</option>
             </select>
-          </div>
+          </div></WorkspaceFieldLabel>
         </div>
       </div>
 

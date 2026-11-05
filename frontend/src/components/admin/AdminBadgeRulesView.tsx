@@ -5,6 +5,7 @@ import { badgeAdminApi } from '../../services/badgeAdminApi';
 import { ApiError } from '../../services/apiError';
 import type { AdminBadge, AdminBadgeInput, RewardManagementPage } from '../../types/rewardManagement';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import './AdminBadgeRulesView.css';
 
 function message(error: unknown): string {
@@ -116,7 +117,7 @@ export function AdminBadgeRulesView() {
     {notice && <div className="badge-notice" role="status">{notice}</div>}
     {actionError && <div className="badge-error" role="alert">{actionError}</div>}
     <div className="badge-catalog-filters">
-      <form onSubmit={submitSearch}><Search size={18} /><input aria-label="Tìm huy hiệu" placeholder="Tìm theo tên huy hiệu" maxLength={100} value={searchInput} onChange={event => setSearchInput(event.target.value)} /><button type="submit" className="adm-btn adm-btn-secondary">Tìm kiếm</button></form>
+      <SearchFieldLabel className="badge-search-group"><form onSubmit={submitSearch}><Search size={18} /><input aria-label="Tìm huy hiệu" placeholder="Tìm theo tên huy hiệu" maxLength={100} value={searchInput} onChange={event => setSearchInput(event.target.value)} /><button type="submit" className="adm-btn adm-btn-secondary">Tìm kiếm</button></form></SearchFieldLabel>
       <label>Trạng thái<select value={active} onChange={event => { setActive(event.target.value); setPage(0); }}><option value="all">Tất cả</option><option value="true">Đang áp dụng</option><option value="false">Tạm dừng</option></select></label>
       <label>Sắp xếp<select value={sort} onChange={event => { setSort(event.target.value); setPage(0); }}><option value="">Mới tạo nhất</option><option value="name,asc">Tên A–Z</option><option value="requiredPoints,asc">Ngưỡng điểm tăng dần</option><option value="requiredPoints,desc">Ngưỡng điểm giảm dần</option><option value="updatedAt,desc">Mới cập nhật</option></select></label>
     </div>

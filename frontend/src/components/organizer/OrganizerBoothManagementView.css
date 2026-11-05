@@ -273,6 +273,7 @@
   min-width: 260px;
   flex: 1;
 }
+.booth-search-group { flex: 1; min-width: 260px; }
 
 .booth-search-box .search-icon {
   position: absolute;
@@ -317,6 +318,8 @@
   cursor: pointer;
   transition: all 160ms ease;
 }
+.booth-status-field { flex: 0 1 190px; min-width: 160px; }
+.booth-status-field .booth-filter-select { width: 100%; box-sizing: border-box; }
 
 .booth-filter-select:focus {
   outline: none;
@@ -328,6 +331,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  align-self: flex-end;
 }
 
 .btn-toolbar-refresh {
@@ -472,15 +476,27 @@
 .booth-code-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 7px;
-  background: #14241F;
-  color: #E9BC63;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.84rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
+  gap: 0.5rem;
+  color: #203b32;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.booth-code-pill strong {
+  font: inherit;
+}
+
+.booth-code-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d5e4dc;
+  border-radius: 4px;
+  background: #f3f7f4;
+  color: #315d4c;
 }
 
 .booth-name-cell {
@@ -536,7 +552,10 @@
 }
 
 .booth-status-switch input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
 
 .booth-status-slider {
@@ -545,7 +564,7 @@
   background: #D1D5DB;
   border-radius: 20px;
   position: relative;
-  transition: all 200ms ease;
+  flex-shrink: 0;
 }
 
 .booth-status-slider::before {
@@ -557,12 +576,21 @@
   background: #FFFFFF;
   top: 3px;
   left: 3px;
-  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .booth-status-switch input:checked + .booth-status-slider {
-  background: #10B981;
+  background: #247357;
+}
+
+.booth-status-switch input:focus-visible + .booth-status-slider {
+  outline: 2px solid #33745b;
+  outline-offset: 3px;
+}
+
+.booth-status-switch input:disabled + .booth-status-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .booth-status-switch input:checked + .booth-status-slider::before {

@@ -104,7 +104,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
                 {profile.avatar ? <img src={profile.avatar} alt={profile.name} /> : profile.name.slice(0, 2).toUpperCase()}
               </div>
               <button className="reader-avatar-button" type="button" disabled={isSaving} onClick={() => fileInputRef.current?.click()}
-                aria-label={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'} title={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'}><Camera size={20} /></button>
+                aria-label={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'} title={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'}><Camera size={18} /></button>
               <input type="file" ref={fileInputRef} accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={isSaving} onChange={handleAvatarFileSelect} />
             </div>
             <div className="profile-names">

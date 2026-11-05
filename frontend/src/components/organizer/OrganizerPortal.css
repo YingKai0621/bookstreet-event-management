@@ -1535,6 +1535,10 @@
   max-width: none;
   background: #FFFFFF;
 }
+.org-event-search-field { flex: 1; min-width: 0; }
+.org-event-search-field .org-event-search-box { width: 100%; }
+.org-event-sort-field { flex: 0 0 220px; width: 220px; }
+.org-event-sort-field .org-event-sort-control { width: 100%; }
 
 .org-event-search-box input {
   height: 42px;
@@ -2629,7 +2633,7 @@
 
   .org-event-toolbar-controls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 210px auto;
+    grid-template-columns: minmax(0, 1fr) 220px auto;
   }
 }
 
@@ -2656,6 +2660,8 @@
   .org-event-sort-control {
     width: 100%;
   }
+
+  .org-event-sort-field { width: 100%; flex-basis: auto; }
 
   .org-event-result-count {
     text-align: left;
@@ -4398,7 +4404,8 @@
   height: 24px;
   padding: 0 0.45rem;
   border: 1px solid #b5d4c5;
-  border-radius: 999px;
+  /* Keep overflow counts compact, but aligned with the square-corner workspace language. */
+  border-radius: 8px;
   background: #edf7f2;
   color: #176149;
   font-size: 0.72rem;
@@ -5355,6 +5362,11 @@
   display: flex;
   align-items: center;
 }
+.org-booth-search-field { flex: 1 1 240px; min-width: 220px; }
+.org-booth-search-field .org-booth-search-box { width: 100%; }
+.org-booth-category-field, .org-booth-sort-field { flex: 0 1 190px; min-width: 160px; }
+.org-booth-category-field .org-booth-select-wrap, .org-booth-sort-field .org-booth-select-wrap { width: 100%; }
+.org-booth-category-field select, .org-booth-sort-field select { width: 100%; }
 
 .org-booth-search-icon {
   position: absolute;

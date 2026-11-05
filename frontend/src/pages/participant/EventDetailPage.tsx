@@ -1,4 +1,5 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, Search, Users, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -233,7 +234,7 @@ export const EventDetailPage = ({
               <p>{vi ? 'Xem lịch, địa điểm và đăng ký những hoạt động còn mở.' : 'Review schedules and register for activities that are still open.'}</p>
             </div>
             {eventCatalog.length > 0 && (
-              <label className="part-search-input">
+              <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
                 <Search size={15} className="icon" />
                 <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
                 <input value={searchParams.get('search') || ''} onChange={event => {
@@ -242,7 +243,7 @@ export const EventDetailPage = ({
                   else next.delete('search');
                   setSearchParams(next, { replace: true });
                 }} placeholder={vi ? 'Tìm theo tên, địa điểm...' : 'Search name or venue...'} />
-              </label>
+              </label></SearchFieldLabel>
             )}
           </div>
 
@@ -296,7 +297,7 @@ export const EventDetailPage = ({
           <div className="participant-section-heading participant-section-heading--actions">
             <div><h2 id="registered-activities-title" className="section-heading-title">{vi ? 'Hoạt động thuộc sự kiện này' : 'Activities in this event'}</h2><p>{vi ? 'Chỉ hiển thị những đăng ký thuộc tài khoản hiện tại.' : 'Only registrations belonging to the current account are shown.'}</p></div>
             {eventActivities.length > 0 && (
-              <label className="part-search-input">
+              <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
                 <Search size={15} className="icon" />
                 <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
                 <input value={searchParams.get('search') || ''} onChange={event => {
@@ -305,7 +306,7 @@ export const EventDetailPage = ({
                   else next.delete('search');
                   setSearchParams(next, { replace: true });
                 }} placeholder={vi ? 'Tìm theo tên, địa điểm...' : 'Search name or venue...'} />
-              </label>
+              </label></SearchFieldLabel>
             )}
           </div>
 

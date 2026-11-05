@@ -150,7 +150,7 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
 }
 
 for (const workspace of workspaces) for (const width of [1440, 390]) {
-  test(`${workspace.role} square components at ${width}px`, async ({ page }) => {
+  test(`${workspace.role} harmonious components at ${width}px`, async ({ page }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width, height: 900 });
     await mockWorkspace(page, workspace.role);
@@ -158,7 +158,27 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
       await page.goto(route);
       await expect(page.locator('h1.workspace-page-title').first()).toBeVisible();
       await expect(page.locator('.role-sidebar-item').first()).toHaveCSS('border-top-left-radius', '10px');
-      // Resolved styles catch lazy route CSS and inline radius overrides.
+      await expect(page.locator('.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell').first())
+        .toHaveCSS('--workspace-control-radius', '8px');
+      await expect(page.locator('.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell').first())
+        .toHaveCSS('--workspace-tag-radius', '4px');
+      const largeSurfaces = page.locator('.adm-card, .adm-kpi-card, .org-dashboard-panel, .org-dashboard-chart-card, .org-metric-card, .partner-card, .partner-stat-card, .partner-workspace-panel, .partner-workspace-stat, .summary-stat-card, .participant-event-card, .participant-rating-card, .participant-event-overview-card, .booth-kpi-card, .booth-card');
+      for (const surface of await largeSurfaces.all()) {
+        await expect(surface, `Square outer surface at ${route}`).toHaveCSS('border-radius', '0px');
+      }
+      const outerGroups = page.locator('.participant-summary-grid, .participant-featured-banner, .participant-calendar-wrapper, .participant-mobile-agenda, .rewards-collection-section, .certificate-card-row, .participant-event-summary, .participant-notification-filters, .partner-todo-section, .booth-map-container, .notifications-list-container, .event-hub-hero, .booth-kpi-grid, .booth-card-item, .adm-profile-details-grid, .adm-profile-form, .org-event-list, .org-event-form-section, .org-toolbar, .org-dashboard-kpi, .obr-toolbar, .booth-crud-toolbar, .organizer-feedback-toolbar, .organizer-feedback-total, .organizer-feedback-card, .review-list-pane, .facility-stat, .facility-panel');
+      for (const group of await outerGroups.all()) {
+        await expect(group, `Square container at ${route}`).toHaveCSS('border-radius', '0px');
+      }
+      if (workspace.role === 'PARTNER' && route === '/partner') {
+        for (const surface of await page.locator('.partner-workspace-hero, .partner-workspace-stats, .partner-workspace-panel, .partner-workspace-activity, .partner-workspace-event, .partner-workspace-task, .partner-workspace-empty').all()) {
+          await expect(surface).toHaveCSS('border-radius', '0px');
+        }
+        await expect(page.locator('.partner-workspace-stat-icon').first()).toHaveCSS('border-radius', '10px');
+        await expect(page.locator('.partner-workspace-primary-action')).toHaveCSS('border-radius', '10px');
+        await expect(page.locator('.partner-workspace-secondary-action')).toHaveCSS('border-radius', '10px');
+      }
+      // Every workspace keeps feature-owned rounded details after lazy loading.
       const roundedBoxes = await page.locator(
         '.participant-app-shell *, .partner-app-shell *, .organizer-app-shell *, .admin-app-shell *'
       ).evaluateAll(elements =>
@@ -173,9 +193,9 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
           });
         }).map(element => `${element.tagName}.${element.className}`).slice(0, 12)
       );
-      expect(roundedBoxes, `Rounded components at ${route}`).toEqual([]);
       if (route === workspace.routes[0]) {
-        await page.screenshot({ path: test.info().outputPath('square-dashboard.png'), fullPage: true });
+        expect(roundedBoxes.length, `Rounded dashboard details at ${route}`).toBeGreaterThan(0);
+        await page.screenshot({ path: test.info().outputPath('harmonious-dashboard.png'), fullPage: true });
       }
     }
   });

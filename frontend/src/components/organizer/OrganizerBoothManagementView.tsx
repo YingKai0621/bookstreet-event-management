@@ -4,6 +4,8 @@ import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   AlertCircle,
   Check,
@@ -720,7 +722,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             <div className="booth-crud-toolbar">
               <div className="booth-toolbar-left">
                 {/* Search Box */}
-                <div className="booth-search-box">
+                <SearchFieldLabel className="booth-search-group"><div className="booth-search-box">
                   <Search size={16} className="search-icon" />
                   <input
                     type="text"
@@ -728,10 +730,10 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                     value={searchKeyword}
                     onChange={e => { setSearchKeyword(e.target.value); pagination.reset(); }}
                   />
-                </div>
+                </div></SearchFieldLabel>
 
                 {/* Status Filter */}
-                <select
+                <WorkspaceFieldLabel className="booth-status-field" label={language === 'vi' ? 'Trạng thái' : 'Status'}><select
                   className="booth-filter-select"
                   value={filterStatus}
                   onChange={e => { setFilterStatus(e.target.value as 'all' | 'active' | 'inactive'); pagination.reset(); }}
@@ -739,7 +741,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                   <option value="all">{language === 'vi' ? 'Tất cả trạng thái' : 'All Statuses'}</option>
                   <option value="active">{language === 'vi' ? 'Đang hoạt động' : 'Active Only'}</option>
                   <option value="inactive">{language === 'vi' ? 'Tạm ngưng' : 'Inactive Only'}</option>
-                </select>
+                </select></WorkspaceFieldLabel>
               </div>
 
               <div className="booth-toolbar-right">
@@ -820,8 +822,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                     {/* Code */}
                     <td>
                       <span className="booth-code-pill">
-                        <Store size={12} />
-                        {booth.code}
+                        <span className="booth-code-icon" aria-hidden="true"><Store size={15} /></span>
+                        <strong>{booth.code}</strong>
                       </span>
                     </td>
 
@@ -900,8 +902,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
               <div key={booth.boothId} className="booth-card-item">
                 <div className="booth-card-top">
                   <span className="booth-code-pill">
-                    <Store size={13} />
-                    {booth.code}
+                    <span className="booth-code-icon" aria-hidden="true"><Store size={15} /></span>
+                    <strong>{booth.code}</strong>
                   </span>
                   <span className="booth-category-badge">
                     {getCategoryLabel(booth.categoryCode, language)}
@@ -1170,7 +1172,8 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
             <div className="booth-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span className="booth-code-pill" style={{ fontSize: '1rem' }}>
-                  {viewingBooth.code}
+                  <span className="booth-code-icon" aria-hidden="true"><Store size={16} /></span>
+                  <strong>{viewingBooth.code}</strong>
                 </span>
                 <h2 style={{ margin: 0 }}>{viewingBooth.name}</h2>
               </div>

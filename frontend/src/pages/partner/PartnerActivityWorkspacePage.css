@@ -21,14 +21,20 @@
 .paw-event-bar label { display: grid; gap: .3rem; min-width: min(390px, 42%); }
 .paw-event-bar select, .paw-toolbar select, .paw-form-grid input, .paw-form-grid select, .paw-form-grid textarea, .paw-request-panel input, .paw-request-panel select, .paw-request-panel textarea { width: 100%; box-sizing: border-box; padding: .7rem .75rem; border: 1px solid #cad7d1; border-radius: 5px; background: #fff; color: #19372d; font: inherit; font-size: .82rem; }
 .paw-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 1rem; border: 1px solid #d7e0dc; background: #fff; }
-.paw-tabs button { display: flex; align-items: center; gap: .7rem; min-width: 0; padding: .85rem 1rem; border: 0; border-right: 1px solid #d7e0dc; background: transparent; color: #71827a; text-align: left; cursor: pointer; }
+.paw-tabs button { display: flex; align-items: center; gap: .7rem; min-width: 0; padding: .85rem 1rem; border: 0; border-right: 1px solid #d7e0dc; border-radius: 0 !important; background: transparent; color: #71827a; text-align: left; cursor: pointer; }
 .paw-tabs button:last-child { border-right: 0; }
 .paw-tabs button.is-active { box-shadow: inset 0 -3px #c49a48; background: #f4f8f5; color: #17382e; }
 .paw-tabs button span { display: grid; min-width: 0; }
 .paw-tabs strong { font-size: .82rem; }
 .paw-tabs small { margin-top: .15rem; overflow: hidden; color: #8a9993; font-size: .66rem; text-overflow: ellipsis; white-space: nowrap; }
 .paw-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) 220px auto auto; align-items: center; gap: .65rem; margin-bottom: .85rem; }
+.paw-toolbar .paw-search-group { width: 100%; }
+.paw-toolbar .paw-status-field { width: 100%; }
 .paw-toolbar > span { color: #708078; font-size: .75rem; text-align: right; }
+.paw-records-panel { border: 1px solid #d7e0dc; border-radius: 0; background: #fff; }
+.paw-records-panel .paw-toolbar { margin: 0; padding: .9rem; border-bottom: 1px solid #e1e8e4; background: #f8faf9; }
+.paw-records-panel .paw-list { padding: .9rem; }
+.paw-records-pagination { padding: 0 .9rem .9rem; }
 .paw-search { display: flex; align-items: center; gap: .55rem; padding: 0 .75rem; border: 1px solid #cad7d1; background: #fff; }
 .paw-search input { width: 100%; min-height: 42px; border: 0; outline: 0; font: inherit; }
 .paw-check { display: flex; align-items: center; gap: .4rem; color: #50655c; font-size: .75rem; font-weight: 700; white-space: nowrap; }
@@ -56,7 +62,7 @@
 .paw-cancellation-note strong, .paw-cancellation-note small { display: block; }
 .paw-cancellation-note p { margin: .3rem 0; font-size: .78rem; }
 .paw-cancellation-note small { color: #a76565; font-size: .68rem; }
-.paw-card-actions { align-content: center; justify-content: flex-end; min-width: 185px; padding: .9rem 1rem; border-left: 1px solid #e0e6e3; }
+.paw-card-actions { align-content: flex-end; align-items: flex-end; flex-direction: column; justify-content: center; min-width: 185px; padding: .9rem 1rem; border-left: 1px solid #e0e6e3; }
 .paw-card-actions button { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem .75rem; border: 1px solid #17382e; background: #17382e; color: #fff; font: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
 .paw-status { display: inline-flex; align-items: center; gap: .38rem; width: fit-content; padding: .3rem .55rem; border: 1px solid; font-size: .68rem; font-weight: 800; white-space: nowrap; }
 .paw-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }

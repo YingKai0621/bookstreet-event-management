@@ -27,6 +27,7 @@ import type {
   UpdateHeritageRequest,
 } from '../../types/heritage';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import './OrganizerPublicContentView.css';
 
 interface OrganizerPublicContentViewProps {
@@ -416,7 +417,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
         </div>
 
         <div className="heritage-management-toolbar">
-          <label className="heritage-management-search"><Search size={18} /><input aria-label="Tìm nội dung di sản" maxLength={100} placeholder="Tìm theo tiêu đề hoặc địa chỉ…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
+          <SearchFieldLabel className="heritage-search-group"><label className="heritage-management-search"><Search size={18} /><input aria-label="Tìm nội dung di sản" maxLength={100} placeholder="Tìm theo tiêu đề hoặc địa chỉ…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label></SearchFieldLabel>
           <label className="heritage-management-filter"><span>Trạng thái</span><select aria-label="Lọc trạng thái di sản" value={status} onChange={event => { setStatus(event.target.value as HeritageStatus | ''); setPage(0); }}><option value="">Tất cả trạng thái</option><option value="DRAFT">Bản nháp</option><option value="PUBLISHED">Đã công bố</option><option value="ARCHIVED">Đã lưu trữ</option></select></label>
           <label className="heritage-management-filter"><span>Sắp xếp</span><select aria-label="Sắp xếp di sản" value={sort} onChange={event => { setSort(event.target.value as HeritageSort); setPage(0); }}><option value="updatedAt,desc">Mới cập nhật</option><option value="updatedAt,asc">Cũ cập nhật</option><option value="title,asc">Tiêu đề A–Z</option><option value="title,desc">Tiêu đề Z–A</option></select></label>
           <button type="button" className="btn-org-secondary" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Tải lại danh sách"><RefreshCw size={17} /></button>

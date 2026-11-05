@@ -247,16 +247,19 @@ test('application hub searches by application ID and applies real time filters',
 
   const applicationCards = page.locator('.event-application-card');
   await expect(applicationCards.first()).toContainText('Sự kiện chưa tham gia');
-  await page.getByLabel('Sắp xếp hồ sơ').selectOption('oldest');
+  await page.getByRole('button', { name: 'Sắp xếp hồ sơ', exact: true }).click();
+  await page.getByRole('option', { name: 'Nộp cũ nhất', exact: true }).click();
   await expect(applicationCards.first()).toContainText('Tuần lễ sách của gian hàng');
   await page.getByLabel('Tìm kiếm hồ sơ sự kiện').fill('31');
   await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
   await expect(page.getByLabel('Sự kiện Đường Sách chưa có ảnh')).toBeVisible();
-  await page.getByLabel('Lọc theo thời gian sự kiện').selectOption('past');
+  await page.getByRole('button', { name: 'Lọc theo thời gian sự kiện', exact: true }).click();
+  await page.getByRole('option', { name: 'Đã kết thúc', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toHaveCount(0);
-  await page.getByLabel('Lọc theo thời gian sự kiện').selectOption('active');
+  await page.getByRole('button', { name: 'Lọc theo thời gian sự kiện', exact: true }).click();
+  await page.getByRole('option', { name: 'Sắp/đang diễn ra', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tuần lễ sách của gian hàng' })).toBeVisible();
-  await expect(page.getByLabel('Sắp xếp hồ sơ')).toHaveValue('oldest');
+  await expect(page.getByRole('button', { name: 'Sắp xếp hồ sơ', exact: true })).toContainText('Nộp cũ nhất');
   await page.screenshot({ path: test.info().outputPath('partner-application-list.png'), fullPage: true });
 });
 

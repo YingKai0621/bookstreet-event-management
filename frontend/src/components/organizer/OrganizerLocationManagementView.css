@@ -34,6 +34,7 @@
   background: white;
   color: #667a72;
 }
+.organizer-location-page .venue-search-group { flex: 1; }
 .organizer-location-page .venue-search input {
   width: 100%;
   min-width: 0;
@@ -78,7 +79,14 @@
 .organizer-location-page .venue-table td { padding: 12px 16px; border-bottom: 1px solid #e7edea; vertical-align: middle; }
 .organizer-location-page .venue-table tr:last-child td { border-bottom: 0; }
 .organizer-location-page .venue-table tbody tr:hover { background: #f7faf8; box-shadow: inset 3px 0 0 #c79531; }
-.organizer-location-page .venue-table th:first-child { width: 28%; }
+.organizer-location-page .venue-table th:first-child { width: 16%; }
+.organizer-location-page .venue-table th:nth-child(2) { width: 30%; }
+.organizer-location-page .venue-table th { padding: 0.9rem 1.15rem; color: #40564f; font-size: 0.8rem; font-weight: 750; white-space: nowrap; }
+.organizer-location-page .venue-table td { padding: 1rem 1.15rem; color: #2d3e39; font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif); font-size: 0.88rem; }
+.organizer-location-page .venue-code { display: inline-flex; align-items: center; gap: 8px; color: #203b32; font-family: inherit; font-size: 0.88rem; font-weight: 700; white-space: nowrap; }
+.organizer-location-page .venue-code .venue-row-icon { width: 32px; height: 32px; border-color: #d5e4dc; border-radius: 4px; background: #f3f7f4; color: #315d4c; }
+.organizer-location-page .venue-row-actions button { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; padding: 8px; border: 1px solid #d5e4dc; background: #fff; color: #315d4c; cursor: pointer; }
+.organizer-location-page .venue-row-actions button:hover { border-color: #8eae9f; background: #f3f7f4; }
 .organizer-location-page .venue-name { display: flex; align-items: center; gap: 10px; }
 .organizer-location-page .venue-row-icon {
   display: grid;
@@ -92,15 +100,15 @@
   color: #936a1c;
 }
 .organizer-location-page .venue-name > span:last-child { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
-.organizer-location-page .venue-name strong { color: #142a23; font-size: 17px; font-weight: 700; line-height: 1.4; }
-.organizer-location-page .venue-name small { color: #61756e; font-size: 14px; }
-.organizer-location-page .venue-description { display: -webkit-box; margin: 3px 0 0; overflow: hidden; color: #687a74; font-size: 15px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.organizer-location-page .organizer-location-type { color: #4d655b; font-size: 15px; white-space: nowrap; }
+.organizer-location-page .venue-name strong { color: #172421; font-size: 0.92rem; font-weight: 700; line-height: 1.4; }
+.organizer-location-page .venue-name small { color: #71847d; font-size: 0.78rem; }
+.organizer-location-page .venue-description { display: -webkit-box; margin: 3px 0 0; overflow: hidden; color: #71847d; font-size: 0.78rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.organizer-location-page .organizer-location-type { color: #1e4f40; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
 .organizer-location-page .venue-capacity,
-.organizer-location-page .venue-coordinate { display: inline-flex; align-items: center; gap: 5px; color: #61756e; font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.organizer-location-page .venue-capacity strong { color: #203b32; font-weight: 650; }
-.organizer-location-page .venue-muted { color: #7b8984; font-size: 15px; }
-.organizer-location-page .organizer-location-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #cce5d8; border-radius: 4px; background: #edf7f1; color: #216147; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.organizer-location-page .venue-coordinate { display: inline-flex; align-items: center; gap: 5px; color: #61756e; font-size: 0.88rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.organizer-location-page .venue-capacity strong { color: #203b32; font-weight: 700; }
+.organizer-location-page .venue-muted { color: #71847d; font-size: 0.88rem; }
+.organizer-location-page .organizer-location-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #cce5d8; border-radius: 4px; background: #edf7f1; color: #216147; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
 .organizer-location-page .organizer-location-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .organizer-location-page .organizer-location-status.is-inactive { border-color: #dfe5e2; background: #f3f5f4; color: #667970; }
 .organizer-location-page .venue-actions { text-align: right; }

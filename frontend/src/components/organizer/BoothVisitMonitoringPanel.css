@@ -7,6 +7,8 @@
 .booth-visit-modes button, .booth-visit-filter button, .booth-visit-table button { border: 1px solid #d7e4dc; border-radius: 8px; padding: 8px 12px; background: #fff; color: #225e46; cursor: pointer; font: inherit; }
 .booth-visit-modes button[aria-pressed='true'] { color: #fff; background: #24654a; border-color: #24654a; }
 .booth-visit-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 0 20px; }
+.booth-visit-search-group { flex: 1; min-width: 260px; }
+.booth-visit-search-group form { width: 100%; }
 .booth-visit-table-wrap { overflow-x: auto; }
 .booth-visit-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .booth-visit-table th { text-align: left; background: #f4f8f5; color: #52645b; font-size: 12px; white-space: nowrap; }

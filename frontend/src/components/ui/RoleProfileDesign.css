@@ -233,3 +233,272 @@
     gap: 10px;
   }
 }
+
+/* Shared four-role profile language: a squared outer frame, warm identity
+   band, and calm label/value rows modeled on the Participant reference. */
+:is(.reader-profile-page, .partner-profile-page, .org-profile-container, .adm-profile-view) {
+  --profile-line: #dce6e1;
+  --profile-ink: #102d25;
+  --profile-muted: #60776e;
+  --profile-green: #185e48;
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-card-container,
+.adm-profile-view .adm-profile-card,
+.org-profile-layout > div:first-child > .organizer-card:first-child,
+.org-profile-layout > div:last-child > .organizer-card:first-child {
+  border: 1px solid var(--profile-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-card-header {
+  min-height: 150px;
+  padding: 28px 36px;
+  background: var(--profile-wash);
+  border-bottom: 1px solid var(--profile-line);
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-user-summary { align-items: center; gap: 28px; }
+:is(.reader-profile-page, .partner-profile-page) .profile-avatar-large { flex: 0 0 auto; }
+:is(.reader-profile-page, .partner-profile-page) .profile-names h2 {
+  margin: 0 0 6px;
+  color: var(--profile-ink);
+  font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 750;
+  line-height: 1.2;
+}
+:is(.reader-profile-page, .partner-profile-page) .profile-names p { margin: 0; color: var(--profile-muted); font-size: 1rem; }
+:is(.reader-profile-page, .partner-profile-page) .reader-role,
+.partner-profile-page .activity-tag {
+  width: fit-content;
+  padding: 5px 9px;
+  border: 1px solid #d4e4da;
+  border-radius: 4px;
+  background: #f0f6f2;
+  color: #205a45;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-details-table {
+  max-width: 940px;
+  padding: 0 36px 26px;
+}
+:is(.reader-profile-page, .partner-profile-page) .profile-detail-row {
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e8eeeb;
+  font-size: .95rem;
+}
+:is(.reader-profile-page, .partner-profile-page) .profile-detail-label { color: var(--profile-muted); font-weight: 600; }
+:is(.reader-profile-page, .partner-profile-page) .profile-detail-val { color: var(--profile-ink); font-weight: 500; }
+:is(.reader-profile-page, .partner-profile-page) .profile-details-table input.part-select,
+.partner-profile-page .profile-details-table textarea.part-select {
+  min-height: 42px;
+  border: 1px solid #cbd9d2;
+  border-radius: 8px;
+  background: #fff;
+}
+:is(.reader-profile-page, .partner-profile-page) .reader-edit-button { border-radius: 10px; }
+.profile-information-heading,
+.adm-profile-information-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px 36px 8px;
+  color: var(--profile-green);
+}
+.profile-information-heading h3,
+.adm-profile-information-heading h3 {
+  margin: 0;
+  color: var(--profile-ink);
+  font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif);
+  font-size: 1.08rem;
+  font-weight: 750;
+}
+.profile-information-heading p,
+.adm-profile-information-heading p { margin: 5px 0 0; color: var(--profile-muted); font-size: .9rem; line-height: 1.5; }
+.partner-profile-page .profile-card-header { border-bottom: 0; }
+.partner-profile-page .profile-information-heading { border-top: 1px solid var(--profile-line); }
+
+/* Organizer identity and personal details sit together like the reference;
+   session and notification settings remain separate sections below. */
+.org-profile-layout { gap: 0 !important; }
+.org-profile-layout > div:first-child > .organizer-card:first-child {
+  grid-template-columns: 76px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto auto !important;
+  gap: 5px 22px !important;
+  border-bottom: 0 !important;
+  padding: 28px 36px !important;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:first-child {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child h2 {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  color: var(--profile-ink) !important;
+  font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif);
+  font-size: clamp(1.5rem, 2.2vw, 2rem) !important;
+  line-height: 1.2;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child > p.org-profile-email {
+  grid-column: 2;
+  grid-row: 2;
+  color: var(--profile-muted) !important;
+  font-size: 1rem !important;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:nth-of-type(2) {
+  grid-column: 2;
+  grid-row: 3;
+  justify-self: start;
+  margin: 4px 0 0 !important;
+  padding: 4px 9px !important;
+  border: 1px solid #d4e4da;
+  border-radius: 4px;
+  background: #f0f6f2 !important;
+  color: #205a45 !important;
+  font-size: .8rem !important;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:last-child {
+  grid-column: 2;
+  grid-row: 4;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100%;
+  margin-top: 6px;
+}
+.org-profile-layout > div:first-child > .organizer-card:first-child > div:last-child > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+.org-profile-layout > div:last-child > .organizer-card:first-child {
+  border-top: 0 !important;
+  padding: 22px 36px 26px !important;
+}
+.org-profile-layout > div:first-child > .organizer-card:nth-child(2),
+.org-profile-layout > div:last-child > .organizer-card:nth-child(2) { margin-top: 16px; }
+.org-profile-layout > div:last-child > .organizer-card:first-child > div:first-child {
+  padding-bottom: 14px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+.org-profile-layout > div:last-child > .organizer-card:first-child h3 {
+  color: var(--profile-ink) !important;
+  font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif);
+  font-size: 1.08rem !important;
+}
+.org-profile-form > div:first-child { display: block !important; max-width: 940px; }
+.org-profile-form > div:first-child > div:not(:nth-child(4)) {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e8eeeb;
+}
+.org-profile-form > div:first-child > div:nth-child(4) { display: none !important; }
+.org-profile-form > div:first-child label { margin: 0 !important; color: var(--profile-muted) !important; font-size: .9rem !important; font-weight: 600 !important; }
+.org-profile-form > div:first-child input:not([type="file"]) {
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--profile-ink) !important;
+  font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif);
+  font-size: .95rem !important;
+}
+.org-profile-form .org-profile-input-with-icon > input {
+  padding-left: 34px !important;
+}
+.org-profile-form.is-editing > div:first-child > div:nth-child(4) { display: block !important; }
+.org-profile-form.is-editing > div:first-child > div:not(:nth-child(4)) { grid-template-columns: 160px minmax(0, 1fr); }
+.org-profile-form.is-editing > div:first-child input:not([type="file"]) { padding: 8px 12px !important; border: 1px solid #cbd9d2 !important; border-radius: 8px; background: #fff !important; }
+
+/* Admin profile uses the same header hierarchy and two-column detail rows. */
+.adm-profile-view .adm-profile-card { border-radius: 0 !important; }
+.adm-profile-body {
+  grid-template-columns: 76px minmax(0, 1fr) auto !important;
+  padding: 28px 36px 0 !important;
+  background: linear-gradient(115deg, #edf5ef, #fffaf0);
+}
+.adm-profile-avatar-wrapper { margin-top: 0 !important; }
+.adm-profile-avatar-large { border-color: #fff !important; box-shadow: 0 2px 8px rgb(16 45 37 / 12%) !important; }
+.adm-profile-name-group { margin-bottom: 6px; }
+.adm-badge-role { border-radius: 4px !important; }
+.adm-profile-name { font-family: var(--font-sans, 'Be Vietnam Pro', sans-serif); font-weight: 750 !important; }
+.adm-profile-dept { margin-top: 4px !important; color: var(--profile-muted) !important; font-size: 1rem !important; }
+.adm-profile-information-heading { grid-column: 1 / -1; margin: 0 -36px; border-top: 1px solid var(--profile-line); background: #fff; }
+.adm-profile-details-grid,
+.adm-profile-form { margin: 0 -36px !important; padding: 8px 36px 26px !important; max-width: none !important; background: #fff; }
+.adm-profile-field-content { grid-template-columns: 160px minmax(0, 1fr) !important; gap: 16px !important; }
+.adm-profile-field-box { padding: 14px 0 !important; }
+.adm-profile-actions .adm-btn { border-radius: 10px; }
+
+@media (max-width: 700px) {
+  :is(.reader-profile-page, .partner-profile-page) .profile-card-header { padding: 20px !important; }
+  :is(.reader-profile-page, .partner-profile-page) .profile-user-summary { gap: 14px; }
+  :is(.reader-profile-page, .partner-profile-page) .profile-details-table { padding: 0 20px 20px; }
+  :is(.reader-profile-page, .partner-profile-page) .profile-detail-row { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; }
+  .profile-information-heading, .adm-profile-information-heading { padding: 20px 20px 8px; }
+  .org-profile-layout > div:first-child > .organizer-card:first-child,
+  .org-profile-layout > div:last-child > .organizer-card:first-child { padding: 20px !important; }
+  .org-profile-layout > div:first-child > .organizer-card:first-child { grid-template-columns: 56px minmax(0, 1fr) !important; gap: 5px 12px !important; }
+  .org-profile-layout > div:first-child > .organizer-card:first-child > div:first-child { width: 56px !important; height: 56px !important; }
+  .org-profile-form > div:first-child > div:not(:nth-child(4)) { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; }
+  .adm-profile-body { grid-template-columns: 56px minmax(0, 1fr) !important; padding: 20px 20px 0 !important; }
+  .adm-profile-information-heading { margin: 0 -20px; }
+  .adm-profile-details-grid, .adm-profile-form { margin: 0 -20px !important; padding: 8px 20px 20px !important; }
+  .adm-profile-field-content { grid-template-columns: 112px minmax(0, 1fr) !important; gap: 10px !important; }
+}
+
+/* Let profile sections use the full workspace width on wide role screens. */
+.partner-profile-page .profile-card-container {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-details-table,
+.reader-profile-body,
+:is(.adm-profile-details-grid, .adm-profile-form),
+.org-profile-form > div:first-child {
+  width: 100%;
+  max-width: none !important;
+}
+
+/* The profile hero uses a long, shallow wave cut for a more spacious banner. */
+:is(.reader-profile-page, .partner-profile-page) .profile-card-header,
+.org-profile-layout > div:first-child > .organizer-card:first-child,
+.adm-profile-view .adm-profile-body {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 210px;
+  background: var(--profile-wash) !important;
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-card-container,
+.org-profile-layout > div:first-child > .organizer-card:first-child,
+.adm-profile-view .adm-profile-card {
+  border-inline: 0 !important;
+  clip-path: polygon(0 12px, 8% 6px, 17% 2px, 27% 0, 38% 0, 49% 0, 60% 0, 71% 0, 81% 2px, 90% 6px, 100% 12px, 100% 100%, 0 100%);
+}
+
+:is(.reader-profile-page, .partner-profile-page) .profile-card-header > *,
+.org-profile-layout > div:first-child > .organizer-card:first-child > *,
+.adm-profile-view .adm-profile-body > * {
+  position: relative;
+  z-index: 1;
+}

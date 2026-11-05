@@ -11,6 +11,7 @@ import {
   Phone,
   Save,
   Shield,
+  UserRound,
   X
 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
@@ -229,12 +230,19 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                   <span>{profile.role}</span>
                 </span>
               </div>
-              <p className="adm-profile-dept">{profile.department}</p>
+              <p className="adm-profile-dept">{profile.email}</p>
             </div>
 
             <div className="adm-profile-divider"></div>
 
             {/* Form or Readonly Information */}
+            <div className="adm-profile-information-heading">
+              <UserRound size={20} aria-hidden="true" />
+              <div>
+                <h3>Thông tin cá nhân</h3>
+                <p>Thông tin liên hệ và định danh tài khoản quản trị.</p>
+              </div>
+            </div>
             {!isEditing ? (
               <div className="adm-profile-details-grid">
                 <div className="adm-profile-field-box">

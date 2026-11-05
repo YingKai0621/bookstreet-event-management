@@ -1,4 +1,6 @@
 import { PaginatedList } from '../ui/PaginatedList';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   AlertCircle,
   CheckCircle2,
@@ -211,7 +213,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
       <div className="adm-card adm-filter-card">
         <div className="adm-filter-bar">
           {/* Search Box */}
-          <div className="adm-search-input-wrap">
+          <SearchFieldLabel className="adm-search-group"><div className="adm-search-input-wrap">
             <Search size={16} className="adm-search-icon" />
             <input 
               type="text"
@@ -228,7 +230,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                 <X size={14} />
               </button>
             )}
-          </div>
+          </div></SearchFieldLabel>
 
           {/* Role Filter Tabs */}
           <div className="adm-role-tabs">
@@ -250,7 +252,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
           </div>
 
           {/* Status Dropdown */}
-          <div className="adm-select-wrap">
+          <WorkspaceFieldLabel className="adm-status-field" label="Trạng thái"><div className="adm-select-wrap">
             <Filter size={14} />
             <select 
               value={selectedStatus}
@@ -262,7 +264,7 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
               <option value="locked">Bị khóa</option>
               <option value="pending_verification">Chờ xác thực</option>
             </select>
-          </div>
+          </div></WorkspaceFieldLabel>
         </div>
       </div>
 
