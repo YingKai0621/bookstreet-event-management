@@ -1,4 +1,4 @@
-import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload } from 'lucide-react';
+import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload, UserRound } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { Language, PartnerOrganization } from '../../types';
@@ -290,6 +290,13 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
         </div>
 
         {/* Organization Details Table / Fields */}
+        <div className="profile-information-heading">
+          <UserRound size={20} aria-hidden="true" />
+          <div>
+            <h3>{language === 'vi' ? 'Thông tin tổ chức' : 'Organization information'}</h3>
+            <p>{language === 'vi' ? 'Thông tin liên hệ và hồ sơ của tổ chức đối tác.' : 'Partner organization details and contact information.'}</p>
+          </div>
+        </div>
         <div className="profile-details-table">
           <div className="profile-detail-row">
             <span className="profile-detail-label">

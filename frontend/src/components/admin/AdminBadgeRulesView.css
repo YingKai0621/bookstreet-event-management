@@ -2,6 +2,8 @@
 .badge-management .adm-page-header { margin-bottom: 0; }
 .badge-catalog-filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; padding: 20px; background: #fff; border: 1px solid #e1e8e3; border-radius: 14px; }
 .badge-catalog-filters form { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 220px; }
+.badge-catalog-filters .badge-search-group { flex: 1; min-width: 220px; }
+.badge-catalog-filters .badge-search-group form { width: 100%; }
 .badge-catalog-filters input { min-width: 0; flex: 1; }
 .badge-catalog-filters label { display: grid; gap: 6px; font-size: 12px; color: #5a6e62; }
 .badge-catalog-filters input, .badge-catalog-filters select { border: 1px solid #d6e0d9; border-radius: 8px; padding: 10px; font: inherit; background: #fff; }

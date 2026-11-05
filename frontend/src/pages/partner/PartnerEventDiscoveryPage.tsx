@@ -7,7 +7,6 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   FileText,
   Search,
@@ -16,6 +15,8 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import '../../components/partner/PartnerEvents.css';
 import { PartnerAvailableEvent, partnerApi } from '../../services/partnerApi';
 import { Language, PartnerEventApplication, PartnerOrganization } from '../../types';
@@ -196,12 +197,12 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
 
       <section className="event-hub-controls" aria-label="Tìm kiếm và lọc sự kiện công khai">
         <div className="event-hub-application-cta is-return"><div><strong>Hồ sơ đã gửi được quản lý riêng</strong><p>Xem trạng thái xét duyệt, phản hồi và rút hồ sơ tại trang quản lý hồ sơ.</p></div><Link to="/partner/events"><FileText size={18} />Hồ sơ sự kiện của tôi<ArrowRight size={17} /></Link></div>
-        <div className="event-hub-search"><Search size={18} /><input type="search" value={search} onChange={event => { setSearch(event.target.value); setEventPage(1); }} placeholder="Tìm theo tên hoặc nội dung sự kiện…" aria-label="Tìm kiếm sự kiện công khai" /></div>
+        <SearchFieldLabel className="event-hub-search-group"><div className="event-hub-search"><Search size={18} /><input type="search" value={search} onChange={event => { setSearch(event.target.value); setEventPage(1); }} placeholder="Tìm theo tên hoặc nội dung sự kiện…" aria-label="Tìm kiếm sự kiện công khai" /></div></SearchFieldLabel>
         <div className="event-hub-control-row">
           <div className="event-hub-status-group"><span className="event-hub-control-label">Tình trạng sự kiện</span><div className="event-hub-filters" role="group" aria-label="Tình trạng sự kiện">{filters.map(filter => <button type="button" aria-pressed={availabilityFilter === filter.value} className={`event-hub-filter is-${filter.value} ${availabilityFilter === filter.value ? 'is-active' : ''}`} key={filter.value} onClick={() => { setAvailabilityFilter(filter.value); setEventPage(1); }}>{filter.value !== 'all' && <i aria-hidden="true" />}{filter.label}<span>{filter.count}</span></button>)}</div></div>
           <div className="event-hub-selectors">
-            <label className="event-hub-select-field"><span>Sắp xếp sự kiện</span><div><ArrowUpDown size={15} /><select value={sortOrder} onChange={event => { setSortOrder(event.target.value as EventSortOrder); setEventPage(1); }} aria-label="Sắp xếp sự kiện"><option value="nearest">Gần nhất</option><option value="farthest">Xa nhất</option></select><ChevronDown size={15} /></div></label>
-            <label className="event-hub-select-field"><span>Thời gian tổ chức</span><div><CalendarDays size={15} /><select value={timeFilter} onChange={event => { setTimeFilter(event.target.value as EventTimeFilter); setEventPage(1); }} aria-label="Lọc thời gian sự kiện"><option value="all">Tất cả thời gian</option><option value="upcoming">Sắp/đang diễn ra</option><option value="month">Trong 30 ngày tới</option></select><ChevronDown size={15} /></div></label>
+            <PartnerFilterSelect label="Sắp xếp" ariaLabel="Sắp xếp sự kiện" icon={ArrowUpDown} value={sortOrder} options={[{ value: 'nearest', label: 'Gần nhất' }, { value: 'farthest', label: 'Xa nhất' }]} onChange={value => { setSortOrder(value); setEventPage(1); }} />
+            <PartnerFilterSelect label="Thời gian tổ chức" ariaLabel="Lọc thời gian sự kiện" icon={CalendarDays} value={timeFilter} options={[{ value: 'all', label: 'Tất cả thời gian' }, { value: 'upcoming', label: 'Sắp/đang diễn ra' }, { value: 'month', label: 'Trong 30 ngày tới' }]} onChange={value => { setTimeFilter(value); setEventPage(1); }} />
           </div>
         </div>
       </section>

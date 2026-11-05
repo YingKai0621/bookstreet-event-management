@@ -202,7 +202,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 <span>Organizer / Điều hành sự kiện</span>
               </div>
 
-              <p style={{ 
+              <p className="org-profile-email" style={{
                 fontSize: '0.82rem', 
                 color: '#4B5563', 
                 lineHeight: 1.45, 
@@ -210,7 +210,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 paddingBottom: '0.85rem',
                 borderBottom: '1px solid #E5E7EB'
               }}>
-                {profile.organization || '—'}
+                {profile.email || '—'}
               </p>
 
               {/* Status and metadata */}
@@ -362,7 +362,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
               </div>
 
               {/* Form Layout: 2 Columns on Desktop */}
-              <form onSubmit={handleSaveProfile}>
+              <form className={`org-profile-form${isEditing ? ' is-editing' : ''}`} onSubmit={handleSaveProfile}>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -415,7 +415,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Cơ quan / Tổ chức trực thuộc' : 'Affiliated Organization'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Building2 size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="text"
@@ -513,7 +513,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Email công vụ' : 'Work Email'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Mail size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="email"
@@ -539,7 +539,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Số điện thoại liên hệ' : 'Contact Phone'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Phone size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="tel"

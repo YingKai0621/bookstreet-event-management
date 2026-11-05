@@ -55,6 +55,7 @@
   background: white;
   color: #667a72;
 }
+.organizer-heritage-page .heritage-search-group { flex: 1; min-width: 240px; }
 .organizer-heritage-page .heritage-management-search input {
   width: 100%;
   min-width: 0;

@@ -15,6 +15,8 @@ import { Language } from '../../types';
 import type { OrganizerActivityResponse } from '../../types/activity';
 import { OrganizerEvent } from '../../types/organizer';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import { BoothVisitMonitoringPanel } from './BoothVisitMonitoringPanel';
 import './ParticipantManagementView.css';
 
@@ -281,19 +283,18 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
           </label>
         )}
         <div className='participant-filters'>
-          <form className='participant-search' onSubmit={submitSearch}>
+          <SearchFieldLabel className='participant-search-group'><form className='participant-search' onSubmit={submitSearch}>
             <Search size={17} aria-hidden='true' />
             <input value={searchInput} onChange={event => setSearchInput(event.target.value)} placeholder='Tìm theo tên người tham gia...' />
-            <button type='submit'>Tìm</button>
-          </form>
+          </form></SearchFieldLabel>
           {view === 'event' ? (
-            <select aria-label='Lọc trạng thái đăng ký sự kiện' value={eventStatus} onChange={event => updateQuery({ status: event.target.value === 'all' ? null : event.target.value, page: null })}>
+            <WorkspaceFieldLabel className='participant-status-field' label='Trạng thái'><select aria-label='Lọc trạng thái đăng ký sự kiện' value={eventStatus} onChange={event => updateQuery({ status: event.target.value === 'all' ? null : event.target.value, page: null })}>
               <option value='all'>Tất cả trạng thái</option><option value='ACTIVE'>Đang tham gia</option><option value='LEFT'>Đã rời sự kiện</option>
-            </select>
+            </select></WorkspaceFieldLabel>
           ) : (
-            <select aria-label='Lọc kết quả tham gia' value={outcome} onChange={event => updateQuery({ outcome: event.target.value === 'all' ? null : event.target.value, page: null })}>
+            <WorkspaceFieldLabel className='participant-status-field' label='Kết quả'><select aria-label='Lọc kết quả tham gia' value={outcome} onChange={event => updateQuery({ outcome: event.target.value === 'all' ? null : event.target.value, page: null })}>
               <option value='all'>Tất cả kết quả</option><option value='ACTIVE'>Đang hiệu lực</option><option value='ATTENDED'>Đã tham gia</option><option value='NO_SHOW'>Vắng mặt</option><option value='CANCELLED'>Đã hủy</option>
-            </select>
+            </select></WorkspaceFieldLabel>
           )}
         </div>
         {loadError && <div className='participant-inline-state is-error' role='alert'><AlertCircle size={20} /><div><strong>Không tải được dữ liệu</strong><p>{loadError}</p></div><button type='button' onClick={() => setReloadKey(value => value + 1)}>Thử lại</button></div>}

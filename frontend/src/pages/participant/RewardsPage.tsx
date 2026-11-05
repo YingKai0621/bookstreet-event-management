@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { rewardApi } from '../../services/rewardApi';
+import { WorkspaceFieldLabel } from '../../components/ui/WorkspaceFieldLabel';
 import type { Language } from '../../types';
 import type {
   ParticipantBadgeResponse,
@@ -163,7 +164,7 @@ export function RewardsPage({ language }: RewardsPageProps) {
                   <option value="EARNED">{vi ? 'Đã mở khóa' : 'Earned'}</option>
                   <option value="IN_PROGRESS">{vi ? 'Đang tiến tới' : 'In progress'}</option>
                 </select>
-                <select value={badgeSort} aria-label={vi ? 'Sắp xếp huy hiệu' : 'Sort badges'}
+                <WorkspaceFieldLabel className="reward-sort-field" label={vi ? 'Sắp xếp' : 'Sort'}><select value={badgeSort} aria-label={vi ? 'Sắp xếp huy hiệu' : 'Sort badges'}
                   onChange={(event) => {
                     setBadgeSort(event.target.value);
                     setBadgePage(0);
@@ -173,7 +174,7 @@ export function RewardsPage({ language }: RewardsPageProps) {
                   <option value="requiredPoints,desc">{vi ? 'Mốc điểm giảm dần' : 'Points: high to low'}</option>
                   <option value="name,asc">{vi ? 'Tên A–Z' : 'Name A–Z'}</option>
                   <option value="earnedAt,desc">{vi ? 'Mở khóa gần nhất' : 'Recently earned'}</option>
-                </select>
+                </select></WorkspaceFieldLabel>
               </div>
             </div>
 

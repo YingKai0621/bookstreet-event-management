@@ -1395,16 +1395,6 @@
   border-bottom: 1px solid #c8d4ce;
 }
 
-.s2-booth-page .s2-booth-header::after {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 86px;
-  height: 3px;
-  background: var(--s2-partner-gold);
-  content: '';
-}
-
 .s2-booth-header-eyebrow {
   color: #85631f;
   font-size: 0.72rem;
@@ -1571,10 +1561,11 @@
 .s2-booth-page > .s2-tabs {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   gap: 1.4rem;
   width: 100%;
   max-width: none;
-  overflow-x: auto;
+  overflow: visible;
   padding: 0;
   border: 0;
   border-bottom: 1px solid #cfd9d4;

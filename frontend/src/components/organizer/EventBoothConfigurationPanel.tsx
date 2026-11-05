@@ -21,6 +21,7 @@ import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
 import type { EventBooth } from '../../types/booth';
 import type { OrganizerEvent } from '../../types/organizer';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import { BoothIllustration } from './BoothIllustration';
 import './Sprint2Booth.css';
 import './OrganizerPortal.css';
@@ -538,7 +539,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
       {/* 3. Toolbar (Search, Filter Pills, Category Select, Sort Select) */}
       <div className="org-booth-toolbar">
         {/* Search Input */}
-        <div className="org-booth-search-box">
+        <WorkspaceFieldLabel className="org-booth-search-field" label="Tìm kiếm"><div className="org-booth-search-box">
           <Search size={16} className="org-booth-search-icon" aria-hidden="true" />
           <input
             type="text"
@@ -550,7 +551,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
             }}
             aria-label="Tìm kiếm gian hàng"
           />
-        </div>
+        </div></WorkspaceFieldLabel>
 
         {/* Filter Pills */}
         <div className="org-booth-filter-pills" role="radiogroup" aria-label="Lọc theo trạng thái cho thuê">
@@ -587,7 +588,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
         </div>
 
         {/* Category Select */}
-        <div className="org-booth-select-wrap">
+        <WorkspaceFieldLabel className="org-booth-category-field" label="Loại gian hàng"><div className="org-booth-select-wrap">
           <select
             value={categoryFilter}
             onChange={e => {
@@ -603,10 +604,10 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
               </option>
             ))}
           </select>
-        </div>
+        </div></WorkspaceFieldLabel>
 
         {/* Sort Select */}
-        <div className="org-booth-select-wrap">
+        <WorkspaceFieldLabel className="org-booth-sort-field" label="Sắp xếp"><div className="org-booth-select-wrap">
           <select
             value={sortBy}
             onChange={e => {
@@ -621,7 +622,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
             <option value="price_asc">Giá thuê: Thấp đến cao</option>
             <option value="price_desc">Giá thuê: Cao đến thấp</option>
           </select>
-        </div>
+        </div></WorkspaceFieldLabel>
       </div>
 
       {/* 4. Content Area: Loading, Empty, or Card Grid */}

@@ -7,7 +7,6 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   FileText,
   MessageSquare,
@@ -17,6 +16,8 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import '../../components/partner/PartnerEvents.css';
 import { partnerApi } from '../../services/partnerApi';
 import { Language, PartnerEventApplication } from '../../types';
@@ -41,6 +42,7 @@ type ApplicationFilter = 'all' | PartnerEventApplication['status'];
 type SortOrder = 'newest' | 'oldest';
 type TimeFilter = 'all' | 'active' | 'past';
 const APPLICATIONS_PER_PAGE = LIST_PAGE_SIZE;
+
 
 function matchesTimeFilter(endAt: string | undefined, timeFilter: TimeFilter, now: number): boolean {
   if (timeFilter === 'all') return true;
@@ -176,10 +178,10 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
           <div><strong>Bạn muốn tham gia sự kiện mới?</strong><p>Khám phá các sự kiện công khai đang nhận hồ sơ từ đối tác.</p></div>
           <Link to="/partner/events/apply"><BookOpen size={18} />Đăng ký sự kiện mới<ArrowRight size={17} /></Link>
         </div>
-        <div className="event-hub-search">
+        <SearchFieldLabel className="event-hub-search-group"><div className="event-hub-search">
           <Search size={18} />
           <input type="search" value={search} onChange={event => { setSearch(event.target.value); setApplicationPage(1); }} placeholder="Tìm theo tên sự kiện, mã hồ sơ hoặc nội dung…" aria-label="Tìm kiếm hồ sơ sự kiện" />
-        </div>
+        </div></SearchFieldLabel>
         <div className="event-hub-control-row">
           <div className="event-hub-status-group">
             <span className="event-hub-control-label">Trạng thái hồ sơ</span>
@@ -192,8 +194,22 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
             </div>
           </div>
           <div className="event-hub-selectors">
-            <label className="event-hub-select-field"><span>Sắp xếp hồ sơ</span><div><ArrowUpDown size={15} /><select value={sortOrder} onChange={event => { setSortOrder(event.target.value as SortOrder); setApplicationPage(1); }} aria-label="Sắp xếp hồ sơ"><option value="newest">Nộp mới nhất</option><option value="oldest">Nộp cũ nhất</option></select><ChevronDown size={15} /></div></label>
-            <label className="event-hub-select-field"><span>Thời gian sự kiện</span><div><CalendarDays size={15} /><select value={timeFilter} onChange={event => { setTimeFilter(event.target.value as TimeFilter); setApplicationPage(1); }} aria-label="Lọc theo thời gian sự kiện"><option value="all">Tất cả thời gian</option><option value="active">Sắp/đang diễn ra</option><option value="past">Đã kết thúc</option></select><ChevronDown size={15} /></div></label>
+            <PartnerFilterSelect
+              label="Sắp xếp"
+              ariaLabel="Sắp xếp hồ sơ"
+              icon={ArrowUpDown}
+              value={sortOrder}
+              options={[{ value: 'newest', label: 'Nộp mới nhất' }, { value: 'oldest', label: 'Nộp cũ nhất' }]}
+              onChange={value => { setSortOrder(value); setApplicationPage(1); }}
+            />
+            <PartnerFilterSelect
+              label="Thời gian sự kiện"
+              ariaLabel="Lọc theo thời gian sự kiện"
+              icon={CalendarDays}
+              value={timeFilter}
+              options={[{ value: 'all', label: 'Tất cả thời gian' }, { value: 'active', label: 'Sắp/đang diễn ra' }, { value: 'past', label: 'Đã kết thúc' }]}
+              onChange={value => { setTimeFilter(value); setApplicationPage(1); }}
+            />
           </div>
         </div>
       </section>

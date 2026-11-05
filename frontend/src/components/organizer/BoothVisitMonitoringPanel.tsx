@@ -4,6 +4,7 @@ import { boothVisitApi } from '../../services/boothVisitApi';
 import { ApiError } from '../../services/apiError';
 import type { OrganizerBoothVisit, OrganizerBoothVisitGroup, OrganizerBoothVisitSummary, RewardManagementPage } from '../../types/rewardManagement';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import './BoothVisitMonitoringPanel.css';
 
 const PAGE_SIZE = 20;
@@ -80,7 +81,7 @@ export function BoothVisitMonitoringPanel({ eventId }: { eventId: string }) {
       </div>
       {booth && <p className="booth-visit-filter">Gian hàng: <strong>{booth.code} · {booth.name}</strong><button type="button" onClick={() => { setBooth(null); setPage(0); }}>Bỏ lọc gian hàng</button></p>}
       <div className="participant-filters">
-        <form className="participant-search" onSubmit={submitSearch}><Search size={17} /><input aria-label="Tìm lượt ghé" value={searchInput} onChange={event => setSearchInput(event.target.value)} maxLength={100} placeholder={mode === 'groups' ? 'Mã hoặc tên gian hàng' : 'Tên người tham gia, mã hoặc tên gian hàng'} /><button type="submit">Tìm kiếm</button></form>
+        <SearchFieldLabel className="booth-visit-search-group"><form className="participant-search" onSubmit={submitSearch}><Search size={17} /><input aria-label="Tìm lượt ghé" value={searchInput} onChange={event => setSearchInput(event.target.value)} maxLength={100} placeholder={mode === 'groups' ? 'Mã hoặc tên gian hàng' : 'Tên người tham gia, mã hoặc tên gian hàng'} /><button type="submit">Tìm kiếm</button></form></SearchFieldLabel>
         <label>Sắp xếp<select aria-label="Sắp xếp lượt ghé" value={sort} onChange={event => { setSort(event.target.value); setPage(0); }}>
           {mode === 'groups' ? <><option value="visitCount,desc">Nhiều lượt ghé nhất</option><option value="lastVisitedAt,desc">Ghé gần nhất</option></> : <><option value="visitedAt,desc">Mới nhất</option><option value="visitedAt,asc">Cũ nhất</option><option value="participantDisplayName,asc">Tên người tham gia</option></>}
           <option value="boothCode,asc">Mã gian hàng</option></select></label>

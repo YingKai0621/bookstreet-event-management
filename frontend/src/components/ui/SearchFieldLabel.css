@@ -1,0 +1,3 @@
+.workspace-search-field { display: grid; gap: 5px; min-width: 0; }
+.workspace-search-field > span { color: #526b61; font-size: .78rem; font-weight: 700; line-height: 1.3; }
+.workspace-search-field > :last-child { min-width: 0; }

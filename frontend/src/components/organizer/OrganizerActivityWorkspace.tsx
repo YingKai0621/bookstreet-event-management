@@ -1,5 +1,7 @@
 import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import { PaginatedList } from '../ui/PaginatedList';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -11,7 +13,6 @@ import {
   Download,
   Eye,
   FilePenLine,
-  Filter,
   Layers3,
   MapPin,
   Plus,
@@ -493,8 +494,9 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
         })}
       </nav>
 
+      <section className="oaw-results-panel" aria-label="Bộ lọc và kết quả hoạt động">
       <div className="oaw-toolbar">
-        <label className="oaw-search">
+        <SearchFieldLabel className="oaw-search-group"><label className="oaw-search">
           <Search size={19} />
           <input
             value={search}
@@ -502,13 +504,12 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
             placeholder={activeView === 'activities' ? 'Tìm theo tên hoạt động...' : 'Tìm hoạt động hoặc đối tác...'}
           />
           {search && <button type="button" onClick={() => updateWorkspaceParams({ search: null, page: null })} aria-label="Xóa từ khóa"><X size={16} /></button>}
-        </label>
-        <label className="oaw-filter">
-          <Filter size={17} />
+        </label></SearchFieldLabel>
+        <WorkspaceFieldLabel className="oaw-status-field" label="Trạng thái"><label className="oaw-filter">
           <select value={status} onChange={event => updateWorkspaceParams({ status: event.target.value, page: null })}>
             {statusOptions.map(value => <option key={value || 'all'} value={value}>{value ? activityStatusLabel(viewKind(activeView), value) : 'Tất cả trạng thái'}</option>)}
           </select>
-        </label>
+        </label></WorkspaceFieldLabel>
         {activeView === 'cancellations' && (
           <label className="oaw-late-filter">
             <input type="checkbox" checked={lateOnly} onChange={event => updateWorkspaceParams({ late: event.target.checked, page: null })} />
@@ -611,6 +612,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
       {getPageCount(meta.totalElements, PAGE_SIZE) > 1 && (
         <ListPagination page={page + 1} pages={getPageCount(meta.totalElements, PAGE_SIZE)} disabled={loading} onPage={value => updateWorkspaceParams({ page: value })} />
       )}
+      </section>
 
       {selectedRecord && (
         <RecordDetailModal

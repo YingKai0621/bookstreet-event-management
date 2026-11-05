@@ -1,5 +1,6 @@
 import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { ListPagination } from '../ui/ListPagination';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   CalendarDays,
   Ban,
@@ -218,19 +219,18 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
         </div>
 
         <div className="org-event-toolbar-controls">
-          <div className="organizer-search-box org-event-search-box">
+          <WorkspaceFieldLabel className="org-event-search-field" label={language === 'vi' ? 'Tìm kiếm' : 'Search'}><div className="organizer-search-box org-event-search-box">
             <Search size={16} />
             <input value={searchQuery} onChange={event => updateSearch(event.target.value)} placeholder={language === 'vi' ? 'Tìm tên sự kiện...' : 'Search event name...'} />
-          </div>
-          <label className="org-event-sort-control">
+          </div></WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="org-event-sort-field" label={language === 'vi' ? 'Sắp xếp' : 'Sort'}><label className="org-event-sort-control">
             <SlidersHorizontal size={16} aria-hidden="true" />
-            <span className="sr-only">{language === 'vi' ? 'Sắp xếp sự kiện' : 'Sort events'}</span>
             <select value={sortBy} onChange={event => updateSort(event.target.value as EventSort)}>
               <option value="updated_desc">{language === 'vi' ? 'Cập nhật gần nhất' : 'Recently updated'}</option>
               <option value="start_asc">{language === 'vi' ? 'Sắp diễn ra' : 'Starting soon'}</option>
               <option value="title_asc">{language === 'vi' ? 'Tên A–Z' : 'Name A–Z'}</option>
             </select>
-          </label>
+          </label></WorkspaceFieldLabel>
           <span className="org-event-result-count" aria-live="polite">{processedEvents.length} {language === 'vi' ? 'kết quả' : 'results'}</span>
         </div>
       </section>

@@ -399,6 +399,9 @@
 .participant-event-overview-card p { margin: 0; color: #5b7068; line-height: 1.6; }
 
 .participant-section-heading--actions { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.participant-activity-search { flex: 0 1 340px; }
+.participant-activity-search .part-search-input { position: relative; display: flex; align-items: center; }
+.participant-activity-search .part-search-input input { width: 100%; min-height: 42px; padding-left: 2.2rem; border: 1px solid #cbd9d2; border-radius: 8px; }
 .participant-section-heading--actions p { margin: 0.3rem 0 0; color: #6b7f77; font-size: 0.82rem; }
 .participant-tabs-bar--wrap { flex-wrap: wrap; }
 
@@ -3187,6 +3190,8 @@
   gap: 0.6rem;
   flex-wrap: nowrap;
 }
+.rewards-page .reward-sort-field { min-width: 205px; }
+.rewards-page .reward-sort-field select { width: 100%; }
 
 .rewards-page .reward-filter-row select {
   min-width: 160px;
