@@ -1,4 +1,4 @@
-import { PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
+import { PartnerEventApplication, PartnerOrganization, PartnerReportStats } from '../types';
 import type {
   ActivityCancellationRequestListQuery,
   ActivityListQuery,
@@ -305,9 +305,6 @@ export const partnerApi = {
     apiClient.post<PartnerActivityCancellationRequestResponse>(
       `/partner/activity-cancellation-requests/${encodeURIComponent(requestId)}/withdraw`,
     ),
-  getNotifications: async (): Promise<PartnerNotification[]> => [],
-  markNotificationRead: async (_id: string): Promise<void> => undefined,
-  markAllNotificationsRead: async (): Promise<void> => undefined,
   getReports: async (_eventId?: string): Promise<PartnerReportStats> =>
     Promise.reject(new Error('Báo cáo đối tác chưa có API backend trong phạm vi hiện tại.')),
   changePassword: async (_currentPassword: string, _newPassword: string): Promise<void> =>

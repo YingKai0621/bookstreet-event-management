@@ -211,6 +211,15 @@ class PartnerSprint01IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.reviewedAt").exists());
+        mvc.perform(get("/api/v1/partner/notifications?type=PARTNER_APPLICATION_STATUS_CHANGED")
+                        .with(as(partner1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].referenceType").value("PARTNER_APPLICATION"))
+                .andExpect(jsonPath("$.content[0].referenceId").value(firstId));
+        mvc.perform(get("/api/v1/partner/notifications").with(as(partner2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(post("/api/v1/organizer/applications/{id}/approve", firstId)
                         .with(as(organizer)).with(csrf()))
                 .andExpect(status().isConflict())
@@ -222,6 +231,11 @@ class PartnerSprint01IntegrationTests {
                 .andExpect(jsonPath("$.status").value("REJECTED"))
                 .andExpect(jsonPath("$.reviewNote").value("Not suitable"))
                 .andExpect(jsonPath("$.reviewedAt").exists());
+        mvc.perform(get("/api/v1/partner/notifications?type=PARTNER_APPLICATION_STATUS_CHANGED")
+                        .with(as(partner2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].referenceId").value(secondId));
         mvc.perform(get("/api/v1/partner/applications/{id}", firstId).with(as(partner1)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
