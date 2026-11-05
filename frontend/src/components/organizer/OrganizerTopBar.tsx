@@ -119,7 +119,8 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
               setNotifPopupOpen(opening);
               if (opening) onNotificationPopoverOpen();
             }}
-            aria-label="Xem thông báo"
+            aria-label={unreadCount !== null && unreadCount > 0
+              ? `Xem thông báo (${unreadCount} chưa đọc)` : 'Xem thông báo'}
             title={language === 'vi' ? 'Thông báo gần đây' : 'Recent notifications'}
           >
             <Bell size={18} />

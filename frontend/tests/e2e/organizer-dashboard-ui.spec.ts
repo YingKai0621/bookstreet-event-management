@@ -98,7 +98,10 @@ async function setupOrganizerDashboard(page: Page, scenario: MockScenario = {}) 
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'mock-csrf' });
     if (path.endsWith('/auth/me')) return json(route, { userId: 1, username: 'organizer', fullName: 'Nguyễn Điều Hành', email: 'organizer@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'ORGANIZER'] });
-    if (path.endsWith('/organizer/notifications')) return json(route, []);
+    if (path.endsWith('/organizer/notifications/unread-count')) return json(route, { unreadCount: 0 });
+    if (path.endsWith('/organizer/notifications')) return json(route, {
+      content: [], page: 0, size: 5, totalElements: 0, totalPages: 0,
+    });
     if (path.endsWith('/organizer/dashboard')) {
       if (scenario.failSummary) return json(route, { code: 'DASHBOARD_UNAVAILABLE', message: 'Không tải được dữ liệu tổng hợp.' }, 503);
       return json(route, {
