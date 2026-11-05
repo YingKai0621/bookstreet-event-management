@@ -1,7 +1,6 @@
 import {
   AdminAuditLogItem,
   AdminBadgeRule,
-  AdminNotificationItem,
   AdminPermissionItem,
   AdminProfile,
   AdminRolePermissionConfig,
@@ -130,13 +129,6 @@ export const adminApi = {
   },
   updateProfile: (data: unknown) => apiClient.patch('/admin/profile', data),
   changePassword: (currentPassword: string, newPassword: string) => apiClient.post('/admin/profile/password', { currentPassword, newPassword }),
-  async getNotifications(): Promise<AdminNotificationItem[]> {
-    const rows = await apiClient.get<any[]>('/admin/notifications');
-    return rows.map(item => ({ id: item.id, title: item.title, content: item.message, category: ['security', 'account', 'role'].includes(item.kind) ? item.kind : 'system', timeAgo: new Date(item.createdAt).toLocaleString('vi-VN'), isRead: item.isRead, targetTab: item.link }));
-  },
-  markNotificationRead: (id: string) => apiClient.patch(`/admin/notifications/${encodeURIComponent(id)}/read`, {}),
-  markAllNotificationsRead: () => apiClient.patch('/admin/notifications/read-all', {}),
-
   // Lấy nhật ký hệ thống (Audit Logs)
   async getAuditLogs(): Promise<AdminAuditLogItem[]> {
     const res = await apiClient.get<any[]>('/admin/audit-logs');

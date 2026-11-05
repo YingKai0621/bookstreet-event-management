@@ -1,20 +1,20 @@
 # Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `ACTIVE - FOUNDATION IMPLEMENTATION AUTHORIZED`
+- Status: `ACTIVE - ADMIN/CROSS-ROLE CLOSURE IN PROGRESS`
 - Prepared date: `2026-11-02`
 - Activation date: `2026-11-03`
 - Approved documentation merge: PR #116, merge commit `3a0a76b`
 - Last product-scope revision: `2026-11-03`
 - Last Acceptance Criteria revision: `2026-11-03`
 - Previous completed Sprint: Sprint 09 Heritage Public Content
-- Current production schema baseline: immutable Flyway migrations `V1` through `V15`
-- Reserved schema change: `V16`, owned exclusively by Developer A (`YingKai0621`)
+- Current production schema baseline: immutable Flyway migrations `V1` through `V16`
+- Implemented schema change: `V16`, authored exclusively by Developer A (`YingKai0621`)
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
 - Current review stage: the 52 Acceptance Criteria, API contract, Physical ERD overlay, implementation
   plan, and three-developer assignment are approved and active
-- Current implementation authorization: Developer A may begin PR 1 foundation work after this activation
-  update is merged; teammates may take PR 2 or PR 3 by claiming the documented Developer B or C role and
-  coordinating its branch and shared-file boundaries.
+- Current implementation progress: foundation PR #122, Partner PR #124/#125, and Organizer PR #126 are
+  merged. Developer A owns the remaining Admin/shared frontend integration, cross-role verification,
+  documentation synchronization, and closure evidence.
 
 This document is the active Sprint 10 baseline. It authorizes only the reviewed implementation units and
 does not authorize code, producer, type, role, reference, or delivery-channel changes outside this scope.
@@ -504,5 +504,5 @@ The documentation activation completed on `2026-11-03`:
 5. PR 1 foundation work is authorized after this activation update merges.
 6. PR 2 and PR 3 use the stable Developer B and C work-package labels. Teammates claim and coordinate the
    relevant role before starting; the assignment document requires no personal-name registry.
-7. The BR-81 exact-deadline equality discrepancy remains a separately recorded decision gate before
-   implementing Organizer Booth re-selection; it does not block the shared PR 1 foundation.
+7. The BR-81 exact-deadline equality decision was resolved on `2026-11-05`: selection is allowed at the
+   exact Booth request deadline and rejected only after it. Boundary tests preserve this inclusive rule.

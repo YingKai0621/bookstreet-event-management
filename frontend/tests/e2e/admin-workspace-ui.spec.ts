@@ -7,6 +7,8 @@ async function setup(page: Page, _tab: string) {
     if (path.endsWith('/auth/csrf')) body = { headerName: 'X-XSRF-TOKEN', token: 'test' };
     else if (path.endsWith('/auth/me')) body = { userId: 1, fullName: 'Admin Test', username: 'admin', roles: ['ADMIN'], email: 'admin@example.com', emailVerified: true, status: 'ACTIVE' };
     else if (path.endsWith('/admin/profile')) body = { id: 1, fullName: 'Admin Test', email: 'admin@example.com', phone: '0901234567', department: 'Quản trị hệ thống', lastActiveAt: '2026-10-14T01:00:00Z' };
+    else if (path.endsWith('/admin/notifications/unread-count')) body = { unreadCount: 0 };
+    else if (path.endsWith('/admin/notifications')) body = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
     else if (path.endsWith('/events')) body = { content: [], totalPages: 0 };
     else if (path.endsWith('/admin/dashboard')) body = {};
     else if (path.endsWith('/admin/audit-logs')) body = Array.from({ length: 40 }, (_, i) => ({ id: String(i), createdAt: '2026-10-14T01:00:00Z', actor: { fullName: 'Admin Test', primaryRole: 'ADMIN' }, action: 'update', targetType: `User ${i}`, details: 'Cập nhật thông tin tài khoản', status: 'success', ipAddress: '127.0.0.1' }));

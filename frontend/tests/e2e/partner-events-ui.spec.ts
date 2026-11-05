@@ -174,6 +174,15 @@ test('my events contains owned applications only, with correctly formatted histo
   await expect(dialog).toHaveCount(0);
 });
 
+test('event cancellation notification link opens the matching owned application', async ({ page }) => {
+  await setup(page);
+  await page.goto('/partner/events?eventId=101');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Tuần lễ sách của gian hàng');
+  await expect(dialog).toContainText('Hồ sơ hợp lệ');
+});
+
 test('registration submits notes through existing CSRF-protected API and displays pending application', async ({ page }) => {
   const state = await setup(page, { empty: true });
   await page.goto('/partner/events/apply');

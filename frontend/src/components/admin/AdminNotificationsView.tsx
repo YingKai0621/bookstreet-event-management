@@ -1,156 +1,137 @@
-import { PaginatedList } from '../ui/PaginatedList';
+import { Bell, CheckCheck, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ApiError } from '../../services/apiClient';
 import {
-  ArrowRight,
-  Bell,
-  CheckCheck,
-  Clock,
-  Database,
-  ShieldAlert,
-  UserCheck
-} from 'lucide-react';
-import React, { useState } from 'react';
-import { AdminNotificationItem } from '../../types/admin';
+  ADMIN_NOTIFICATIONS_CHANGED,
+  adminNotificationsApi,
+  notifyAdminNotificationsChanged,
+} from '../../services/adminNotificationsApi';
+import type { Language } from '../../types';
 
-interface AdminNotificationsViewProps {
-  notifications: AdminNotificationItem[];
-  onMarkAllAsRead: () => void;
-  onMarkAsRead: (id: string) => void;
-  onNavigateTab: (tab: string) => void;
+function loadErrorMessage(error: unknown, language: Language): string {
+  const vi = language === 'vi';
+  if (error instanceof ApiError && error.status === 401) {
+    return vi
+      ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+      : 'Your session has expired. Please sign in again.';
+  }
+  if (error instanceof ApiError && error.status === 403) {
+    return vi
+      ? 'Bạn không có quyền xem thông báo Admin.'
+      : 'You cannot access Admin notifications.';
+  }
+  return vi
+    ? 'Không tải được thông báo. Vui lòng thử lại.'
+    : 'Notifications could not be loaded. Please try again.';
 }
 
-export const AdminNotificationsView: React.FC<AdminNotificationsViewProps> = ({
-  notifications,
-  onMarkAllAsRead,
-  onMarkAsRead,
-  onNavigateTab
-}) => {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+export function AdminNotificationsView({ language }: { language: Language }) {
+  const vi = language === 'vi';
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [pending, setPending] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [revision, setRevision] = useState(0);
 
-  const filteredNotifs = notifications.filter(n => {
-    if (activeCategory === 'all') return true;
-    return n.category === activeCategory;
-  });
+  useEffect(() => {
+    let active = true;
+    // oxlint-disable-next-line react/set-state-in-effect -- Route entry and explicit refresh synchronize the durable Admin inbox.
+    setLoading(true);
+    setLoadError('');
+    Promise.all([
+      adminNotificationsApi.list({ page: 0, size: 20 }),
+      adminNotificationsApi.unreadCount(),
+    ]).then(([page, count]) => {
+      if (!active) return;
+      if (!Array.isArray(page.content)
+          || !Number.isFinite(page.totalElements)
+          || !Number.isFinite(count.unreadCount)
+          || page.content.length !== 0
+          || page.totalElements !== 0
+          || count.unreadCount !== 0) {
+        throw new Error('Invalid Admin notification response');
+      }
+      setUnreadCount(count.unreadCount);
+    }).catch(error => {
+      if (active) {
+        setUnreadCount(null);
+        setLoadError(loadErrorMessage(error, language));
+      }
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [language, revision]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1);
+    window.addEventListener(ADMIN_NOTIFICATIONS_CHANGED, refresh);
+    return () => window.removeEventListener(ADMIN_NOTIFICATIONS_CHANGED, refresh);
+  }, []);
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'security':
-        return <ShieldAlert size={18} className="notif-icon-security" />;
-      case 'account':
-        return <UserCheck size={18} className="notif-icon-account" />;
-      case 'system':
-        return <Database size={18} className="notif-icon-system" />;
-      default:
-        return <Bell size={18} className="notif-icon-default" />;
+  async function markAllRead() {
+    if (pending) return;
+    setPending(true);
+    setActionError('');
+    try {
+      await adminNotificationsApi.markAllRead();
+      notifyAdminNotificationsChanged();
+    } catch {
+      setActionError(vi
+        ? 'Không thể đánh dấu tất cả đã đọc. Vui lòng thử lại.'
+        : 'Notifications could not be marked as read. Please try again.');
+    } finally {
+      setPending(false);
     }
-  };
+  }
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'security': return 'An ninh';
-      case 'account': return 'Tài khoản';
-      case 'system': return 'Hệ thống';
-      default: return 'Thông báo';
-    }
-  };
-
-  const handleClickItem = (notif: AdminNotificationItem) => {
-    if (!notif.isRead) {
-      onMarkAsRead(notif.id);
-    }
-    if (notif.targetTab) {
-      onNavigateTab(notif.targetTab);
-    }
-  };
-
-  return (
-    <div className="adm-notifications-view">
-      {/* Header */}
-      <div className="adm-page-header">
-        <div>
-          <h1 className="adm-page-title workspace-page-title">Thông báo Quản trị</h1>
-          <p className="adm-page-subtitle workspace-page-subtitle">
-            Cảnh báo hệ thống, nhật ký đăng nhập bất thường và yêu cầu cần xác thực từ người dùng.
-          </p>
-        </div>
-        <div className="adm-page-header-actions">
-          {unreadCount > 0 && (
-            <button className="adm-btn adm-btn-secondary" onClick={onMarkAllAsRead}>
-              <CheckCheck size={16} />
-              <span>Đánh dấu tất cả đã đọc</span>
-            </button>
-          )}
-        </div>
+  return <div className="adm-notifications-view">
+    <div className="adm-page-header">
+      <div>
+        <h1 className="adm-page-title workspace-page-title">
+          {vi ? 'Thông báo quản trị' : 'Admin notifications'}
+        </h1>
+        <p className="adm-page-subtitle workspace-page-subtitle">
+          {vi
+            ? 'Thông báo dành riêng cho vai trò Admin sẽ xuất hiện tại đây.'
+            : 'Notifications intended for the Admin role will appear here.'}
+        </p>
       </div>
-
-      {/* Category Tabs */}
-      <div className="adm-card adm-notif-tabs-card">
-        <div className="adm-notif-tabs">
-          {[
-            { id: 'all', label: 'Tất cả' },
-            { id: 'security', label: 'An ninh' },
-            { id: 'account', label: 'Tài khoản' },
-            { id: 'system', label: 'Hệ thống' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              className={`adm-tab-pill ${activeCategory === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveCategory(tab.id)}
-            >
-              {tab.label}
-              {tab.id === 'all' && unreadCount > 0 && (
-                <span className="adm-pill-count">{unreadCount}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Notifications List */}
-      <div className="adm-card adm-notif-list-card">
-        {filteredNotifs.length === 0 ? (
-          <div className="adm-notif-empty">
-            <Bell size={36} />
-            <p>Không có thông báo nào trong danh mục này.</p>
-          </div>
-        ) : (
-          <PaginatedList items={filteredNotifs}>{pageItems => (<div className="adm-notif-list">
-            {pageItems.map((notif) => (
-              <div 
-                key={notif.id}
-                className={`adm-notif-item ${!notif.isRead ? 'unread' : ''}`}
-                onClick={() => handleClickItem(notif)}
-              >
-                <div className="adm-notif-item-icon">
-                  {getCategoryIcon(notif.category)}
-                </div>
-
-                <div className="adm-notif-item-main">
-                  <div className="adm-notif-item-top">
-                    <span className="adm-notif-badge">{getCategoryLabel(notif.category)}</span>
-                    <span className="adm-notif-time">
-                      <Clock size={12} />
-                      {notif.timeAgo}
-                    </span>
-                    {!notif.isRead && <span className="adm-notif-unread-dot"></span>}
-                  </div>
-
-                  <h4 className="adm-notif-title">{notif.title}</h4>
-                  <p className="adm-notif-content">{notif.content}</p>
-                </div>
-
-                {notif.targetTab && (
-                  <div className="adm-notif-arrow">
-                    <ArrowRight size={16} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>)}</PaginatedList>
-        )}
+      <div className="adm-page-header-actions">
+        <button type="button" className="adm-btn adm-btn-secondary" disabled={loading}
+          onClick={() => setRevision(value => value + 1)}>
+          <RefreshCw size={16} />
+          <span>{vi ? 'Tải lại' : 'Refresh'}</span>
+        </button>
+        <button type="button" className="adm-btn adm-btn-secondary"
+          disabled={loading || pending || unreadCount === null || unreadCount === 0}
+          onClick={() => void markAllRead()}>
+          <CheckCheck size={16} />
+          <span>{vi ? 'Đánh dấu tất cả đã đọc' : 'Mark all as read'}</span>
+        </button>
       </div>
     </div>
-  );
-};
 
+    {actionError && <p className="app-loading-state" role="alert">{actionError}</p>}
+    {loading ? <p className="app-loading-state" role="status">
+      {vi ? 'Đang tải thông báo...' : 'Loading notifications...'}
+    </p> : loadError ? <div className="adm-card adm-notif-list-card" role="alert">
+      <div className="adm-notif-empty">
+        <Bell size={36} />
+        <p>{loadError}</p>
+        <button type="button" className="adm-btn adm-btn-secondary"
+          onClick={() => setRevision(value => value + 1)}>
+          {vi ? 'Thử lại' : 'Retry'}
+        </button>
+      </div>
+    </div> : <div className="adm-card adm-notif-list-card">
+      <div className="adm-notif-empty">
+        <Bell size={36} />
+        <p>{vi
+          ? 'Hiện chưa có thông báo nào dành cho Admin.'
+          : 'There are currently no notifications for Admin.'}</p>
+      </div>
+    </div>}
+  </div>;
+}
