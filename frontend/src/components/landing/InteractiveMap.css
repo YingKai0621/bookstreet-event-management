@@ -687,7 +687,7 @@
 
 @media (max-width: 900px) {
   .figma-map-section {
-    padding: 3.5rem 0 4rem;
+    padding: 2.25rem 0 2.5rem;
   }
 
   .blueprint-map-section-container {
@@ -806,6 +806,10 @@
 }
 
 @media (max-width: 480px) {
+  .figma-map-section {
+    padding: 1.85rem 0 2rem;
+  }
+
   .illustrated-map-marker .marker-label {
     display: none;
   }

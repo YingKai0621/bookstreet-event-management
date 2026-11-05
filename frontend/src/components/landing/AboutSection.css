@@ -173,70 +173,93 @@
 @media (max-width: 767px) {
   .core-values-section {
     min-height: auto;
-    padding: 3.5rem 1rem 4rem 1rem;
+    padding: 2.25rem 1.15rem 2rem 1.15rem; /* Thu gọn padding trên dưới chuyên nghiệp */
   }
 
   .core-values-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1.35rem;
   }
   
+  .core-values-eyebrow {
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+  }
+
   .core-values-title {
-    font-size: 1.85rem;
+    font-size: clamp(1.75rem, 6.5vw, 2.2rem);
+    line-height: 1.25;
   }
   
   .core-values-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0;
-    padding-top: 0;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
   }
   
   .core-value-block {
-    padding: 1.25rem 0.85rem;
-  }
-  
-  .core-value-block:nth-child(2n + 1) {
-    border-left: none;
-    padding-left: 0.25rem;
-    padding-right: 0.85rem;
-  }
-
-  .core-value-block:nth-child(2n) {
-    border-left: none;
-    padding-left: 0.85rem;
-    padding-right: 0.25rem;
+    padding: 1.25rem 1.25rem;
+    border-left: none !important;
+    border-top: none !important;
+    background: rgba(13, 43, 37, 0.55);
+    border: 1px solid rgba(201, 155, 82, 0.28);
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    transition: transform 180ms ease, border-color 180ms ease;
   }
 
-  .core-value-block:nth-child(n + 3) {
-    border-top: 1px solid rgba(255, 255, 255, 0.24);
+  .core-value-block:hover {
+    border-color: rgba(201, 155, 82, 0.5);
+    transform: translateY(-2px);
   }
   
   .core-value-num {
-    font-size: 0.84rem;
-    margin-bottom: 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #E9BC63;
+    margin-bottom: 0.35rem;
   }
 
   .core-value-heading {
-    font-size: 1.3rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0.45rem;
+    color: #FFFFFF;
   }
 
   .core-value-desc {
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.94rem;
+    line-height: 1.58;
+    color: rgba(255, 255, 255, 0.92);
+  }
+}
+
+@media (max-width: 480px) {
+  .core-values-section {
+    padding: 1.85rem 0.85rem 1.75rem 0.85rem;
+  }
+
+  .core-values-header {
+    margin-bottom: 1.15rem;
+  }
+
+  .core-values-grid {
+    gap: 0.65rem;
+    padding-top: 0.65rem;
   }
 }
 
 @media (max-width: 380px) {
   .core-value-block {
-    padding: 1rem 0.5rem;
+    padding: 1.1rem 1rem;
   }
   
   .core-value-heading {
-    font-size: 1.16rem;
+    font-size: 1.25rem;
   }
 
   .core-value-desc {
-    font-size: 0.84rem;
-    line-height: 1.48;
+    font-size: 0.88rem;
+    line-height: 1.52;
   }
 }

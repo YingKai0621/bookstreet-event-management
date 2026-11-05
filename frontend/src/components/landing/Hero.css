@@ -127,6 +127,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
   border-radius: var(--radius-pill);
@@ -484,22 +485,49 @@
 
 @media (max-width: 768px) {
   .figma-hero-section {
-    padding: 5.5rem 1rem 2.75rem 1rem;
+    padding-top: calc(4.75rem + 32px); /* Dời khối nội dung sịch xuống dưới thanh Header */
+    padding-bottom: 1.75rem;
+    padding-inline: 1.15rem;
     min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .figma-hero-content {
+    width: 100%;
+    max-width: 580px;
+    margin-top: 0;
   }
 
   .figma-hero-h1 {
-    font-size: clamp(1.75rem, 6.2vw, 2.3rem);
-    margin-bottom: 0.75rem;
-    line-height: 1.24;
+    font-size: clamp(2.15rem, 8vw, 2.85rem);
+    margin-bottom: 0.95rem;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.85);
+  }
+
+  .figma-hero-h1 .serif-italic-accent {
+    display: inline-block;
+    font-size: 1.07em;
+    font-weight: 800;
+    color: #F8D377;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.92), 0 0 28px rgba(233, 188, 99, 0.65);
+    margin-top: 0.15rem;
   }
 
   .figma-hero-desc {
-    font-size: 0.88rem;
-    line-height: 1.55;
-    margin-bottom: 1.15rem;
-    padding-inline: 0.25rem;
+    font-size: clamp(0.92rem, 3.8vw, 1.02rem);
+    line-height: 1.5;
+    margin-bottom: 1.4rem;
+    padding-inline: 0.5rem;
+    max-width: 460px;
+    margin-inline: auto;
     white-space: normal;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
   }
 
   .hero-eyebrow-tag {
@@ -510,34 +538,50 @@
 
   .hero-search-wrapper {
     margin-bottom: 1.1rem;
-    max-width: 100%;
+    width: 100%;
+    max-width: 440px;
   }
 
   .hero-search-form {
-    padding: 0.3rem 0.35rem 0.3rem 0.95rem;
+    padding: 0.22rem 0.3rem 0.22rem 0.8rem;
     min-height: 48px;
+    gap: 0.35rem;
     border-radius: 9999px;
+  }
+
+  .hero-search-icon-box {
+    margin-right: 0.2rem;
   }
 
   .hero-search-input {
-    font-size: 16px; /* Prevents auto-zoom on iOS */
+    font-size: 15px;
+    padding: 0.35rem 0;
+    min-width: 0;
   }
 
   .hero-search-submit-btn {
-    padding: 0.55rem 1.15rem;
-    font-size: 0.86rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.84rem;
+    gap: 0.35rem;
     border-radius: 9999px;
+    flex-shrink: 0;
+    font-weight: 600;
   }
 
-  .quick-tags-container {
-    margin-top: 0.6rem;
+  .hero-quick-tags {
+    margin-top: 0.75rem;
+    width: 100%;
+    overflow: hidden;
   }
 
   .quick-tags-list {
     display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
     gap: 0.45rem;
     overflow-x: auto;
-    padding-bottom: 0.25rem;
+    padding: 0.2rem 0.35rem 0.45rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
@@ -547,8 +591,14 @@
     display: none;
   }
 
+  .quick-tags-label {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    margin-right: 0.25rem;
+  }
+
   .quick-tag-chip {
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     padding: 0.3rem 0.75rem;
     border-radius: 9999px;
     white-space: nowrap;
@@ -559,7 +609,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
-    max-width: 380px;
+    max-width: 400px;
     margin-inline: auto;
     gap: 0.65rem;
     margin-bottom: 1.25rem;
@@ -568,16 +618,20 @@
   .figma-hero-actions .btn-figma-primary,
   .figma-hero-actions .btn-figma-outline {
     flex: 1 1 calc(50% - 0.35rem);
-    min-height: 42px;
+    min-height: 44px;
     font-size: 0.84rem;
     padding: 0.5rem 0.85rem;
     justify-content: center;
     border-radius: 10px;
   }
 
+  .hero-member-strip {
+    margin-bottom: 1.5rem;
+  }
+
   .hero-member-pill {
     font-size: 0.76rem;
-    padding: 0.4rem 0.9rem;
+    padding: 0.45rem 1rem;
     text-align: center;
     line-height: 1.35;
   }
@@ -586,45 +640,106 @@
   .hero-member-sep {
     display: none;
   }
-
-  .hero-member-pill {
-    padding: 0.48rem 1rem;
-  }
 }
 
 @media (max-width: 480px) {
   .figma-hero-section {
-    padding: 5rem 0.85rem 2rem 0.85rem;
+    padding-top: calc(4.5rem + 30px); /* Dời xuống thoáng đẹp, tránh header */
+    padding-bottom: 1.25rem; /* Thu gọn khoảng trống dư thừa phía dưới Hero */
+    padding-inline: 0.85rem;
+    min-height: auto;
+  }
+
+  .figma-hero-content {
+    margin-top: 0;
   }
 
   .figma-hero-h1 {
-    font-size: 1.65rem;
+    font-size: clamp(1.9rem, 7.5vw, 2.35rem); /* Nâng size to bản, hoành tráng và cân đối 2 dòng */
+    line-height: 1.22;
+    margin-bottom: 0.85rem;
+  }
+
+  .figma-hero-h1 .serif-italic-accent {
+    display: block;
+    white-space: nowrap;
+    font-size: 1.06em;
+    margin-top: 0.18rem;
+  }
+
+  .figma-hero-desc {
+    font-size: 0.92rem;
+    line-height: 1.48;
+    margin-bottom: 1.15rem;
+    padding-inline: 0.35rem;
   }
 
   .figma-hero-actions {
+    display: flex;
     flex-direction: row;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 380px;
+    margin-inline: auto;
     gap: 0.5rem;
+    margin-bottom: 0.95rem;
   }
 
   .figma-hero-actions .btn-figma-primary,
   .figma-hero-actions .btn-figma-outline {
-    min-height: 40px;
+    flex: 1 1 50%;
+    min-width: 0;
+    min-height: 44px;
     font-size: 0.8rem;
-    padding: 0.45rem 0.65rem;
+    padding: 0.55rem 0.4rem;
+    justify-content: center;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .hero-member-strip {
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-scroll-cue {
+    margin-top: 0.2rem;
+    margin-bottom: 0.25rem;
   }
 }
 
 @media (max-width: 360px) {
+  .figma-hero-section {
+    padding-top: calc(4.5rem + 36px);
+    padding-inline: 0.75rem;
+  }
+
+  .figma-hero-h1 {
+    font-size: clamp(1.85rem, 7.8vw, 2.15rem);
+  }
+
   .hero-search-form {
-    flex-wrap: wrap;
-    border-radius: var(--radius-md);
-    padding: 0.4rem;
+    padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+    gap: 0.25rem;
+  }
+
+  .hero-search-input {
+    font-size: 14px;
   }
 
   .hero-search-submit-btn {
+    padding: 0.48rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .figma-hero-actions {
+    flex-direction: column;
+    max-width: 280px;
+  }
+
+  .figma-hero-actions .btn-figma-primary,
+  .figma-hero-actions .btn-figma-outline {
     width: 100%;
-    margin-top: 0.35rem;
-    justify-content: center;
+    flex: none;
   }
 }
 

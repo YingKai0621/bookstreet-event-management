@@ -344,37 +344,23 @@
   color: #172421 !important;
   border-color: #FFF2C6 !important;
   box-shadow: 0 0 0 2px #172421, 0 0 20px rgba(233, 188, 99, 0.95);
+  transform: scale(1.14);
   z-index: 4;
-  /* Entry bounce (0.5s) rồi chuyển sang breathing pulse (vô tận) */
-  animation: ticketIconEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-             ticketIconPulse 2.8s 0.45s ease-in-out infinite;
+  animation: ticketIconPulse 2.8s ease-in-out infinite;
 }
 
 .ticket-nav-item.is-current .ticket-item-circle svg {
-  animation: ticketSvgEnter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* Nhảy vào: co lại → bật ra to → về kích thước active */
-@keyframes ticketIconEnter {
-  0%   { transform: scale(0.75); box-shadow: 0 0 0 2px #172421, 0 0 4px rgba(233, 188, 99, 0.3); }
-  55%  { transform: scale(1.28); box-shadow: 0 0 0 2px #172421, 0 0 30px rgba(233, 188, 99, 1), 0 0 10px rgba(255,255,255,0.7); }
-  100% { transform: scale(1.16); box-shadow: 0 0 0 2px #172421, 0 0 18px rgba(233, 188, 99, 0.85); }
-}
-
-@keyframes ticketSvgEnter {
-  0%   { transform: scale(0.7) rotate(-15deg); }
-  60%  { transform: scale(1.2) rotate(8deg); }
-  100% { transform: scale(1.12) rotate(0deg); }
+  transform: scale(1.1);
 }
 
 @keyframes ticketIconPulse {
   0%, 100% {
     box-shadow: 0 0 0 2px #172421, 0 0 14px rgba(233, 188, 99, 0.85);
-    transform: scale(1.16);
+    transform: scale(1.14);
   }
   50% {
-    box-shadow: 0 0 0 2px #172421, 0 0 26px rgba(233, 188, 99, 1), 0 0 8px rgba(255, 255, 255, 0.6);
-    transform: scale(1.2);
+    box-shadow: 0 0 0 2px #172421, 0 0 24px rgba(233, 188, 99, 1), 0 0 8px rgba(255, 255, 255, 0.6);
+    transform: scale(1.18);
   }
 }
 
