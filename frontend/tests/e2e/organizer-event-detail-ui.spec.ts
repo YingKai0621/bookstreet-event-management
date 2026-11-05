@@ -172,7 +172,10 @@ async function setupEventDetail(page: Page, scenario: DetailScenario = {}) {
     const path = url.pathname;
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'mock-csrf' });
     if (path.endsWith('/auth/me')) return json(route, { userId: 1, username: 'organizer', fullName: 'Organizer Demo', email: 'organizer@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'ORGANIZER'] });
-    if (path.endsWith('/organizer/notifications')) return json(route, []);
+    if (path.endsWith('/organizer/notifications/unread-count')) return json(route, { unreadCount: 0 });
+    if (path.endsWith('/organizer/notifications')) return json(route, {
+      content: [], page: 0, size: 5, totalElements: 0, totalPages: 0,
+    });
     if (path.endsWith('/organizer/events/501/cancel') && route.request().method() === 'POST') {
       actions.push(`cancel:${route.request().postDataJSON().reason}`);
       currentEvent = {

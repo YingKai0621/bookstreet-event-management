@@ -5,7 +5,6 @@ import com.swp391.bookstreet.auth.repository.UserRepository;
 import com.swp391.bookstreet.booth.dto.BoothPageResponse;
 import com.swp391.bookstreet.booth.dto.BoothRequestResponse;
 import com.swp391.bookstreet.booth.dto.RejectBoothRequest;
-import com.swp391.bookstreet.booth.entity.Booth;
 import com.swp391.bookstreet.booth.entity.BoothAssignment;
 import com.swp391.bookstreet.booth.entity.BoothHold;
 import com.swp391.bookstreet.booth.entity.BoothRequest;
@@ -22,8 +21,6 @@ import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.repository.EventRepository;
 import com.swp391.bookstreet.event.service.EventRootLockService;
-import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
-import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import java.time.Clock;
 import java.time.Instant;
@@ -48,6 +45,7 @@ public class OrganizerBoothRequestService {
     private final UserRepository userRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
+    private final BoothSelectionEligibilityService selectionEligibility;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final PartnerOutcomeNotificationService outcomeNotifications;
@@ -62,8 +60,10 @@ public class OrganizerBoothRequestService {
             UserRepository userRepository,
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
+            BoothSelectionEligibilityService selectionEligibility,
             ApplicationEventPublisher eventPublisher,
-            PartnerOutcomeNotificationService outcomeNotifications, Clock clock) {
+            PartnerOutcomeNotificationService outcomeNotifications,
+            Clock clock) {
         this.eventRepository = eventRepository;
         this.eventRootLockService = eventRootLockService;
         this.boothRepository = boothRepository;
@@ -74,6 +74,7 @@ public class OrganizerBoothRequestService {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
+        this.selectionEligibility = selectionEligibility;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.outcomeNotifications = outcomeNotifications;
@@ -120,7 +121,7 @@ public class OrganizerBoothRequestService {
                 .orElseThrow(OrganizerBoothRequestService::requestNotFound);
         Long boothId = candidate.getBooth().getBoothId();
 
-        Booth booth = boothRepository.findByBoothIdForUpdate(boothId)
+        boothRepository.findByBoothIdForUpdate(boothId)
                 .orElseThrow(OrganizerBoothRequestService::boothNotAvailable);
         EventBoothConfig config = configRepository
                 .findByEventIdAndBoothIdForUpdate(eventId, boothId)
@@ -132,33 +133,8 @@ public class OrganizerBoothRequestService {
                 .findFirst().orElse(candidate);
 
         requirePending(request);
-        PartnerEventApplication application = request.getApplication();
-        if (!eligible(application)) {
-            throw new BoothApiException(HttpStatus.CONFLICT,
-                    "PARTNER_APPLICATION_NOT_APPROVED",
-                    "The Partner application is no longer Approved.");
-        }
-
         Instant selectedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
-        if (event.getBoothRequestDeadlineAt() == null
-                || !selectedAt.isBefore(event.getBoothRequestDeadlineAt())) {
-            throw new BoothApiException(HttpStatus.CONFLICT,
-                    "BOOTH_REQUEST_DEADLINE_PASSED",
-                    "The Booth request deadline has passed.");
-        }
-        if (!config.isEnabled() || !booth.getLocation().isActive()
-                || configRepository.existsCurrentOverlappingHoldForBooth(
-                        boothId, event.getStartAt(), event.getEndAt())
-                || assignmentRepository.existsOverlappingActiveAssignment(
-                        boothId, event.getStartAt(), event.getEndAt())) {
-            throw boothNotAvailable();
-        }
-        if (requestRepository.countCurrentActiveHolds(application.getId())
-                + assignmentRepository.countActiveByApplication(application.getId())
-                >= event.getMaxBoothsPerPartner()) {
-            throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_QUOTA_EXCEEDED",
-                    "The Partner has reached this Event's Booth quota.");
-        }
+        selectionEligibility.requireSelectable(event, request, config, selectedAt);
 
         Instant expiresAt = selectedAt.plus(
                 event.getBoothPaymentWindowMinutes(), ChronoUnit.MINUTES);
@@ -221,12 +197,6 @@ public class OrganizerBoothRequestService {
                 request.getBoothRequestId(), recipient, event.getName(),
                 request.getBooth().getLocation().getCode(), hold.getLockedRentalPrice(),
                 hold.getExpiresAt());
-    }
-
-    private static boolean eligible(PartnerEventApplication application) {
-        return application.getStatus() == PartnerEventApplication.ApplicationStatus.APPROVED
-                && application.getPartnerOrganization().getStatus()
-                == PartnerOrganization.OrganizationStatus.ACTIVE;
     }
 
     private static void requirePending(BoothRequest request) {

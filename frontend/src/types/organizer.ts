@@ -169,18 +169,6 @@ export interface OrganizerActivityItem {
   conflictNotes?: string;
 }
 
-export interface OrganizerNotificationItem {
-  id: string;
-  title: string;
-  content: string;
-  category: 'booth' | 'activity' | 'participant' | 'feedback' | 'system';
-  timeAgo: string;
-  isRead: boolean;
-  isImportant?: boolean;
-  targetTab?: string;
-  relatedId?: string;
-}
-
 export interface OrganizerReport {
   eventId: string;
   eventName: string;

@@ -29,6 +29,7 @@ const SUPPORTED_TABS = new Set<OrganizerTab>([
   'participants',
   'feedback',
   'public_content',
+  'notifications',
   'profile',
 ]);
 const EVENT_SCOPED_TABS: OrganizerTab[] = ['booth_requests', 'booths', 'activities', 'participants', 'reports'];

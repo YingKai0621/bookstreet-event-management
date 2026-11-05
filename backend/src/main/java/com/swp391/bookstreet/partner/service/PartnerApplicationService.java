@@ -3,6 +3,7 @@ package com.swp391.bookstreet.partner.service;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import com.swp391.bookstreet.partner.dto.PartnerApplicationResponse;
 import com.swp391.bookstreet.partner.dto.SubmitPartnerApplicationRequest;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
@@ -24,17 +25,20 @@ public class PartnerApplicationService {
     private final PartnerOrganizationRepository organizationRepository;
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventRootLockService eventRootLockService;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
     private final Clock clock;
 
     public PartnerApplicationService(
             PartnerOrganizationRepository organizationRepository,
             PartnerEventApplicationRepository applicationRepository,
             EventRootLockService eventRootLockService,
+            OrganizerWorkItemNotificationService organizerNotifications,
             Clock clock
     ) {
         this.organizationRepository = organizationRepository;
         this.applicationRepository = applicationRepository;
         this.eventRootLockService = eventRootLockService;
+        this.organizerNotifications = organizerNotifications;
         this.clock = clock;
     }
 
@@ -92,10 +96,12 @@ public class PartnerApplicationService {
                 now
         );
         try {
-            return PartnerApplicationResponse.from(applicationRepository.saveAndFlush(application));
+            application = applicationRepository.saveAndFlush(application);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateApplication();
         }
+        organizerNotifications.applicationSubmitted(event, application);
+        return PartnerApplicationResponse.from(application);
     }
 
     @Transactional
