@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-04`
+Last updated: `2026-11-05`
 
 ## Current implementation status
 
@@ -127,8 +127,8 @@ Last updated: `2026-11-04`
 - Sprint 10 PR #122 merged at `280588c` on 2026-11-04. It implements V16, role-aware Notification
   persistence and constraints, the shared writer/query/read foundation, all four role endpoint families,
   Participant backend compatibility, producer-free Admin operations, exact-role security, no-store
-  handling and focused migration/concurrency coverage. Partner and Organizer domain producers and their
-  real frontend inboxes remain assigned to PR 2 and PR 3.
+  handling and focused migration/concurrency coverage. Partner PR #124/#125 and Organizer PR #126 are
+  also merged; Admin/shared frontend integration and final cross-role closure remain active.
 - The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
   free version. One assigned Heritage Owner consumes that migration and owns the entity,
   repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
@@ -273,14 +273,12 @@ V1 through V16 are now immutable.
 
 ## Next implementation task
 
-- Developer B implements PR 2 from updated `main`: approved Partner outcome producers plus the real Partner
-  preview/full inbox, focused transaction/suppression tests and Partner browser evidence.
-- Developer C follows the documented Organizer PR 3 scope. Its Booth re-selection integration starts from
-  merged PR 2 because Payment/Hold/Assignment paths overlap Developer B ownership.
-- After PR 2 and PR 3 merge, Developer A rebases PR 4 for Admin/shared frontend integration; PR 5 then
-  consolidates all 52 Acceptance Criteria and closure evidence.
-- The BR-81 exact-deadline equality discrepancy must be resolved separately before Organizer Booth
-  re-selection implementation; it does not block Partner PR 2 work outside that decision.
+- Developer A completes the remaining Admin/shared frontend integration: genuine producer-free Admin
+  empty/failure behavior, current API mapping, and bounded refresh without fabricated categories.
+- Complete cross-role navigation and browser regression coverage, then consolidate all 52 Acceptance
+  Criteria and closure evidence.
+- BR-81 equality is resolved as inclusive: exact Booth request deadline is allowed; only a later backend
+  time is rejected. Preserve the canonical predicate with focused boundary tests.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
   independent and creates no Notification broadcast.
 
@@ -289,8 +287,8 @@ V1 through V16 are now immutable.
 Sprint 09 Heritage Public Content is the latest completed Sprint as of 2026-11-01.
 
 Sprint 10 Role-Scoped In-App Notifications is the active Sprint as of 2026-11-03. It is not yet complete
-and now has its V16/shared backend foundation merged through PR #122 at `280588c`. Partner, Organizer,
-shared frontend and final closure units remain open.
+and now has its foundation, Partner and Organizer units merged through PR #126. Admin/shared frontend and
+final cross-role closure units remain open.
 
 Sprint 8 includes these approved Use Case slices:
 

@@ -2,12 +2,14 @@
 
 ## Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `ACTIVE - PR 1 MERGED; PARTNER PR 2 NEXT`
+- Status: `ACTIVE - PARTNER/ORGANIZER MERGED; ADMIN/CLOSURE IN PROGRESS`
 - Activation date: `2026-11-03`
 - Previous completed Sprint: `Sprint 09 Heritage Public Content`
 - Approved documentation: PR #116, merge commit `3a0a76b`
 - Current implemented schema: immutable Flyway migrations `V1` through `V16`
 - Sprint 10 foundation: PR #122, merge commit `280588c`
+- Partner inbox and producers: PR #124 (`7a8518a`) and PR #125 (`5fde175`)
+- Organizer inbox and producers: PR #126, merge commit `e9a0355`
 - Implemented Sprint 10 migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
 - Sprint baseline: `docs/sprints/sprint-10.md`
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
@@ -72,9 +74,10 @@ PR #122 merged the Developer A foundation into `main` at `280588c`. The delivere
 - Participant backend compatibility and real database-backed Admin operations with no producer
 - focused migration, repository, service, controller, security and concurrency tests
 
-The next implementation unit is Developer B's PR 2 for Partner producers and the real Partner inbox.
-Developer C may prepare role-local work but must base the Booth re-selection integration on merged PR 2.
-After PR 2 and PR 3 merge, Developer A owns PR 4 shared/Admin frontend integration and PR 5 closure.
+PR #124 and PR #125 delivered the Partner inbox and approved Partner producers. PR #126 delivered the
+Organizer inbox and approved Organizer producers. The current implementation unit is Developer A's
+Admin/shared frontend integration and Sprint closure: genuine Admin empty/failure behavior, cross-role
+navigation and browser regression coverage, documentation synchronization, and final audit evidence.
 
 ## Non-negotiable implementation rules
 
@@ -86,8 +89,8 @@ After PR 2 and PR 3 merge, Developer A owns PR 4 shared/Admin frontend integrati
 - Every approved producer joins the owning domain transaction; existing email remains after commit.
 - No Admin producer, combined inbox, NotificationType table, sender, preference, outbox, SMS, push,
   WebSocket, SSE, polling, mock fallback or localStorage read truth is allowed.
-- The BR-81 exact-deadline equality discrepancy must be resolved separately before implementing
-  Organizer Booth re-selection; it does not block Partner PR 2 work outside that decision.
+- BR-81 equality is inclusive: Organizer Booth selection is allowed at the exact request deadline and
+  rejected only when backend time is later. The canonical predicate and boundary tests must preserve it.
 - Do not commit `.env`, credentials, local database URLs, demo-only data or local scripts.
 
 ## Explicitly out of scope
@@ -106,4 +109,5 @@ Sprint 10 documentation was reviewed and merged through PR #116. The active Busi
 MVP Scope, Sprint pointer and AI context were promoted on `2026-11-03`. Developer A reserved V16 after
 confirming updated `main` contained only immutable migrations V1 through V15. PR #122 subsequently
 implemented V16 and the shared role-scoped Notification backend foundation and merged it at `280588c` on
-`2026-11-04`. V1 through V16 are now immutable; Partner PR 2 is the next delivery unit.
+`2026-11-04`. Partner PR #124/#125 and Organizer PR #126 are also merged. V1 through V16 are immutable;
+Admin/shared integration and final closure verification are the remaining Sprint 10 delivery unit.

@@ -75,9 +75,14 @@ export const PartnerEventApplicationsPage: React.FC<PartnerEventApplicationsPage
     try {
       const ownApplications = await partnerApi.getApplications();
       setApplications(ownApplications);
-      const requestedApplicationId = new URLSearchParams(location.search).get('application');
-      if (requestedApplicationId) {
-        setDetailApplication(ownApplications.find(application => application.id === requestedApplicationId) || null);
+      const params = new URLSearchParams(location.search);
+      const requestedApplicationId = params.get('application');
+      const requestedEventId = params.get('eventId');
+      if (requestedApplicationId || requestedEventId) {
+        setDetailApplication(ownApplications.find(application =>
+          requestedApplicationId
+            ? application.id === requestedApplicationId
+            : application.eventId === requestedEventId) || null);
       }
     } catch (error) {
       setErrorMessage(partnerApplicationErrorMessage(error));
