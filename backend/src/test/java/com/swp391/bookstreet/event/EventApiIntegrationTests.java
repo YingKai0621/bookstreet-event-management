@@ -109,6 +109,9 @@ class EventApiIntegrationTests {
     void cleanup() {
         SecurityContextHolder.clearContext();
         if (owner != null && other != null) {
+            jdbc.update("delete from notifications where recipient_role = 'PARTNER' "
+                    + "and event_id in (select event_id from events where organizer_user_id in (?, ?))",
+                    owner, other);
             jdbc.update("delete from events where organizer_user_id in (?, ?)", owner, other);
             jdbc.update("delete from users where user_id in (?, ?)", owner, other);
         }
@@ -1566,6 +1569,8 @@ class EventApiIntegrationTests {
 
     private void deleteCancellationRecipients(List<CancellationRecipientFixture> recipients) {
         for (CancellationRecipientFixture recipient : recipients.reversed()) {
+            jdbc.update("delete from notifications where recipient_user_id = ? and recipient_role = 'PARTNER'",
+                    recipient.userId());
             jdbc.update("delete from partner_event_applications where application_id = ?",
                     recipient.applicationId());
             jdbc.update("delete from partner_organizations where partner_organization_id = ?",

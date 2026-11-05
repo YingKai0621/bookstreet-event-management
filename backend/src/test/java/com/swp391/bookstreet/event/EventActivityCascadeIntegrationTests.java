@@ -97,6 +97,7 @@ class EventActivityCascadeIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
         jdbc.update("delete from notifications where event_id in "
                 + "(select event_id from events where organizer_user_id = ?)", organizerId);
         jdbc.update("delete from attendances where activity_registration_id in "
@@ -211,6 +212,12 @@ class EventActivityCascadeIntegrationTests {
                 .isEqualTo("EVENT_CANCELLATION");
         assertThat(dbStatus("activity_requests", "activity_request_id", requestId))
                 .isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "event_id = ? and recipient_role = 'PARTNER' and notification_type = 'PARTNER_EVENT_CANCELLED'",
+                Integer.class, eventId)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "recipient_role = 'PARTNER' and (activity_proposal_id = ? or activity_request_id = ?)",
+                Integer.class, proposalId, requestId)).isZero();
         Instant firstCancelledAt = jdbc.queryForObject(
                 "select cancelled_at from activities where activity_id = ?",
                 Instant.class, activityId);

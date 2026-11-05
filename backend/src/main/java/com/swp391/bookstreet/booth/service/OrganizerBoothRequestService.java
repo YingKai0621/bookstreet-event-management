@@ -24,6 +24,7 @@ import com.swp391.bookstreet.event.repository.EventRepository;
 import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.entity.PartnerOrganization;
+import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -49,6 +50,7 @@ public class OrganizerBoothRequestService {
     private final BoothHoldExpiryService expiryService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
 
     public OrganizerBoothRequestService(EventRepository eventRepository,
             EventRootLockService eventRootLockService,
@@ -61,7 +63,7 @@ public class OrganizerBoothRequestService {
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
             ApplicationEventPublisher eventPublisher,
-            Clock clock) {
+            PartnerOutcomeNotificationService outcomeNotifications, Clock clock) {
         this.eventRepository = eventRepository;
         this.eventRootLockService = eventRootLockService;
         this.boothRepository = boothRepository;
@@ -74,6 +76,7 @@ public class OrganizerBoothRequestService {
         this.expiryService = expiryService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.outcomeNotifications = outcomeNotifications;
     }
 
     public BoothPageResponse<BoothRequestResponse> list(Long eventId, int page, int size,
@@ -104,6 +107,7 @@ public class OrganizerBoothRequestService {
                 .orElseThrow(OrganizerBoothRequestService::requestNotFound);
         requirePending(request);
         request.reject(command.reviewNote().trim(), clock.instant());
+        outcomeNotifications.boothChanged(request);
         return BoothRequestResponse.from(requestRepository.saveAndFlush(request));
     }
 
@@ -170,7 +174,10 @@ public class OrganizerBoothRequestService {
                 assignmentRepository.save(BoothAssignment.create(hold, selectedAt));
                 requestRepository.findCompetingForUpdate(
                                 eventId, boothId, BoothRequestStatus.PENDING)
-                        .forEach(competing -> competing.notSelected(selectedAt));
+                        .forEach(competing -> {
+                            competing.notSelected(selectedAt);
+                            outcomeNotifications.boothChanged(competing);
+                        });
                 assignmentRepository.flush();
             }
         } catch (DataIntegrityViolationException error) {
@@ -179,6 +186,8 @@ public class OrganizerBoothRequestService {
             }
             throw error;
         }
+
+        outcomeNotifications.boothChanged(request);
 
         eventPublisher.publishEvent(selectionMessage(request, event, hold));
         return BoothRequestResponse.from(request, hold);

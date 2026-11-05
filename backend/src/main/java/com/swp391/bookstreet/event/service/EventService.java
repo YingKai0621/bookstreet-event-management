@@ -18,6 +18,7 @@ import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import com.swp391.bookstreet.registration.service.EventParticipantCancellationService;
 import java.time.Clock;
 import java.time.Instant;
@@ -63,6 +64,7 @@ public class EventService {
     private final EventParticipantCancellationService participantCancellationService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
 
     public EventService(EventRepository repository, EventCurrentUser currentUser,
             EventValidation validation, EventRootLockService eventRootLockService,
@@ -76,7 +78,7 @@ public class EventService {
             PartnerEventApplicationRepository partnerApplicationRepository,
             EventParticipantCancellationService participantCancellationService,
             ApplicationEventPublisher eventPublisher,
-            Clock clock) {
+            PartnerOutcomeNotificationService outcomeNotifications, Clock clock) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.validation = validation;
@@ -92,6 +94,7 @@ public class EventService {
         this.participantCancellationService = participantCancellationService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.outcomeNotifications = outcomeNotifications;
     }
 
     @Transactional
@@ -248,6 +251,7 @@ public class EventService {
         participantCancellationService.cancelEvent(
                 id, event.getName(), seatActiveActivityIds, now);
         repository.flush();
+        outcomeNotifications.eventCancelled(event);
         eventPublisher.publishEvent(new EventCancellationMessageRequested(
                 event.getEventId(), event.getName(), event.getCancelledAt(),
                 event.getCancellationReason(), partnerApplicationRepository

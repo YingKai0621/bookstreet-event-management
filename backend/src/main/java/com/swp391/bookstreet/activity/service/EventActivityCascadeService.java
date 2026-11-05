@@ -69,11 +69,13 @@ public class EventActivityCascadeService {
         closeOpenProposals(eventId, now, true);
         for (Activity activity : activityRepository.findByEventIdForUpdate(eventId)) {
             activity.advanceTimedLifecycle(now);
+            boolean cancelledBySystem = activity.getStatus() == ActivityStatus.DRAFT;
             if (activity.getStatus() == ActivityStatus.DRAFT) {
                 activity.cancel(EVENT_COMPLETION_REASON,
                         ActivityCancellationSource.SYSTEM, now);
+                notificationService.activityCancelledBySystem(activity, now);
             }
-            closePendingRequests(activity.getActivityId(), now, true);
+            closePendingRequests(activity.getActivityId(), now, !cancelledBySystem);
             participation.finalizeCompleted(activity, now);
         }
     }
