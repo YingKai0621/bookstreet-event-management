@@ -16,14 +16,38 @@ const selectedBoothRequest = { boothRequestId: 51, eventId: 101, boothId: 11, bo
   hold: activeBoothHold };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean; notifications?: boolean; notificationsFailure?: boolean; readFailure?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
+  let notificationRead = false;
+  const notification = { notificationId: 301, type: 'PARTNER_APPLICATION_STATUS_CHANGED',
+    title: 'Hồ sơ tham gia đã được duyệt', message: 'Hồ sơ tham gia sự kiện của bạn đã được chấp thuận.',
+    referenceType: 'PARTNER_APPLICATION', referenceId: 31, contextEventId: 101,
+    createdAt: stamp, readAt: null as string | null, read: false };
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
     if (path.endsWith('/auth/me')) return json(route, { userId: 2, username: 'partner', fullName: 'Partner Demo', email: 'partner@example.com', emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'PARTNER'] });
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-csrf' });
+    if (path.endsWith('/partner/notifications/unread-count')) return json(route, { unreadCount: scenario.notifications && !notificationRead ? 1 : 0 });
+    if (path.endsWith('/partner/notifications/read-all') && method === 'POST') {
+      const changed = scenario.notifications && !notificationRead ? 1 : 0;
+      notificationRead = true;
+      return json(route, { updatedCount: changed });
+    }
+    if (path.endsWith('/partner/notifications/301/read') && method === 'POST') {
+      if (scenario.readFailure) return json(route, { code: 'UNAVAILABLE', message: 'Read failed' }, 503);
+      notificationRead = true;
+      return json(route, { ...notification, readAt: stamp, read: true });
+    }
+    if (path.endsWith('/partner/notifications')) {
+      if (scenario.notificationsFailure) return json(route, { code: 'UNAVAILABLE', message: 'List failed' }, 503);
+      const params = new URL(route.request().url()).searchParams;
+      const visible = scenario.notifications && params.get('read') !== (notificationRead ? 'false' : 'true')
+        && (!params.get('type') || params.get('type') === notification.type)
+        ? [{ ...notification, readAt: notificationRead ? stamp : null, read: notificationRead }] : [];
+      return json(route, { content: visible, page: 0, size: Number(params.get('size') || 20), totalElements: visible.length, totalPages: visible.length ? 1 : 0 });
+    }
     if (path.endsWith('/partner/organization')) return scenario.missingProfile ? json(route, { code: 'PARTNER_ORGANIZATION_NOT_FOUND', message: 'Chưa có hồ sơ' }, 404)
       : json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: '', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
     if (path.endsWith('/partner/applications')) {
@@ -65,7 +89,7 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
       return json(route, paged(scenario.history ? [otherEvent] : publishedEvents));
     }
     if (path.endsWith('/heritages')) return json(route, []);
-    if (path.includes('/activity-proposals') || path.includes('/notifications') || path.endsWith('/partner/schedule')) state.unsupported.push(path);
+    if (path.includes('/activity-proposals') || path.endsWith('/partner/schedule')) state.unsupported.push(path);
     return json(route, { code: 'NOT_FOUND', message: 'Không có API này' }, 404);
   });
   return state;
@@ -84,6 +108,38 @@ test('partner workspace shows real overview, upcoming event, actionable task, an
   await expect(page.getByRole('heading', { name: 'Hoạt động gần đây' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Hồ sơ sự kiện được duyệt' })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('partner-workspace.png'), fullPage: true });
+});
+
+test('Partner opens a real inbox, filters it, and reads an application outcome', async ({ page }) => {
+  await setup(page, { notifications: true });
+  await page.goto('/partner/notifications');
+  await expect(page.getByRole('heading', { name: 'Thông báo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
+  await page.getByLabel('Loại').selectOption('PARTNER_BOOTH_REQUEST_STATUS_CHANGED');
+  await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
+  await page.getByLabel('Loại').selectOption('all');
+  await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
+  await expect(page).toHaveURL(/\/partner\/events\?application=31$/);
+  await page.goto('/partner/notifications');
+  await page.getByLabel('Trạng thái').selectOption('unread');
+  await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
+});
+
+test('Partner inbox keeps API failure separate from an empty result', async ({ page }) => {
+  await setup(page, { notificationsFailure: true });
+  await page.goto('/partner/notifications');
+  await expect(page.getByRole('alert').filter({ hasText: 'Không tải được thông báo' })).toBeVisible();
+  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+});
+
+test('Partner read failure leaves a notification unread', async ({ page }) => {
+  await setup(page, { notifications: true, readFailure: true });
+  await page.goto('/partner/notifications');
+  await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Không thể đánh dấu đã đọc' })).toBeVisible();
+  await expect(page).toHaveURL(/\/partner\/notifications$/);
+  await page.getByLabel('Trạng thái').selectOption('unread');
+  await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
 });
 
 test('dashboard shows profile action only when profile is missing', async ({ page }) => {

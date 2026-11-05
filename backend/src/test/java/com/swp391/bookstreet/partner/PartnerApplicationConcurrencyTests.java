@@ -58,6 +58,13 @@ class PartnerApplicationConcurrencyTests {
 
     @AfterEach
     void removeCommittedFixture() {
+        jdbc.update("""
+                DELETE FROM notifications
+                WHERE partner_event_application_id IN (
+                    SELECT application_id FROM partner_event_applications WHERE event_id = ?
+                )
+                OR recipient_user_id IN (?, ?)
+                """, eventId, partnerUserId, organizerUserId);
         jdbc.update("DELETE FROM partner_event_applications WHERE event_id = ?", eventId);
         jdbc.update("DELETE FROM partner_organizations WHERE partner_organization_id = ?", organizationId);
         jdbc.update("DELETE FROM events WHERE event_id = ?", eventId);

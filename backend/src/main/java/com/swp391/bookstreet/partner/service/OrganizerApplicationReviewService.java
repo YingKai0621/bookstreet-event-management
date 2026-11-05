@@ -18,15 +18,18 @@ public class OrganizerApplicationReviewService {
 
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventRootLockService eventRootLockService;
+    private final PartnerOutcomeNotificationService outcomeNotifications;
     private final Clock clock;
 
     public OrganizerApplicationReviewService(
             PartnerEventApplicationRepository applicationRepository,
             EventRootLockService eventRootLockService,
+            PartnerOutcomeNotificationService outcomeNotifications,
             Clock clock
     ) {
         this.applicationRepository = applicationRepository;
         this.eventRootLockService = eventRootLockService;
+        this.outcomeNotifications = outcomeNotifications;
         this.clock = clock;
     }
 
@@ -115,6 +118,7 @@ public class OrganizerApplicationReviewService {
         } else {
             application.reject(reviewNote, clock.instant());
         }
+        outcomeNotifications.applicationReviewed(application);
 
         return new OrganizerApplicationResponse(
                 application.getId(),

@@ -1,140 +1,116 @@
-import { PaginatedList } from '../../components/ui/PaginatedList';
-import {
-  Bell,
-  Calendar,
-  CheckCheck,
-  Clock,
-  ExternalLink,
-  Layers,
-  Store
-} from 'lucide-react';
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Language, PartnerNotification } from '../../types';
+import { Bell, CheckCheck, ExternalLink, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CompactPagination } from '../../components/ui/CompactPagination';
+import { PARTNER_NOTIFICATION_TYPES, notifyPartnerNotificationsChanged, partnerNotificationTarget,
+  partnerNotificationsApi, type PartnerNotificationItem, type PartnerNotificationType } from '../../services/partnerNotificationsApi';
+import type { Language } from '../../types';
 import './PartnerPages.css';
 
-interface PartnerNotificationsPageProps {
-  language: Language;
-  notifications: PartnerNotification[];
-  onMarkAllAsRead: () => void;
-  onMarkItemAsRead: (id: string) => void;
-}
-
-export const PartnerNotificationsPage: React.FC<PartnerNotificationsPageProps> = ({
-  language,
-  notifications,
-  onMarkAllAsRead,
-  onMarkItemAsRead,
-}) => {
-  const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
-
-  const filteredNotifs = notifications.filter(n => {
-    if (filterType === 'unread') return !n.isRead;
-    return true;
-  });
-
-  const getNotifIcon = (type: string) => {
-    switch (type) {
-      case 'activity':
-        return <Layers size={18} />;
-      case 'booth':
-        return <Store size={18} />;
-      case 'reminder':
-        return <Clock size={18} />;
-      case 'event':
-        return <Calendar size={18} />;
-      default:
-        return <Bell size={18} />;
-    }
-  };
-
-  return (
-    <div className="partner-notifications-page">
-      {/* 1. Header matching Sketch Screen 8 */}
-      <div className="partner-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 className="partner-page-title workspace-page-title">
-            {language === 'vi' ? 'Thông báo' : 'Notifications'}
-          </h1>
-          <p className="partner-page-sub workspace-page-subtitle">
-            {language === 'vi' 
-              ? 'Cập nhật phê duyệt, phản hồi gian hàng và lịch trình từ Ban Quản Lý.' 
-              : 'Updates on activity approvals, booth requests, and schedule reminders.'}
-          </p>
-        </div>
-
-        {/* Filter & Actions matching Sketch Screen 8 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
-            style={{
-              padding: '0.45rem 0.85rem',
-              borderRadius: '8px',
-              border: '1px solid #D5DFDC',
-              fontSize: '0.84rem',
-              backgroundColor: '#FFFFFF',
-              color: '#172421',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">{language === 'vi' ? 'Tất cả' : 'All'}</option>
-            <option value="unread">{language === 'vi' ? 'Chưa đọc' : 'Unread'}</option>
-          </select>
-
-          <button
-            type="button"
-            className="btn-part-secondary"
-            onClick={onMarkAllAsRead}
-          >
-            <CheckCheck size={15} />
-            <span>{language === 'vi' ? 'Đánh dấu đã đọc' : 'Mark All as Read'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Notifications List Container matching Sketch Screen 8 */}
-      <PaginatedList items={filteredNotifs}>{pageItems => (<div className="notifications-list-container">
-        {filteredNotifs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#637771' }}>
-            <p>{language === 'vi' ? 'Không có thông báo mới nào.' : 'No notifications found.'}</p>
-          </div>
-        ) : (
-          pageItems.map((item) => (
-            <div 
-              key={item.id} 
-              className={`notification-row-item ${!item.isRead ? 'unread' : ''}`}
-              onClick={() => onMarkItemAsRead(item.id)}
-            >
-              <div className={`notif-icon-circle ${item.type}`}>
-                {getNotifIcon(item.type)}
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: item.isRead ? 500 : 700, color: '#172421', lineHeight: 1.4 }}>
-                  {item.title}
-                </div>
-                <div style={{ fontSize: '0.76rem', color: '#8C9F9A', marginTop: '0.25rem' }}>
-                  {item.time}
-                </div>
-              </div>
-
-              {item.link && (
-                <Link 
-                  to={item.link} 
-                  className="btn-part-secondary" 
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', gap: '0.3rem' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span>{language === 'vi' ? 'Xem' : 'View'}</span>
-                  <ExternalLink size={13} />
-                </Link>
-              )}
-            </div>
-          ))
-        )}
-      </div>)}</PaginatedList>
-    </div>
-  );
+const LABELS: Record<PartnerNotificationType, string> = {
+  PARTNER_APPLICATION_STATUS_CHANGED: 'Hồ sơ tham gia sự kiện',
+  PARTNER_BOOTH_REQUEST_STATUS_CHANGED: 'Yêu cầu gian hàng',
+  PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED: 'Đề xuất hoạt động',
+  PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED: 'Yêu cầu thay đổi hoạt động',
+  PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED: 'Yêu cầu hủy hoạt động',
+  PARTNER_EVENT_CANCELLED: 'Sự kiện bị hủy',
+  PARTNER_ACTIVITY_CANCELLED: 'Hoạt động bị hủy',
 };
 
+export function PartnerNotificationsPage({ language }: { language: Language }) {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<PartnerNotificationItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [pages, setPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [read, setRead] = useState<'all' | 'unread' | 'read'>('all');
+  const [type, setType] = useState<'all' | PartnerNotificationType>('all');
+  const [revision, setRevision] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    // oxlint-disable-next-line react/set-state-in-effect
+    setLoading(true);
+    setError('');
+    partnerNotificationsApi.list({ page, size: 10,
+      read: read === 'all' ? undefined : read === 'read',
+      type: type === 'all' ? undefined : type,
+    }).then(result => {
+      if (!active) return;
+      if (!Array.isArray(result.content)) throw new Error('Phản hồi thông báo không hợp lệ.');
+      setItems(result.content);
+      setPages(result.totalPages);
+      setTotal(result.totalElements);
+      if (result.totalPages > 0 && page >= result.totalPages) setPage(result.totalPages - 1);
+    }).catch(cause => {
+      if (!active) return;
+      setError(cause?.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+        : cause?.status === 403 ? 'Bạn không có quyền xem thông báo Partner.'
+          : 'Không tải được thông báo. Vui lòng thử lại.');
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, read, revision, type]);
+
+  async function openItem(item: PartnerNotificationItem) {
+    if (pending) return;
+    setPending(true);
+    setActionError('');
+    try {
+      if (!item.read) await partnerNotificationsApi.markRead(item.notificationId);
+      notifyPartnerNotificationsChanged();
+      setRevision(value => value + 1);
+      const target = partnerNotificationTarget(item);
+      if (target) navigate(target);
+      else setActionError('Nội dung được nhắc đến hiện không mở được từ thông báo này.');
+    } catch { setActionError('Không thể đánh dấu đã đọc. Vui lòng thử lại.'); }
+    finally { setPending(false); }
+  }
+
+  async function markAll() {
+    if (pending) return;
+    setPending(true);
+    setActionError('');
+    try {
+      await partnerNotificationsApi.markAllRead();
+      notifyPartnerNotificationsChanged();
+      setRevision(value => value + 1);
+    } catch { setActionError('Không thể đánh dấu tất cả đã đọc. Vui lòng thử lại.'); }
+    finally { setPending(false); }
+  }
+
+  return <div className="partner-notifications-page">
+    <div className="partner-page-header"><div><h1 className="partner-page-title workspace-page-title">Thông báo</h1>
+      <p className="partner-page-sub workspace-page-subtitle">Kết quả hồ sơ, gian hàng và hoạt động của bạn.</p></div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" onClick={() => setRevision(value => value + 1)} disabled={loading} aria-label="Tải lại thông báo"><RefreshCw size={17} /> Tải lại</button>
+        <button type="button" onClick={() => void markAll()} disabled={pending || loading || total === 0}><CheckCheck size={17} /> Đã đọc tất cả</button>
+      </div></div>
+    <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+      <label>Trạng thái <select value={read} onChange={event => { setRead(event.target.value as typeof read); setPage(0); }}>
+        <option value="all">Tất cả</option><option value="unread">Chưa đọc</option><option value="read">Đã đọc</option>
+      </select></label>
+      <label>Loại <select value={type} onChange={event => { setType(event.target.value as typeof type); setPage(0); }}>
+        <option value="all">Tất cả</option>{PARTNER_NOTIFICATION_TYPES.map(value => <option key={value} value={value}>{LABELS[value]}</option>)}
+      </select></label></div>
+    {actionError && <p role="alert">{actionError}</p>}
+    {loading ? <p role="status">Đang tải thông báo...</p>
+      : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
+        : items.length === 0 ? <div className="notifications-list-container" style={{ padding: 30 }}>
+          <Bell size={25} /><p>{read !== 'all' || type !== 'all' ? 'Không có thông báo phù hợp bộ lọc.' : 'Bạn chưa có thông báo nào.'}</p>
+        </div> : <div className="notifications-list-container">
+          {items.map(item => <button type="button" key={item.notificationId} disabled={pending}
+            onClick={() => void openItem(item)} className={`notification-row-item ${item.read ? '' : 'unread'}`}
+            style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 15 }}>
+            <span className="notif-icon-circle"><Bell size={18} /></span>
+            <span style={{ flex: 1 }}><strong>{item.title}</strong><span style={{ display: 'block' }}>{item.message}</span>
+              <small>{LABELS[item.type] || 'Thông báo'} · {new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(item.createdAt))}</small></span>
+            {partnerNotificationTarget(item) && <ExternalLink size={16} />}
+          </button>)}
+        </div>}
+    {!loading && !error && pages > 1 && <CompactPagination page={page} pages={pages} total={total} onPage={setPage} />}
+  </div>;
+}
