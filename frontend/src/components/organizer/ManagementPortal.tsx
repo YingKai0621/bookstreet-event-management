@@ -41,6 +41,13 @@ import {
   type OrganizerDashboardSummary,
   OrganizerPartnerApplication,
 } from '../../services/organizerApi';
+import {
+  ORGANIZER_NOTIFICATIONS_CHANGED,
+  notifyOrganizerNotificationsChanged,
+  organizerNotificationTarget,
+  organizerNotificationsApi,
+  type OrganizerNotificationItem,
+} from '../../services/organizerNotificationsApi';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { BoothRequest } from '../../types/booth';
@@ -50,7 +57,6 @@ import {
   OrganizerEvent,
   OrganizerEventRequest,
   OrganizerEventUpdateRequest,
-  OrganizerNotificationItem,
   OrganizerProfile,
   OrganizerTab,
 } from '../../types/organizer';
@@ -154,6 +160,11 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
   const [boothsList, setBoothsList] = useState<OrganizerBoothItem[]>([]);
   const activitiesList: OrganizerActivityItem[] = [];
   const [notificationsList, setNotificationsList] = useState<OrganizerNotificationItem[]>([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState<number | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationError, setNotificationError] = useState('');
+  const [notificationActionError, setNotificationActionError] = useState('');
+  const [notificationPending, setNotificationPending] = useState(false);
   const [profile, setProfile] = useState<OrganizerProfile>(() => {
     const fullName = user?.fullName || '';
     const initials = fullName.split(' ').filter(Boolean).map(part => part[0]).join('').slice(-2).toUpperCase();
@@ -186,10 +197,46 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     }
   }, [navigateToTab]);
 
+  const refreshNotifications = useCallback(async () => {
+    setNotificationLoading(true);
+    setNotificationError('');
+    setNotificationActionError('');
+    try {
+      const [page, count] = await Promise.all([
+        organizerNotificationsApi.list({ page: 0, size: 5 }),
+        organizerNotificationsApi.unreadCount(),
+      ]);
+      if (!Array.isArray(page.content) || !Number.isFinite(count.unreadCount)) {
+        throw new Error('Invalid Organizer notification response');
+      }
+      setNotificationsList(page.content);
+      setNotificationUnreadCount(count.unreadCount);
+    } catch (error) {
+      setNotificationError(error instanceof ApiError && error.status === 401
+        ? 'Phiên đăng nhập đã hết hạn.'
+        : error instanceof ApiError && error.status === 403
+          ? 'Bạn không có quyền xem thông báo Organizer.'
+          : 'Không tải được thông báo.');
+    } finally {
+      setNotificationLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Organizer data is synchronized with the current route by this async loader.
     void refreshOrganizerData().catch(error => { console.warn('Could not load organizer data', error); setLoadError(error instanceof Error ? error.message : 'Không tải được dữ liệu điều hành'); setIsLoadingEvents(false); });
   }, [refreshOrganizerData]);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Workspace entry synchronizes the role-scoped preview and badge.
+    void refreshNotifications();
+    window.addEventListener(ORGANIZER_NOTIFICATIONS_CHANGED, refreshNotifications);
+    return () => window.removeEventListener(ORGANIZER_NOTIFICATIONS_CHANGED, refreshNotifications);
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    if (activeTab === 'notifications') void refreshNotifications();
+  }, [activeTab, refreshNotifications]);
 
   useEffect(() => {
     if (activeTab !== 'event_detail' || !selectedEventId) return;
@@ -294,9 +341,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       active = false;
     };
   }, [selectedEventId]);
-
-  // Unread notifications count
-  const unreadCount = notificationsList.filter(n => !n.isRead).length;
 
   const handleApprovePartnerApplication = async (
     applicationId: string,
@@ -419,8 +463,45 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
 
   // Notification Mark All as Read
   const handleMarkAllNotificationsRead = async () => {
-    await organizerApi.markAllNotificationsRead();
-    setNotificationsList(await organizerApi.getNotifications());
+    if (notificationPending) return;
+    setNotificationPending(true);
+    setNotificationActionError('');
+    try {
+      await organizerNotificationsApi.markAllRead();
+      setNotificationUnreadCount(0);
+      notifyOrganizerNotificationsChanged();
+    } catch {
+      setNotificationActionError('Không thể đánh dấu tất cả đã đọc. Vui lòng thử lại.');
+    } finally {
+      setNotificationPending(false);
+    }
+  };
+
+  const handleOpenNotification = async (item: OrganizerNotificationItem) => {
+    if (notificationPending) return false;
+    setNotificationPending(true);
+    setNotificationActionError('');
+    try {
+      if (!item.read) {
+        const confirmed = await organizerNotificationsApi.markRead(item.notificationId);
+        setNotificationsList(current => current.map(value => value.notificationId === confirmed.notificationId
+          ? confirmed : value));
+        setNotificationUnreadCount(current => current === null ? null : Math.max(0, current - 1));
+        notifyOrganizerNotificationsChanged();
+      }
+      const target = organizerNotificationTarget(item);
+      if (target) {
+        navigate(target);
+        return true;
+      }
+      setNotificationActionError('Nội dung này hiện không thể mở từ thông báo.');
+      return false;
+    } catch {
+      setNotificationActionError('Không thể đánh dấu thông báo đã đọc. Vui lòng thử lại.');
+      return false;
+    } finally {
+      setNotificationPending(false);
+    }
   };
 
   // Find currently selected event
@@ -453,15 +534,19 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
       <OrganizerTopBar 
         language={language}
         profile={profile}
-        unreadCount={unreadCount}
+        unreadCount={notificationUnreadCount}
         notifications={notificationsList}
+        notificationLoading={notificationLoading}
+        notificationError={notificationError}
+        notificationActionError={notificationActionError}
+        notificationPending={notificationPending}
         onOpenNotifications={() => navigateToTab('notifications')}
+        onNotificationPopoverOpen={() => { void refreshNotifications(); }}
+        onOpenNotification={handleOpenNotification}
         onOpenProfile={() => navigateToTab('profile')}
         onLogout={onLogout}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-        onNavigateTab={(tab) => navigateToTab(tab)}
-        onMarkNotificationRead={(id) => { void organizerApi.markNotificationRead(id).then(() => organizerApi.getNotifications()).then(setNotificationsList); }}
-        onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+        onMarkAllNotificationsRead={() => { void handleMarkAllNotificationsRead(); }}
       />
 
       {/* 2. Body Container: Sidebar + Main Viewport */}
@@ -471,7 +556,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
           language={language}
           activeTab={activeTab}
           onSelectTab={(tab: OrganizerTab) => navigateToTab(tab)}
-          unreadNotificationsCount={unreadCount}
+          unreadNotificationsCount={notificationUnreadCount ?? 0}
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
           onLogout={onLogout}
@@ -613,12 +698,7 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
 
         {activeTab === 'notifications' && (
-          <OrganizerNotificationsView 
-            language={language}
-            notifications={notificationsList}
-            onMarkAllRead={handleMarkAllNotificationsRead}
-            onNavigateTab={(tab: OrganizerTab) => navigateToTab(tab)}
-          />
+          <OrganizerNotificationsView language={language} />
         )}
 
         {activeTab === 'profile' && (

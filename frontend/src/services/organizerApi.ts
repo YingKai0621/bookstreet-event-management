@@ -7,7 +7,6 @@ import {
   OrganizerEventUpdateRequest,
   OrganizerEventResponse,
   OrganizerEventStatus,
-  OrganizerNotificationItem,
   OrganizerProfile,
   OrganizerReport,
 } from '../types/organizer';
@@ -501,9 +500,6 @@ export const organizerApi = {
       avatarUrl: user.avatarUrl || undefined,
     };
   },
-  getNotifications: async (): Promise<OrganizerNotificationItem[]> => [],
-  markNotificationRead: async (_id: string): Promise<void> => undefined,
-  markAllNotificationsRead: async (): Promise<void> => undefined,
   async getEvents(page = 0, size = 100, sort = 'createdAt,desc'): Promise<OrganizerEvent[]> {
     const query = new URLSearchParams({
       page: String(page),

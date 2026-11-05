@@ -6,28 +6,31 @@ import {
   ChevronRight,
   LogOut,
   Menu,
-  MessageSquare,
-  Settings,
   Store,
   User,
   Users
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
-import { OrganizerNotificationItem, OrganizerProfile, OrganizerTab } from '../../types/organizer';
+import { OrganizerProfile } from '../../types/organizer';
+import type { OrganizerNotificationItem } from '../../services/organizerNotificationsApi';
 
 interface OrganizerTopBarProps {
   language: Language;
   profile: OrganizerProfile;
-  unreadCount: number;
+  unreadCount: number | null;
   notifications?: OrganizerNotificationItem[];
+  notificationLoading: boolean;
+  notificationError: string;
+  notificationActionError: string;
+  notificationPending: boolean;
   onOpenNotifications: () => void;
+  onNotificationPopoverOpen: () => void;
+  onOpenNotification: (item: OrganizerNotificationItem) => Promise<boolean>;
   onOpenProfile: () => void;
   onLogout?: () => void;
   onOpenMobileMenu: () => void;
-  onNavigateTab?: (tab: OrganizerTab) => void;
-  onMarkNotificationRead?: (id: string) => void;
-  onMarkAllNotificationsRead?: () => void;
+  onMarkAllNotificationsRead: () => void;
 }
 
 export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
@@ -35,12 +38,16 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
   profile,
   unreadCount,
   notifications = [],
+  notificationLoading,
+  notificationError,
+  notificationActionError,
+  notificationPending,
   onOpenNotifications,
+  onNotificationPopoverOpen,
+  onOpenNotification,
   onOpenProfile,
   onLogout,
   onOpenMobileMenu,
-  onNavigateTab,
-  onMarkNotificationRead,
   onMarkAllNotificationsRead
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -61,16 +68,17 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const getCategoryIcon = (category: OrganizerNotificationItem['category']) => {
-    switch (category) {
-      case 'booth': return <Store size={15} />;
-      case 'activity': return <Calendar size={15} />;
-      case 'participant': return <Users size={15} />;
-      case 'feedback': return <MessageSquare size={15} />;
-      case 'system': return <Settings size={15} />;
-      default: return <Bell size={15} />;
-    }
+  const getNotificationIcon = (notification: OrganizerNotificationItem) => {
+    if (notification.type === 'ORGANIZER_NEW_PARTNER_APPLICATION') return <Users size={15} />;
+    if (notification.type === 'ORGANIZER_NEW_BOOTH_REQUEST'
+        || notification.type === 'ORGANIZER_BOOTH_RESELECTION_REQUIRED') return <Store size={15} />;
+    return <Calendar size={15} />;
   };
+
+  const formatCreatedAt = (createdAt: string) => new Intl.DateTimeFormat(
+    language === 'vi' ? 'vi-VN' : 'en-US',
+    { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },
+  ).format(new Date(createdAt));
 
   const recentList = notifications.slice(0, 5);
 
@@ -106,12 +114,16 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
           <button
             type="button"
             className="organizer-icon-button"
-            onClick={() => setNotifPopupOpen(!notifPopupOpen)}
+            onClick={() => {
+              const opening = !notifPopupOpen;
+              setNotifPopupOpen(opening);
+              if (opening) onNotificationPopoverOpen();
+            }}
             aria-label="Xem thông báo"
             title={language === 'vi' ? 'Thông báo gần đây' : 'Recent notifications'}
           >
             <Bell size={18} />
-            {unreadCount > 0 && <span className="organizer-badge-dot"></span>}
+            {unreadCount !== null && unreadCount > 0 && <span className="organizer-badge-dot"></span>}
           </button>
 
           {notifPopupOpen && (
@@ -143,7 +155,7 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
                   <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#172421' }}>
                     {language === 'vi' ? 'Thông báo gần đây' : 'Recent Notifications'}
                   </span>
-                  {unreadCount > 0 && (
+                  {unreadCount !== null && unreadCount > 0 && (
                     <span style={{
                       background: '#FEE2E2',
                       color: '#991B1B',
@@ -157,9 +169,10 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
                   )}
                 </div>
 
-                {unreadCount > 0 && onMarkAllNotificationsRead && (
+                {unreadCount !== null && unreadCount > 0 && (
                   <button
                     type="button"
+                    disabled={notificationPending}
                     onClick={() => {
                       onMarkAllNotificationsRead();
                     }}
@@ -183,27 +196,34 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
 
               {/* Notification List */}
               <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
-                {recentList.length === 0 ? (
+                {notificationLoading ? (
+                  <div role="status" style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6B7280', fontSize: '0.84rem' }}>
+                    {language === 'vi' ? 'Đang tải thông báo...' : 'Loading notifications...'}
+                  </div>
+                ) : notificationError ? (
+                  <div role="alert" style={{ padding: '1.25rem 1rem', textAlign: 'center', color: '#991B1B', fontSize: '0.84rem' }}>
+                    <p>{notificationError}</p>
+                    <button type="button" onClick={onNotificationPopoverOpen}>
+                      {language === 'vi' ? 'Thử lại' : 'Retry'}
+                    </button>
+                  </div>
+                ) : recentList.length === 0 ? (
                   <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#6B7280', fontSize: '0.84rem' }}>
                     {language === 'vi' ? 'Không có thông báo nào.' : 'No notifications.'}
                   </div>
                 ) : (
                   recentList.map(notif => (
                     <div
-                      key={notif.id}
+                      key={notif.notificationId}
                       onClick={() => {
-                        if (onMarkNotificationRead) onMarkNotificationRead(notif.id);
-                        if (notif.targetTab && onNavigateTab) {
-                          onNavigateTab(notif.targetTab as OrganizerTab);
-                        } else {
-                          onOpenNotifications();
-                        }
-                        setNotifPopupOpen(false);
+                        void onOpenNotification(notif).then(navigated => {
+                          if (navigated) setNotifPopupOpen(false);
+                        });
                       }}
                       style={{
                         padding: '0.8rem 1rem',
                         borderBottom: '1px solid #F0F4F2',
-                        background: notif.isRead ? '#FFFFFF' : '#F4F9F6',
+                        background: notif.read ? '#FFFFFF' : '#F4F9F6',
                         cursor: 'pointer',
                         transition: 'background 0.15s ease',
                         display: 'flex',
@@ -211,28 +231,28 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
                         alignItems: 'flex-start'
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF6F2'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = notif.isRead ? '#FFFFFF' : '#F4F9F6'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = notif.read ? '#FFFFFF' : '#F4F9F6'; }}
                     >
                       <div style={{
                         width: 32,
                         height: 32,
                         borderRadius: '8px',
-                        background: notif.isRead ? '#F3F4F6' : '#DCFCE7',
-                        color: notif.isRead ? '#6B7280' : '#166534',
+                        background: notif.read ? '#F3F4F6' : '#DCFCE7',
+                        color: notif.read ? '#6B7280' : '#166534',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                         marginTop: '2px'
                       }}>
-                        {getCategoryIcon(notif.category)}
+                        {getNotificationIcon(notif)}
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', marginBottom: '2px' }}>
                           <span style={{
                             fontSize: '0.84rem',
-                            fontWeight: notif.isRead ? 600 : 750,
+                            fontWeight: notif.read ? 600 : 750,
                             color: '#172421',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -240,7 +260,7 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
                           }}>
                             {notif.title}
                           </span>
-                          {!notif.isRead && (
+                          {!notif.read && (
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />
                           )}
                         </div>
@@ -254,16 +274,20 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical'
                         }}>
-                          {notif.content}
+                          {notif.message}
                         </p>
                         <span style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '3px', display: 'inline-block' }}>
-                          {notif.timeAgo}
+                          {formatCreatedAt(notif.createdAt)}
                         </span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
+
+              {notificationActionError && <div role="alert" style={{ padding: '0.55rem 1rem', color: '#991B1B', fontSize: '0.76rem' }}>
+                {notificationActionError}
+              </div>}
 
               {/* Footer: View All */}
               <div style={{
