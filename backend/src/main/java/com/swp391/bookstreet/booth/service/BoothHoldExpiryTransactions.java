@@ -21,22 +21,25 @@ public class BoothHoldExpiryTransactions {
     private final BoothPaymentRepository paymentRepository;
     private final BoothRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
+    private final BoothReselectionNotificationService reselectionNotifications;
 
     public BoothHoldExpiryTransactions(EventRootLockService eventRootLockService,
             BoothHoldRepository holdRepository, BoothPaymentRepository paymentRepository,
-            BoothRequestRepository requestRepository, BoothAssignmentRepository assignmentRepository) {
+            BoothRequestRepository requestRepository,
+            BoothAssignmentRepository assignmentRepository,
+            BoothReselectionNotificationService reselectionNotifications) {
         this.eventRootLockService = eventRootLockService;
         this.holdRepository = holdRepository;
         this.paymentRepository = paymentRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
+        this.reselectionNotifications = reselectionNotifications;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int expire(Long eventId, Instant now) {
-        if (eventRootLockService.lock(eventId).isEmpty()) {
-            return 0;
-        }
+        var event = eventRootLockService.lock(eventId).orElse(null);
+        if (event == null) return 0;
         var holds = holdRepository.findByEventIdForUpdate(eventId);
         var payments = paymentRepository.findByEventIdForUpdate(eventId);
         Set<Long> blockedHolds = payments.stream()
@@ -53,6 +56,9 @@ public class BoothHoldExpiryTransactions {
                     && !assignmentRepository.existsByBoothHoldBoothHoldId(hold.getBoothHoldId())
                     && hold.expire(now)) {
                 expired++;
+                holdRepository.flush();
+                reselectionNotifications.notifyIfEligible(
+                        event, hold.getBoothRequest(), now);
             }
         }
         return expired;

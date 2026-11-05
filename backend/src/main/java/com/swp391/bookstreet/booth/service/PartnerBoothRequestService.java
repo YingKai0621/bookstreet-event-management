@@ -19,6 +19,7 @@ import com.swp391.bookstreet.booth.security.BoothCurrentUser;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
@@ -54,6 +55,8 @@ public class PartnerBoothRequestService {
     private final BoothAssignmentRepository assignmentRepository;
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
+    private final BoothReselectionNotificationService reselectionNotifications;
     private final Clock clock;
 
     public PartnerBoothRequestService(
@@ -67,6 +70,8 @@ public class PartnerBoothRequestService {
             BoothAssignmentRepository assignmentRepository,
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
+            OrganizerWorkItemNotificationService organizerNotifications,
+            BoothReselectionNotificationService reselectionNotifications,
             Clock clock
     ) {
         this.eventRootLockService = eventRootLockService;
@@ -79,6 +84,8 @@ public class PartnerBoothRequestService {
         this.assignmentRepository = assignmentRepository;
         this.currentUser = currentUser;
         this.expiryService = expiryService;
+        this.organizerNotifications = organizerNotifications;
+        this.reselectionNotifications = reselectionNotifications;
         this.clock = clock;
     }
 
@@ -141,6 +148,7 @@ public class PartnerBoothRequestService {
             }
             throw error;
         }
+        organizerNotifications.boothRequestSubmitted(event, request);
         return BoothRequestResponse.from(request);
     }
 
@@ -165,7 +173,7 @@ public class PartnerBoothRequestService {
         Long partnerUserId = currentUser.requirePartnerId();
         Long eventId = requestRepository.findOwnedEventIdById(requestId, partnerUserId)
                 .orElseThrow(PartnerBoothRequestService::requestNotFound);
-        eventRootLockService.lock(eventId)
+        Event event = eventRootLockService.lock(eventId)
                 .orElseThrow(PartnerBoothRequestService::requestNotFound);
         // Discover and lock the optional Hold before loading/locking the request.
         BoothHold hold = holdRepository.findOwnedByRequestIdForUpdate(requestId, partnerUserId)
@@ -185,12 +193,16 @@ public class PartnerBoothRequestService {
                     "Only a Pending or eligible Selected Booth request can be withdrawn.");
         }
         Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-        if (request.getStatus() == BoothRequestStatus.SELECTED) {
+        boolean selectedRelease = request.getStatus() == BoothRequestStatus.SELECTED;
+        if (selectedRelease) {
             requireReleasable(hold, payments, now);
             hold.release(now);
         }
         request.withdraw(now);
         requestRepository.flush();
+        if (selectedRelease) {
+            reselectionNotifications.notifyIfEligible(event, request, now);
+        }
         return BoothRequestResponse.from(request, hold);
     }
 

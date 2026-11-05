@@ -15,6 +15,7 @@ import com.swp391.bookstreet.booth.entity.LocationType;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
 import java.time.Clock;
@@ -37,6 +38,7 @@ public class PartnerActivityProposalService {
     private final ActivityValidationService validation;
     private final ActivityProposalLifecycleService proposalLifecycleService;
     private final ActivityProposalLifecycleTransactionService proposalLifecycleTransactions;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
     private final Clock clock;
 
     public PartnerActivityProposalService(ActivityProposalRepository proposalRepository,
@@ -47,6 +49,7 @@ public class PartnerActivityProposalService {
             ActivityValidationService validation,
             ActivityProposalLifecycleService proposalLifecycleService,
             ActivityProposalLifecycleTransactionService proposalLifecycleTransactions,
+            OrganizerWorkItemNotificationService organizerNotifications,
             Clock clock) {
         this.proposalRepository = proposalRepository;
         this.activityRepository = activityRepository;
@@ -57,6 +60,7 @@ public class PartnerActivityProposalService {
         this.validation = validation;
         this.proposalLifecycleService = proposalLifecycleService;
         this.proposalLifecycleTransactions = proposalLifecycleTransactions;
+        this.organizerNotifications = organizerNotifications;
         this.clock = clock;
     }
 
@@ -88,6 +92,7 @@ public class PartnerActivityProposalService {
                 fields.title(), fields.description(), fields.activityType(), fields.startAt(),
                 fields.endAt(), fields.capacity(), now);
         proposalRepository.saveAndFlush(proposal);
+        organizerNotifications.activityProposalSubmitted(event, proposal, false);
         return ownedView(proposal.getActivityProposalId(), representativeUserId);
     }
 
@@ -187,6 +192,7 @@ public class PartnerActivityProposalService {
                 application.getPartnerOrganization().getId());
         proposal.resubmit(now());
         proposalRepository.flush();
+        organizerNotifications.activityProposalSubmitted(locks.event(), proposal, true);
         return ownedView(proposalId, representativeUserId);
     }
 
