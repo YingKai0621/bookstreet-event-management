@@ -399,7 +399,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
 
                   {/* Cơ quan / Tổ chức trực thuộc */}
-                  <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ gridColumn: '1 / -1', ...(profile.organization ? {} : { display: 'none' }) }}>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Cơ quan / Tổ chức trực thuộc' : 'Affiliated Organization'}
                     </label>

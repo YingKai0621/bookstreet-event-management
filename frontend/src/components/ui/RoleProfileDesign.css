@@ -379,8 +379,8 @@
 .org-profile-layout > div:first-child > .organizer-card:first-child > div:last-child > div {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start !important;
+  gap: 8px;
   width: 100%;
 }
 .org-profile-layout > div:last-child > .organizer-card:first-child {
