@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import {
@@ -233,6 +234,9 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     window.addEventListener(ORGANIZER_NOTIFICATIONS_CHANGED, refreshNotifications);
     return () => window.removeEventListener(ORGANIZER_NOTIFICATIONS_CHANGED, refreshNotifications);
   }, [refreshNotifications]);
+
+  useNotificationStream('organizer');
+  useNotificationLiveRefresh(refreshNotifications);
 
   useEffect(() => {
     if (activeTab === 'notifications') void refreshNotifications();

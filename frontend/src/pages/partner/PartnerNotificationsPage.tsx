@@ -1,6 +1,7 @@
 import { Bell, CalendarDays, CheckCheck, ChevronRight, ClipboardList, Filter, Layers, Store, TimerReset } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNotificationLiveRefresh } from '../../hooks/useNotificationLiveUpdates';
 import '../../components/partner/PartnerEvents.css';
 import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
 import { CompactPagination } from '../../components/ui/CompactPagination';
@@ -85,11 +86,19 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [pending, setPending] = useState(false);
+  const silentRefresh = useRef(false);
+
+  useNotificationLiveRefresh(useCallback(() => {
+    silentRefresh.current = true;
+    setRevision(value => value + 1);
+  }, []));
 
   useEffect(() => {
     let active = true;
+    // A live update keeps the list on screen instead of flashing the loading state.
     // oxlint-disable-next-line react/set-state-in-effect
-    setLoading(true);
+    if (!silentRefresh.current) setLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect
     setError('');
     partnerNotificationsApi.list({ page, size: 10,
       read: read === 'all' ? undefined : read === 'read',
@@ -107,7 +116,11 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
       setError(cause?.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
         : cause?.status === 403 ? 'Bạn không có quyền xem thông báo Partner.'
           : 'Không tải được thông báo. Vui lòng thử lại.');
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => {
+      if (!active) return;
+      silentRefresh.current = false;
+      setLoading(false);
+    });
     // The badge is optional context, so a failed count hides it instead of reporting zero.
     partnerNotificationsApi.unreadCount()
       .then(result => { if (active) setUnreadCount(Number.isFinite(result.unreadCount) ? result.unreadCount : null); })

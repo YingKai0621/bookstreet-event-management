@@ -11,7 +11,8 @@ import {
   Medal,
   RefreshCw,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNotificationLiveRefresh } from '../../hooks/useNotificationLiveUpdates';
 import { useNavigate } from 'react-router-dom';
 import { CompactPagination } from '../../components/ui/CompactPagination';
 import {
@@ -100,12 +101,20 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
   const [actionError, setActionError] = useState('');
   const [readingId, setReadingId] = useState('');
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const silentRefresh = useRef(false);
+
+  useNotificationLiveRefresh(useCallback(() => {
+    silentRefresh.current = true;
+    setRevision(value => value + 1);
+  }, []));
 
   useEffect(() => {
     let active = true;
     // This effect synchronizes the server-paginated notification page with the selected filters.
+    // A live update keeps the list on screen instead of flashing the loading state.
     // oxlint-disable-next-line react/set-state-in-effect
-    setIsLoading(true);
+    if (!silentRefresh.current) setIsLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect
     setLoadError('');
     participantApi.getNotificationPage({
       page,
@@ -132,7 +141,9 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
           : (vi ? 'Không thể tải danh sách thông báo.' : 'Unable to load notifications.'));
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (!active) return;
+        silentRefresh.current = false;
+        setIsLoading(false);
       });
     return () => { active = false; };
   }, [page, readFilter, typeFilter, revision, vi]);

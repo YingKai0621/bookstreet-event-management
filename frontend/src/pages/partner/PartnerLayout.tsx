@@ -13,6 +13,7 @@ import {
   X
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
 import { Language, PartnerOrganization } from '../../types';
@@ -68,6 +69,9 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     window.addEventListener(PARTNER_NOTIFICATIONS_CHANGED, refreshNotifications);
     return () => window.removeEventListener(PARTNER_NOTIFICATIONS_CHANGED, refreshNotifications);
   }, [refreshNotifications]);
+
+  useNotificationStream('partner');
+  useNotificationLiveRefresh(refreshNotifications);
 
   async function markAll() {
     if (notificationPending) return;

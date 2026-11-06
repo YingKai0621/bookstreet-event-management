@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
@@ -110,6 +111,9 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
       window.removeEventListener('participant:notifications-changed', refreshNotifications);
     };
   }, [refreshNotifications]);
+
+  useNotificationStream('participant');
+  useNotificationLiveRefresh(refreshNotifications);
 
   useEffect(() => {
     const clockInterval = window.setInterval(() => setNotificationClock(Date.now()), 60_000);

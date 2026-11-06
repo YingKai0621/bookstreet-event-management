@@ -6,15 +6,19 @@ import com.swp391.bookstreet.notification.entity.NotificationType;
 import com.swp391.bookstreet.notification.repository.NotificationRepository;
 import java.time.Instant;
 import java.util.Objects;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NotificationWriterService implements NotificationWriter {
     private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public NotificationWriterService(NotificationRepository notificationRepository) {
+    public NotificationWriterService(NotificationRepository notificationRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.notificationRepository = notificationRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -45,6 +49,10 @@ public class NotificationWriterService implements NotificationWriter {
                         notification.deduplicationKey())
                 .orElseThrow(() -> new IllegalStateException(
                         "Notification insert completed without a durable row."));
+        if (created) {
+            eventPublisher.publishEvent(new NotificationCreated(
+                    notification.recipientUserId(), notification.recipientRole()));
+        }
         return new NotificationWriteResult(durableNotification, created);
     }
 
