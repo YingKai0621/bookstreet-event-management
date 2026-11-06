@@ -425,6 +425,8 @@
 .org-profile-form.is-editing > div:first-child > div:nth-child(4) { display: block !important; }
 .org-profile-form.is-editing > div:first-child > div:not(:nth-child(4)) { grid-template-columns: 160px minmax(0, 1fr); }
 .org-profile-form.is-editing > div:first-child input:not([type="file"]) { padding: 8px 12px !important; border: 1px solid #cbd9d2 !important; border-radius: 8px; background: #fff !important; }
+.org-profile-form > div:first-child .org-profile-input-with-icon > input:not([type="file"]),
+.org-profile-form.is-editing > div:first-child .org-profile-input-with-icon > input:not([type="file"]) { padding-left: 34px !important; }
 
 /* Admin profile uses the same header hierarchy and two-column detail rows. */
 .adm-profile-view .adm-profile-card { border-radius: 0 !important; }

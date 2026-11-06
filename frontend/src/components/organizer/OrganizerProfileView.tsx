@@ -226,31 +226,25 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     {language === 'vi' ? 'Đang hoạt động' : 'Active'}
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Lần đăng nhập:</span>
-                  <span style={{ color: '#13241F', fontWeight: 500 }}>Hôm nay, 08:30</span>
-                </div>
               </div>
             </div>
 
             {/* Session / Account Card */}
-            <div className="organizer-card" style={{ padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.5rem 0' }}>
-                {language === 'vi' ? 'Phiên làm việc' : 'Session Management'}
-              </h3>
-
-              <div style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, marginBottom: '1rem' }}>
-                <div>Trình duyệt hiện tại: <strong>Chrome trên Windows</strong></div>
-                <div style={{ marginTop: 2 }}>Kết nối mã hóa phiên an toàn.</div>
+            <div className="organizer-card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem 1.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.25rem 0' }}>
+                  {language === 'vi' ? 'Phiên làm việc' : 'Session'}
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, margin: 0 }}>
+                  {language === 'vi' ? 'Đăng xuất khỏi tài khoản trên thiết bị này.' : 'Sign out of your account on this device.'}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(true)}
                 style={{
-                  width: '100%',
-                  padding: '7px 12px',
+                  padding: '7px 16px',
                   background: 'transparent',
                   border: '1px solid #EF4444',
                   color: '#EF4444',
