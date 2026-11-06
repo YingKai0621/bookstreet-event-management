@@ -98,7 +98,7 @@ test('Admin creates only approved fields, edits and toggles through real contrac
   await expect(dialog).toHaveCount(0);
   await page.getByRole('button', { name: 'Tạm dừng', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Kích hoạt', exact: true })).toBeVisible();
-  expect(calls.some(call => call.path.includes('badge-rules') || call.path.includes('/admin/settings') || call.path.includes('/admin/profile') || call.path.includes('/admin/notifications'))).toBeFalsy();
+  expect(calls.some(call => call.path.includes('badge-rules') || call.path.includes('/admin/settings'))).toBeFalsy();
 });
 
 test('Admin conflict retains the modal and values, Escape closes it', async ({ page }) => {
@@ -125,7 +125,10 @@ test('Admin resumes synchronization after failure and refreshes only the Badge c
   await page.clock.install();
   await page.clock.fastForward(60_000);
   expect(calls.length).toBe(count);
-  expect(calls.filter(call => call.path.includes('/admin/')).every(call => call.path.includes('/admin/badges'))).toBeTruthy();
+  // The workspace shell owns the entry-time profile load and the bounded inbox refresh.
+  expect(calls.filter(call => call.path.includes('/admin/')
+    && !call.path.includes('/admin/notifications') && !call.path.endsWith('/admin/profile'))
+    .every(call => call.path.includes('/admin/badges'))).toBeTruthy();
 });
 
 test('Admin uses server pagination and filters with empty and forbidden states', async ({ page }) => {

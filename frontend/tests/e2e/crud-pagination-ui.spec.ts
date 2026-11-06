@@ -71,7 +71,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768
     await page.setViewportSize(viewport);
     await mockWorkspace(page, 'ADMIN');
     await page.goto('/admin/badges');
-    const cards = page.locator('.adm-badge-item-card');
+    const cards = page.locator('.badge-catalog-card');
     const pagination = page.getByRole('navigation', { name: 'pagination', exact: true });
     await expect(cards).toHaveCount(10);
     await pagination.getByRole('link', { name: 'Trang 2', exact: true }).click();
