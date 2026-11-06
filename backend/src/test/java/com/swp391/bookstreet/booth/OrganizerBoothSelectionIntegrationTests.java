@@ -118,6 +118,14 @@ class OrganizerBoothSelectionIntegrationTests {
                         select event_id from events where organizer_user_id in (?, ?)))
                 """, organizer, otherOrganizer);
         jdbc.update("""
+                delete from booth_payments where booth_hold_id in (
+                    select hold.booth_hold_id from booth_holds hold
+                    join event_booth_configs config
+                      on config.event_booth_config_id = hold.event_booth_config_id
+                    where config.event_id in (
+                        select event_id from events where organizer_user_id in (?, ?)))
+                """, organizer, otherOrganizer);
+        jdbc.update("""
                 delete from booth_holds
                 where booth_request_id in (
                     select request.booth_request_id
@@ -341,6 +349,96 @@ class OrganizerBoothSelectionIntegrationTests {
     }
 
     @Test
+    void expiredHoldAlertsOwnerOnceWhileAnotherCandidateIsSelectable() {
+        long eventId = insertEvent(organizer, futureRange(30), 1440, 2);
+        long boothId = insertBooth("RESELECT");
+        long configId = configure(eventId, boothId, 1_500_000);
+        long released = insertSelectedRequest(approve(partnerOne, eventId), boothId);
+        insertExpiredHold(configId, released);
+        long candidate = insertRequest(approve(partnerTwo, eventId), boothId, "PENDING");
+
+        Instant processedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        assertThat(expiryService.expireDueHolds(processedAt)).isOne();
+        assertThat(expiryService.expireDueHolds(processedAt.plusSeconds(1))).isZero();
+
+        assertThat(reselectionRows(released)).isOne();
+        assertThat(reselectionRows(candidate)).isZero();
+    }
+
+    @Test
+    void expiredHoldDoesNotAlertOwnerWithoutASelectableCandidate() {
+        long noCandidate = expiringRequestInNewEvent("NOCAND");
+
+        long pastDeadlineEvent = insertEvent(organizer, futureRange(30), 1440, 2);
+        long pastDeadlineBooth = insertBooth("DEADLINE");
+        long pastDeadline = insertSelectedRequest(approve(partnerOne, pastDeadlineEvent), pastDeadlineBooth);
+        insertExpiredHold(configure(pastDeadlineEvent, pastDeadlineBooth, 1_500_000), pastDeadline);
+        insertRequest(approve(partnerTwo, pastDeadlineEvent), pastDeadlineBooth, "PENDING");
+        jdbc.update("update events set booth_request_deadline_at = current_timestamp - interval '1 minute' "
+                + "where event_id = ?", pastDeadlineEvent);
+
+        long blockedEvent = insertEvent(organizer, futureRange(30), 1440, 2);
+        long blockedBooth = insertBooth("BLOCKED");
+        long blocked = insertSelectedRequest(approve(partnerOne, blockedEvent), blockedBooth);
+        long blockedHold = insertExpiredHold(configure(blockedEvent, blockedBooth, 1_500_000), blocked);
+        insertRequest(approve(partnerTwo, blockedEvent), blockedBooth, "PENDING");
+        jdbc.update("""
+                insert into booth_payments(booth_hold_id, transaction_type, purpose, amount, status,
+                    idempotency_key, gateway_provider)
+                values (?, 'PAYMENT', 'INITIAL_BOOTH_RENTAL', 1500000, 'PENDING', ?, 'VNPAY')
+                """, blockedHold, UUID.randomUUID());
+
+        expiryService.expireDueHolds(Instant.now().truncatedTo(ChronoUnit.MICROS));
+
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, blocked)).isEqualTo("SELECTED");
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, noCandidate)).isEqualTo("PAYMENT_EXPIRED");
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, pastDeadline)).isEqualTo("PAYMENT_EXPIRED");
+        assertThat(reselectionRows(noCandidate)).isZero();
+        assertThat(reselectionRows(pastDeadline)).isZero();
+        assertThat(reselectionRows(blocked)).isZero();
+
+        long inactiveEvent = insertEvent(organizer, futureRange(30), 1440, 2);
+        long inactiveBooth = insertBooth("INACTIVE");
+        long inactive = insertSelectedRequest(approve(partnerOne, inactiveEvent), inactiveBooth);
+        insertExpiredHold(configure(inactiveEvent, inactiveBooth, 1_500_000), inactive);
+        insertRequest(approve(partnerTwo, inactiveEvent), inactiveBooth, "PENDING");
+        jdbc.update("update partner_organizations set status = 'INACTIVE' "
+                + "where representative_user_id = ?", partnerTwo);
+
+        expiryService.expireDueHolds(Instant.now().truncatedTo(ChronoUnit.MICROS));
+
+        assertThat(jdbc.queryForObject("select status from booth_requests where booth_request_id = ?",
+                String.class, inactive)).isEqualTo("PAYMENT_EXPIRED");
+        assertThat(reselectionRows(inactive)).isZero();
+    }
+
+    @Test
+    void withdrawingOnlyASelectedBoothWithACandidateAlertsTheOwner() throws Exception {
+        long eventId = insertEvent(organizer, futureRange(30), 1440, 2);
+        long contestedBooth = insertBooth("WITHDRAW");
+        configure(eventId, contestedBooth, 1_500_000);
+        long partnerOneApplication = approve(partnerOne, eventId);
+        long released = insertRequest(partnerOneApplication, contestedBooth, "PENDING");
+        long candidate = insertRequest(approve(partnerTwo, eventId), contestedBooth, "PENDING");
+        selectExpecting(eventId, released, 200, null);
+        withdraw(partnerOne, released);
+        withdraw(partnerTwo, candidate);
+
+        long soloBooth = insertBooth("WITHDRAWSOLO");
+        configure(eventId, soloBooth, 1_500_000);
+        long solo = insertRequest(partnerOneApplication, soloBooth, "PENDING");
+        selectExpecting(eventId, solo, 200, null);
+        withdraw(partnerOne, solo);
+
+        assertThat(reselectionRows(released)).isOne();
+        assertThat(reselectionRows(candidate)).isZero();
+        assertThat(reselectionRows(solo)).isZero();
+    }
+
+    @Test
     void freeAssignmentNotifiesWinnerAndCompetingPartnerOnlyAfterCompletion() throws Exception {
         long eventId = insertEvent(organizer, futureRange(30), 90, 2);
         long boothId = insertBooth("FREE-NOTIFY");
@@ -478,6 +576,49 @@ class OrganizerBoothSelectionIntegrationTests {
             releaseMail.countDown();
         }
         assertThat(mailFinished.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    private long expiringRequestInNewEvent(String boothSuffix) {
+        long eventId = insertEvent(organizer, futureRange(30), 1440, 2);
+        long boothId = insertBooth(boothSuffix);
+        long requestId = insertSelectedRequest(approve(partnerOne, eventId), boothId);
+        insertExpiredHold(configure(eventId, boothId, 1_500_000), requestId);
+        return requestId;
+    }
+
+    private long insertSelectedRequest(long applicationId, long boothId) {
+        return jdbc.queryForObject("""
+                insert into booth_requests(application_id, booth_id, status, submitted_at,
+                    reviewed_at, selected_at)
+                values (?, ?, 'SELECTED', current_timestamp - interval '3 hours',
+                    current_timestamp - interval '2 hours', current_timestamp - interval '2 hours')
+                returning booth_request_id
+                """, Long.class, applicationId, boothId);
+    }
+
+    private long insertExpiredHold(long configId, long requestId) {
+        return jdbc.queryForObject("""
+                insert into booth_holds(event_booth_config_id, booth_request_id,
+                    locked_rental_price, status, created_at, expires_at)
+                values (?, ?, 1500000, 'ACTIVE', current_timestamp - interval '2 hours',
+                    current_timestamp - interval '1 hour')
+                returning booth_hold_id
+                """, Long.class, configId, requestId);
+    }
+
+    private void withdraw(Long partnerUserId, long requestId) throws Exception {
+        mvc.perform(post("/api/v1/partner/booth-requests/{id}/withdraw", requestId)
+                        .with(identity(partnerUserId, true, "PARTNER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WITHDRAWN"));
+    }
+
+    private int reselectionRows(long requestId) {
+        return jdbc.queryForObject("""
+                select count(*) from notifications
+                where booth_request_id = ? and recipient_user_id = ? and recipient_role = 'ORGANIZER'
+                  and notification_type = 'ORGANIZER_BOOTH_RESELECTION_REQUIRED'
+                """, Integer.class, requestId, organizer);
     }
 
     private int selectConcurrently(long eventId, long requestId, CountDownLatch ready,

@@ -273,6 +273,44 @@ class OrganizerActivityRequestIntegrationTests {
                 .andExpect(jsonPath("$.status").value("PENDING"));
         assertThat(activityStatus(changeActivityId)).isEqualTo("ONGOING");
         assertThat(activityStatus(cancellationActivityId)).isEqualTo("ONGOING");
+
+        jdbc.update("update activities set end_at = ? where activity_id = ?",
+                Timestamp.from(now.minusSeconds(1)), cancellationActivityId);
+        mvc.perform(get(CANCELLATIONS + "/" + cancellationId)
+                        .with(actor(organizerId, "ORGANIZER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(get(CHANGES + "/" + changeId).with(actor(organizerId, "ORGANIZER")))
+                .andExpect(status().isOk());
+        assertThat(partnerRows("activity_request_id", changeId,
+                "PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED")).isOne();
+        assertThat(partnerRows("activity_request_id", cancellationId,
+                "PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED")).isOne();
+    }
+
+    @Test
+    void directOrganizerCancellationNotifiesPartnerOnceAndSuppressesItsPendingRequest()
+            throws Exception {
+        Instant start = future(4);
+        long eventId = insertEvent(organizerId, start, start.plus(Duration.ofDays(1)), "PUBLISHED");
+        long activityId = insertPartnerActivity(insertApplication(eventId), eventId,
+                insertLocation("DIRECTCANCEL", "Direct Cancel Stage"), "Directly cancelled",
+                start.plus(Duration.ofHours(1)), "PUBLISHED");
+        long requestId = insertChangeRequest(activityId, "Requested before cancellation", "PENDING");
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(post("/api/v1/organizer/activities/" + activityId + "/cancel")
+                            .with(actor(organizerId, "ORGANIZER")).with(csrf())
+                            .contentType(APPLICATION_JSON)
+                            .content("{\"reason\":\"Diễn giả không thể tiếp tục tham gia.\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.cancellationSource").value("ORGANIZER"));
+        }
+
+        assertThat(partnerRows("activity_id", activityId, "PARTNER_ACTIVITY_CANCELLED")).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_request_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, requestId)).isZero();
     }
 
     @Test
@@ -421,6 +459,10 @@ class OrganizerActivityRequestIntegrationTests {
         assertThat(cancelled.get("status")).isEqualTo("CANCELLED");
         assertThat(cancelled.get("cancellation_source")).isEqualTo("PARTNER_REQUEST");
         assertThat(cancelled.get("cancellation_reason")).isEqualTo(cancellationReason);
+        assertThat(partnerRows("activity_request_id", cancellationId,
+                "PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED")).isOne();
+        assertThat(partnerRows("activity_id", cancelledActivityId,
+                "PARTNER_ACTIVITY_CANCELLED")).isZero();
 
         mvc.perform(post(CANCELLATIONS + "/" + cancellationId + "/approve")
                         .with(actor(organizerId, "ORGANIZER")).with(csrf()))
@@ -502,6 +544,12 @@ class OrganizerActivityRequestIntegrationTests {
         assertThat(jdbc.queryForObject("select cancellation_source from activity_registrations where activity_registration_id=?", String.class, registrationId)).isEqualTo("ACTIVITY");
         assertThat(jdbc.queryForObject("select status from attendances where activity_registration_id=?", String.class, registrationId)).isEqualTo("VALID");
         assertThat(jdbc.queryForObject("select count(*) from notifications where recipient_user_id=? and notification_type='ACTIVITY_CANCELLED'", Integer.class, partnerUserId)).isEqualTo(1);
+    }
+
+    private int partnerRows(String referenceColumn, long referenceId, String type) {
+        return jdbc.queryForObject("select count(*) from notifications where " + referenceColumn
+                + " = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = ?", Integer.class, referenceId, partnerUserId, type);
     }
 
     private long enableParticipation(long eventId, long activityId, Instant start, boolean attended) {

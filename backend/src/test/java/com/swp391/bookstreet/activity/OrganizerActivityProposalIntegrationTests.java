@@ -204,6 +204,13 @@ class OrganizerActivityProposalIntegrationTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("PROPOSAL_NOT_REVIEWABLE"));
         assertThat(proposalStatus(commandGuardId)).isEqualTo("CANCELLED");
+        mvc.perform(get(PROPOSALS + "/" + proposalId)
+                        .with(actor(organizerId, "ORGANIZER")))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_proposal_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = 'PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED'",
+                Integer.class, proposalId, partnerUserId)).isOne();
     }
 
     @Test
