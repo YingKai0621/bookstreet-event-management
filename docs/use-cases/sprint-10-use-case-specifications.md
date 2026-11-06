@@ -588,8 +588,9 @@ The active set contains **52 Acceptance Criteria** matching `docs/sprints/sprint
 
 These 52 criteria were approved on 2026-11-03. The 2026-11-06 amendment in `docs/sprints/sprint-10.md`
 section 12 adds `AC-E-S10-14`, `AC-E-S10-15`, `AC-O-S10-11`, and `AC-P-S10-08` for the four producers defined
-by `BR-110`, for an active total of **56 Acceptance Criteria**. It governs over earlier closed-type wording
-in this document. Developer A may implement the shared foundation after the
+by `BR-110`, and section 13 adds `AC-N-S10-12` and `AC-N-S10-13` for the live signal defined by `BR-111`, for
+an active total of **58 Acceptance Criteria**. These amendments govern over earlier closed-type and channel
+wording in this document. Developer A may implement the shared foundation after the
 activation update is merged. Teammates may implement Partner or Organizer delivery by claiming the
 documented Developer B or C work package and coordinating its branch and merge order. No later change may
 add a producer, role, type, reference, delivery channel, or combined inbox

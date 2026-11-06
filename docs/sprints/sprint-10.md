@@ -478,8 +478,8 @@ security, migration, frontend, Feedback, email, and scope-exclusion regression b
     to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate, or Badge lifecycle meaning.
 
 Sections 9.1 through 9.6 contain the original 52 reviewed criteria: 11 shared-foundation, 7 Participant,
-13 Partner, 10 Organizer, 5 Admin, and 6 regression. Section 12 adds four, so the active baseline contains
-**56 Acceptance Criteria**.
+13 Partner, 10 Organizer, 5 Admin, and 6 regression. Section 12 adds four and section 13 adds two, so the
+active baseline contains **58 Acceptance Criteria**.
 
 ## 10. Delivery units
 
@@ -543,3 +543,24 @@ Amended Acceptance Criteria:
 
 The four new types extend `AC-P-S10-01`, `AC-P-S10-02`, `AC-P-S10-07`, `AC-E-S10-12`, `AC-E-S10-13`,
 `AC-O-S10-09`, `AC-O-S10-10`, and `AC-S10-REG-06` without otherwise changing them.
+
+## 13. Live inbox update amendment — 2026-11-06
+
+Manual review showed that a recipient had to reload the page to see a new Notification. The project owner
+approved one Server-Sent Events signal, defined by active `BR-111`. It adds no table, migration, type, producer,
+or lifecycle change. Where this section conflicts with an earlier Sprint 10 statement that excludes SSE or real-time
+delivery, this section governs; the other `BR-109` exclusions remain active.
+
+Amended Acceptance Criteria:
+
+57. `AC-N-S10-12`: the Participant, Partner, and Organizer streams use the exact authority of their inbox and
+    reject anonymous, wrong-role, and disabled-account requests. A new row signals only that User's connections
+    for that exact role, only after commit, and with no Notification data. A rollback, another role's row, and a
+    deduplicated retry send no signal, and signal delivery cannot affect the source transition.
+58. `AC-N-S10-13`: an open workspace updates its unread badge, preview, and full inbox without a page reload,
+    using only the existing inbox APIs and without flashing the loading state. A hidden tab releases its
+    connection and reloads once when shown again. An unavailable stream leaves the existing refresh triggers
+    working, and Admin opens no connection.
+
+`AC-S10-REG-06` permits this signal and no other real-time transport. Bounded refresh criteria continue to apply
+as the fallback when no connection is open.

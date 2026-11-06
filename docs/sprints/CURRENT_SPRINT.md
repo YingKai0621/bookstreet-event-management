@@ -44,10 +44,10 @@ The active implementation is limited to:
 - real role-local frontend preview/full inbox, filters, read state and allowlisted navigation
 - bounded refresh on workspace entry, inbox/popover open and confirmed read mutation
 
-The approved baseline contains **56 Acceptance Criteria**, including the 2026-11-06 amendment defined by
-`BR-110` and `docs/sprints/sprint-10.md` section 12:
+The approved baseline contains **58 Acceptance Criteria**, including the 2026-11-06 amendments defined by
+`BR-110` and `BR-111` in `docs/sprints/sprint-10.md` sections 12 and 13:
 
-- 11 shared foundation criteria: `AC-N-S10-01` through `AC-N-S10-11`
+- 13 shared foundation criteria: `AC-N-S10-01` through `AC-N-S10-13`
 - 8 Participant criteria: `AC-P-S10-01` through `AC-P-S10-08`
 - 15 Partner criteria: `AC-E-S10-01` through `AC-E-S10-15`
 - 11 Organizer criteria: `AC-O-S10-01` through `AC-O-S10-11`
@@ -89,7 +89,8 @@ navigation and browser regression coverage, documentation synchronization, and f
 - Clients cannot create Notification rows or supply recipient/audience.
 - Every approved producer joins the owning domain transaction; existing email remains after commit.
 - No Admin producer, combined inbox, NotificationType table, sender, preference, outbox, SMS, push,
-  WebSocket, SSE, polling, mock fallback or localStorage read truth is allowed.
+  WebSocket, polling, mock fallback or localStorage read truth is allowed. The only SSE is the content-free
+  `BR-111` signal.
 - BR-81 equality is inclusive: Organizer Booth selection is allowed at the exact request deadline and
   rejected only when backend time is later. The canonical predicate and boundary tests must preserve it.
 - Do not commit `.env`, credentials, local database URLs, demo-only data or local scripts.
