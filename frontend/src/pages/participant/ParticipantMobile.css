@@ -217,6 +217,9 @@
     color: #185e48 !important;
     font-weight: 800 !important;
   }
+  .participant-app-shell .participant-calendar-day[aria-pressed="true"] .participant-day-number.is-today {
+    color: #ffffff !important;
+  }
 
   /* Mobile Dots Container inside cell at the bottom */
   .participant-calendar-mobile-dots {

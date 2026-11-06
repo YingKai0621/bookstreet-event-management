@@ -106,7 +106,7 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
         expect(copyPadding.top, `${route} hero copy top padding`).toBeGreaterThanOrEqual(16);
         expect(copyPadding.left, `${route} hero copy left padding`).toBeGreaterThanOrEqual(20);
       } else {
-        const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 18 : 36;
+        const expectedTopInset = workspace.role === 'PARTICIPANT' && width === 390 ? 16 : 36;
         await expect.poll(async () => {
           const topInset = await title.evaluate(element => {
             const main = element.closest('main')!;
@@ -118,7 +118,7 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
           const main = element.closest('main')!;
           return element.getBoundingClientRect().left - main.getBoundingClientRect().left;
         });
-        const expectedInlineInset = workspace.role === 'PARTICIPANT' && width === 390 ? 16 : 48;
+        const expectedInlineInset = workspace.role === 'PARTICIPANT' && width === 390 ? 14 : 48;
         expect(Math.abs(inlineInset - expectedInlineInset), route).toBeLessThanOrEqual(1);
       }
 
@@ -128,10 +128,10 @@ for (const workspace of workspaces) for (const width of [1440, 390]) {
       });
       expect(styles.family, route).toContain('Noto Serif');
       const participantMobile = workspace.role === 'PARTICIPANT' && width === 390;
-      expect(styles.size, route).toBe(width === 1440 ? '32px' : participantMobile ? '24px' : '30px');
+      expect(styles.size, route).toBe(width === 1440 ? '32px' : participantMobile ? '22.4px' : '30px');
       expect(styles.weight, route).toBe('700');
       expect(styles.color, route).toBe('rgb(16, 37, 31)');
-      expect(styles.lineHeight, route).toBe(width === 1440 ? '38.4px' : participantMobile ? '28.8px' : '36px');
+      expect(styles.lineHeight, route).toBe(width === 1440 ? '38.4px' : participantMobile ? '26.88px' : '36px');
       expect(styles.margin, route).toBe('0px');
       const subStyles = await subtitle.evaluate(element => {
         const style = getComputedStyle(element);

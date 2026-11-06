@@ -559,7 +559,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                       justifyContent: 'space-between',
                       marginBottom: '6px'
                     }}>
-                      <span className="participant-day-number" style={{
+                      <span className={`participant-day-number${isToday ? ' is-today' : ''}`} style={{
                         fontSize: '0.88rem',
                         fontWeight: isSelected || isToday ? 850 : 650,
                         color: isToday ? '#FFFFFF' : isSelected ? '#17382E' : '#2C3E3A',
