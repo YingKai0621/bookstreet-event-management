@@ -384,7 +384,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={profile.role}
+                      value={profile.role === 'ORGANIZER' ? (language === 'vi' ? 'Ban tổ chức' : 'Organizer') : profile.role}
                       disabled
                       style={{
                         width: '100%',
