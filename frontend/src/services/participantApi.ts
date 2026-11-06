@@ -275,7 +275,7 @@ export interface ParticipantNotificationItem {
   title: string;
   message: string;
   isRead: boolean;
-  link: string;
+  link: string | null;
   createdAt: string;
   readAt?: string;
   referenceType: ParticipantNotificationReferenceType;
@@ -297,17 +297,25 @@ export interface ParticipantNotificationQuery {
   type?: ParticipantNotificationType;
 }
 
-function notificationLink(notification: ParticipantNotificationResponse): string {
-  if (notification.referenceType === 'EVENT') {
-    return `/participant/events/${encodeURIComponent(notification.referenceId)}`;
+function notificationLink(notification: ParticipantNotificationResponse): string | null {
+  const { type, referenceType, referenceId } = notification;
+  if (!Number.isSafeInteger(referenceId) || referenceId <= 0) return null;
+  switch (type) {
+    case 'EVENT_CANCELLED':
+      return referenceType === 'EVENT'
+        ? `/participant/events/${encodeURIComponent(referenceId)}` : null;
+    case 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED':
+    case 'ACTIVITY_CANCELLED':
+      return referenceType === 'ACTIVITY'
+        ? `/participant/activities/detail/${encodeURIComponent(referenceId)}` : null;
+    case 'CERTIFICATE_ISSUED':
+    case 'CERTIFICATE_REVOKED':
+      return referenceType === 'CERTIFICATE' ? '/participant/certificates' : null;
+    case 'BADGE_UNLOCKED':
+      return referenceType === 'BADGE' ? '/participant/rewards' : null;
+    default:
+      return null;
   }
-  if (notification.referenceType === 'ACTIVITY') {
-    return `/participant/activities/detail/${encodeURIComponent(notification.referenceId)}`;
-  }
-  if (notification.referenceType === 'BADGE') {
-    return '/participant/rewards';
-  }
-  return '/participant/certificates';
 }
 
 function mapNotification(notification: ParticipantNotificationResponse): ParticipantNotificationItem {
@@ -482,7 +490,10 @@ export const participantApi = {
   },
   async getNotificationUnreadCount(): Promise<number> {
     const response = await apiClient.get<{ unreadCount: number }>('/participant/notifications/unread-count');
-    return Number.isFinite(response.unreadCount) ? response.unreadCount : 0;
+    if (!Number.isFinite(response.unreadCount)) {
+      throw new Error('Phản hồi số thông báo chưa đọc không đúng định dạng.');
+    }
+    return response.unreadCount;
   },
   async markNotificationRead(id: string): Promise<ParticipantNotificationItem> {
     const notification = await apiClient.post<ParticipantNotificationResponse>(

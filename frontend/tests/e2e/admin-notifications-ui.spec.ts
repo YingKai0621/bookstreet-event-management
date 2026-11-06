@@ -38,6 +38,13 @@ async function setup(page: Page, options: { listFailure?: boolean } = {}) {
         lastActiveAt: null,
       });
     }
+    if (path.endsWith('/admin/settings')) {
+      return json(route, [{ key: 'admin.system', value: {
+        general: { systemName: 'Book Street', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
+        security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },
+        notifications: { sendWelcomeEmail: true, alertOnFailedLogins: true, notifyRoleChanges: true, dailyDigestEmail: false },
+      } }]);
+    }
     if (path.endsWith('/admin/notifications/unread-count')) {
       countRequests += 1;
       return json(route, { unreadCount: 0 });
@@ -79,6 +86,17 @@ test('Admin inbox keeps API failure separate from an empty inbox', async ({ page
   await expect(page.getByText('Hiện chưa có thông báo nào dành cho Admin.')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Đánh dấu tất cả đã đọc' })).toBeDisabled();
+});
+
+test('Admin settings promise no unsupported notification or alert preferences', async ({ page }) => {
+  await setup(page);
+  await page.goto('/admin/settings');
+
+  await expect(page.getByRole('heading', { name: 'Cài đặt Hệ thống' })).toBeVisible();
+  await expect(page.getByText('Cấu hình Thông báo Quản trị')).toHaveCount(0);
+  await expect(page.getByText('đăng nhập sai bất thường')).toHaveCount(0);
+  await expect(page.getByText('ma trận phân quyền')).toHaveCount(0);
+  await expect(page.getByText('cảnh báo nền tảng')).toHaveCount(0);
 });
 
 test('opening the Admin notification popover performs one bounded refresh', async ({ page }) => {
