@@ -519,6 +519,46 @@ class PaymentSprint03IntegrationTests {
     }
 
     @Test
+    void failedPaymentAfterHoldDeadlineCreatesOnePartnerPaymentExpiredOutcome() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update booth_holds set created_at = ?, expires_at = ? "
+                        + "where booth_request_id = ?", Timestamp.from(now.minusSeconds(7200)),
+                Timestamp.from(now.minusSeconds(3600)), fixture.requestId());
+        expiryService.expireDueHolds(now);
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+        VnPayResult cancelled = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "24", "02", "765437", "customer cancelled after deadline");
+
+        settlementService.acceptIpn(cancelled, now);
+        settlementService.acceptIpn(cancelled, now);
+        expiryService.expireDueHolds(now);
+
+        assertRequestAndHold(fixture.requestId(), "PAYMENT_EXPIRED", "EXPIRED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = 'PARTNER_BOOTH_REQUEST_STATUS_CHANGED'",
+                Integer.class, fixture.requestId(), partner)).isOne();
+    }
+
+    @Test
+    void failedPaymentWhileHoldIsActiveCreatesNoPartnerOutcome() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        VnPayResult cancelled = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "24", "02", "765438", "customer cancelled");
+
+        settlementService.acceptIpn(cancelled, Instant.now());
+
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+        assertThat(jdbc.queryForObject("select count(*) from notifications "
+                + "where booth_request_id = ?", Integer.class, fixture.requestId())).isZero();
+    }
+
+    @Test
     void inconsistentCancellationCallbackRemainsPendingForReconciliation() throws Exception {
         Fixture fixture = fixture(10_000, "SELECTED");
         insertHold(fixture.configId(), fixture.requestId(), 10_000);

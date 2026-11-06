@@ -287,6 +287,7 @@ public class PaymentSettlementService {
 
     private void expireHoldAndNotify(Event event, BoothHold hold, Instant now) {
         if (hold.expire(now)) {
+            outcomeNotifications.boothChanged(hold.getBoothRequest());
             holdRepository.flush();
             reselectionNotifications.notifyIfEligible(event, hold.getBoothRequest(), now);
         }

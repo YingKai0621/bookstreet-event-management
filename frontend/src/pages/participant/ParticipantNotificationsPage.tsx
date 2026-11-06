@@ -158,7 +158,11 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
       }
       setReadingId('');
     }
-    if (navigateAfter && notification.link.startsWith('/participant/')) navigate(notification.link);
+    if (!navigateAfter) return;
+    if (notification.link) navigate(notification.link);
+    else setActionError(vi
+      ? 'Nội dung được nhắc đến hiện không mở được từ thông báo này.'
+      : 'The referenced item cannot currently be opened from this notification.');
   };
 
   const markAllAsRead = async () => {

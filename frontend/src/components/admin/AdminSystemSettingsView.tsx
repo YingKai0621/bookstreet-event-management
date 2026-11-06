@@ -1,5 +1,4 @@
 import {
-  Bell,
   Building,
   Check,
   RotateCcw,
@@ -47,15 +46,6 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
     setSaveToast(false);
   };
 
-  const handleNotificationChange = (key: keyof AdminSystemSettings['notifications'], value: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      notifications: { ...prev.notifications, [key]: value }
-    }));
-    setHasChanges(true);
-    setSaveToast(false);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveSettings(formData);
@@ -83,7 +73,7 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
         <div>
           <h1 className="adm-page-title workspace-page-title">Cài đặt Hệ thống</h1>
           <p className="adm-page-subtitle workspace-page-subtitle">
-            Cấu hình thông số vận hành chung, chính sách bảo mật phiên làm việc và cảnh báo nền tảng.
+            Cấu hình thông số vận hành chung và chính sách bảo mật phiên làm việc.
           </p>
         </div>
         <div className="adm-page-header-actions">
@@ -272,68 +262,6 @@ export const AdminSystemSettingsView: React.FC<AdminSystemSettingsViewProps> = (
           </div>
         </div>
 
-        {/* Section 3: Notification Preferences */}
-        <div className="adm-card adm-settings-card">
-          <div className="adm-card-header">
-            <div className="adm-card-header-icon icon-amber">
-              <Bell size={20} />
-            </div>
-            <div>
-              <h3 className="adm-card-title">Cấu hình Thông báo Quản trị</h3>
-              <p className="adm-card-subtitle">Kích hoạt các kịch bản gửi email cảnh báo và cập nhật quan trọng</p>
-            </div>
-          </div>
-
-          <div className="adm-card-body">
-            <div className="adm-setting-toggle-item">
-              <div className="adm-setting-toggle-info">
-                <span className="adm-setting-toggle-title">Gửi email chào mừng khi tạo tài khoản mới</span>
-                <span className="adm-setting-toggle-desc">Tự động gửi thông tin đăng nhập và hướng dẫn cho người dùng mới</span>
-              </div>
-              <label className="adm-toggle-label">
-                <input 
-                  type="checkbox"
-                  className="adm-toggle-checkbox"
-                  checked={formData.notifications.sendWelcomeEmail}
-                  onChange={(e) => handleNotificationChange('sendWelcomeEmail', e.target.checked)}
-                />
-                <span className="adm-toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="adm-setting-toggle-item">
-              <div className="adm-setting-toggle-info">
-                <span className="adm-setting-toggle-title">Cảnh báo khẩn cấp khi phát hiện đăng nhập sai bất thường</span>
-                <span className="adm-setting-toggle-desc">Gửi thông báo tức thì đến quản trị viên khi tài khoản bị khóa do nghi ngờ brute-force</span>
-              </div>
-              <label className="adm-toggle-label">
-                <input 
-                  type="checkbox"
-                  className="adm-toggle-checkbox"
-                  checked={formData.notifications.alertOnFailedLogins}
-                  onChange={(e) => handleNotificationChange('alertOnFailedLogins', e.target.checked)}
-                />
-                <span className="adm-toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="adm-setting-toggle-item">
-              <div className="adm-setting-toggle-info">
-                <span className="adm-setting-toggle-title">Thông báo khi có thay đổi ma trận phân quyền</span>
-                <span className="adm-setting-toggle-desc">Ghi nhật ký và báo cáo email mỗi khi quyền của bất kỳ vai trò nào bị chỉnh sửa</span>
-              </div>
-              <label className="adm-toggle-label">
-                <input 
-                  type="checkbox"
-                  className="adm-toggle-checkbox"
-                  checked={formData.notifications.notifyRoleChanges}
-                  onChange={(e) => handleNotificationChange('notifyRoleChanges', e.target.checked)}
-                />
-                <span className="adm-toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
       </form>
     </div>
   );

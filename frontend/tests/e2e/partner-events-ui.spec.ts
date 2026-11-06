@@ -16,7 +16,7 @@ const selectedBoothRequest = { boothRequestId: 51, eventId: 101, boothId: 11, bo
   hold: activeBoothHold };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean; notifications?: boolean; notificationsFailure?: boolean; readFailure?: boolean } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean; notifications?: boolean; notificationsFailure?: boolean; notificationsStatus?: number; readFailure?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
   let notificationRead = false;
@@ -42,6 +42,7 @@ async function setup(page: Page, scenario: { status?: string; empty?: boolean; m
     }
     if (path.endsWith('/partner/notifications')) {
       if (scenario.notificationsFailure) return json(route, { code: 'UNAVAILABLE', message: 'List failed' }, 503);
+      if (scenario.notificationsStatus) return json(route, { code: 'DENIED', message: 'Denied' }, scenario.notificationsStatus);
       const params = new URL(route.request().url()).searchParams;
       const visible = scenario.notifications && params.get('read') !== (notificationRead ? 'false' : 'true')
         && (!params.get('type') || params.get('type') === notification.type)
@@ -129,6 +130,20 @@ test('Partner inbox keeps API failure separate from an empty result', async ({ p
   await setup(page, { notificationsFailure: true });
   await page.goto('/partner/notifications');
   await expect(page.getByRole('alert').filter({ hasText: 'Không tải được thông báo' })).toBeVisible();
+  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+});
+
+test('Partner inbox shows a forbidden response instead of an empty result', async ({ page }) => {
+  await setup(page, { notificationsStatus: 403 });
+  await page.goto('/partner/notifications');
+  await expect(page.getByRole('alert').filter({ hasText: 'Bạn không có quyền xem thông báo Partner.' }).first()).toBeVisible();
+  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+});
+
+test('an expired Partner session shows sign-in instead of an empty inbox', async ({ page }) => {
+  await setup(page, { notificationsStatus: 401 });
+  await page.goto('/partner/notifications');
+  await expect(page.getByRole('button', { name: 'Đăng nhập vào Cổng Đối tác' })).toBeVisible();
   await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
 });
 

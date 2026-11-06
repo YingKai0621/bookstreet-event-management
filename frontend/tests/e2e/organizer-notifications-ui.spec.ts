@@ -33,7 +33,7 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function setup(page: Page, options: { failListOnce?: boolean } = {}) {
+async function setup(page: Page, options: { failListOnce?: boolean; listStatus?: number } = {}) {
   let listFailuresLeft = options.failListOnce ? 1 : 0;
   let listCalls = 0;
   let unreadCount = 1;
@@ -66,6 +66,7 @@ async function setup(page: Page, options: { failListOnce?: boolean } = {}) {
     }
     if (path.endsWith('/organizer/notifications')) {
       listCalls += 1;
+      if (options.listStatus) return json(route, { code: 'DENIED' }, options.listStatus);
       if (listFailuresLeft > 0) {
         listFailuresLeft -= 1;
         return json(route, { code: 'UNAVAILABLE' }, 503);
@@ -132,6 +133,22 @@ test.describe('Organizer notifications inbox', () => {
     await page.getByRole('button', { name: 'Thử lại' }).click();
     await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
     expect(state.getListCalls()).toBeGreaterThan(1);
+  });
+
+  test('shows a forbidden response instead of an empty inbox', async ({ page }) => {
+    await setup(page, { listStatus: 403 });
+    await page.goto(`${BASE_URL}/organizer/notifications`);
+
+    await expect(page.getByRole('alert').filter({ hasText: 'Bạn không có quyền xem thông báo Organizer.' }).first()).toBeVisible();
+    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+  });
+
+  test('shows sign-in instead of an empty inbox when the session expires', async ({ page }) => {
+    await setup(page, { listStatus: 401 });
+    await page.goto(`${BASE_URL}/organizer/notifications`);
+
+    await expect(page.getByRole('button', { name: 'Đăng nhập vào Cổng Quản Lý' })).toBeVisible();
+    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
   });
 
   test('marks all read through the server and refreshes the unread count', async ({ page }) => {
