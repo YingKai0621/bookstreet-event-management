@@ -33,11 +33,11 @@ async function json(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function setup(page: Page, options: { failListOnce?: boolean; listStatus?: number } = {}) {
+async function setup(page: Page, options: { failListOnce?: boolean; listStatus?: number; rows?: typeof notifications } = {}) {
   let listFailuresLeft = options.failListOnce ? 1 : 0;
   let listCalls = 0;
   let unreadCount = 1;
-  let currentRows = notifications.map(item => ({ ...item }));
+  let currentRows = (options.rows ?? notifications).map(item => ({ ...item }));
   const calls = { markOne: 0, markAll: 0 };
 
   await page.route('**/api/v1/**', async route => {
@@ -122,6 +122,24 @@ test.describe('Organizer notifications inbox', () => {
     await expect(page).toHaveURL(/\/organizer\/events\/501\?section=partners$/);
     expect(state.calls.markOne).toBe(1);
   });
+
+  for (const [type, referenceType, target] of [
+    ['ORGANIZER_BOOTH_PAYMENT_CONFIRMED', 'BOOTH_REQUEST', '/organizer/booth-requests?eventId=501'],
+    ['ORGANIZER_BOOTH_RESELECTION_REQUIRED', 'BOOTH_REQUEST', '/organizer/booth-requests?eventId=501'],
+    ['ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED', 'ACTIVITY_PROPOSAL', '/organizer/activities?eventId=501&view=proposals'],
+    ['ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST', 'ACTIVITY_REQUEST', '/organizer/activities?eventId=501&view=changes'],
+    ['ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST', 'ACTIVITY_REQUEST', '/organizer/activities?eventId=501&view=cancellations'],
+  ]) {
+    test(`${type} opens its owner-scoped queue after the read is confirmed`, async ({ page }) => {
+      const state = await setup(page, { rows: [{ ...notifications[0], type, referenceType, title: 'Việc cần xử lý' }] });
+      await page.goto(`${BASE_URL}/organizer/notifications`);
+
+      await page.getByRole('button', { name: /Việc cần xử lý/ }).click();
+
+      await expect.poll(() => { const url = new URL(page.url()); return url.pathname + url.search; }).toBe(target);
+      expect(state.calls.markOne).toBe(1);
+    });
+  }
 
   test('shows a retryable API error and retries instead of showing an empty inbox', async ({ page }) => {
     const state = await setup(page, { failListOnce: true });

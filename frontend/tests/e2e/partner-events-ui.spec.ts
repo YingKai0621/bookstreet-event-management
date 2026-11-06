@@ -16,14 +16,14 @@ const selectedBoothRequest = { boothRequestId: 51, eventId: 101, boothId: 11, bo
   hold: activeBoothHold };
 function paged(content: unknown[]) { return { content, page: 0, size: 100, totalElements: content.length, totalPages: 1 }; }
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }); }
-async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean; notifications?: boolean; notificationsFailure?: boolean; notificationsStatus?: number; readFailure?: boolean } = {}) {
+async function setup(page: Page, scenario: { status?: string; empty?: boolean; missingProfile?: boolean; history?: boolean; failure?: boolean; applicationCount?: number; eventCount?: number; boothRequests?: unknown[]; applicationsFailure?: boolean; boothFailure?: boolean; notifications?: boolean; notificationsFailure?: boolean; notificationsStatus?: number; readFailure?: boolean; notification?: { type: string; referenceType: string; referenceId: number } } = {}) {
   await page.clock.install({ time: new Date('2026-10-14T05:00:00Z') });
   const state = { status: scenario.status || 'APPROVED', submissions: [] as unknown[], unsupported: [] as string[], withdrawals: 0 };
   let notificationRead = false;
   const notification = { notificationId: 301, type: 'PARTNER_APPLICATION_STATUS_CHANGED',
     title: 'Hồ sơ tham gia đã được duyệt', message: 'Hồ sơ tham gia sự kiện của bạn đã được chấp thuận.',
     referenceType: 'PARTNER_APPLICATION', referenceId: 31, contextEventId: 101,
-    createdAt: stamp, readAt: null as string | null, read: false };
+    createdAt: stamp, readAt: null as string | null, read: false, ...scenario.notification };
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
@@ -130,6 +130,25 @@ test('Partner opens a real inbox, filters it, and reads an application outcome',
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('partner-notifications.png'), fullPage: true });
 });
+
+for (const [type, referenceType, referenceId, target] of [
+  ['PARTNER_EVENT_PUBLISHED', 'EVENT', 101, '/partner/events/apply?event=101'],
+  ['PARTNER_BOOTH_REQUEST_STATUS_CHANGED', 'BOOTH_REQUEST', 51, '/partner/booth-requests?eventId=101&view=requests'],
+  ['PARTNER_BOOTH_HOLD_EXPIRING', 'BOOTH_REQUEST', 51, '/partner/booth-requests?eventId=101&view=requests'],
+  ['PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED', 'ACTIVITY_PROPOSAL', 61, '/partner/activities?eventId=101&view=proposals'],
+  ['PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED', 'ACTIVITY_REQUEST', 71, '/partner/activities?eventId=101&view=changes'],
+  ['PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED', 'ACTIVITY_REQUEST', 71, '/partner/activities?eventId=101&view=cancellations'],
+  ['PARTNER_ACTIVITY_CANCELLED', 'ACTIVITY', 81, '/partner/activities/81'],
+] as const) {
+  test(`${type} opens its Partner-owned target`, async ({ page }) => {
+    await setup(page, { notifications: true, notification: { type, referenceType, referenceId } });
+    await page.goto('/partner/notifications');
+
+    await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
+
+    await expect.poll(() => { const url = new URL(page.url()); return url.pathname + url.search; }).toBe(target);
+  });
+}
 
 test('Partner inbox keeps API failure separate from an empty result', async ({ page }) => {
   await setup(page, { notificationsFailure: true });

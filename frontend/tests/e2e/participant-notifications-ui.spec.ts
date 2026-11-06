@@ -16,7 +16,8 @@ type NotificationType =
   | 'EVENT_CANCELLED'
   | 'CERTIFICATE_ISSUED'
   | 'CERTIFICATE_REVOKED'
-  | 'BADGE_UNLOCKED';
+  | 'BADGE_UNLOCKED'
+  | 'ACTIVITY_STARTING_SOON';
 
 interface MockNotification {
   notificationId: number;
@@ -45,6 +46,7 @@ const references: Record<NotificationType, Pick<MockNotification, 'referenceType
   CERTIFICATE_ISSUED: { referenceType: 'CERTIFICATE', referenceId: 501 },
   CERTIFICATE_REVOKED: { referenceType: 'CERTIFICATE', referenceId: 501 },
   BADGE_UNLOCKED: { referenceType: 'BADGE', referenceId: 83 },
+  ACTIVITY_STARTING_SOON: { referenceType: 'ACTIVITY', referenceId: 91 },
 };
 
 function createNotifications(): MockNotification[] {
@@ -84,9 +86,13 @@ async function mockNotifications(
     failFirstRead?: boolean;
     previewStatus?: number;
     invalidReference?: boolean;
+    startingSoon?: boolean;
   } = {},
 ) {
   let notifications = createNotifications();
+  if (options.startingSoon) {
+    notifications[0] = { ...notifications[0], type: 'ACTIVITY_STARTING_SOON', ...references.ACTIVITY_STARTING_SOON };
+  }
   if (options.invalidReference) {
     notifications[0] = { ...notifications[0], type: 'CERTIFICATE_ISSUED', referenceType: 'BADGE' };
   }
@@ -351,6 +357,19 @@ test('a mismatched type and reference stays readable without an unsafe redirect'
   await expect(page.getByRole('alert')).toContainText('không mở được từ thông báo này');
   await expect(page).toHaveURL(/\/participant\/notifications$/);
   await expect(card).toBeVisible();
+});
+
+test('Activity reminder filters, marks read and opens the Participant Activity detail', async ({ page }) => {
+  const requests = await mockNotifications(page, { startingSoon: true });
+  await page.goto('/participant/notifications');
+
+  await page.getByLabel('Loại thông báo').selectOption('ACTIVITY_STARTING_SOON');
+  const reminder = page.locator('.participant-notification-card');
+  await expect(reminder).toHaveCount(1);
+  await reminder.getByRole('button', { name: 'Xem chi tiết' }).click();
+  await expect(page).toHaveURL(/\/participant\/activities\/detail\/91$/);
+  expect(requests.some(entry => entry.method === 'POST'
+    && /\/participant\/notifications\/\d+\/read$/.test(entry.path))).toBe(true);
 });
 
 test('Badge unlock notification filters, marks read and opens the Rewards page', async ({ page }) => {
