@@ -41,6 +41,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=${EVENT_TEST_DATABASE_URL}",
+        "bookstreet.feedback.throttle-hmac-secret=test-only-secret",
         "logging.level.org.springframework.security=ERROR"
 })
 @EnabledIfEnvironmentVariable(named = "EVENT_TEST_DATABASE_URL", matches = ".+")
