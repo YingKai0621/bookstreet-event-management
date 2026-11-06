@@ -115,8 +115,7 @@ test.describe('Organizer notifications inbox', () => {
     await expect(page.locator('.organizer-topbar').getByText('Có hồ sơ đối tác mới')).toBeVisible();
     await page.getByRole('button', { name: 'Xem tất cả thông báo' }).click();
 
-    await page.getByLabel('Trạng thái').selectOption('unread');
-    await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
+    await page.getByRole('tab', { name: /Chưa đọc/ }).click();    await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
     await expect(page.getByText('Có yêu cầu gian hàng mới')).toHaveCount(0);
 
     await page.getByRole('button', { name: /Có hồ sơ đối tác mới/ }).click();

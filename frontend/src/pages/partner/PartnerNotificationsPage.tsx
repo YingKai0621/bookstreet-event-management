@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import '../../components/partner/PartnerEvents.css';
 import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
 import { CompactPagination } from '../../components/ui/CompactPagination';
+import { groupNotificationsByDay, notificationTimeFormatter } from '../../components/ui/notificationDayGroups';
 import { PARTNER_NOTIFICATION_TYPES, notifyPartnerNotificationsChanged, partnerNotificationTarget,
   partnerNotificationsApi, type PartnerNotificationItem, type PartnerNotificationType } from '../../services/partnerNotificationsApi';
 import type { Language } from '../../types';
@@ -28,15 +29,7 @@ const READ_FILTERS = [
   { value: 'read', label: 'Đã đọc' },
 ] as const;
 
-const TIME_ZONE = 'Asia/Ho_Chi_Minh';
-const DAY_KEY_FORMAT = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE });
-const ONE_DAY_MS = 86_400_000;
-
 type ReadFilter = typeof READ_FILTERS[number]['value'];
-
-function dayKey(value: string | number): string {
-  return DAY_KEY_FORMAT.format(new Date(value));
-}
 
 function emptyCopy(read: ReadFilter, type: 'all' | PartnerNotificationType): { title: string; hint: string } {
   const topic = type === 'all' ? '' : ` thuộc loại “${LABELS[type]}”`;
@@ -122,23 +115,7 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
     return () => { active = false; };
   }, [page, read, revision, type]);
 
-  const groups = useMemo(() => {
-    const today = dayKey(loadedAt);
-    const yesterday = dayKey(loadedAt - ONE_DAY_MS);
-    const dateFormat = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { dateStyle: 'long', timeZone: TIME_ZONE });
-    const result: Array<{ key: string; label: string; items: PartnerNotificationItem[] }> = [];
-    for (const item of items) {
-      const key = dayKey(item.createdAt);
-      let group = result.find(candidate => candidate.key === key);
-      if (!group) {
-        group = { key, items: [],
-          label: key === today ? 'Hôm nay' : key === yesterday ? 'Hôm qua' : dateFormat.format(new Date(item.createdAt)) };
-        result.push(group);
-      }
-      group.items.push(item);
-    }
-    return result;
-  }, [items, language, loadedAt]);
+  const groups = useMemo(() => groupNotificationsByDay(items, loadedAt, language), [items, language, loadedAt]);
 
   async function openItem(item: PartnerNotificationItem) {
     if (pending) return;
@@ -167,7 +144,7 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
     finally { setPending(false); }
   }
 
-  const timeFormatter = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { timeStyle: 'short', timeZone: TIME_ZONE });
+  const timeFormatter = notificationTimeFormatter(language);
   const filtered = read !== 'all' || type !== 'all';
   const empty = emptyCopy(read, type);
 
