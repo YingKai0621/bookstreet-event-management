@@ -10,6 +10,7 @@ public enum NotificationType {
     CERTIFICATE_ISSUED(NotificationRecipientRole.PARTICIPANT),
     CERTIFICATE_REVOKED(NotificationRecipientRole.PARTICIPANT),
     BADGE_UNLOCKED(NotificationRecipientRole.PARTICIPANT),
+    ACTIVITY_STARTING_SOON(NotificationRecipientRole.PARTICIPANT),
 
     PARTNER_APPLICATION_STATUS_CHANGED(NotificationRecipientRole.PARTNER),
     PARTNER_BOOTH_REQUEST_STATUS_CHANGED(NotificationRecipientRole.PARTNER),
@@ -18,13 +19,16 @@ public enum NotificationType {
     PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED(NotificationRecipientRole.PARTNER),
     PARTNER_EVENT_CANCELLED(NotificationRecipientRole.PARTNER),
     PARTNER_ACTIVITY_CANCELLED(NotificationRecipientRole.PARTNER),
+    PARTNER_EVENT_PUBLISHED(NotificationRecipientRole.PARTNER),
+    PARTNER_BOOTH_HOLD_EXPIRING(NotificationRecipientRole.PARTNER),
 
     ORGANIZER_NEW_PARTNER_APPLICATION(NotificationRecipientRole.ORGANIZER),
     ORGANIZER_NEW_BOOTH_REQUEST(NotificationRecipientRole.ORGANIZER),
     ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED(NotificationRecipientRole.ORGANIZER),
     ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST(NotificationRecipientRole.ORGANIZER),
     ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST(NotificationRecipientRole.ORGANIZER),
-    ORGANIZER_BOOTH_RESELECTION_REQUIRED(NotificationRecipientRole.ORGANIZER);
+    ORGANIZER_BOOTH_RESELECTION_REQUIRED(NotificationRecipientRole.ORGANIZER),
+    ORGANIZER_BOOTH_PAYMENT_CONFIRMED(NotificationRecipientRole.ORGANIZER);
 
     private final NotificationRecipientRole recipientRole;
 

@@ -7,6 +7,7 @@ export const ORGANIZER_NOTIFICATION_TYPES = [
   'ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST',
   'ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST',
   'ORGANIZER_BOOTH_RESELECTION_REQUIRED',
+  'ORGANIZER_BOOTH_PAYMENT_CONFIRMED',
 ] as const;
 
 export type OrganizerNotificationType = typeof ORGANIZER_NOTIFICATION_TYPES[number];
@@ -58,6 +59,7 @@ export function organizerNotificationTarget(item: OrganizerNotificationItem): st
         ? `/organizer/events/${eventId}?section=partners` : null;
     case 'ORGANIZER_NEW_BOOTH_REQUEST':
     case 'ORGANIZER_BOOTH_RESELECTION_REQUIRED':
+    case 'ORGANIZER_BOOTH_PAYMENT_CONFIRMED':
       return item.referenceType === 'BOOTH_REQUEST'
         ? `/organizer/booth-requests?eventId=${eventId}` : null;
     case 'ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED':

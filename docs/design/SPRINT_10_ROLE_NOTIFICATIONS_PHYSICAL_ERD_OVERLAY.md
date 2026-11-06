@@ -1,9 +1,9 @@
 # Sprint 10 Role-Scoped Notifications Physical ERD Overlay
 
-- Status: `IMPLEMENTED - V16 IMMUTABLE`
+- Status: `IMPLEMENTED - V16 IMMUTABLE; V17 TYPE AMENDMENT`
 - Prepared date: `2026-11-02`
-- Current applied baseline: immutable Flyway `V1` through `V16`
-- Implemented migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
+- Current applied baseline: Flyway `V1` through `V17`
+- Implemented migrations: `V16` and `V17`, authored by Developer A (`YingKai0621`)
 - Related Sprint baseline: `docs/sprints/sprint-10.md`
 - Reviewed API contract: `docs/api/sprint-10-api-contract.md`
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
@@ -250,7 +250,21 @@ This overlay adds no:
 - Redis key or cache
 - production data seed
 
-## 13. Overlay conclusion
+## 13. V17 type amendment — 2026-11-06
+
+`V17__extend_sprint10_notification_types.sql` replaces `ck_notifications_type_role_reference` only. It adds no
+table, column, foreign key, or index, and it does not change any existing row.
+
+| Added type | Audience | Required reference |
+| --- | --- | --- |
+| `ACTIVITY_STARTING_SOON` | `PARTICIPANT` | `activity_id` |
+| `PARTNER_EVENT_PUBLISHED` | `PARTNER` | `event_id` |
+| `PARTNER_BOOTH_HOLD_EXPIRING` | `PARTNER` | `booth_request_id` |
+| `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` | `ORGANIZER` | `booth_request_id` |
+
+Admin still has no type. Earlier type lists in sections 6 and 7 describe V16; this section extends them.
+
+## 14. Overlay conclusion
 
 Sprint 10 changes one existing table by adding one audience column and four approved domain references.
 It preserves the implemented Participant history, makes multi-role isolation enforceable in PostgreSQL,

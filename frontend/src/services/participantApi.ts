@@ -15,7 +15,8 @@ export type ParticipantNotificationType =
   | 'EVENT_CANCELLED'
   | 'CERTIFICATE_ISSUED'
   | 'CERTIFICATE_REVOKED'
-  | 'BADGE_UNLOCKED';
+  | 'BADGE_UNLOCKED'
+  | 'ACTIVITY_STARTING_SOON';
 
 export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE' | 'BADGE';
 
@@ -306,6 +307,7 @@ function notificationLink(notification: ParticipantNotificationResponse): string
         ? `/participant/events/${encodeURIComponent(referenceId)}` : null;
     case 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED':
     case 'ACTIVITY_CANCELLED':
+    case 'ACTIVITY_STARTING_SOON':
       return referenceType === 'ACTIVITY'
         ? `/participant/activities/detail/${encodeURIComponent(referenceId)}` : null;
     case 'CERTIFICATE_ISSUED':

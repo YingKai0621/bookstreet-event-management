@@ -29,6 +29,7 @@ const TYPE_LABELS: Record<OrganizerNotificationType, { vi: string; en: string }>
   ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST: { vi: 'Yêu cầu đổi hoạt động', en: 'Activity change request' },
   ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST: { vi: 'Yêu cầu hủy hoạt động', en: 'Activity cancellation request' },
   ORGANIZER_BOOTH_RESELECTION_REQUIRED: { vi: 'Cần chọn lại gian hàng', en: 'Booth re-selection' },
+  ORGANIZER_BOOTH_PAYMENT_CONFIRMED: { vi: 'Đã thanh toán gian hàng', en: 'Booth payment confirmed' },
 };
 
 function loadErrorMessage(error: unknown, language: Language): string {
@@ -45,7 +46,8 @@ function loadErrorMessage(error: unknown, language: Language): string {
 function typeIcon(type: OrganizerNotificationType) {
   if (type === 'ORGANIZER_NEW_PARTNER_APPLICATION') return <Users size={18} />;
   if (type === 'ORGANIZER_NEW_BOOTH_REQUEST'
-      || type === 'ORGANIZER_BOOTH_RESELECTION_REQUIRED') return <Store size={18} />;
+      || type === 'ORGANIZER_BOOTH_RESELECTION_REQUIRED'
+      || type === 'ORGANIZER_BOOTH_PAYMENT_CONFIRMED') return <Store size={18} />;
   return <CalendarClock size={18} />;
 }
 

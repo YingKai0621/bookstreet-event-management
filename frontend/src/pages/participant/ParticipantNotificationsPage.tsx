@@ -39,6 +39,7 @@ const typeOptions: ParticipantNotificationType[] = [
   'CERTIFICATE_ISSUED',
   'CERTIFICATE_REVOKED',
   'BADGE_UNLOCKED',
+  'ACTIVITY_STARTING_SOON',
 ];
 
 function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
@@ -49,12 +50,13 @@ function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
     CERTIFICATE_ISSUED: ['Đã cấp chứng nhận', 'Certificate issued'],
     CERTIFICATE_REVOKED: ['Thu hồi chứng nhận', 'Certificate revoked'],
     BADGE_UNLOCKED: ['Mở khóa huy hiệu', 'Badge unlocked'],
+    ACTIVITY_STARTING_SOON: ['Hoạt động sắp diễn ra', 'Activity starting soon'],
   };
   return labels[type][vi ? 0 : 1];
 }
 
 function NotificationIcon({ type }: { type: ParticipantNotificationType }) {
-  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED') return <CalendarClock size={20} />;
+  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED' || type === 'ACTIVITY_STARTING_SOON') return <CalendarClock size={20} />;
   if (type === 'ACTIVITY_CANCELLED' || type === 'EVENT_CANCELLED') return <CalendarX size={20} />;
   if (type === 'CERTIFICATE_ISSUED') return <FileCheck2 size={20} />;
   if (type === 'BADGE_UNLOCKED') return <Medal size={20} />;

@@ -1,6 +1,6 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-05`
+Last updated: `2026-11-06`
 
 ## Current implementation status
 
@@ -259,6 +259,10 @@ indexes. V1 through V15 are now immutable.
 scope and approved Partner/Organizer references, backfills existing rows as `PARTICIPANT`, replaces the
 type/reference/deduplication constraints with role-aware equivalents and adds role-local inbox indexes.
 V1 through V16 are now immutable.
+
+`V17__extend_sprint10_notification_types.sql` replaces only the Notification type/role/reference check to add
+`ACTIVITY_STARTING_SOON`, `PARTNER_EVENT_PUBLISHED`, `PARTNER_BOOTH_HOLD_EXPIRING` and
+`ORGANIZER_BOOTH_PAYMENT_CONFIRMED` under `BR-110`. The Sprint 10 baseline is now 56 Acceptance Criteria.
 
 ## Not yet implemented
 

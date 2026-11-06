@@ -389,7 +389,12 @@ class PaymentSprint03IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("02"));
         assertThat(jdbc.queryForObject("select count(*) from notifications where "
-                + "booth_request_id = ?", Integer.class, fixture.requestId())).isOne();
+                + "booth_request_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId())).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'ORGANIZER' "
+                + "and notification_type = 'ORGANIZER_BOOTH_PAYMENT_CONFIRMED'",
+                Integer.class, fixture.requestId(), organizer)).isOne();
     }
 
     @Test

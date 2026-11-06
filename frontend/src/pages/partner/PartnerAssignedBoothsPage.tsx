@@ -280,7 +280,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
           <button type="button" onClick={() => { setSearch(''); setFilter('all'); }}>Xóa bộ lọc</button>
         </div>
       ) : (
-        <PaginatedList items={visibleItems}>{pageItems => (<div className="my-booths-grid">
+        <PaginatedList items={visibleItems} pageSize={6}>{pageItems => (<div className="my-booths-grid">
           {pageItems.map(item => {
             const application = item.application;
             const eventTitle = application?.eventTitle || `Sự kiện #${item.assignment.eventId}`;

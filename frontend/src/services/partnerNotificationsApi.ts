@@ -8,6 +8,8 @@ export const PARTNER_NOTIFICATION_TYPES = [
   'PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED',
   'PARTNER_EVENT_CANCELLED',
   'PARTNER_ACTIVITY_CANCELLED',
+  'PARTNER_EVENT_PUBLISHED',
+  'PARTNER_BOOTH_HOLD_EXPIRING',
 ] as const;
 
 export type PartnerNotificationType = typeof PARTNER_NOTIFICATION_TYPES[number];
@@ -56,7 +58,11 @@ export function partnerNotificationTarget(item: PartnerNotificationItem): string
     case 'PARTNER_APPLICATION_STATUS_CHANGED':
       return item.referenceType === 'PARTNER_APPLICATION' && contextValid
         ? `/partner/events?application=${item.referenceId}` : null;
+    case 'PARTNER_EVENT_PUBLISHED':
+      return item.referenceType === 'EVENT' && item.referenceId === eventId
+        ? `/partner/events/apply?event=${eventId}` : null;
     case 'PARTNER_BOOTH_REQUEST_STATUS_CHANGED':
+    case 'PARTNER_BOOTH_HOLD_EXPIRING':
       return item.referenceType === 'BOOTH_REQUEST' && contextValid
         ? `/partner/booth-requests?eventId=${eventId}&view=requests` : null;
     case 'PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED':

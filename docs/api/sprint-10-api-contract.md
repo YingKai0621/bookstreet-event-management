@@ -101,10 +101,11 @@ EVENT_CANCELLED
 CERTIFICATE_ISSUED
 CERTIFICATE_REVOKED
 BADGE_UNLOCKED
+ACTIVITY_STARTING_SOON
 ```
 
 The Participant type/reference/producer matrix is closed and preserves the implemented Sprint 6/7
-contract:
+contract, plus the 2026-11-06 amendment in section 9.6:
 
 | Type | Required reference | Approved producing transition and recipient |
 | --- | --- | --- |
@@ -114,9 +115,10 @@ contract:
 | `CERTIFICATE_ISSUED` | `CERTIFICATE` | A Certificate transition to issued notifies that Certificate's owning Participant. |
 | `CERTIFICATE_REVOKED` | `CERTIFICATE` | A Certificate transition to revoked notifies that Certificate's owning Participant. |
 | `BADGE_UNLOCKED` | `BADGE` | A newly persisted UserBadge from an approved award path notifies the earning User. |
+| `ACTIVITY_STARTING_SOON` | `ACTIVITY` | A server reminder job notifies each User with an active registration of a Published Activity inside the reminder window. |
 
-`GET /participant/notifications` accepts exactly these six values for `type`. Sprint 10 neither renames
-them nor introduces another Participant producer. Event cancellation retains its Event summary behavior;
+`GET /participant/notifications` accepts exactly these seven values for `type`. Sprint 10 does not rename
+them or introduce another Participant producer. Event cancellation retains its Event summary behavior;
 the child Activity-registration cancellations performed by that same Event transition do not create
 additional `ACTIVITY_CANCELLED` rows.
 
@@ -130,9 +132,11 @@ PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED
 PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED
 PARTNER_EVENT_CANCELLED
 PARTNER_ACTIVITY_CANCELLED
+PARTNER_EVENT_PUBLISHED
+PARTNER_BOOTH_HOLD_EXPIRING
 ```
 
-The Partner endpoint accepts exactly the seven values above for `type`. Their type/reference/transition
+The Partner endpoint accepts exactly the nine values above for `type`. Their type/reference/transition
 matrix is closed:
 
 | Type | Required reference | Approved committed outcomes |
@@ -144,6 +148,8 @@ matrix is closed:
 | `PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED` | `ACTIVITY_REQUEST` | Cancellation request `PENDING → APPROVED/REJECTED`, or independent lifecycle `PENDING → CANCELLED`. |
 | `PARTNER_EVENT_CANCELLED` | `EVENT` | Event `PUBLISHED → CANCELLED` summary for a representative whose organization has a `PENDING` or `APPROVED` application. |
 | `PARTNER_ACTIVITY_CANCELLED` | `ACTIVITY` | Partner-owned official non-terminal Activity `→ CANCELLED` with source `ORGANIZER` or `SYSTEM`, outside Event cancellation and outside an approved Partner cancellation request. |
+| `PARTNER_EVENT_PUBLISHED` | `EVENT` | Event `DRAFT → PUBLISHED` for each `ACTIVE` organization representative except the Event Organizer. |
+| `PARTNER_BOOTH_HOLD_EXPIRING` | `BOOTH_REQUEST` | Server reminder for an eligible Active Hold inside the reminder window. |
 
 The generic `*_STATUS_CHANGED` names group filters by owned workflow; they do not authorize every status
 transition. Title and message record the approved historical outcome in user-facing language, while the
@@ -159,9 +165,10 @@ ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED
 ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST
 ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST
 ORGANIZER_BOOTH_RESELECTION_REQUIRED
+ORGANIZER_BOOTH_PAYMENT_CONFIRMED
 ```
 
-The Organizer endpoint accepts exactly the six values above for `type`. Their type/reference/transition
+The Organizer endpoint accepts exactly the seven values above for `type`. Their type/reference/transition
 matrix is closed:
 
 | Type | Required reference | Approved committed transition |
@@ -172,6 +179,7 @@ matrix is closed:
 | `ORGANIZER_NEW_ACTIVITY_CHANGE_REQUEST` | `ACTIVITY_REQUEST` | Creation of a new change request in `PENDING`. |
 | `ORGANIZER_NEW_ACTIVITY_CANCELLATION_REQUEST` | `ACTIVITY_REQUEST` | Creation of a new cancellation request in `PENDING`; user-facing content may say it was sent late only when the persisted compatibility `isLate` value is true. |
 | `ORGANIZER_BOOTH_RESELECTION_REQUIRED` | `BOOTH_REQUEST` | A safely released selected request commits as `WITHDRAWN` or `PAYMENT_EXPIRED`, and at least one different `PENDING` request for the same Booth passes the canonical selection eligibility check at that backend time. |
+| `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` | `BOOTH_REQUEST` | Trusted settlement completes a Booth request and creates its Assignment. Zero-price selection creates no row. |
 
 The re-selection row references the released terminal Booth request, not an arbitrary pending candidate.
 That terminal request and its persisted release time provide a stable transition identity and durable
@@ -556,6 +564,30 @@ This keeps authorization, CSRF, paging, validation, error handling, and future m
 without inventing product events. It also proves an Admin on a multi-role User cannot list or mutate rows
 from another audience.
 
+### 9.6 Actionable Notification amendment — approved 2026-11-06
+
+`BR-110` and `docs/sprints/sprint-10.md` section 12 add four producers through migration `V17`. No endpoint,
+request field, response field, or delivery channel changes.
+
+Stable identities:
+
+- `PARTNER_EVENT_PUBLISHED`: Event id, because publication occurs once
+- `PARTNER_BOOTH_HOLD_EXPIRING`: Hold id plus `expiresAt`
+- `ORGANIZER_BOOTH_PAYMENT_CONFIRMED`: Booth-request id plus `completedAt`
+- `ACTIVITY_STARTING_SOON`: Activity id plus the epoch second of `startAt`
+
+Publication and settlement rows join the owning transaction. Reminder rows are written by server schedulers,
+which leave the source lifecycle unchanged and rely on the same insert-if-absent writer.
+
+Navigation additions:
+
+| Type | Allowed destination |
+| --- | --- |
+| `PARTNER_EVENT_PUBLISHED` | Partner Event discovery focused on the Event reference |
+| `PARTNER_BOOTH_HOLD_EXPIRING` | Owned Booth-request area for the context Event |
+| `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` | Booth-request queue for `contextEventId` |
+| `ACTIVITY_STARTING_SOON` | Participant Activity detail |
+
 ## 10. Error envelope
 
 The existing `ApiErrorResponse` is reused:
@@ -654,7 +686,8 @@ successful read-mutation boundaries.
 
 ## 12. Acceptance Criteria traceability — reviewed 2026-11-03
 
-The accepted Sprint 10 baseline contains 52 criteria. Traceability is closed by responsibility group:
+The accepted Sprint 10 baseline contains 56 criteria. `AC-E-S10-14`, `AC-E-S10-15`, `AC-O-S10-11`, and
+`AC-P-S10-08` map to section 9.6. The original 52 are traced by responsibility group:
 
 | Acceptance Criteria | Contract sections |
 | --- | --- |

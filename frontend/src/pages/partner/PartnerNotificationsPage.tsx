@@ -15,6 +15,8 @@ const LABELS: Record<PartnerNotificationType, string> = {
   PARTNER_ACTIVITY_CANCELLATION_REQUEST_STATUS_CHANGED: 'Yêu cầu hủy hoạt động',
   PARTNER_EVENT_CANCELLED: 'Sự kiện bị hủy',
   PARTNER_ACTIVITY_CANCELLED: 'Hoạt động bị hủy',
+  PARTNER_EVENT_PUBLISHED: 'Sự kiện mới',
+  PARTNER_BOOTH_HOLD_EXPIRING: 'Sắp hết hạn giữ gian hàng',
 };
 
 export function PartnerNotificationsPage({ language }: { language: Language }) {

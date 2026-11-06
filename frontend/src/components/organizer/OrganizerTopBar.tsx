@@ -71,7 +71,8 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
   const getNotificationIcon = (notification: OrganizerNotificationItem) => {
     if (notification.type === 'ORGANIZER_NEW_PARTNER_APPLICATION') return <Users size={15} />;
     if (notification.type === 'ORGANIZER_NEW_BOOTH_REQUEST'
-        || notification.type === 'ORGANIZER_BOOTH_RESELECTION_REQUIRED') return <Store size={15} />;
+        || notification.type === 'ORGANIZER_BOOTH_RESELECTION_REQUIRED'
+        || notification.type === 'ORGANIZER_BOOTH_PAYMENT_CONFIRMED') return <Store size={15} />;
     return <Calendar size={15} />;
   };
 
