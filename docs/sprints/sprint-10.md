@@ -65,7 +65,7 @@ stays at 26.
 
 ### 3.2 Explicitly out of scope
 
-- email changes, SMS, mobile push, WebSocket, Server-Sent Events, or background polling
+- email changes, SMS, mobile push, WebSocket, background polling, or SSE beyond the `BR-111` signal
 - notification preferences, quiet hours, subscriptions, templates, or a broadcast composer
 - General Feedback broadcast to every Organizer
 - a notification for every Participant registration, Booth visit, point award, or normal self-action
@@ -99,7 +99,7 @@ The rules in this section are defined by active `BR-102` through `BR-109` in
 7. `BR-108 — Cascade suppression`: a parent cancellation or terminal workflow outcome must not create
    both a summary and redundant intermediate/child outcomes. The exact precedence rules are in section 5.2.
 8. `BR-109 — Channel and noise boundary`: Sprint 10 adds no email behavior, SMS, push, WebSocket,
-   Server-Sent Events, polling, preferences, composer, sender, NotificationType entity, or outbox. General
+   polling, preferences, composer, sender, NotificationType entity, or outbox. General
    Feedback remains a shared queue. Existing email behavior remains unchanged and after commit. Admin has
    a real empty inbox foundation but no producer or fabricated type.
 
@@ -140,7 +140,7 @@ target presentation are defined by the reviewed API/UI contract, not promoted to
 
 ### 4.4 Approved refresh policy
 
-Sprint 10 has no real-time transport or background polling. At minimum, a workspace fetches current data
+Sprint 10 has no background polling. An open workspace also refreshes on the `BR-111` signal (section 13). At minimum, a workspace fetches current data
 on workspace entry, when the User opens the inbox or notification popover, and after a read mutation.
 Browser-focus refresh is not required and continuous polling is prohibited.
 
@@ -473,7 +473,7 @@ security, migration, frontend, Feedback, email, and scope-exclusion regression b
     prerequisites for an approved in-app recipient; an email failure neither rolls back the committed
     domain transition/Notification nor causes another in-app row.
 52. `AC-S10-REG-06`: Sprint 10 introduces no mock/fallback Notification array, `localStorage` read state,
-    SMS, mobile push, WebSocket, Server-Sent Events, polling, preference/quiet-hour model, broadcast
+    SMS, mobile push, WebSocket, SSE beyond the `BR-111` signal, polling, preference/quiet-hour model, broadcast
     composer, NotificationType table, sender User, delivery-attempt table, transactional outbox, or change
     to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate, or Badge lifecycle meaning.
 
@@ -523,7 +523,7 @@ closed types or forbids a further Participant producer, this section governs.
 
 Configuration defaults are `bookstreet.booth.hold-reminder-window-minutes=120` and
 `bookstreet.activity.reminder-window-hours=24`. Time-based reminders run in existing-style server schedulers.
-They are not client polling, real-time delivery, or a lifecycle change, so `BR-109` remains intact. The
+They are not client polling or a lifecycle change, so `BR-109` remains intact. The
 Partner workspace sidebar also exposes the existing inbox with its unread count under `AC-E-S10-12`.
 
 Amended Acceptance Criteria:
@@ -548,8 +548,7 @@ The four new types extend `AC-P-S10-01`, `AC-P-S10-02`, `AC-P-S10-07`, `AC-E-S10
 
 Manual review showed that a recipient had to reload the page to see a new Notification. The project owner
 approved one Server-Sent Events signal, defined by active `BR-111`. It adds no table, migration, type, producer,
-or lifecycle change. Where this section conflicts with an earlier Sprint 10 statement that excludes SSE or real-time
-delivery, this section governs; the other `BR-109` exclusions remain active.
+or lifecycle change.
 
 Amended Acceptance Criteria:
 
@@ -562,5 +561,5 @@ Amended Acceptance Criteria:
     connection and reloads once when shown again. An unavailable stream leaves the existing refresh triggers
     working, and Admin opens no connection.
 
-`AC-S10-REG-06` permits this signal and no other real-time transport. Bounded refresh criteria continue to apply
+Bounded refresh criteria continue to apply
 as the fallback when no connection is open.

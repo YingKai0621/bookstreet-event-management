@@ -42,7 +42,7 @@ The active implementation is limited to:
 - Admin genuine empty/failure behavior with no producer
 - atomic producer writes, stable deduplication and first-read concurrency semantics
 - real role-local frontend preview/full inbox, filters, read state and allowlisted navigation
-- bounded refresh on workspace entry, inbox/popover open and confirmed read mutation
+- refresh on workspace entry, inbox/popover open, confirmed read mutation and the `BR-111` signal
 
 The approved baseline contains **58 Acceptance Criteria**, including the 2026-11-06 amendments defined by
 `BR-110` and `BR-111` in `docs/sprints/sprint-10.md` sections 12 and 13:
@@ -99,7 +99,7 @@ navigation and browser regression coverage, documentation synchronization, and f
 
 - notification deletion, archive, pin, snooze, reply or assignment
 - generic broadcast/composer behavior
-- email behavior changes, SMS, mobile push or real-time transport
+- email behavior changes, SMS, mobile push or real-time transport other than the `BR-111` signal
 - General Feedback broadcast
 - Participant-volume Organizer alerts
 - Admin security/account/system alert producers
