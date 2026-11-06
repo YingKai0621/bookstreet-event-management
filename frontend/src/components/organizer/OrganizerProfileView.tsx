@@ -1,6 +1,5 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
-  Bell,
   Building2,
   Check,
   Edit3,
@@ -35,11 +34,6 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
   const [profileSource, setProfileSource] = useState(profile);
-
-  // Notification preferences do not have an approved backend contract yet.
-  const notifyNewBooth = profile.notificationPreferences?.newBooth ?? false;
-  const notifyNewActivity = profile.notificationPreferences?.newActivity ?? false;
-  const notifyDailyEmail = profile.notificationPreferences?.dailyEmail ?? false;
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -562,111 +556,6 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
                 </div>
               </form>
-            </div>
-
-            {/* 4. Notification Preferences Card with Modern Toggle Switches */}
-            <div className="organizer-card" style={{ padding: '1.5rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                paddingBottom: '0.9rem',
-                borderBottom: '1px solid #E5E7EB',
-                marginBottom: '1rem'
-              }}>
-                <Bell size={18} color="#13241F" />
-                <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#13241F', margin: 0 }}>
-                  {language === 'vi' ? 'Cài đặt thông báo điều hành' : 'Notification Preferences'}
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {/* Row 1 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đơn đăng ký gian hàng mới' : 'New Booth Registration Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có hồ sơ gian hàng mới.' : 'Alerts when a new booth application is submitted.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewBooth ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyNewBooth}
-                    aria-label="Thông báo đơn đăng ký gian hàng mới"
-                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 2 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đề xuất hoạt động cần duyệt' : 'Activity Proposal Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có đề xuất tọa đàm, workshop mới.' : 'Alerts when new activity proposals need review.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewActivity ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyNewActivity}
-                    aria-label="Thông báo đề xuất hoạt động cần duyệt"
-                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 3 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Nhận tóm tắt báo cáo định kỳ qua Email' : 'Periodic Summary via Email'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Gửi báo cáo tổng hợp lưu lượng người tham gia vào cuối ngày.' : 'Daily digest of attendee volume and operations.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyDailyEmail ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyDailyEmail}
-                    aria-label="Nhận tóm tắt báo cáo định kỳ qua Email"
-                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-              </div>
             </div>
 
           </div>
