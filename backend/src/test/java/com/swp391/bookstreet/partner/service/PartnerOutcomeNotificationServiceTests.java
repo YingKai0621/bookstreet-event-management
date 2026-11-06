@@ -21,7 +21,8 @@ import static org.mockito.Mockito.when;
 class PartnerOutcomeNotificationServiceTests {
     private final NotificationWriter writer = mock(NotificationWriter.class);
     private final PartnerOutcomeNotificationService service = new PartnerOutcomeNotificationService(
-            writer, mock(PartnerEventApplicationRepository.class));
+            writer, mock(PartnerEventApplicationRepository.class),
+            mock(com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository.class));
 
     @Test
     void selectedAndCompletedUseDifferentPersistedTransitionKeys() {

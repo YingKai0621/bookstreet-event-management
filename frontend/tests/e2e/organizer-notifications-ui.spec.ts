@@ -115,8 +115,7 @@ test.describe('Organizer notifications inbox', () => {
     await expect(page.locator('.organizer-topbar').getByText('Có hồ sơ đối tác mới')).toBeVisible();
     await page.getByRole('button', { name: 'Xem tất cả thông báo' }).click();
 
-    await page.getByLabel('Trạng thái').selectOption('unread');
-    await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
+    await page.getByRole('tab', { name: /Chưa đọc/ }).click();    await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
     await expect(page.getByText('Có yêu cầu gian hàng mới')).toHaveCount(0);
 
     await page.getByRole('button', { name: /Có hồ sơ đối tác mới/ }).click();
@@ -129,7 +128,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('alert')).toContainText('Không tải được thông báo');
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
     await page.getByRole('button', { name: 'Thử lại' }).click();
     await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
     expect(state.getListCalls()).toBeGreaterThan(1);
@@ -140,7 +139,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('alert').filter({ hasText: 'Bạn không có quyền xem thông báo Organizer.' }).first()).toBeVisible();
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
   });
 
   test('shows sign-in instead of an empty inbox when the session expires', async ({ page }) => {
@@ -148,7 +147,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('button', { name: 'Đăng nhập vào Cổng Quản Lý' })).toBeVisible();
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
   });
 
   test('marks all read through the server and refreshes the unread count', async ({ page }) => {

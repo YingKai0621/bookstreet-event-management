@@ -102,15 +102,18 @@ public class NotificationWriterService implements NotificationWriter {
                 applicationId, boothRequestId, proposalId, activityRequestId);
         boolean expectedReference = switch (type) {
             case ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED, ACTIVITY_CANCELLED,
-                    PARTNER_ACTIVITY_CANCELLED -> activityId != null;
-            case EVENT_CANCELLED, PARTNER_EVENT_CANCELLED -> eventId != null;
+                    ACTIVITY_STARTING_SOON, PARTNER_ACTIVITY_CANCELLED -> activityId != null;
+            case EVENT_CANCELLED, PARTNER_EVENT_CANCELLED,
+                    PARTNER_EVENT_PUBLISHED -> eventId != null;
             case CERTIFICATE_ISSUED, CERTIFICATE_REVOKED -> certificateId != null;
             case BADGE_UNLOCKED -> badgeId != null;
             case PARTNER_APPLICATION_STATUS_CHANGED,
                     ORGANIZER_NEW_PARTNER_APPLICATION -> applicationId != null;
             case PARTNER_BOOTH_REQUEST_STATUS_CHANGED,
+                    PARTNER_BOOTH_HOLD_EXPIRING,
                     ORGANIZER_NEW_BOOTH_REQUEST,
-                    ORGANIZER_BOOTH_RESELECTION_REQUIRED -> boothRequestId != null;
+                    ORGANIZER_BOOTH_RESELECTION_REQUIRED,
+                    ORGANIZER_BOOTH_PAYMENT_CONFIRMED -> boothRequestId != null;
             case PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED,
                     ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED -> proposalId != null;
             case PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED,

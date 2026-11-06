@@ -5,10 +5,10 @@
 - Activation date: `2026-11-03`
 - Approved documentation merge: PR #116, merge commit `3a0a76b`
 - Last product-scope revision: `2026-11-03`
-- Last Acceptance Criteria revision: `2026-11-03`
+- Last Acceptance Criteria revision: `2026-11-06` (section 12 amendment)
 - Previous completed Sprint: Sprint 09 Heritage Public Content
-- Current production schema baseline: immutable Flyway migrations `V1` through `V16`
-- Implemented schema change: `V16`, authored exclusively by Developer A (`YingKai0621`)
+- Current production schema baseline: immutable Flyway migrations `V1` through `V17`
+- Implemented schema changes: `V16` and amendment `V17`, authored by Developer A (`YingKai0621`)
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
 - Current review stage: the 52 Acceptance Criteria, API contract, Physical ERD overlay, implementation
   plan, and three-developer assignment are approved and active
@@ -231,8 +231,8 @@ BADGE_UNLOCKED
 ```
 
 Existing creation rules, ownership, links, filters, UI behavior, and transaction boundaries remain valid.
-The only intended behavior correction is atomic first-read handling under concurrency. This proposal does
-not add Participant notification triggers.
+The only intended behavior correction is atomic first-read handling under concurrency. The only added
+Participant trigger is `ACTIVITY_STARTING_SOON`, approved by the section 12 amendment.
 
 ## 8. Admin foundation
 
@@ -477,9 +477,9 @@ security, migration, frontend, Feedback, email, and scope-exclusion regression b
     composer, NotificationType table, sender User, delivery-attempt table, transactional outbox, or change
     to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate, or Badge lifecycle meaning.
 
-The active baseline contains **52 Acceptance Criteria**. All 11 shared-foundation, 7
-Participant, 13 Partner, 10 Organizer, 5 Admin, and 6 regression criteria in sections 9.1 through 9.6 have
-completed Acceptance Criteria review.
+Sections 9.1 through 9.6 contain the original 52 reviewed criteria: 11 shared-foundation, 7 Participant,
+13 Partner, 10 Organizer, 5 Admin, and 6 regression. Section 12 adds four, so the active baseline contains
+**56 Acceptance Criteria**.
 
 ## 10. Delivery units
 
@@ -506,3 +506,40 @@ The documentation activation completed on `2026-11-03`:
    relevant role before starting; the assignment document requires no personal-name registry.
 7. The BR-81 exact-deadline equality decision was resolved on `2026-11-05`: selection is allowed at the
    exact Booth request deadline and rejected only after it. Boundary tests preserve this inclusive rule.
+
+## 12. Actionable Notification amendment — 2026-11-06
+
+Manual review showed that the closed producer matrix left out information recipients need in order to act.
+The project owner approved adding exactly the following producers to Sprint 10 through migration `V17`,
+defined by active `BR-110`. Where this section conflicts with an earlier Sprint 10 statement that lists the
+closed types or forbids a further Participant producer, this section governs.
+
+| Type | Audience and recipient | Trigger | Reference | Deduplication |
+|---|---|---|---|---|
+| `PARTNER_EVENT_PUBLISHED` | `PARTNER`; representative of each `ACTIVE` organization except the Event Organizer | Event `DRAFT → PUBLISHED` commits | `EVENT` | Event id; publication happens once |
+| `PARTNER_BOOTH_HOLD_EXPIRING` | `PARTNER`; representative of the selected request's organization | Server job finds an eligible Hold inside the reminder window | `BOOTH_REQUEST` | Hold id plus `expiresAt` |
+| `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` | `ORGANIZER`; Event `organizerUserId` | Trusted settlement completes the request and creates its Assignment | `BOOTH_REQUEST` | Request id plus `completedAt` |
+| `ACTIVITY_STARTING_SOON` | `PARTICIPANT`; each User with an `ACTIVE` ActivityRegistration | Server job finds a `PUBLISHED` Activity inside the reminder window | `ACTIVITY` | Activity id plus `startAt` |
+
+Configuration defaults are `bookstreet.booth.hold-reminder-window-minutes=120` and
+`bookstreet.activity.reminder-window-hours=24`. Time-based reminders run in existing-style server schedulers.
+They are not client polling, real-time delivery, or a lifecycle change, so `BR-109` remains intact. The
+Partner workspace sidebar also exposes the existing inbox with its unread count under `AC-E-S10-12`.
+
+Amended Acceptance Criteria:
+
+53. `AC-E-S10-14`: publishing an Event creates one `PARTNER_EVENT_PUBLISHED` row per `ACTIVE` organization
+    representative in the publication transaction and creates none for an `INACTIVE` organization or for the
+    Event's own Organizer. It opens the owned Event discovery target for that Event.
+54. `AC-E-S10-15`: an eligible Hold creates exactly one `PARTNER_BOOTH_HOLD_EXPIRING` row inside the reminder
+    window. A Hold outside the window, a Hold whose full lifetime is not longer than the window, and a Hold
+    with `PENDING`/`SUCCESS` payment or reconciliation evidence create none.
+55. `AC-O-S10-11`: trusted settlement creates one `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` row for the Event owner
+    in the settlement transaction; a retried callback creates no duplicate and zero-price selection creates
+    none. It opens the owner-scoped Booth request queue.
+56. `AC-P-S10-08`: a `PUBLISHED` Activity inside the reminder window creates one `ACTIVITY_STARTING_SOON` row
+    for each `ACTIVE` registration and none for cancelled registrations or Activities outside the window.
+    Changing `startAt` permits one new reminder. It opens Participant Activity detail.
+
+The four new types extend `AC-P-S10-01`, `AC-P-S10-02`, `AC-P-S10-07`, `AC-E-S10-12`, `AC-E-S10-13`,
+`AC-O-S10-09`, `AC-O-S10-10`, and `AC-S10-REG-06` without otherwise changing them.

@@ -1,6 +1,5 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
-  Bell,
   Building2,
   Check,
   Edit3,
@@ -35,11 +34,6 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
   const [profileSource, setProfileSource] = useState(profile);
-
-  // Notification preferences do not have an approved backend contract yet.
-  const notifyNewBooth = profile.notificationPreferences?.newBooth ?? false;
-  const notifyNewActivity = profile.notificationPreferences?.newActivity ?? false;
-  const notifyDailyEmail = profile.notificationPreferences?.dailyEmail ?? false;
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -232,31 +226,25 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     {language === 'vi' ? 'Đang hoạt động' : 'Active'}
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Lần đăng nhập:</span>
-                  <span style={{ color: '#13241F', fontWeight: 500 }}>Hôm nay, 08:30</span>
-                </div>
               </div>
             </div>
 
             {/* Session / Account Card */}
-            <div className="organizer-card" style={{ padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.5rem 0' }}>
-                {language === 'vi' ? 'Phiên làm việc' : 'Session Management'}
-              </h3>
-
-              <div style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, marginBottom: '1rem' }}>
-                <div>Trình duyệt hiện tại: <strong>Chrome trên Windows</strong></div>
-                <div style={{ marginTop: 2 }}>Kết nối mã hóa phiên an toàn.</div>
+            <div className="organizer-card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem 1.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.25rem 0' }}>
+                  {language === 'vi' ? 'Phiên làm việc' : 'Session'}
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, margin: 0 }}>
+                  {language === 'vi' ? 'Đăng xuất khỏi tài khoản trên thiết bị này.' : 'Sign out of your account on this device.'}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(true)}
                 style={{
-                  width: '100%',
-                  padding: '7px 12px',
+                  padding: '7px 16px',
                   background: 'transparent',
                   border: '1px solid #EF4444',
                   color: '#EF4444',
@@ -396,7 +384,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={profile.role}
+                      value={profile.role === 'ORGANIZER' ? (language === 'vi' ? 'Ban tổ chức' : 'Organizer') : profile.role}
                       disabled
                       style={{
                         width: '100%',
@@ -411,7 +399,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
 
                   {/* Cơ quan / Tổ chức trực thuộc */}
-                  <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ gridColumn: '1 / -1', ...(profile.organization ? {} : { display: 'none' }) }}>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Cơ quan / Tổ chức trực thuộc' : 'Affiliated Organization'}
                     </label>
@@ -562,111 +550,6 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
                 </div>
               </form>
-            </div>
-
-            {/* 4. Notification Preferences Card with Modern Toggle Switches */}
-            <div className="organizer-card" style={{ padding: '1.5rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                paddingBottom: '0.9rem',
-                borderBottom: '1px solid #E5E7EB',
-                marginBottom: '1rem'
-              }}>
-                <Bell size={18} color="#13241F" />
-                <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#13241F', margin: 0 }}>
-                  {language === 'vi' ? 'Cài đặt thông báo điều hành' : 'Notification Preferences'}
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {/* Row 1 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đơn đăng ký gian hàng mới' : 'New Booth Registration Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có hồ sơ gian hàng mới.' : 'Alerts when a new booth application is submitted.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewBooth ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyNewBooth}
-                    aria-label="Thông báo đơn đăng ký gian hàng mới"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 2 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đề xuất hoạt động cần duyệt' : 'Activity Proposal Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có đề xuất tọa đàm, workshop mới.' : 'Alerts when new activity proposals need review.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewActivity ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyNewActivity}
-                    aria-label="Thông báo đề xuất hoạt động cần duyệt"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 3 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Nhận tóm tắt báo cáo định kỳ qua Email' : 'Periodic Summary via Email'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Gửi báo cáo tổng hợp lưu lượng người tham gia vào cuối ngày.' : 'Daily digest of attendee volume and operations.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyDailyEmail ? 'is-active' : ''}`}
-                    disabled
-                    role="switch"
-                    aria-checked={notifyDailyEmail}
-                    aria-label="Nhận tóm tắt báo cáo định kỳ qua Email"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-              </div>
             </div>
 
           </div>

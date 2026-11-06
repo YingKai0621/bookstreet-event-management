@@ -39,6 +39,7 @@ const typeOptions: ParticipantNotificationType[] = [
   'CERTIFICATE_ISSUED',
   'CERTIFICATE_REVOKED',
   'BADGE_UNLOCKED',
+  'ACTIVITY_STARTING_SOON',
 ];
 
 function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
@@ -49,12 +50,23 @@ function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
     CERTIFICATE_ISSUED: ['Đã cấp chứng nhận', 'Certificate issued'],
     CERTIFICATE_REVOKED: ['Thu hồi chứng nhận', 'Certificate revoked'],
     BADGE_UNLOCKED: ['Mở khóa huy hiệu', 'Badge unlocked'],
+    ACTIVITY_STARTING_SOON: ['Hoạt động sắp diễn ra', 'Activity starting soon'],
   };
   return labels[type][vi ? 0 : 1];
 }
 
+function emptyTitle(read: ReadFilter, type: TypeFilter, vi: boolean): string {
+  const label = type === 'all' ? '' : typeLabel(type, vi);
+  if (read === 'unread') {
+    if (label) return vi ? `Không có thông báo chưa đọc thuộc loại “${label}”` : `No unread “${label}” notifications`;
+    return vi ? 'Bạn đã đọc hết thông báo' : 'You are all caught up';
+  }
+  if (label) return vi ? `Chưa có thông báo thuộc loại “${label}”` : `No “${label}” notifications yet`;
+  return vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications';
+}
+
 function NotificationIcon({ type }: { type: ParticipantNotificationType }) {
-  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED') return <CalendarClock size={20} />;
+  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED' || type === 'ACTIVITY_STARTING_SOON') return <CalendarClock size={20} />;
   if (type === 'ACTIVITY_CANCELLED' || type === 'EVENT_CANCELLED') return <CalendarX size={20} />;
   if (type === 'CERTIFICATE_ISSUED') return <FileCheck2 size={20} />;
   if (type === 'BADGE_UNLOCKED') return <Medal size={20} />;
@@ -249,12 +261,10 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
           <div className="participant-empty-icon-circle">
             <Bell size={28} strokeWidth={2.2} aria-hidden="true" />
           </div>
-          <strong>{isFiltered
-            ? (vi ? 'Không có kết quả phù hợp' : 'No matching notifications')
-            : (vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications')}</strong>
-          <p>{isFiltered
-            ? (vi ? 'Hãy thay đổi bộ lọc để xem các thông báo khác.' : 'Change the filters to see other notifications.')
-            : (vi ? 'Thông báo mới về hoạt động, chứng nhận và huy hiệu sẽ xuất hiện tại đây.' : 'Updates about activities, certificates, and badges will appear here.')}</p>
+          <strong>{emptyTitle(readFilter, typeFilter, vi)}</strong>
+          <p>{vi
+            ? 'Thông báo mới về hoạt động, chứng nhận và huy hiệu sẽ xuất hiện tại đây.'
+            : 'Updates about activities, certificates, and badges will appear here.'}</p>
           {isFiltered && (
             <button
               type="button"
@@ -265,7 +275,7 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
                 setPage(0);
               }}
             >
-              {vi ? 'Xóa bộ lọc' : 'Clear filters'}
+              {vi ? 'Xem tất cả thông báo' : 'View all notifications'}
             </button>
           )}
         </div>

@@ -5,10 +5,12 @@ import com.swp391.bookstreet.notification.entity.NotificationType;
 import com.swp391.bookstreet.notification.service.NotificationCommand;
 import com.swp391.bookstreet.notification.service.NotificationWriter;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
+import com.swp391.bookstreet.booth.entity.BoothHold;
 import com.swp391.bookstreet.booth.entity.BoothRequest;
 import com.swp391.bookstreet.booth.entity.BoothRequestStatus;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -20,11 +22,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class PartnerOutcomeNotificationService {
     private final NotificationWriter writer;
     private final PartnerEventApplicationRepository applications;
+    private final PartnerOrganizationRepository organizations;
 
     public PartnerOutcomeNotificationService(NotificationWriter writer,
-            PartnerEventApplicationRepository applications) {
+            PartnerEventApplicationRepository applications,
+            PartnerOrganizationRepository organizations) {
         this.writer = writer;
         this.applications = applications;
+        this.organizations = organizations;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -81,6 +86,34 @@ public class PartnerOutcomeNotificationService {
                 null, null, null, null, null, request.getBoothRequestId(), null, null,
                 "partner:booth:" + request.getBoothRequestId() + ":" + status + ":" + at,
                 title, message, at));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void boothHoldExpiring(BoothHold hold, Instant now) {
+        BoothRequest request = hold.getBoothRequest();
+        writer.write(new NotificationCommand(
+                request.getApplication().getPartnerOrganization().getRepresentativeUserId(),
+                NotificationRecipientRole.PARTNER,
+                NotificationType.PARTNER_BOOTH_HOLD_EXPIRING,
+                null, null, null, null, null, request.getBoothRequestId(), null, null,
+                "partner:booth-hold-expiring:" + hold.getBoothHoldId() + ":" + hold.getExpiresAt(),
+                "Gian hàng sắp hết hạn giữ chỗ",
+                "Hãy hoàn tất thanh toán trước khi hết hạn để không mất gian hàng đã được chọn.",
+                now));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void eventPublished(Event event, Instant publishedAt) {
+        for (Long recipient : organizations.findActiveRepresentativeIdsExcluding(
+                event.getOrganizerUserId())) {
+            writer.write(new NotificationCommand(recipient, NotificationRecipientRole.PARTNER,
+                    NotificationType.PARTNER_EVENT_PUBLISHED,
+                    event.getEventId(), null, null, null, null, null, null, null,
+                    "partner:event-published:" + event.getEventId(),
+                    "Có sự kiện mới đang mở đăng ký",
+                    "Một sự kiện mới vừa được công bố. Xem chi tiết để đăng ký tham gia.",
+                    publishedAt));
+        }
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

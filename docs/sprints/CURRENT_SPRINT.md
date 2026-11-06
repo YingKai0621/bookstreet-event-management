@@ -6,11 +6,11 @@
 - Activation date: `2026-11-03`
 - Previous completed Sprint: `Sprint 09 Heritage Public Content`
 - Approved documentation: PR #116, merge commit `3a0a76b`
-- Current implemented schema: immutable Flyway migrations `V1` through `V16`
+- Current implemented schema: Flyway migrations `V1` through `V17`
 - Sprint 10 foundation: PR #122, merge commit `280588c`
 - Partner inbox and producers: PR #124 (`7a8518a`) and PR #125 (`5fde175`)
 - Organizer inbox and producers: PR #126, merge commit `e9a0355`
-- Implemented Sprint 10 migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
+- Implemented Sprint 10 migrations: `V16` and amendment `V17`, authored by Developer A (`YingKai0621`)
 - Sprint baseline: `docs/sprints/sprint-10.md`
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
 - Documentation audit: `docs/development/SPRINT_10_DOCUMENTATION_AUDIT.md`
@@ -25,7 +25,7 @@
 
 Extend the implemented Participant Notification foundation into one durable role-scoped inbox:
 
-1. Preserve the six existing Participant types and behavior.
+1. Preserve the six existing Participant types and behavior, plus the `ACTIVITY_STARTING_SOON` reminder.
 2. Deliver approved committed outcomes to the affected Partner representative.
 3. Deliver approved actionable work items to the owning Event Organizer.
 4. Provide Admin with real role-isolated list/read infrastructure but no type or producer.
@@ -35,7 +35,7 @@ Extend the implemented Participant Notification foundation into one durable role
 
 The active implementation is limited to:
 
-- one existing PostgreSQL `notifications` table extended by implemented migration V16
+- one existing PostgreSQL `notifications` table extended by implemented migrations V16 and V17
 - exact audiences `PARTICIPANT`, `PARTNER`, `ORGANIZER`, and `ADMIN`
 - four endpoint families with list, unread count, mark-one, and mark-all operations
 - the closed Participant, Partner, and Organizer type/reference/transition matrices
@@ -44,12 +44,13 @@ The active implementation is limited to:
 - real role-local frontend preview/full inbox, filters, read state and allowlisted navigation
 - bounded refresh on workspace entry, inbox/popover open and confirmed read mutation
 
-The approved baseline contains **52 Acceptance Criteria**:
+The approved baseline contains **56 Acceptance Criteria**, including the 2026-11-06 amendment defined by
+`BR-110` and `docs/sprints/sprint-10.md` section 12:
 
 - 11 shared foundation criteria: `AC-N-S10-01` through `AC-N-S10-11`
-- 7 Participant criteria: `AC-P-S10-01` through `AC-P-S10-07`
-- 13 Partner criteria: `AC-E-S10-01` through `AC-E-S10-13`
-- 10 Organizer criteria: `AC-O-S10-01` through `AC-O-S10-10`
+- 8 Participant criteria: `AC-P-S10-01` through `AC-P-S10-08`
+- 15 Partner criteria: `AC-E-S10-01` through `AC-E-S10-15`
+- 11 Organizer criteria: `AC-O-S10-01` through `AC-O-S10-11`
 - 5 Admin criteria: `AC-A-S10-01` through `AC-A-S10-05`
 - 6 regression criteria: `AC-S10-REG-01` through `AC-S10-REG-06`
 

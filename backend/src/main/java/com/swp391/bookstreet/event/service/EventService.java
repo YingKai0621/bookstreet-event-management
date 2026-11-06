@@ -194,6 +194,7 @@ public class EventService {
         validation.validateForPublish(event, clock.instant());
         event.setStatus(EventStatus.PUBLISHED);
         repository.flush();
+        outcomeNotifications.eventPublished(event, clock.instant());
         return EventResponse.from(event);
     }
 

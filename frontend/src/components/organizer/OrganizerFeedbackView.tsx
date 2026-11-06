@@ -36,7 +36,7 @@ const COPY = {
     allTargets: 'Tất cả phạm vi', bookStreetTarget: 'Toàn Đường Sách', eventTarget: 'Sự kiện', bookStreetName: 'Đường Sách TP.HCM',
     statusFilter: 'Trạng thái', targetFilter: 'Phạm vi',
     sort: 'Sắp xếp', newest: 'Mới nhất trước', oldest: 'Cũ nhất trước', loadingQueue: 'Đang tải góp ý…', retry: 'Thử lại',
-    empty: 'Chưa có góp ý phù hợp với bộ lọc.', viewDetail: 'Xem chi tiết', previousPage: 'Trang trước', nextPage: 'Trang sau', page: 'Trang',
+    empty: 'Không tìm thấy góp ý nào. Hãy thử từ khóa hoặc trạng thái khác.', viewDetail: 'Xem chi tiết', previousPage: 'Trang trước', nextPage: 'Trang sau', page: 'Trang',
     detailTitle: 'Chi tiết góp ý', close: 'Đóng', loadingDetail: 'Đang tải chi tiết…', detailFailure: 'Không tải được chi tiết góp ý.',
     sentAt: 'Gửi lúc', anonymous: 'Khách ẩn danh', noEmail: 'Không cung cấp email', messageTitle: 'Nội dung góp ý', handledBy: 'Xử lý gần nhất:',
     noteLabel: 'Ghi chú nội bộ', noteHelp: 'Chỉ Ban Tổ chức xem được. Nội dung này không gửi cho khách.',

@@ -18,4 +18,12 @@ public class BoothHoldExpiryScheduler {
     public void expireDueHolds() {
         expiryService.expireDueHolds();
     }
+
+    @Scheduled(
+            initialDelayString = "${bookstreet.booth.hold-expiry-initial-delay-ms:60000}",
+            fixedDelayString = "${bookstreet.booth.hold-expiry-delay-ms:60000}"
+    )
+    public void remindExpiringHolds() {
+        expiryService.remindExpiringHolds();
+    }
 }

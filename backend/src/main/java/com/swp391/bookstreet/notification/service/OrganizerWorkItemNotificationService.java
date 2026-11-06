@@ -137,6 +137,22 @@ public class OrganizerWorkItemNotificationService {
                 releasedAt));
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void boothPaymentConfirmed(Event event, BoothRequest request) {
+        if (request.getStatus() != BoothRequestStatus.COMPLETED) return;
+        Instant completedAt = required(request.getCompletedAt(),
+                "Completed Booth request has no completion time");
+        writer.write(new NotificationCommand(
+                event.getOrganizerUserId(), NotificationRecipientRole.ORGANIZER,
+                NotificationType.ORGANIZER_BOOTH_PAYMENT_CONFIRMED,
+                null, null, null, null, null, request.getBoothRequestId(), null, null,
+                "organizer:booth-payment-confirmed:" + request.getBoothRequestId()
+                        + ":" + completedAt,
+                "Đối tác đã thanh toán gian hàng",
+                "Một đối tác vừa hoàn tất thanh toán và gian hàng đã được cấp.",
+                completedAt));
+    }
+
     private static Instant required(Instant value, String message) {
         if (value == null) throw new IllegalStateException(message);
         return value;

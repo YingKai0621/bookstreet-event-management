@@ -85,7 +85,7 @@ export const EventImageCropModal: React.FC<EventImageCropModalProps> = ({
       imageElementRef.current = null;
       setImgDimensions(null);
       setIsImageLoading(false);
-      setCropError('Không thể tải ảnh để căn chỉnh. Nếu đây là liên kết từ website khác, máy chủ ảnh có thể không cho phép xử lý CORS. Bạn vẫn có thể hủy và giữ ảnh gốc.');
+      setCropError('Không thể tải ảnh để căn chỉnh. Ảnh từ website khác có thể không cho phép chỉnh sửa tại đây. Bạn vẫn có thể hủy và giữ ảnh gốc.');
     };
     img.src = imageSrc;
     return () => {

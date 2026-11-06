@@ -218,7 +218,7 @@ test('mark all as read clears unread results and the shared badge', async ({ pag
   await expect(page.locator('.participant-notification-card.is-unread')).toHaveCount(0);
   await expect(page.locator('.role-sidebar-item-badge')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chưa đọc', exact: true }).click();
-  await expect(page.getByText('Không có kết quả phù hợp')).toBeVisible();
+  await expect(page.getByText('Bạn đã đọc hết thông báo')).toBeVisible();
   expect(requests.some(entry => entry.method === 'POST'
     && entry.path === '/api/v1/participant/notifications/read-all')).toBe(true);
 });

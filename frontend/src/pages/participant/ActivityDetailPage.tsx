@@ -13,6 +13,19 @@ interface ActivityDetailPageProps {
   onCancelActivity: (activityId: string) => void | Promise<void>;
 }
 
+const ACTIVITY_STATUS_LABELS: Record<string, { vi: string; en: string }> = {
+  DRAFT: { vi: 'Đang chuẩn bị', en: 'In preparation' },
+  PUBLISHED: { vi: 'Sắp diễn ra', en: 'Upcoming' },
+  ONGOING: { vi: 'Đang diễn ra', en: 'In progress' },
+  COMPLETED: { vi: 'Đã kết thúc', en: 'Ended' },
+  CANCELLED: { vi: 'Đã hủy', en: 'Cancelled' },
+};
+
+function activityStatusLabel(status: string | undefined, language: Language): string {
+  if (!status) return '—';
+  return ACTIVITY_STATUS_LABELS[status]?.[language === 'vi' ? 'vi' : 'en'] ?? '—';
+}
+
 function formatRegisteredAt(value: string | undefined, language: Language): string {
   if (!value) return '—';
   return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
@@ -109,7 +122,7 @@ export const ActivityDetailPage = ({
           <div><dt><Clock size={17} />{vi ? 'Thời gian' : 'Time'}</dt><dd>{activity.time}</dd></div>
           <div><dt><MapPin size={17} />{vi ? 'Địa điểm' : 'Venue'}</dt><dd>{activity.venue || '—'}</dd></div>
           <div><dt>{vi ? 'Đăng ký lúc' : 'Registered at'}</dt><dd>{formatRegisteredAt(activity.registeredAt, language)}</dd></div>
-          <div><dt>{vi ? 'Trạng thái hoạt động' : 'Activity status'}</dt><dd>{activity.activityStatus || '—'}</dd></div>
+          <div><dt>{vi ? 'Trạng thái hoạt động' : 'Activity status'}</dt><dd>{activityStatusLabel(activity.activityStatus, language)}</dd></div>
           <div><dt>{vi ? 'Kết quả điểm danh' : 'Attendance outcome'}</dt><dd>{activity.attendanceStatus === 'VALID' || activity.status === 'attended' ? (vi ? 'Đã ghi nhận hợp lệ' : 'Valid attendance recorded') : (vi ? 'Chưa có điểm danh hợp lệ' : 'No valid attendance recorded')}</dd></div>
         </dl>
 

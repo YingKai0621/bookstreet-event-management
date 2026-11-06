@@ -12,6 +12,7 @@ import com.swp391.bookstreet.booth.service.BoothReselectionNotificationService;
 import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import com.swp391.bookstreet.payment.config.VnPayProperties;
 import com.swp391.bookstreet.payment.dto.VnPayAcknowledgement;
 import com.swp391.bookstreet.payment.entity.BoothPayment;
@@ -42,6 +43,7 @@ public class PaymentSettlementService {
     private final BoothReselectionNotificationService reselectionNotifications;
     private final VnPayProperties properties;
     private final PartnerOutcomeNotificationService outcomeNotifications;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
 
     public PaymentSettlementService(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
@@ -49,7 +51,8 @@ public class PaymentSettlementService {
             EventRootLockService eventRootLockService,
             BoothReselectionNotificationService reselectionNotifications,
             VnPayProperties properties,
-            PartnerOutcomeNotificationService outcomeNotifications) {
+            PartnerOutcomeNotificationService outcomeNotifications,
+            OrganizerWorkItemNotificationService organizerNotifications) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
@@ -58,6 +61,7 @@ public class PaymentSettlementService {
         this.reselectionNotifications = reselectionNotifications;
         this.properties = properties;
         this.outcomeNotifications = outcomeNotifications;
+        this.organizerNotifications = organizerNotifications;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -237,6 +241,7 @@ public class PaymentSettlementService {
         request.complete(now);
         assignmentRepository.save(BoothAssignment.create(hold, now));
         outcomeNotifications.boothChanged(request);
+        organizerNotifications.boothPaymentConfirmed(event, request);
         requestRepository.findCompetingForUpdate(
                         request.getApplication().getEventId(), request.getBooth().getBoothId(),
                         BoothRequestStatus.PENDING)
