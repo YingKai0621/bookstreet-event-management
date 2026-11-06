@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
 import { PublicEventContext } from '../../components/landing/PublicEventContext';
+import './HeritageExperience.css';
 import './BoothsExperience.css';
 
 interface BoothsExperienceProps {
