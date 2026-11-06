@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 for (const width of [360, 390, 640]) {
   test(`Participant phone navigation and connected layout at ${width}px`, async ({ page }) => {
+    // November 2026 needs six calendar rows, the tallest month the Dashboard can show.
+    await page.clock.setFixedTime(new Date('2026-11-06T03:00:00Z'));
     await page.setViewportSize({ width, height: 844 });
     await page.route('**/api/v1/**', async route => {
       const path = new URL(route.request().url()).pathname;
@@ -18,7 +20,10 @@ for (const width of [360, 390, 640]) {
     await expect(page.locator('.participant-bottom-nav')).toHaveCount(0);
     await expect(page.locator('.participant-mobile-agenda')).toBeVisible();
     const calendar = await page.locator('.dashboard-calendar-card').boundingBox();
-    expect(calendar!.height).toBeLessThan(650);
+    expect(calendar!.height).toBeLessThan(700);
+    await expect(page.locator('.participant-calendar-day[aria-pressed="true"] .participant-day-number'))
+      .toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(page.locator('.role-sidebar')).toHaveCSS('box-shadow', 'none');
     await page.screenshot({ path: `test-results/participant-dashboard-mobile-${width}.png`, fullPage: true });
 
     for (const route of ['/participant/events', '/participant/rewards', '/participant/certificates', '/participant/feedback', '/participant/notifications', '/participant/profile']) {
@@ -35,6 +40,7 @@ for (const width of [360, 390, 640]) {
     await toggle.click();
     const sidebar = page.locator('.role-sidebar.is-mobile-open');
     await expect(sidebar).toBeVisible();
+    await expect(sidebar).not.toHaveCSS('box-shadow', 'none');
     await sidebar.getByRole('button', { name: 'Sự kiện' }).click();
     await expect(page).toHaveURL(/\/participant\/events$/);
 
