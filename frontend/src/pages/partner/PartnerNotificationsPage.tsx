@@ -1,5 +1,5 @@
 import { Bell, CalendarDays, CheckCheck, ChevronRight, ClipboardList, Filter, Layers, Store, TimerReset } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../components/partner/PartnerEvents.css';
 import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
@@ -28,7 +28,15 @@ const READ_FILTERS = [
   { value: 'read', label: 'Đã đọc' },
 ] as const;
 
+const TIME_ZONE = 'Asia/Ho_Chi_Minh';
+const DAY_KEY_FORMAT = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE });
+const ONE_DAY_MS = 86_400_000;
+
 type ReadFilter = typeof READ_FILTERS[number]['value'];
+
+function dayKey(value: string | number): string {
+  return DAY_KEY_FORMAT.format(new Date(value));
+}
 
 function NotificationIcon({ type }: { type: PartnerNotificationType }) {
   if (type === 'PARTNER_BOOTH_HOLD_EXPIRING') {
@@ -49,9 +57,11 @@ function NotificationIcon({ type }: { type: PartnerNotificationType }) {
 export function PartnerNotificationsPage({ language }: { language: Language }) {
   const navigate = useNavigate();
   const [items, setItems] = useState<PartnerNotificationItem[]>([]);
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
   const [page, setPage] = useState(0);
   const [pages, setPages] = useState(0);
   const [total, setTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [read, setRead] = useState<ReadFilter>('all');
   const [type, setType] = useState<'all' | PartnerNotificationType>('all');
   const [revision, setRevision] = useState(0);
@@ -72,6 +82,7 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
       if (!active) return;
       if (!Array.isArray(result.content)) throw new Error('Phản hồi thông báo không hợp lệ.');
       setItems(result.content);
+      setLoadedAt(Date.now());
       setPages(result.totalPages);
       setTotal(result.totalElements);
       if (result.totalPages > 0 && page >= result.totalPages) setPage(result.totalPages - 1);
@@ -81,8 +92,30 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
         : cause?.status === 403 ? 'Bạn không có quyền xem thông báo Partner.'
           : 'Không tải được thông báo. Vui lòng thử lại.');
     }).finally(() => { if (active) setLoading(false); });
+    // The badge is optional context, so a failed count hides it instead of reporting zero.
+    partnerNotificationsApi.unreadCount()
+      .then(result => { if (active) setUnreadCount(Number.isFinite(result.unreadCount) ? result.unreadCount : null); })
+      .catch(() => { if (active) setUnreadCount(null); });
     return () => { active = false; };
   }, [page, read, revision, type]);
+
+  const groups = useMemo(() => {
+    const today = dayKey(loadedAt);
+    const yesterday = dayKey(loadedAt - ONE_DAY_MS);
+    const dateFormat = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { dateStyle: 'long', timeZone: TIME_ZONE });
+    const result: Array<{ key: string; label: string; items: PartnerNotificationItem[] }> = [];
+    for (const item of items) {
+      const key = dayKey(item.createdAt);
+      let group = result.find(candidate => candidate.key === key);
+      if (!group) {
+        group = { key, items: [],
+          label: key === today ? 'Hôm nay' : key === yesterday ? 'Hôm qua' : dateFormat.format(new Date(item.createdAt)) };
+        result.push(group);
+      }
+      group.items.push(item);
+    }
+    return result;
+  }, [items, language, loadedAt]);
 
   async function openItem(item: PartnerNotificationItem) {
     if (pending) return;
@@ -111,9 +144,8 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
     finally { setPending(false); }
   }
 
-  const dateFormatter = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
-    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
-  });
+  const timeFormatter = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { timeStyle: 'short', timeZone: TIME_ZONE });
+  const filtered = read !== 'all' || type !== 'all';
 
   return <div className="partner-page partner-event-hub partner-notifications-page">
     <PartnerEventHero
@@ -133,6 +165,7 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
                 className={`event-hub-filter is-${filter.value} ${read === filter.value ? 'is-active' : ''}`}
                 onClick={() => { setRead(filter.value); setPage(0); }}>
                 {filter.label}
+                {filter.value === 'unread' && unreadCount !== null && unreadCount > 0 && <span>{unreadCount}</span>}
               </button>
             ))}
           </div>
@@ -149,6 +182,10 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
             ]}
             onChange={value => { setType(value); setPage(0); }}
           />
+          <button type="button" className="btn-part-secondary" onClick={() => void markAll()}
+            disabled={pending || loading || unreadCount === 0}>
+            <CheckCheck size={16} /> Đã đọc tất cả
+          </button>
         </div>
       </div>
     </section>
@@ -161,33 +198,38 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
         <h2>{error}</h2>
         <button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button>
       </div>
-        : <section aria-labelledby="partner-inbox-title">
-          <div className="event-hub-section-heading">
-            <div><h2 id="partner-inbox-title">Hộp thư của bạn</h2></div>
-            <div className="partner-notifications-heading-actions">
-              <p>{total} mục</p>
-              <button type="button" className="btn-part-secondary" onClick={() => void markAll()} disabled={pending || total === 0}>
-                <CheckCheck size={16} /> Đã đọc tất cả
-              </button>
-            </div>
-          </div>
-          {items.length === 0 ? <div className="event-hub-empty">
-            <Bell size={30} />
-            <h2>{read !== 'all' || type !== 'all' ? 'Không có thông báo phù hợp bộ lọc.' : 'Bạn chưa có thông báo nào.'}</h2>
-            {(read !== 'all' || type !== 'all') && <button type="button" onClick={() => { setRead('all'); setType('all'); setPage(0); }}>Xóa bộ lọc</button>}
-          </div> : <div className="notifications-list-container">
-            {items.map(item => <button type="button" key={item.notificationId} disabled={pending}
-              onClick={() => void openItem(item)} className={`notification-row-item ${item.read ? '' : 'unread'}`}>
-              <NotificationIcon type={item.type} />
-              <span className="notification-row-copy">
-                <strong>{item.title}</strong>
-                <span>{item.message}</span>
-                <small>{LABELS[item.type] || 'Thông báo'} · {dateFormatter.format(new Date(item.createdAt))}</small>
-              </span>
-              {partnerNotificationTarget(item) && <ChevronRight size={18} aria-hidden="true" />}
-            </button>)}
-          </div>}
-          {pages > 1 && <CompactPagination page={page + 1} pages={pages} total={total} onPage={next => setPage(next - 1)} disabled={pending} />}
-        </section>}
+        : items.length === 0 ? <div className="event-hub-empty">
+          <Bell size={30} />
+          <h2>{filtered ? 'Không có thông báo phù hợp bộ lọc.' : 'Bạn chưa có thông báo nào.'}</h2>
+          <p>{filtered ? 'Hãy thử chọn trạng thái hoặc loại khác.' : 'Kết quả hồ sơ, gian hàng và sự kiện mới sẽ xuất hiện tại đây.'}</p>
+          {filtered && <button type="button" onClick={() => { setRead('all'); setType('all'); setPage(0); }}>Xóa bộ lọc</button>}
+        </div>
+          : <section aria-label="Danh sách thông báo">
+            {groups.map(group => <div className="partner-inbox-group" key={group.key}>
+              <h2 className="partner-inbox-day">{group.label}</h2>
+              <div className="notifications-list-container">
+                {group.items.map(item => {
+                  const target = partnerNotificationTarget(item);
+                  const urgent = !item.read && item.type === 'PARTNER_BOOTH_HOLD_EXPIRING';
+                  return <button type="button" key={item.notificationId} disabled={pending}
+                    onClick={() => void openItem(item)}
+                    className={`notification-row-item ${item.read ? 'is-read' : 'unread'} ${urgent ? 'is-urgent' : ''}`}>
+                    <NotificationIcon type={item.type} />
+                    <span className="notification-row-copy">
+                      <strong>{item.title}</strong>
+                      <span>{item.message}</span>
+                      <small>
+                        <em>{LABELS[item.type] || 'Thông báo'}</em>
+                        <time dateTime={item.createdAt}>{timeFormatter.format(new Date(item.createdAt))}</time>
+                      </small>
+                    </span>
+                    {!item.read && <span className="notification-row-dot" title="Chưa đọc" />}
+                    {target && <ChevronRight className="notification-row-arrow" size={18} aria-hidden="true" />}
+                  </button>;
+                })}
+              </div>
+            </div>)}
+            {pages > 1 && <CompactPagination page={page + 1} pages={pages} total={total} onPage={next => setPage(next - 1)} disabled={pending} />}
+          </section>}
   </div>;
 }
