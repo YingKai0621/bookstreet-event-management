@@ -38,6 +38,29 @@ function dayKey(value: string | number): string {
   return DAY_KEY_FORMAT.format(new Date(value));
 }
 
+function emptyCopy(read: ReadFilter, type: 'all' | PartnerNotificationType): { title: string; hint: string } {
+  const topic = type === 'all' ? '' : ` về ${LABELS[type].toLocaleLowerCase('vi')}`;
+  if (read === 'unread') {
+    return {
+      title: topic ? `Không có thông báo chưa đọc${topic}` : 'Bạn đã đọc hết thông báo',
+      hint: 'Thông báo mới sẽ xuất hiện tại đây.',
+    };
+  }
+  if (read === 'read') {
+    return {
+      title: `Chưa có thông báo đã đọc${topic}`,
+      hint: 'Những thông báo bạn đã mở sẽ nằm ở đây.',
+    };
+  }
+  if (topic) {
+    return { title: `Chưa có thông báo${topic}`, hint: 'Khi có cập nhật, thông báo sẽ xuất hiện tại đây.' };
+  }
+  return {
+    title: 'Bạn chưa có thông báo nào',
+    hint: 'Kết quả hồ sơ, gian hàng và sự kiện mới sẽ xuất hiện tại đây.',
+  };
+}
+
 function NotificationIcon({ type }: { type: PartnerNotificationType }) {
   if (type === 'PARTNER_BOOTH_HOLD_EXPIRING') {
     return <span className="notif-icon-circle reminder"><TimerReset size={18} /></span>;
@@ -146,6 +169,7 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
 
   const timeFormatter = new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { timeStyle: 'short', timeZone: TIME_ZONE });
   const filtered = read !== 'all' || type !== 'all';
+  const empty = emptyCopy(read, type);
 
   return <div className="partner-page partner-event-hub partner-notifications-page">
     <PartnerEventHero
@@ -200,9 +224,9 @@ export function PartnerNotificationsPage({ language }: { language: Language }) {
       </div>
         : items.length === 0 ? <div className="event-hub-empty">
           <Bell size={30} />
-          <h2>{filtered ? 'Không có thông báo phù hợp bộ lọc.' : 'Bạn chưa có thông báo nào.'}</h2>
-          <p>{filtered ? 'Hãy thử chọn trạng thái hoặc loại khác.' : 'Kết quả hồ sơ, gian hàng và sự kiện mới sẽ xuất hiện tại đây.'}</p>
-          {filtered && <button type="button" onClick={() => { setRead('all'); setType('all'); setPage(0); }}>Xóa bộ lọc</button>}
+          <h2>{empty.title}</h2>
+          <p>{empty.hint}</p>
+          {filtered && <button type="button" onClick={() => { setRead('all'); setType('all'); setPage(0); }}>Xem tất cả thông báo</button>}
         </div>
           : <section aria-label="Danh sách thông báo">
             {groups.map(group => <div className="partner-inbox-group" key={group.key}>

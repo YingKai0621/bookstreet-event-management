@@ -118,15 +118,15 @@ test('Partner opens a real inbox, filters it, and reads an application outcome',
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
   await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
   await page.getByRole('option', { name: 'Yêu cầu gian hàng', exact: true }).click();
-  await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chưa có thông báo về yêu cầu gian hàng' })).toBeVisible();
   await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
   await page.getByRole('option', { name: 'Tất cả loại' }).click();
   await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
   await expect(page).toHaveURL(/\/partner\/events\?application=31$/);
   await page.goto('/partner/notifications');
   await page.getByRole('tab', { name: 'Chưa đọc' }).click();
-  await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
-  await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
+  await expect(page.getByRole('heading', { name: 'Bạn đã đọc hết thông báo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Xem tất cả thông báo' }).click();
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('partner-notifications.png'), fullPage: true });
 });
@@ -135,21 +135,21 @@ test('Partner inbox keeps API failure separate from an empty result', async ({ p
   await setup(page, { notificationsFailure: true });
   await page.goto('/partner/notifications');
   await expect(page.getByRole('alert').filter({ hasText: 'Không tải được thông báo' })).toBeVisible();
-  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+  await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
 });
 
 test('Partner inbox shows a forbidden response instead of an empty result', async ({ page }) => {
   await setup(page, { notificationsStatus: 403 });
   await page.goto('/partner/notifications');
   await expect(page.getByRole('alert').filter({ hasText: 'Bạn không có quyền xem thông báo Partner.' }).first()).toBeVisible();
-  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+  await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
 });
 
 test('an expired Partner session shows sign-in instead of an empty inbox', async ({ page }) => {
   await setup(page, { notificationsStatus: 401 });
   await page.goto('/partner/notifications');
   await expect(page.getByRole('button', { name: 'Đăng nhập vào Cổng Đối tác' })).toBeVisible();
-  await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+  await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
 });
 
 test('Partner read failure leaves a notification unread', async ({ page }) => {
