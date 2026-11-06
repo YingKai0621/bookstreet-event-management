@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../services/apiError';
 import { EventItem, Language, ParticipantProfile } from '../../types';
+import './HeritageExperience.css';
 import './EventsExperience.css';
 import { useDeadlineClock } from '../../hooks/useDeadlineClock';
 import { registrationDeadlinePassed } from '../../utils/registrationDeadline';

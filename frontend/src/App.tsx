@@ -1,7 +1,6 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
 import './App.css';
 import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
@@ -368,13 +367,6 @@ export function App() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const [publicEventSwitchNotice, setPublicEventSwitchNotice] = useState<{
-    label: string;
-    eventName: string;
-  } | null>(null);
-  const [isNoticeClosing, setIsNoticeClosing] = useState(false);
-  const publicEventSwitchTimerRef = useRef<number | null>(null);
-  const publicEventSwitchCloseTimerRef = useRef<number | null>(null);
   const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
   const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
   const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
@@ -392,31 +384,8 @@ export function App() {
   const publicBoothsError = hasCurrentBooths ? loadedBooths.error : '';
   const isPublicBoothsLoading = Boolean(isPublicRoute && publicEventId && !hasCurrentBooths);
 
-  useEffect(() => {
-    return () => {
-      if (publicEventSwitchTimerRef.current !== null) window.clearTimeout(publicEventSwitchTimerRef.current);
-      if (publicEventSwitchCloseTimerRef.current !== null) window.clearTimeout(publicEventSwitchCloseTimerRef.current);
-    };
-  }, []);
-
-  const dismissPublicEventSwitchNotice = () => {
-    if (isNoticeClosing) return;
-    setIsNoticeClosing(true);
-    if (publicEventSwitchTimerRef.current !== null) {
-      window.clearTimeout(publicEventSwitchTimerRef.current);
-      publicEventSwitchTimerRef.current = null;
-    }
-    publicEventSwitchCloseTimerRef.current = window.setTimeout(() => {
-      setPublicEventSwitchNotice(null);
-      setIsNoticeClosing(false);
-      publicEventSwitchCloseTimerRef.current = null;
-    }, 320);
-  };
-
   const selectPublicEvent = (eventId: string) => {
-    const targetEvent = publicContextEvents.find(event => event.id === eventId);
-    if (!targetEvent) return;
-    const isSwitchingEvent = eventId !== publicEventId;
+    if (!publicContextEvents.some(event => event.id === eventId)) return;
     setSelectedPublicEventId(eventId);
     const params = new URLSearchParams(location.search);
     params.set('eventId', eventId);
@@ -424,26 +393,6 @@ export function App() {
       pathname: location.pathname,
       search: `?${params.toString()}`,
     }, { replace: true, preventScrollReset: true });
-
-    if (isSwitchingEvent) {
-      const eventName = language === 'vi' ? targetEvent.title : (targetEvent.titleEn || targetEvent.title);
-      setPublicEventSwitchNotice({
-        label: language === 'vi' ? 'Đang lọc gian hàng & bản đồ' : 'Filtering booths & map',
-        eventName,
-      });
-      setIsNoticeClosing(false);
-      if (publicEventSwitchTimerRef.current !== null) window.clearTimeout(publicEventSwitchTimerRef.current);
-      if (publicEventSwitchCloseTimerRef.current !== null) window.clearTimeout(publicEventSwitchCloseTimerRef.current);
-      publicEventSwitchTimerRef.current = window.setTimeout(() => {
-        setIsNoticeClosing(true);
-        publicEventSwitchCloseTimerRef.current = window.setTimeout(() => {
-          setPublicEventSwitchNotice(null);
-          setIsNoticeClosing(false);
-          publicEventSwitchCloseTimerRef.current = null;
-        }, 320);
-        publicEventSwitchTimerRef.current = null;
-      }, 3200);
-    }
   };
 
   useEffect(() => {
@@ -1279,33 +1228,6 @@ export function App() {
         onParticipantLogout={handleParticipantLogout}
         selectedPublicEventId={publicEventId}
       />
-
-      {publicEventSwitchNotice && (
-        <div
-          key={`${publicEventSwitchNotice.label}-${publicEventSwitchNotice.eventName}`}
-          className={`public-event-switch-toast ${isNoticeClosing ? 'is-leaving' : ''}`}
-          aria-live="polite"
-          onClick={dismissPublicEventSwitchNotice}
-          title={language === 'vi' ? 'Bấm để ẩn thông báo' : 'Click to dismiss'}
-        >
-          <span className="public-event-switch-toast-dot" aria-hidden="true" />
-          <div className="public-event-switch-toast-content">
-            <span className="public-event-switch-toast-label">{publicEventSwitchNotice.label}</span>
-            <span className="public-event-switch-toast-name">{publicEventSwitchNotice.eventName}</span>
-          </div>
-          <button
-            type="button"
-            className="public-event-switch-toast-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              dismissPublicEventSwitchNotice();
-            }}
-            aria-label={language === 'vi' ? 'Đóng thông báo' : 'Close notification'}
-          >
-            <X size={14} aria-hidden="true" />
-          </button>
-        </div>
-      )}
 
       <div className={`main-app-container ${isSlidePageOpen ? 'heritage-active-bg' : ''}`} inert={isSlidePageOpen} aria-hidden={isSlidePageOpen || undefined}>
         <main id="main-content">
