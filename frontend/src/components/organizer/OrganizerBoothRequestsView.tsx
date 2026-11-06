@@ -53,6 +53,13 @@ const QUICK_REJECTION_REASONS = [
   'Đã hết hạn tiếp nhận và sắp xếp vị trí cho khu vực này.',
 ];
 
+const HOLD_STATUS_LABELS: Record<NonNullable<BoothRequest['hold']>['status'], string> = {
+  ACTIVE: 'Đang giữ chỗ',
+  CONSUMED: 'Đã cấp gian',
+  EXPIRED: 'Đã hết hạn',
+  RELEASED: 'Đã trả chỗ',
+};
+
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
@@ -506,7 +513,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
               </div>
 
               {/* Card Body: Notes on left, Financials/Hold on right */}
-              <div className="obr-card-body">
+              <div className={`obr-card-body${request.hold ? '' : ' is-notes-only'}`}>
                 <div className="obr-card-notes-col">
                   {request.requestNote ? (
                     <div className="obr-note-box partner-note s2-request-note-box">
@@ -539,73 +546,52 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                   )}
                 </div>
 
-                <div className="obr-card-hold-col s2-hold-card">
-                  {request.hold ? (
-                    <>
-                      <div className="obr-hold-pricing">
-                        <span className="obr-price-label s2-hold-price-label">Giá giữ chỗ:</span>
-                        <strong className="obr-price-val s2-hold-price-val">
-                          {money(request.hold.lockedRentalPrice)}
-                        </strong>
-                      </div>
-                      <div className="obr-hold-meta-list">
-                        <div className="obr-hold-meta-item">
-                          <span className="meta-key">
-                            <Info size={13} />
-                            Trạng thái Hold:
-                          </span>
-                          <span
-                            className={`obr-hold-status-chip s2-hold-status-badge status-${request.hold.status.toLowerCase()}`}
-                          >
-                            {request.hold.status}
-                          </span>
-                        </div>
-                        <div className="obr-hold-meta-item">
-                          <span className="meta-key">
-                            <Clock3 size={13} />
-                            Tạo giữ chỗ:
-                          </span>
-                          <span className="meta-val">{dateTime(request.hold.createdAt)}</span>
-                        </div>
-                        <div className="obr-hold-meta-item is-expiry">
-                          <span className="meta-key">
-                            <Hourglass size={13} />
-                            Hạn thanh toán:
-                          </span>
-                          <span className="meta-val">{dateTime(request.hold.expiresAt)}</span>
-                        </div>
-                        {request.hold.releasedAt && (
-                          <div className="obr-hold-meta-item">
-                            <span className="meta-key">
-                              <Check size={13} />
-                              Giải phóng:
-                            </span>
-                            <span className="meta-val">{dateTime(request.hold.releasedAt)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        gap: '0.4rem',
-                        color: '#64748B',
-                        padding: '1rem 0',
-                      }}
-                    >
-                      <Store size={26} style={{ color: '#94A3B8' }} />
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Chưa có thông tin giữ chỗ</span>
-                      <span style={{ fontSize: '0.74rem', color: '#94A3B8', textAlign: 'center' }}>
-                        Hold sẽ được kích hoạt ngay khi BQL duyệt cấp vị trí.
+                {request.hold && (
+                  <div className="obr-card-hold-col s2-hold-card">
+                  <div className="obr-hold-pricing">
+                    <span className="obr-price-label s2-hold-price-label">Giá giữ chỗ:</span>
+                    <strong className="obr-price-val s2-hold-price-val">
+                      {money(request.hold.lockedRentalPrice)}
+                    </strong>
+                  </div>
+                  <div className="obr-hold-meta-list">
+                    <div className="obr-hold-meta-item">
+                      <span className="meta-key">
+                        <Info size={13} />
+                        Trạng thái giữ chỗ:
+                      </span>
+                      <span
+                        className={`obr-hold-status-chip s2-hold-status-badge status-${request.hold.status.toLowerCase()}`}
+                      >
+                        {HOLD_STATUS_LABELS[request.hold.status]}
                       </span>
                     </div>
-                  )}
-                </div>
+                    <div className="obr-hold-meta-item">
+                      <span className="meta-key">
+                        <Clock3 size={13} />
+                        Tạo giữ chỗ:
+                      </span>
+                      <span className="meta-val">{dateTime(request.hold.createdAt)}</span>
+                    </div>
+                    <div className="obr-hold-meta-item is-expiry">
+                      <span className="meta-key">
+                        <Hourglass size={13} />
+                        Hạn thanh toán:
+                      </span>
+                      <span className="meta-val">{dateTime(request.hold.expiresAt)}</span>
+                    </div>
+                    {request.hold.releasedAt && (
+                      <div className="obr-hold-meta-item">
+                        <span className="meta-key">
+                          <Check size={13} />
+                          Trả chỗ lúc:
+                        </span>
+                        <span className="meta-val">{dateTime(request.hold.releasedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                  </div>
+                )}
               </div>
 
               {/* Card Footer Actions */}
