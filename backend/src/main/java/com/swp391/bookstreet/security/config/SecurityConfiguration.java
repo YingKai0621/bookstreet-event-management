@@ -2,6 +2,7 @@ package com.swp391.bookstreet.security.config;
 
 import com.swp391.bookstreet.security.handler.RestAccessDeniedHandler;
 import com.swp391.bookstreet.security.handler.RestAuthenticationEntryPoint;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -145,6 +146,8 @@ public class SecurityConfiguration {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
 
         http.authorizeHttpRequests(authorize -> authorize
+                // The original request was authorized; this only finishes an open notification stream.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                 .requestMatchers(
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",

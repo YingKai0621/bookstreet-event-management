@@ -245,7 +245,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Generic Organizer notification composer, SMS/push delivery and transactional message outbox
 
-- Combined cross-role inbox, client-created Notification, polling, WebSocket/SSE delivery, notification
+- Combined cross-role inbox, client-created Notification, polling, WebSocket delivery, SSE beyond the BR-111 signal, notification
   preferences, delete/archive/pin/snooze and Admin alert producers
 
 - Sponsor management
@@ -319,7 +319,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 - Exactly four role endpoint families provide list, unread count, mark-one and mark-all operations.
 - Partner and Organizer producers are limited to the approved transition matrices and suppression rules;
   Participant meaning remains backward compatible and Admin has no producer.
-- Refresh occurs on workspace entry, inbox/popover open and confirmed read mutation. Background polling,
+- Refresh occurs on workspace entry, inbox/popover open, confirmed read mutation and the BR-111 signal. Background polling,
   fake real-time delivery and local-only read truth are outside the active slice.
 - Exact type/reference pairs, API DTOs, migration constraints and 52 Acceptance Criteria are governed by
   the active Sprint 10 baseline, Use Case Specifications, API Contract and Physical ERD overlay.

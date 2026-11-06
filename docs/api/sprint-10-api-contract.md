@@ -60,7 +60,8 @@ POST /admin/notifications/read-all
 Every path above is relative to `/api/v1`.
 
 There is no combined `/notifications` endpoint, recipient selector, create endpoint, delete endpoint,
-broadcast endpoint, preference endpoint, email endpoint, push endpoint, stream, or WebSocket.
+broadcast endpoint, preference endpoint, email endpoint, push endpoint, or WebSocket. The only stream is the
+content-free live update signal in section 9.7.
 
 ## 2. Exact role security
 
@@ -588,6 +589,27 @@ Navigation additions:
 | `ORGANIZER_BOOTH_PAYMENT_CONFIRMED` | Booth-request queue for `contextEventId` |
 | `ACTIVITY_STARTING_SOON` | Participant Activity detail |
 
+### 9.7 Live inbox update signal — approved 2026-11-06
+
+`BR-111` adds exactly three Server-Sent Events operations:
+
+```text
+GET /participant/notifications/stream
+GET /partner/notifications/stream
+GET /organizer/notifications/stream
+```
+
+- Each uses the same Session and exact role authority as its inbox. An anonymous request returns `401`; a
+  missing role or disabled account returns `403`. Admin has no stream because it has no producer.
+- The response is `text/event-stream` with `Cache-Control: no-store`.
+- After a transaction commits a new row, the recipient's connections for that exact role receive
+  `event: notifications-changed` with `data: {}`. A rollback or a deduplicated retry sends nothing.
+- The signal contains no Notification data. The client refreshes through sections 5 and 6 only.
+- A connection lasts up to one hour with a 25-second heartbeat, and each User and role keeps at most five
+  connections. Connections are per application instance; a multi-instance deployment needs shared delivery.
+- The frontend closes the connection while a tab is hidden and reloads once on every reconnect. If the stream
+  is unavailable, the existing refresh triggers in section 11 continue to work.
+
 ## 10. Error envelope
 
 The existing `ApiErrorResponse` is reused:
@@ -686,8 +708,9 @@ successful read-mutation boundaries.
 
 ## 12. Acceptance Criteria traceability — reviewed 2026-11-03
 
-The accepted Sprint 10 baseline contains 56 criteria. `AC-E-S10-14`, `AC-E-S10-15`, `AC-O-S10-11`, and
-`AC-P-S10-08` map to section 9.6. The original 52 are traced by responsibility group:
+The accepted Sprint 10 baseline contains 58 criteria. `AC-E-S10-14`, `AC-E-S10-15`, `AC-O-S10-11`, and
+`AC-P-S10-08` map to section 9.6; `AC-N-S10-12` and `AC-N-S10-13` map to section 9.7. The original 52 are
+traced by responsibility group:
 
 | Acceptance Criteria | Contract sections |
 | --- | --- |
@@ -711,7 +734,7 @@ Sprint 10 preserves:
 - optional after-commit email behavior
 - the shared General Feedback queue
 
-Sprint 10 adds no email API, SMS, push, WebSocket, SSE, polling, preferences, templates, composer,
+Apart from the section 9.7 signal, Sprint 10 adds no email API, SMS, push, WebSocket, SSE, polling, preferences, templates, composer,
 NotificationType entity/table, sender, delivery attempt, outbox, Redis Notification state, mock fallback,
 or localStorage inbox.
 

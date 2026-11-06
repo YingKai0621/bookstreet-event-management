@@ -9,7 +9,8 @@ import {
   TimerReset,
   Users,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNotificationLiveRefresh } from '../../hooks/useNotificationLiveUpdates';
 import { useNavigate } from 'react-router-dom';
 import type { Language } from '../../types';
 import { ApiError } from '../../services/apiClient';
@@ -94,11 +95,19 @@ export function OrganizerNotificationsView({ language }: { language: Language })
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
   const [pending, setPending] = useState(false);
+  const silentRefresh = useRef(false);
+
+  useNotificationLiveRefresh(useCallback(() => {
+    silentRefresh.current = true;
+    setRevision(value => value + 1);
+  }, []));
 
   useEffect(() => {
     let active = true;
+    // A live update keeps the list on screen instead of flashing the loading state.
     // oxlint-disable-next-line react/set-state-in-effect -- Route/filter changes intentionally start a server refresh.
-    setLoading(true);
+    if (!silentRefresh.current) setLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect -- Route/filter changes intentionally start a server refresh.
     setLoadError('');
     organizerNotificationsApi.list({
       page,
@@ -117,7 +126,9 @@ export function OrganizerNotificationsView({ language }: { language: Language })
     }).catch(error => {
       if (active) setLoadError(loadErrorMessage(error, language));
     }).finally(() => {
-      if (active) setLoading(false);
+      if (!active) return;
+      silentRefresh.current = false;
+      setLoading(false);
     });
     // The tab badge is optional context, so a failed count hides it instead of reporting zero.
     organizerNotificationsApi.unreadCount()

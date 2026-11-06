@@ -262,7 +262,9 @@ V1 through V16 are now immutable.
 
 `V17__extend_sprint10_notification_types.sql` replaces only the Notification type/role/reference check to add
 `ACTIVITY_STARTING_SOON`, `PARTNER_EVENT_PUBLISHED`, `PARTNER_BOOTH_HOLD_EXPIRING` and
-`ORGANIZER_BOOTH_PAYMENT_CONFIRMED` under `BR-110`. The Sprint 10 baseline is now 56 Acceptance Criteria.
+`ORGANIZER_BOOTH_PAYMENT_CONFIRMED` under `BR-110`. `BR-111` adds a content-free after-commit Server-Sent
+Events signal for the Participant, Partner and Organizer inboxes without schema change. The Sprint 10 baseline
+is now 58 Acceptance Criteria.
 
 ## Not yet implemented
 
@@ -273,7 +275,7 @@ V1 through V16 are now immutable.
 - Frontend lint-warning cleanup and production bundle splitting
 - General Feedback reporting and map data
 - Notification behavior outside the approved Sprint 10 type/reference/producer matrices, including any
-  Admin producer, combined inbox, composer, polling or real-time delivery
+  Admin producer, combined inbox, composer, polling or real-time delivery beyond the `BR-111` signal
 
 ## Next implementation task
 

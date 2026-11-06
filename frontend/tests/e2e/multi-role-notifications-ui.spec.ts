@@ -36,6 +36,7 @@ async function setup(page: Page) {
         emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'PARTNER', 'ORGANIZER', 'ADMIN'],
       });
     }
+    if (path.endsWith('/notifications/stream')) return route.abort();
     const inbox = path.match(/\/api\/v1\/(participant|partner|organizer|admin)\/notifications(\/unread-count)?$/);
     if (inbox) {
       const role = inbox[1] as Role;

@@ -8,23 +8,27 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class NotificationWriterServiceTests {
     private static final Instant CREATED_AT = Instant.parse("2026-11-04T01:00:00Z");
 
     private NotificationRepository repository;
+    private ApplicationEventPublisher eventPublisher;
     private NotificationWriterService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(NotificationRepository.class);
-        service = new NotificationWriterService(repository);
+        eventPublisher = mock(ApplicationEventPublisher.class);
+        service = new NotificationWriterService(repository, eventPublisher);
     }
 
     @Test
@@ -64,6 +68,8 @@ class NotificationWriterServiceTests {
                 "Đơn đăng ký mới",
                 "Có một hồ sơ đang chờ duyệt.",
                 CREATED_AT);
+        verify(eventPublisher).publishEvent(
+                new NotificationCreated(7L, NotificationRecipientRole.ORGANIZER));
     }
 
     @Test
@@ -83,6 +89,7 @@ class NotificationWriterServiceTests {
 
         assertThat(result.notification()).isSameAs(stored);
         assertThat(result.created()).isFalse();
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
