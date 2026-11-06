@@ -231,7 +231,7 @@ test('organizer queue renders loading and empty states', async ({ page }) => {
   await page.goto('/organizer');
   await page.getByRole('button', { name: 'Góp ý', exact: true }).click();
   await expect(page.getByText('Đang tải góp ý…')).toBeVisible();
-  await expect(page.getByText('Chưa có góp ý phù hợp với bộ lọc.')).toBeVisible();
+  await expect(page.getByText('Không tìm thấy góp ý nào. Hãy thử từ khóa hoặc trạng thái khác.')).toBeVisible();
 });
 
 for (const queueFailure of [

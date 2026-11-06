@@ -604,7 +604,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     role="switch"
                     aria-checked={notifyNewBooth}
                     aria-label="Thông báo đơn đăng ký gian hàng mới"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
+                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>
@@ -633,7 +633,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     role="switch"
                     aria-checked={notifyNewActivity}
                     aria-label="Thông báo đề xuất hoạt động cần duyệt"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
+                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>
@@ -661,7 +661,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     role="switch"
                     aria-checked={notifyDailyEmail}
                     aria-label="Nhận tóm tắt báo cáo định kỳ qua Email"
-                    title={language === 'vi' ? 'Chưa có API cấu hình thông báo' : 'Notification settings API is not available yet'}
+                    title={language === 'vi' ? 'Tính năng này chưa khả dụng' : 'This setting is not available yet'}
                   >
                     <span className="org-toggle-switch-thumb" />
                   </button>

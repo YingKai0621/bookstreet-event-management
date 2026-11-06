@@ -118,7 +118,7 @@ test('Partner opens a real inbox, filters it, and reads an application outcome',
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
   await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
   await page.getByRole('option', { name: 'Yêu cầu gian hàng', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Chưa có thông báo về yêu cầu gian hàng' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chưa có thông báo thuộc loại “Yêu cầu gian hàng”' })).toBeVisible();
   await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
   await page.getByRole('option', { name: 'Tất cả loại' }).click();
   await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();

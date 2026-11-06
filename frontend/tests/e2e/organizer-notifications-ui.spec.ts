@@ -129,7 +129,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('alert')).toContainText('Không tải được thông báo');
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
     await page.getByRole('button', { name: 'Thử lại' }).click();
     await expect(page.getByText('Có hồ sơ đối tác mới')).toBeVisible();
     expect(state.getListCalls()).toBeGreaterThan(1);
@@ -140,7 +140,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('alert').filter({ hasText: 'Bạn không có quyền xem thông báo Organizer.' }).first()).toBeVisible();
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
   });
 
   test('shows sign-in instead of an empty inbox when the session expires', async ({ page }) => {
@@ -148,7 +148,7 @@ test.describe('Organizer notifications inbox', () => {
     await page.goto(`${BASE_URL}/organizer/notifications`);
 
     await expect(page.getByRole('button', { name: 'Đăng nhập vào Cổng Quản Lý' })).toBeVisible();
-    await expect(page.getByText('Bạn chưa có thông báo nào.')).toHaveCount(0);
+    await expect(page.getByText('Bạn chưa có thông báo nào')).toHaveCount(0);
   });
 
   test('marks all read through the server and refreshes the unread count', async ({ page }) => {

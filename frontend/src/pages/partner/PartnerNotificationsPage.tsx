@@ -39,7 +39,7 @@ function dayKey(value: string | number): string {
 }
 
 function emptyCopy(read: ReadFilter, type: 'all' | PartnerNotificationType): { title: string; hint: string } {
-  const topic = type === 'all' ? '' : ` về ${LABELS[type].toLocaleLowerCase('vi')}`;
+  const topic = type === 'all' ? '' : ` thuộc loại “${LABELS[type]}”`;
   if (read === 'unread') {
     return {
       title: topic ? `Không có thông báo chưa đọc${topic}` : 'Bạn đã đọc hết thông báo',

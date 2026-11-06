@@ -457,7 +457,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
           <Store size={40} />
           <p>
             {searchTerm || boothFilter !== 'ALL'
-              ? 'Không tìm thấy yêu cầu thuê gian hàng phù hợp với bộ lọc hiện tại.'
+              ? 'Không tìm thấy yêu cầu thuê gian hàng nào. Hãy thử từ khóa hoặc gian hàng khác.'
               : 'Không có yêu cầu thuê gian hàng trong danh mục này.'}
           </p>
         </div>

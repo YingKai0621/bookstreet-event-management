@@ -43,6 +43,20 @@ function loadErrorMessage(error: unknown, language: Language): string {
   return vi ? 'Không tải được thông báo. Vui lòng thử lại.' : 'Notifications could not be loaded. Please try again.';
 }
 
+function emptyTitle(read: 'all' | 'unread' | 'read', type: 'all' | OrganizerNotificationType, vi: boolean): string {
+  const label = type === 'all' ? '' : TYPE_LABELS[type][vi ? 'vi' : 'en'];
+  if (read === 'unread') {
+    if (label) return vi ? `Không có thông báo chưa đọc thuộc loại “${label}”` : `No unread “${label}” notifications`;
+    return vi ? 'Bạn đã đọc hết thông báo' : 'You are all caught up';
+  }
+  if (read === 'read') {
+    if (label) return vi ? `Chưa có thông báo đã đọc thuộc loại “${label}”` : `No read “${label}” notifications yet`;
+    return vi ? 'Chưa có thông báo đã đọc' : 'No read notifications yet';
+  }
+  if (label) return vi ? `Chưa có thông báo thuộc loại “${label}”` : `No “${label}” notifications yet`;
+  return vi ? 'Bạn chưa có thông báo nào' : 'You do not have any notifications yet';
+}
+
 function typeIcon(type: OrganizerNotificationType) {
   if (type === 'ORGANIZER_NEW_PARTNER_APPLICATION') return <Users size={18} />;
   if (type === 'ORGANIZER_NEW_BOOTH_REQUEST'
@@ -145,8 +159,6 @@ export function OrganizerNotificationsView({ language }: { language: Language })
     }
   }
 
-  const filtered = readFilter !== 'all' || typeFilter !== 'all';
-
   return <div className="organizer-content">
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
       <div>
@@ -203,9 +215,7 @@ export function OrganizerNotificationsView({ language }: { language: Language })
       </div>
         : items.length === 0 ? <div className="organizer-card" style={{ padding: '2rem', textAlign: 'center' }}>
           <Bell size={28} />
-          <p>{filtered
-            ? (vi ? 'Không có thông báo phù hợp với bộ lọc.' : 'No notifications match the filters.')
-            : (vi ? 'Bạn chưa có thông báo nào.' : 'You do not have any notifications yet.')}</p>
+          <p>{emptyTitle(readFilter, typeFilter, vi)}</p>
         </div>
           : <div className="organizer-card" style={{ padding: 0, overflow: 'hidden' }}>
             {items.map(item => <button type="button" key={item.notificationId} disabled={pending}
