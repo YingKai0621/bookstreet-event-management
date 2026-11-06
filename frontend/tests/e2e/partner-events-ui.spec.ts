@@ -116,14 +116,19 @@ test('Partner opens a real inbox, filters it, and reads an application outcome',
   await page.goto('/partner/notifications');
   await expect(page.getByRole('heading', { name: 'Thông báo' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
-  await page.getByLabel('Loại').selectOption('PARTNER_BOOTH_REQUEST_STATUS_CHANGED');
+  await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
+  await page.getByRole('option', { name: 'Yêu cầu gian hàng', exact: true }).click();
   await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
-  await page.getByLabel('Loại').selectOption('all');
+  await page.getByRole('button', { name: 'Lọc theo loại thông báo' }).click();
+  await page.getByRole('option', { name: 'Tất cả loại' }).click();
   await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
   await expect(page).toHaveURL(/\/partner\/events\?application=31$/);
   await page.goto('/partner/notifications');
-  await page.getByLabel('Trạng thái').selectOption('unread');
+  await page.getByRole('tab', { name: 'Chưa đọc' }).click();
   await expect(page.getByText('Không có thông báo phù hợp bộ lọc.')).toBeVisible();
+  await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
+  await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('partner-notifications.png'), fullPage: true });
 });
 
 test('Partner inbox keeps API failure separate from an empty result', async ({ page }) => {
@@ -153,7 +158,7 @@ test('Partner read failure leaves a notification unread', async ({ page }) => {
   await page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Không thể đánh dấu đã đọc' })).toBeVisible();
   await expect(page).toHaveURL(/\/partner\/notifications$/);
-  await page.getByLabel('Trạng thái').selectOption('unread');
+  await page.getByRole('tab', { name: 'Chưa đọc' }).click();
   await expect(page.getByRole('button', { name: /Hồ sơ tham gia đã được duyệt/ })).toBeVisible();
 });
 

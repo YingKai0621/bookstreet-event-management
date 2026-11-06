@@ -229,6 +229,6 @@ export function OrganizerNotificationsView({ language }: { language: Language })
           </div>}
 
     {!loading && !loadError && pages > 1
-      && <CompactPagination page={page} pages={pages} total={total} onPage={setPage} disabled={pending} />}
+      && <CompactPagination page={page + 1} pages={pages} total={total} onPage={next => setPage(next - 1)} disabled={pending} />}
   </div>;
 }

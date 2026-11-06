@@ -819,6 +819,73 @@
   color: #1D4ED8;
 }
 
+button.notification-row-item {
+  width: 100%;
+  align-items: center;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  background: #FFFFFF;
+  color: #62756E;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.notification-row-item.unread {
+  background: #F6F9F8;
+  border-left: 3.5px solid #17382E;
+}
+
+button.notification-row-item:hover:not(:disabled) {
+  background: #F8FAF9;
+}
+
+button.notification-row-item:disabled {
+  cursor: wait;
+}
+
+.notification-row-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.notification-row-copy strong {
+  color: #172421;
+  font-size: 0.95rem;
+}
+
+.notification-row-copy span {
+  color: #536860;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.notification-row-copy small {
+  color: #62756E;
+  font-size: 0.75rem;
+}
+
+.partner-notifications-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.partner-notifications-heading-actions p {
+  margin: 0;
+  color: #62756E;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.partner-notifications-page .event-hub-selectors .event-hub-select-field {
+  min-width: 240px;
+}
+
 /* 16. ATTENDANCE PROCESSING MODAL (Screen 10) */
 .attendance-modal-overlay {
   position: fixed;
