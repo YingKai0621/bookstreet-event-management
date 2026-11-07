@@ -355,7 +355,7 @@ class OrganizerActivityProposalIntegrationTests {
                   and status = 'DRAFT'
                 """, Integer.class, activityId, eventId, stageId,
                 Timestamp.from(start), Timestamp.from(end))).isOne();
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
     }
 
@@ -450,7 +450,7 @@ class OrganizerActivityProposalIntegrationTests {
             assertThat(jdbc.queryForObject(
                     "select count(*) from activities where source_proposal_id = ?",
                     Integer.class, proposalId)).isOne();
-            verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+            verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                     event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
         } finally {
             start.countDown();
