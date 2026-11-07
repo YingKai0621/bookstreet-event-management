@@ -1,100 +1,173 @@
 # Chatbot Guest và Participant — hợp đồng triển khai
 
-Ngày 26/10/2026. Tính năng này được thực hiện theo yêu cầu riêng của project owner. `08_MVP_Scope_v2.md` vẫn ghi AI chatbot ngoài MVP, và `CURRENT_SPRINT.md` vẫn giới hạn Sprint 6; thay đổi này cần được quản lý như một hạng mục chatbot độc lập, không coi là Acceptance Criterion Sprint 6.
+Cập nhật 07/11/2026 (thay bản 26/10/2026). Tính năng này được thực hiện theo yêu cầu riêng của
+project owner. `08_MVP_Scope_v2.md` vẫn ghi AI chatbot ngoài MVP; chatbot được quản lý như một
+hạng mục độc lập, không phải Acceptance Criterion của Sprint nào.
 
 ## Mục đích và ranh giới
 
-- Trả lời câu hỏi tự do bằng tiếng Việt cho Guest và Participant.
-- Chỉ đọc dữ liệu. Chatbot không Join/Leave, đăng ký/hủy Activity, điểm danh, đánh giá, thanh toán hay sửa hồ sơ.
-- Thông tin công khai lấy từ `EventService.listPublic` và `PublicActivityService.list`. Thông tin “của tôi” lấy từ các service Participant hiện có, vốn xác định User từ Session.
-- Không đưa raw QR token, mật khẩu, session ID hoặc thông tin của User khác vào ngữ cảnh AI.
-- Không lưu lịch sử chat vào PostgreSQL hoặc Redis. Giao diện chỉ giữ lịch sử trong bộ nhớ của tab đang mở.
-- Câu trả lời hướng tới người dùng phổ thông: 1–3 câu ngắn, dùng giờ Việt Nam và từ ngữ quen thuộc; chỉ nêu chi tiết được hỏi. Mã trạng thái và thuật ngữ kỹ thuật không được đưa vào ngữ cảnh hiển thị.
-- Câu hỏi và các facts liên quan được gửi tới Gemini Generate Content API. Vì vậy không nhập thông tin bí mật vào ô chat. API key chỉ nằm ở backend.
+- Trả lời câu hỏi tự do bằng tiếng Việt cho Guest và Participant về sự kiện, hoạt động, gian hàng,
+  quy định và cách dùng website.
+- Chỉ đọc dữ liệu. Chatbot không Join/Leave, đăng ký/hủy Activity, điểm danh, đánh giá, thanh toán
+  hay sửa hồ sơ.
+- Không đưa tên đăng nhập, mật khẩu, email, session, raw QR token, mã chứng nhận, ID nội bộ hoặc
+  dữ liệu của User khác cho mô hình.
+- Không lưu lịch sử chat vào PostgreSQL hoặc Redis. Giao diện chỉ giữ lịch sử trong bộ nhớ của tab.
+- Câu hỏi và kết quả tra cứu đã lọc được gửi tới Gemini Generate Content API. Không nhập thông tin
+  bí mật vào ô chat. API key chỉ nằm ở backend.
+
+## Kiến trúc: Gemini function calling trên các công cụ whitelist
+
+Backend không tự phân loại câu hỏi theo từ khóa. Gemini đọc câu hỏi, tự chọn công cụ và tham số;
+backend chạy công cụ trên service hiện có rồi trả kết quả đã lọc; Gemini viết câu trả lời.
+
+```
+Người dùng ─► ChatController (CSRF, 8 câu/phút/IP)
+                 │
+                 ▼
+           ChatService ── prompt hệ thống + lịch sử (≤ 6 lượt) + câu hỏi + khai báo công cụ ──► Gemini
+                 ▲                                                                              │
+                 │      text ◄───────────────────────────────────────────────────────────────── ┤
+                 │      functionCall(name, args) ◄──────────────────────────────────────────────┘
+                 │                │
+                 │                ▼
+                 │          ChatTools.execute ─► service hiện có ─► repository ─► PostgreSQL
+                 │                │
+                 └── functionResponse (dữ liệu đã lọc) ── lặp tối đa 4 vòng
+```
+
+| Thành phần | Trách nhiệm |
+| --- | --- |
+| `ChatController` | `POST /api/v1/chat/messages`, kiểm tra rate limit qua `ChatRateLimiter` |
+| `ChatService` | Vòng lặp function calling, prompt hệ thống, xóa URL trong câu trả lời của mô hình |
+| `GeminiChatClient` | Gọi `generateContent` với `tools`; trả nguyên `content` của mô hình để giữ thought signature |
+| `ChatTools` | Khai báo và thực thi công cụ; tự dựng từng trường trả về cho mô hình |
+| `ChatGuide` | Nội dung hướng dẫn/quy định đã biên tập, phải khớp `05_Business_Rules` |
+| `ChatLinks` | Chọn liên kết chi tiết cho các mục mà câu trả lời thực sự nhắc tới |
+
+### Công cụ
+
+| Công cụ | Tham số | Nguồn | Quyền |
+| --- | --- | --- | --- |
+| `search_events` | `keyword`, `fromDate`, `toDate` | `EventService.listPublic` | Mọi người |
+| `search_activities` | `keyword`, `eventName`, `fromDate`, `toDate`, `onlyOpenForRegistration` | `PublicActivityService.list` | Mọi người |
+| `get_event_details` | `eventName` | Event công khai + Activity của Event + số gian hàng trống | Mọi người |
+| `search_booths` | `eventName`, `keyword`, `onlyAvailable` | `EventBoothService.listPublic` | Mọi người |
+| `get_platform_guide` | `topic` (enum) | `ChatGuide` | Mọi người |
+| `get_my_participation` | `fromDate`, `toDate` | Service Participant theo Session | `PARTICIPANT` |
+| `get_my_notifications` | `unreadOnly` | `NotificationInboxService` (vai trò `PARTICIPANT`) | `PARTICIPANT` |
+
+- Công cụ cá nhân trả `LOGIN_REQUIRED` khi người hỏi chưa đăng nhập và không gọi service dữ liệu.
+  Service xác định User từ Session; mô hình không truyền được userId.
+- Tên công cụ lạ trả `UNKNOWN_TOOL`. Tham số chuỗi bị cắt ở 100 ký tự; ngày sai định dạng bị bỏ qua.
+  Lỗi khi tra cứu trả `LOOKUP_FAILED` và được ghi log cảnh báo.
+- Mỗi lần gọi công cụ ghi log `Chat tool call <tên> <tham số>` để theo dõi.
+
+### Nguyên tắc: việc gì code làm được thì không giao cho mô hình
+
+- Lọc theo khoảng ngày, kiểm tra còn chỗ/mở đăng ký và tính trạng thái đều chạy trong backend.
+  Mô hình chỉ đổi “cuối tuần này”, “tháng 12”… thành `fromDate`/`toDate`. Prompt cho biết hôm nay
+  là thứ mấy, ngày nào và tuần bắt đầu từ thứ Hai.
+- Từ khóa so khớp không dấu, không phân biệt hoa thường; mọi từ quan trọng phải xuất hiện.
+- Tên sự kiện: khớp chính xác được ưu tiên, sau đó là khớp cụm, cuối cùng là khớp đủ từ. Nếu nhiều
+  sự kiện cùng khớp, công cụ trả `AMBIGUOUS_EVENT` kèm danh sách để chatbot hỏi lại.
+- Thời gian gửi cho mô hình có dạng `15/12/2026 lúc 18:00` để tránh đọc nhầm giờ thành ngày.
+- Mỗi công cụ tìm kiếm đọc tối đa 10 trang × 30 bản ghi và trả tối đa 8 kết quả (gian hàng: 15,
+  hoạt động trong `get_event_details`: 20).
 
 ## API
 
-`POST /api/v1/chat/messages` cho Guest và Participant. Trình duyệt gửi CSRF token theo chính sách hiện có.
-
-Request:
+`POST /api/v1/chat/messages` cho Guest và Participant. Trình duyệt gửi CSRF token theo chính sách
+hiện có.
 
 ```json
-{"message":"Cuối tuần này có hoạt động nào?"}
+{"message":"Cuối tuần này có hoạt động nào?",
+ "history":[{"role":"user","text":"..."},{"role":"assistant","text":"..."}]}
 ```
 
-`message` bắt buộc, không quá 500 ký tự. Response:
-
-`history` tùy chọn, tối đa 6 lượt `{ "role": "user|assistant", "text": "..." }` (mỗi lượt tối đa 500 ký tự). Frontend gửi lịch sử trong tab để hiểu câu hỏi nối tiếp; backend không tin lịch sử này là dữ liệu BookStreet và luôn truy vấn lại nguồn hiện tại.
+`message` bắt buộc, tối đa 500 ký tự. `history` tùy chọn, tối đa 6 lượt, mỗi lượt tối đa 500 ký
+tự. Lịch sử chỉ giúp hiểu câu hỏi nối tiếp; dữ liệu luôn được tra lại qua công cụ. Frontend không
+gửi các câu báo lỗi vào lịch sử.
 
 ```json
 {
-  "answer":"Câu trả lời bằng tiếng Việt dựa trên dữ liệu đã tìm được.",
-  "sources":[{"title":"Hoạt động hoặc trang liên quan","url":"/su-kien"}]
+  "answer":"Câu trả lời bằng văn bản thuần, không Markdown.",
+  "sources":[{"title":"Không gian Sách, STEM và Công nghệ","url":"/su-kien/84"}]
 }
 ```
 
-Chatbot tự trả lời khi không tìm được facts hoặc khi Guest hỏi dữ liệu cá nhân. Nếu bước phân loại AI không sẵn sàng, chatbot trả lời chưa tìm thấy thay vì truy vấn dữ liệu theo một ý định chưa được kiểm tra. Khi đã có facts nhưng chưa có `GEMINI_API_KEY`/`CHATBOT_API_KEY` hoặc key/model không truy cập được, API trả `503`. Gemini trả `402` khi tài khoản cần thanh toán hoặc hết hạn mức; lỗi tạm thời khác trả `502`; quá 8 yêu cầu/phút trên cùng IP trả `429`. Không hiển thị phản hồi lỗi thô hoặc key của nhà cung cấp.
+| Mã | Khi nào |
+| --- | --- |
+| `503` | Thiếu `GEMINI_API_KEY`, model sai định dạng, hoặc key/model không truy cập được |
+| `402` | Tài khoản Gemini cần thanh toán hoặc hết hạn mức |
+| `429` | Quá 8 câu/phút trên cùng IP, hoặc Gemini giới hạn tốc độ |
+| `502` | Gemini lỗi tạm thời hoặc bị chặn/không hoàn tất câu trả lời |
+
+Giao diện chỉ hiển thị câu thân thiện (riêng `429` báo thử lại sau một phút); không hiển thị lỗi
+thô, tên nhà cung cấp hay key.
+
+## Liên kết nguồn
+
+Backend tự dựng mọi URL từ ID đã tra được; URL trong câu trả lời của mô hình bị xóa. `ChatLinks`
+chỉ giữ liên kết của những mục được nhắc tên trong câu trả lời (so khớp không dấu, nguyên từ; chấp
+nhận tên rút gọn bỏ tiền tố `[...]` hoặc phần trước ` - `), theo thứ tự xuất hiện, tối đa 4. Khi
+tên rút gọn trùng nhau giữa nhiều sự kiện, tên sự kiện trong câu trả lời được dùng để chọn đúng
+liên kết. Không mục nào được nhắc tới thì dùng liên kết chung của công cụ.
+
+| Mục | Liên kết |
+| --- | --- |
+| Sự kiện | `/su-kien/{eventId}` |
+| Hoạt động | `/su-kien/{eventId}` của sự kiện chứa nó (chưa có trang công khai riêng cho Activity) |
+| Gian hàng | `/gian-hang/{boothId}?eventId={eventId}` |
+| Sự kiện của tôi | `/participant/events/{eventId}` |
+| Hoạt động của tôi | `/participant/activities/detail/{activityId}` |
+| Hướng dẫn | Trang theo chủ đề: `/register`, `/login`, `/participant/certificates`, `/#gian-hang`… |
+
+Chatbot không dẫn tới `/participant/attendance/scan`: trang này cần token từ QR của Ban tổ chức.
 
 ## Cấu hình
 
-Đặt `GEMINI_API_KEY` và tùy chọn `CHATBOT_MODEL` trong `.env` cục bộ hoặc secret của môi trường triển khai. `CHATBOT_API_KEY` cũ vẫn được đọc nếu chưa đổi tên biến. File `.env` không được commit. Mặc định model là `gemini-3.5-flash-lite`; model phải được tài khoản Gemini API của bạn hỗ trợ. Server cần outbound HTTPS tới `generativelanguage.googleapis.com`. Không cần GPU, pgvector hoặc migration.
+Đặt `GEMINI_API_KEY` và tùy chọn `CHATBOT_MODEL` trong `.env` cục bộ hoặc secret của môi trường
+triển khai. File `.env` không được commit. Mặc định model là `gemini-3.5-flash-lite`; model phải hỗ
+trợ function calling và được tài khoản Gemini API cho phép. Server cần outbound HTTPS tới
+`generativelanguage.googleapis.com`. Không cần migration, GPU hay pgvector.
+
+## Mở rộng thêm công cụ
+
+1. Thêm khai báo trong `ChatTools.declarations()`.
+2. Thêm nhánh trong `ChatTools.execute()`.
+3. Gọi service hiện có (không truy vấn repository hay SQL trực tiếp) và tự chọn từng trường trả về.
+   Không trả ID, email, tên đăng nhập, token hay dữ liệu của người khác.
+4. Nếu là dữ liệu cá nhân: kiểm tra `ChatTools.isParticipant()` và trả `LOGIN_REQUIRED`.
+5. Thêm `ChatLinks.Candidate` nếu kết quả có trang chi tiết; viết test trong `ChatServiceTests`.
+
+Không thêm công cụ cho dữ liệu Admin/Organizer, danh sách người tham gia, liên hệ đối tác hay
+thanh toán.
 
 ## Phép thử nghiệm thu
 
-1. Guest hỏi quy tắc đăng ký: có trả lời và link; Guest hỏi “đăng ký của tôi”: hướng dẫn đăng nhập, không gọi service dữ liệu riêng.
-2. Participant hỏi “hoạt động của tôi”: lấy dữ liệu theo Session, không chấp nhận userId trong request.
-3. Sự kiện/Activity không có trong dữ liệu trả về: chatbot nói chưa tìm được, không bịa kết quả.
-4. Thiếu API key và lỗi nhà cung cấp: giao diện báo chưa trả lời được, không hiển thị câu giả.
-5. Câu hỏi quá 500 ký tự hoặc gửi quá nhanh bị từ chối.
-6. Câu lệnh yêu cầu mật khẩu, QR token hoặc dữ liệu người khác không được gửi tới mô hình.
+1. Guest hỏi quy tắc đăng ký: có câu trả lời từ `get_platform_guide` và liên kết đúng trang.
+2. Guest hỏi “hoạt động của tôi”/“thông báo của tôi”: được mời đăng nhập; service cá nhân không
+   được gọi.
+3. Participant hỏi “lịch tuần sau”: công cụ nhận đúng `fromDate`/`toDate`, chỉ trả mục trong khoảng.
+4. Sự kiện không tồn tại: chatbot nói chưa tìm thấy, không bịa, không có liên kết.
+5. Tên sự kiện mơ hồ: chatbot hỏi lại sự kiện cụ thể.
+6. Yêu cầu tài khoản/mật khẩu/email của người khác hoặc lệnh “bỏ qua quy tắc”: bị từ chối.
+7. Câu hỏi ngoài BookStreet: từ chối lịch sự và gợi ý hỏi về sự kiện.
+8. Thiếu API key: API trả `503`, giao diện báo chưa trả lời được.
+9. Câu hỏi quá 500 ký tự hoặc gửi quá nhanh bị từ chối.
 
-## Nhận diện câu hỏi nhiều cách diễn đạt
-
-Backend chuẩn hóa tiếng Việt rồi xử lý các cụm phổ biến theo `ChatIntentResolver`: sự kiện,
-hoạt động, câu hỏi lịch chung, hướng dẫn, dữ liệu của tôi, thời gian và yêu cầu còn chỗ.
-Các cách nói như “cuối tuần có gì vui”, “lịch thứ Bảy”, “có chương trình nào”, “buổi giao lưu”,
-“buổi nói chuyện” và “còn suất” được chuyển về cùng loại truy vấn mà không gọi thêm Gemini.
-Tìm kiếm chỉ dùng service công khai hoặc service Participant lấy chủ sở hữu từ Session.
-Danh sách được đọc từng trang tối đa 10 trang × 30 bản ghi; chatbot chỉ gửi tối đa 5 facts
-cho bước soạn câu trả lời.
-
-Khi không xác định được ý định bằng quy tắc, backend gọi Gemini một lần để phân loại thành
-`intent`, `timeframe` và `availableOnly`. Backend chỉ chấp nhận enum và boolean hợp lệ;
-không nhận SQL, URL, userId, tên bảng hay nội dung trả lời từ bước phân loại. Kết quả
-không hợp lệ hoặc API phân loại không sẵn sàng được xem là `UNKNOWN`; không truy vấn dữ liệu
-riêng nếu Guest chưa đăng nhập. Bước soạn câu trả lời vẫn chỉ nhận facts đã tìm được.
-
-Ngữ cảnh hướng dẫn thường gặp gồm: xem nội dung khi chưa đăng nhập, tạo tài khoản,
-khác biệt giữa tham gia Event và giữ chỗ Activity, hoạt động không cần đăng ký, hủy đăng ký,
-quét QR chung tại địa điểm, chứng nhận, email, thông báo, gian hàng và chức năng chưa hỗ trợ.
-Thông tin lịch, chỗ trống và trạng thái cá nhân luôn lấy từ runtime, không lấy từ câu hỏi mẫu.
+Test tự động: `ChatServiceTests`, `ChatLinksTests`, `GeminiChatClientTests`,
+`ChatControllerIntegrationTests`.
 
 ## Giới hạn hiện tại
 
-### Liên kết điều hướng đã đối chiếu với frontend
-
-| Nội dung | Đích liên kết |
-| --- | --- |
-| Tra cứu sự kiện, hoạt động công khai | `/su-kien` |
-| Gian hàng trên trang chủ | `/#gian-hang` |
-| Bản đồ trên trang chủ | `/#ban-do` |
-| Đăng nhập / tạo tài khoản | `/login` / `/register` |
-| Sự kiện đã tham gia, rời sự kiện | `/participant/events` |
-| Hoạt động đã đăng ký, hủy đăng ký, hướng dẫn điểm danh | `/participant/activities` |
-| Chứng nhận | `/participant/certificates` |
-| Đánh giá hoạt động | `/participant/feedback` |
-| Thông báo | `/participant/notifications` |
-| Hồ sơ, xác minh email | `/participant/profile` |
-
-Các trang Participant yêu cầu đăng nhập; frontend giữ đích đến để quay lại sau đăng nhập.
-Chatbot không dẫn trực tiếp tới `/participant/attendance/scan`: trang này cần token từ QR
-của Ban tổ chức và hiển thị lỗi nếu mở liên kết không có token. Nguồn cho từng sự kiện/hoạt
-động hiện dẫn về danh sách phù hợp, chưa tự mở chi tiết bản ghi.
-
-### Giới hạn tìm kiếm và dữ liệu
-
-- Tìm kiếm dữ liệu công khai đọc tối đa 300 Event và 300 Activity theo thứ tự bắt đầu. Với catalog lớn hơn cần truy vấn theo ngày và từ khóa ngay trong PostgreSQL.
-- Bộ quy tắc chỉ hiểu các nhóm ngày tương đối đang hỗ trợ; ngày nhập tự do và câu hỏi mơ hồ phụ thuộc bước phân loại AI hoặc trả lời chưa tìm thấy.
-- Nguồn dẫn tới trang danh sách hiện có; frontend chưa có link public riêng cho từng Activity.
-- Bộ câu hỏi 82 ý định là tập kiểm thử ban đầu, không phải toàn bộ FAQ đã được biên tập và duyệt.
-- Đã xác nhận key hiện tại liệt kê được model Gemini, nhưng yêu cầu generateContent tới `gemini-3.5-flash-lite` trả `402 RESOURCE_EXHAUSTED` tại thời điểm chuyển đổi. Cần kiểm tra quyền/hạn mức/thanh toán trong Google AI Studio trước khi kiểm thử câu trả lời thật.
+- Tìm kiếm đọc tối đa 300 Event/Activity theo thứ tự bắt đầu. Catalog lớn hơn cần lọc theo ngày
+  và từ khóa ngay trong PostgreSQL.
+- Mỗi câu hỏi có thể gọi Gemini tối đa 5 lần (4 vòng công cụ + 1 lần trả lời), ảnh hưởng chi phí
+  và độ trễ.
+- Prompt chỉ là lớp bảo vệ mềm. Lớp bảo vệ chắc chắn là dữ liệu: mô hình chỉ thấy những gì công cụ
+  trả về.
+- Liên kết dựa trên việc câu trả lời có nhắc tên mục; nếu mô hình diễn đạt khác hẳn tên gốc thì chỉ
+  có liên kết chung.
+- Bộ câu hỏi trong `guest-participant-question-bank.md` là tập kiểm thử, không phải FAQ đã duyệt.

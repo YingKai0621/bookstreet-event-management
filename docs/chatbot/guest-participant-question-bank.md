@@ -4,25 +4,31 @@
 
 ## Cách sử dụng
 
-### Cách hỏi phổ biến đã được gắn với tìm kiếm runtime
+### Cách hỏi phổ biến và công cụ chatbot cần gọi
 
-| Cách hỏi của khách | Ý định chuẩn | Nguồn cần dùng |
+Chatbot dùng Gemini function calling (xem [`chatbot-implementation.md`](chatbot-implementation.md)).
+Khi kiểm thử, xem log `Chat tool call ...` để đối chiếu công cụ và tham số Gemini đã chọn.
+
+| Cách hỏi của khách | Công cụ dự kiến | Nguồn cần dùng |
 | --- | --- | --- |
-| Cuối tuần có gì vui?; lịch thứ Bảy có gì? | Tìm cả sự kiện và hoạt động theo ngày | Event/Activity công khai |
-| Có chương trình hoặc hội sách nào? | Tìm sự kiện | Event công khai |
-| Có buổi giao lưu, tọa đàm, workshop nào? | Tìm hoạt động | Activity công khai |
-| Buổi nào còn chỗ, còn suất? | Tìm hoạt động đang mở đăng ký | Activity công khai và số chỗ thực tế |
-| Buổi nào hết chỗ? | Tìm hoạt động có số chỗ còn lại bằng 0 | Activity công khai và số chỗ thực tế |
-| Tham gia sự kiện có tự đăng ký hoạt động không? | Giải thích hai bước tham gia | Quy tắc Event/Activity |
-| Sao có hoạt động không cần đăng ký? | Giải thích hoạt động mở | Quy tắc Activity |
-| QR của tôi ở đâu; điểm danh thế nào? | Hướng dẫn tự quét QR chung | Quy tắc Attendance hiện hành |
-| Tôi hủy đăng ký hoặc đăng ký lại được không? | Hướng dẫn điều kiện hủy/đăng ký lại | Quy tắc Activity Registration |
-| Lịch của tôi; tôi đã đăng ký gì? | Xem dữ liệu riêng | Session Participant |
-| Không đăng nhập có xem lịch được không? | Hướng dẫn Guest | Quy tắc truy cập công khai |
+| Cuối tuần có gì vui?; lịch thứ Bảy có gì? | `search_events` / `search_activities` với `fromDate`, `toDate` | Event/Activity công khai |
+| Có chương trình hoặc hội sách nào? | `search_events` | Event công khai |
+| Có buổi giao lưu, tọa đàm, workshop nào? | `search_activities` với `keyword` | Activity công khai |
+| Buổi nào còn chỗ, còn suất? | `search_activities` với `onlyOpenForRegistration=true` | Activity công khai và số chỗ thực tế |
+| Buổi nào hết chỗ? | `search_activities`, đọc `availableSeats = 0` | Activity công khai và số chỗ thực tế |
+| Sự kiện X có những hoạt động gì? | `get_event_details` | Event và Activity công khai |
+| Còn gian hàng trống nào, giá thuê bao nhiêu? | `search_booths` với `onlyAvailable=true` | Gian hàng công khai của Event |
+| Tham gia sự kiện có tự đăng ký hoạt động không? | `get_platform_guide` (`EVENT_VS_ACTIVITY`) | Quy tắc Event/Activity |
+| Sao có hoạt động không cần đăng ký? | `get_platform_guide` (`ACTIVITY_REGISTRATION`) | Quy tắc Activity |
+| QR của tôi ở đâu; điểm danh thế nào? | `get_platform_guide` (`ATTENDANCE`) | Quy tắc Attendance hiện hành |
+| Tôi hủy đăng ký hoặc đăng ký lại được không? | `get_platform_guide` (`CANCEL_REGISTRATION`) | Quy tắc Activity Registration |
+| Lịch của tôi; tôi đã đăng ký gì? | `get_my_participation` (có thể kèm khoảng ngày) | Session Participant |
+| Tôi có thông báo mới không? | `get_my_notifications` | Session Participant |
+| Không đăng nhập có xem lịch được không? | `get_platform_guide` (`GUEST_ACCESS`) | Quy tắc truy cập công khai |
 
 Các dòng này là mẫu diễn đạt và kiểm thử, không được dùng làm dữ liệu lịch hoặc chỗ trống.
-Nếu quy tắc không nhận diện được câu hỏi, Gemini chỉ phân loại ý định trong danh sách cho phép;
-backend vẫn kiểm tra và lấy dữ liệu thực trước khi soạn câu trả lời.
+Gemini tự chọn công cụ; mọi dữ liệu lịch, chỗ trống và trạng thái đều do công cụ tra tại thời
+điểm hỏi.
 
 - Mỗi dòng là một *ý định hỏi*. Cột “Cách hỏi khác” giúp kiểm tra khả năng hiểu câu nhập tự do; không giới hạn người dùng vào đúng các câu này.
 - `LIVE`: quy tắc và chức năng được `AI_CONTEXT.md` ghi đã triển khai. `S6`: đã được duyệt cho Sprint 6 nhưng `AI_CONTEXT.md` ghi chưa triển khai tại thời điểm lập bộ câu hỏi. `FUTURE`: có trong baseline hoặc tài liệu tham khảo nhưng chưa có chức năng tương ứng. `DYNAMIC`: phải truy vấn dữ liệu hiện tại, không lưu câu trả lời cố định. `REFUSE`: không cung cấp dữ liệu hoặc thao tác được hỏi.

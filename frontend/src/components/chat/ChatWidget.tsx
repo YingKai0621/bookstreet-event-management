@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/useAuth';
 import { askChatbot, ChatRequestError, type ChatSource } from '../../services/chatApi';
 import './ChatWidget.css';
 
-interface Message { role: 'user' | 'assistant'; text: string; sources?: ChatSource[] }
+interface Message { role: 'user' | 'assistant'; text: string; sources?: ChatSource[]; failed?: boolean }
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -32,22 +32,19 @@ export function ChatWidget() {
     setMessages(previous => [...previous, { role: 'user', text: question }]);
     setBusy(true);
     try {
-      const result = await askChatbot(question, messages.map(({ role, text }) => ({ role, text: text.slice(0, 500) })));
+      const history = messages.filter(message => !message.failed)
+        .map(({ role, text }) => ({ role, text: text.slice(0, 500) }));
+      const result = await askChatbot(question, history);
       setMessages(previous => [...previous, {
         role: 'assistant', text: result.answer, sources: result.sources,
       }]);
     } catch (error) {
-      const text = error instanceof ChatRequestError && error.status === 402
-        ? 'Tài khoản Gemini API đã hết hạn mức hoặc cần bật thanh toán. Vui lòng thử lại sau khi kiểm tra Google AI Studio.'
-        : error instanceof ChatRequestError && error.status === 503
-          ? 'Gemini API key hoặc model chưa được cấu hình hoặc chưa có quyền truy cập.'
-        : error instanceof ChatRequestError && error.status === 429
-          ? 'Bạn đã gửi quá nhiều câu hỏi. Vui lòng thử lại sau một phút.'
-          : error instanceof ChatRequestError && error.status === 502
-            ? 'Dịch vụ AI đang không phản hồi. Vui lòng thử lại sau.'
-            : 'Chatbot hiện chưa trả lời được. Vui lòng thử lại sau.';
+      // Configuration details (API key, billing) are for operators, not visitors.
+      const text = error instanceof ChatRequestError && error.status === 429
+        ? 'Bạn đã gửi quá nhiều câu hỏi. Vui lòng thử lại sau một phút.'
+        : 'Trợ lý tạm thời chưa trả lời được. Vui lòng thử lại sau.';
       setMessages(previous => [...previous, {
-        role: 'assistant', text,
+        role: 'assistant', text, failed: true,
       }]);
     } finally {
       setBusy(false);
