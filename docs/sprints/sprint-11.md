@@ -114,17 +114,18 @@ Units are delivered in this order. Each needs a focused review with evidence map
    validation error rather than a server error.
 3. `AC-A01-S11-03`: a supplied email on a new account stays unverified and receives a verification email after
    commit. An email failure does not roll back the account.
-4. `AC-A01-S11-04`: updating an account changes only full name, phone and an unverified email. Changing an
-   unverified email clears any pending verification and issues a new one after commit. A verified email is rejected
-   with a stable code. The operation accepts no role or status input.
+4. `AC-A01-S11-04`: updating another account changes only full name, phone and an unverified email. Changing an
+   unverified email clears any pending verification and issues a new one after commit. A verified email or the
+   Admin's own account is rejected with a stable code. The operation accepts no role or status input.
 5. `AC-A01-S11-05`: the status command accepts only `ACTIVE` and `DISABLED` and requires a reason of 10 to 500
    characters after normalization. Any other value is rejected without change. Repeating the current status returns
    that status, changes nothing and writes no audit row.
 6. `AC-A01-S11-06`: Admin cannot lock their own account or the last active Admin. Concurrent commands cannot leave
    the system with no active Admin.
 7. `AC-A01-S11-07`: from the next request after a lock commits, the account's existing Sessions cannot use any
-   authenticated API, and its open Notification streams close. The account cannot sign in until unlocked.
-   Public endpoints stay available without authentication.
+   authenticated API, and its open Notification streams close. The account cannot sign in until unlocked, and after
+   unlocking it must sign in again because earlier Sessions do not resume. Public endpoints stay available without
+   authentication.
 8. `AC-A01-S11-08`: the Admin user screen shows the real status, verification state and every role of each account,
    uses server paging, and distinguishes loading, empty, filtered-empty, forbidden, expired-session and failure
    states. Lock and unlock require a reason in the UI, and a failed action is visible and changes nothing on screen.
@@ -267,6 +268,8 @@ These read-only criteria are outside the 51 and enter only under section 5, unit
 | Accounts created by Admin | Must verify email; demos use seeded verified accounts |
 | Pending items of a locked organization | Organizer may reject; approving and requesting changes are blocked |
 | Password reset | Included as the last deferrable unit, using the existing token table |
+| Changing a password while signed in | Next Sprint; if password reset is deferred, both move together so a User always gains a way to change a password in the same delivery |
+| Admin access to `/organizer` | Removed; a person who needs both gets both roles |
 | Admin password reset | Removed because it sets a fixed known password |
 | Facilities, Assets, Booth catalog on Admin | Removed; Organizer manages Locations and Booths |
 | Audit log | Kept as a real feature; requires a new migration |
