@@ -1,6 +1,7 @@
 # Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `ACTIVE - ADMIN/CROSS-ROLE CLOSURE IN PROGRESS`
+- Status: `COMPLETED - 2026-11-07`
+- Closure report: `docs/development/SPRINT_10_CLOSURE_REPORT.md`
 - Prepared date: `2026-11-02`
 - Activation date: `2026-11-03`
 - Approved documentation merge: PR #116, merge commit `3a0a76b`
@@ -10,14 +11,9 @@
 - Current production schema baseline: immutable Flyway migrations `V1` through `V17`
 - Implemented schema changes: `V16` and amendment `V17`, authored by Developer A (`YingKai0621`)
 - Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
-- Current review stage: the 52 Acceptance Criteria, API contract, Physical ERD overlay, implementation
-  plan, and three-developer assignment are approved and active
-- Current implementation progress: foundation PR #122, Partner PR #124/#125, and Organizer PR #126 are
-  merged. Developer A owns the remaining Admin/shared frontend integration, cross-role verification,
-  documentation synchronization, and closure evidence.
 
-This document is the active Sprint 10 baseline. It authorizes only the reviewed implementation units and
-does not authorize code, producer, type, role, reference, or delivery-channel changes outside this scope.
+This document is the completed Sprint 10 baseline. It authorized only the reviewed implementation units and
+did not authorize code, producer, type, role, reference, or delivery-channel changes outside this scope.
 
 ## 1. Goal
 

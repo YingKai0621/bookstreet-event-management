@@ -1,13 +1,13 @@
 # Sprint 10 Role-Scoped Notifications Implementation Plan
 
-- Status: `ACTIVE - PR 1 MERGED; PR 2 NEXT`
+- Status: `COMPLETED - 2026-11-07`; see `docs/development/SPRINT_10_CLOSURE_REPORT.md`
 - Prepared date: `2026-11-02`
 - Scope baseline: `docs/sprints/sprint-10.md`
 - API contract: `docs/api/sprint-10-api-contract.md`
 - Physical ERD overlay: `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
 - Three-developer ownership: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
-- Schema baseline: immutable Flyway `V1` through `V16`
-- Implemented migration: `V16`, authored exclusively by Developer A (`YingKai0621`)
+- Schema baseline: immutable Flyway `V1` through `V17`
+- Implemented migrations: `V16` and amendment `V17`, authored exclusively by Developer A (`YingKai0621`)
 - Foundation delivery: PR #122, merge commit `280588c`, merged `2026-11-04`
 
 ## 1. Delivery principles

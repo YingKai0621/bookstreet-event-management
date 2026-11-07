@@ -1,12 +1,12 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-06`
+Last updated: `2026-11-07`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V16. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V17. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
   Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
@@ -14,9 +14,9 @@ Last updated: `2026-11-06`
   BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay. V13
   adds the Booth image URL used by the demo/public experience. V14 owns the Sprint 8 General
   Feedback schema. V15 owns the Sprint 9 Heritage schema. V16 owns the Sprint 10 role-scoped
-  Notification schema overlay and backfill.
+  Notification schema overlay and backfill. V17 adds the four `BR-110` Notification types.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover the immutable migration chain through V16 and the relevant prior
+- Flyway migration tests cover the immutable migration chain through V17 and the relevant prior
   Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
@@ -128,7 +128,8 @@ Last updated: `2026-11-06`
   persistence and constraints, the shared writer/query/read foundation, all four role endpoint families,
   Participant backend compatibility, producer-free Admin operations, exact-role security, no-store
   handling and focused migration/concurrency coverage. Partner PR #124/#125 and Organizer PR #126 are
-  also merged; Admin/shared frontend integration and final cross-role closure remain active.
+  also merged. PR #133, #136 and #137 added the `BR-110` producers, acceptance evidence and the `BR-111` live
+  signal. Sprint 10 closed on 2026-11-07.
 - The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
   free version. One assigned Heritage Owner consumes that migration and owns the entity,
   repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
@@ -258,7 +259,7 @@ indexes. V1 through V15 are now immutable.
 `V16__role_scope_notifications.sql` extends the existing `notifications` table with exact recipient-role
 scope and approved Partner/Organizer references, backfills existing rows as `PARTICIPANT`, replaces the
 type/reference/deduplication constraints with role-aware equivalents and adds role-local inbox indexes.
-V1 through V16 are now immutable.
+V1 through V17 are now immutable.
 
 `V17__extend_sprint10_notification_types.sql` replaces only the Notification type/role/reference check to add
 `ACTIVITY_STARTING_SOON`, `PARTNER_EVENT_PUBLISHED`, `PARTNER_BOOTH_HOLD_EXPIRING` and
@@ -279,10 +280,8 @@ is now 58 Acceptance Criteria.
 
 ## Next implementation task
 
-- Developer A completes the remaining Admin/shared frontend integration: genuine producer-free Admin
-  empty/failure behavior, current API mapping, and bounded refresh without fabricated categories.
-- Complete cross-role navigation and browser regression coverage, then consolidate all 52 Acceptance
-  Criteria and closure evidence.
+- No Sprint is active. Approve a Sprint 11 baseline before new feature or schema work. Recommended debt is
+  in `docs/development/SPRINT_10_CLOSURE_REPORT.md` section 7.
 - BR-81 equality is resolved as inclusive: exact Booth request deadline is allowed; only a later backend
   time is rejected. Preserve the canonical predicate with focused boundary tests.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
@@ -290,11 +289,8 @@ is now 58 Acceptance Criteria.
 
 ## Latest completed Sprint
 
-Sprint 09 Heritage Public Content is the latest completed Sprint as of 2026-11-01.
-
-Sprint 10 Role-Scoped In-App Notifications is the active Sprint as of 2026-11-03. It is not yet complete
-and now has its foundation, Partner and Organizer units merged through PR #126. Admin/shared frontend and
-final cross-role closure units remain open.
+Sprint 10 Role-Scoped In-App Notifications is the latest completed Sprint as of 2026-11-07, with 58 Acceptance
+Criteria. See `docs/development/SPRINT_10_CLOSURE_REPORT.md`.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -313,12 +309,12 @@ Sprint 9 includes these completed Use Case slices:
 ## Current approved baselines
 
 - Requirement baseline: active MVP rules plus completed Sprint 7 reward, completed Sprint 8 General
-  Feedback, completed Sprint 9 Heritage and active Sprint 10 role-scoped Notification decisions
+  Feedback, completed Sprint 9 Heritage and completed Sprint 10 role-scoped Notification decisions
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
   interpretations
-- Physical implementation source: immutable Flyway V1–V16. V10 implements the Sprint 6
+- Physical implementation source: immutable Flyway V1–V17. V10 implements the Sprint 6
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
   approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
   the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay and V16 applies the
@@ -335,9 +331,8 @@ Sprint 9 includes these completed Use Case slices:
 - Active MVP Use Case count: 26
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation source.
-Use immutable V1–V16 and the current Physical ERD report as current physical truth. For remaining Sprint
-10 work use the active Sprint 10 baseline, Use Case Specifications, API Contract, implemented V16 and
-approved overlay.
+Use immutable V1–V17 and the current Physical ERD report as current physical truth. For Sprint 10 behavior
+use the completed Sprint 10 baseline, Use Case Specifications, API Contract, V16, V17 and the approved overlay.
 
 ## Authentication baseline
 

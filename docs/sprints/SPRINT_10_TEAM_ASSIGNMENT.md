@@ -1,6 +1,6 @@
 # Sprint 10 Role-Scoped Notifications — Three-Developer Assignment
 
-- Status: `ACTIVE - WORK-PACKAGE OWNERSHIP DEFINED`
+- Status: `COMPLETED - 2026-11-07`; see `docs/development/SPRINT_10_CLOSURE_REPORT.md`
 - Prepared date: `2026-11-03`
 - Team size: exactly three developers
 - Scope baseline: `docs/sprints/sprint-10.md`
