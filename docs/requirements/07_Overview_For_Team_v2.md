@@ -14,7 +14,7 @@ What every team member must understand — active MVP updated 09/10/2026
 | Participant | Join Event, đăng ký Activity, tự quét Activity/Booth QR, Attendance, BoothVisit và rewards.                           |
 | Partner     | Apply Event, request Booth, thanh toán/settlement Booth và đề xuất Activity.                                          |
 | Organizer   | Quản lý Event và duyệt/vận hành nghiệp vụ.                                                                            |
-| Admin       | Account, Role/UserRole và Badge toàn hệ thống; không có Permission model hoặc System Settings module riêng trong MVP. |
+| Admin       | Account, Role/UserRole và Badge toàn hệ thống; đề xuất Sprint 11 thêm tổ chức đối tác, nhật ký quản trị và Dashboard toàn hệ thống; không có Permission model hoặc System Settings module riêng trong MVP. |
 
 # 3. Những khái niệm không được nhầm
 
