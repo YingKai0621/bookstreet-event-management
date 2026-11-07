@@ -93,9 +93,9 @@ Units are delivered in this order. Each needs a focused review with evidence map
 
 1. `S11-1` Security and cleanup: enforcement, `/organizer/**` authority, removal of out-of-scope screens and APIs.
 2. `S11-2` Audit foundation: migration, writer and read API.
-3. `S11-3` Accounts and roles, with audit.
+3. `S11-3` Accounts, roles and the Admin profile, with audit.
 4. `S11-4` Partner organizations and their effects, with Badge audit.
-5. `S11-5` Dashboard, profile and Sprint 10 debt.
+5. `S11-5` Dashboard and Sprint 10 debt.
 6. `S11-6` Password reset. It may move to the next Sprint without affecting units 1 to 5; if it does, its six
    criteria leave this baseline by a recorded amendment.
 7. `S11-7` Optional read-only oversight. It is outside the baseline count and enters only by a recorded decision
