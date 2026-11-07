@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/organizer/events")
-@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
+@PreAuthorize("hasRole('ORGANIZER')")
 public class OrganizerApplicationQueryController {
 
     private final OrganizerApplicationQueryService queryService;

@@ -3,6 +3,7 @@ package com.swp391.bookstreet.notification;
 import com.swp391.bookstreet.notification.entity.NotificationRecipientRole;
 import com.swp391.bookstreet.notification.entity.NotificationType;
 import com.swp391.bookstreet.notification.service.NotificationCommand;
+import com.swp391.bookstreet.notification.service.NotificationStreamsRevoked;
 import com.swp391.bookstreet.notification.service.NotificationWriter;
 import java.net.CookieManager;
 import java.net.URI;
@@ -26,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -60,6 +62,7 @@ class NotificationLiveUpdateIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired NotificationWriter writer;
     @Autowired TransactionTemplate transactions;
+    @Autowired ApplicationEventPublisher events;
 
     private final BlockingQueue<String> streamLines = new LinkedBlockingQueue<>();
     private HttpClient client;
@@ -122,7 +125,13 @@ class NotificationLiveUpdateIntegrationTests {
                 .startsWith("text/event-stream");
         assertThat(stream.headers().firstValue("Cache-Control").orElseThrow())
                 .contains("no-store");
-        Thread reader = new Thread(() -> openStream.forEach(streamLines::add));
+        Thread reader = new Thread(() -> {
+            try {
+                openStream.forEach(streamLines::add);
+            } catch (java.io.UncheckedIOException closedByTest) {
+                streamLines.add("closed");
+            }
+        });
         reader.setDaemon(true);
         reader.start();
 
@@ -144,8 +153,23 @@ class NotificationLiveUpdateIntegrationTests {
                 NotificationRecipientRole.PARTNER, NotificationType.PARTNER_EVENT_PUBLISHED, "committed")));
         assertNoSignal();
 
+        transactions.executeWithoutResult(status -> events.publishEvent(
+                new NotificationStreamsRevoked(userId, NotificationRecipientRole.PARTICIPANT)));
+        assertNoSignal();
+        assertThat(reader.isAlive()).as("another role's revocation keeps this stream open").isTrue();
+        transactions.executeWithoutResult(status -> {
+            events.publishEvent(new NotificationStreamsRevoked(userId, NotificationRecipientRole.PARTNER));
+            status.setRollbackOnly();
+        });
+        Thread.sleep(700);
+        assertThat(reader.isAlive()).as("a rolled-back revocation keeps this stream open").isTrue();
+        transactions.executeWithoutResult(status -> events.publishEvent(
+                new NotificationStreamsRevoked(userId, NotificationRecipientRole.PARTNER)));
+        reader.join(5000);
+        assertThat(reader.isAlive()).as("a committed revocation ends the stream").isFalse();
+
         jdbc.update("update users set status = 'DISABLED' where user_id = ?", userId);
-        assertThat(status("/api/v1/partner/notifications/stream")).isEqualTo(403);
+        assertThat(status("/api/v1/partner/notifications/stream")).isEqualTo(401);
     }
 
     private NotificationCommand command(NotificationRecipientRole role, NotificationType type,

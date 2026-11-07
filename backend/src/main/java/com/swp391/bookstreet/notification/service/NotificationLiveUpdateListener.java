@@ -20,4 +20,10 @@ public class NotificationLiveUpdateListener {
     public void signalAfterCommit(NotificationCreated event) {
         hub.signal(event.recipientUserId(), event.recipientRole());
     }
+
+    @Async(NotificationAsyncConfiguration.LIVE_UPDATE_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void closeAfterCommit(NotificationStreamsRevoked event) {
+        hub.close(event.userId(), event.role());
+    }
 }

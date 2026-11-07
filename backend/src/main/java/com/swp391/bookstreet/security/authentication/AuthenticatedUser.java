@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 
 import java.io.Serial;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +27,7 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
     private final boolean enabled;
     private final boolean emailVerified;
     private final List<GrantedAuthority> authorities;
+    private final Instant authenticatedAt;
 
     private AuthenticatedUser(
             Long userId,
@@ -41,6 +43,7 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
         this.enabled = enabled;
         this.emailVerified = emailVerified;
         this.authorities = List.copyOf(authorities);
+        this.authenticatedAt = Instant.now();
     }
 
     public static AuthenticatedUser from(User user) {
@@ -81,6 +84,11 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
 
     public Long getUserId() {
         return userId;
+    }
+
+    /** Null only for a Session stored before this field existed. */
+    public Instant getAuthenticatedAt() {
+        return authenticatedAt;
     }
 
     @Override
