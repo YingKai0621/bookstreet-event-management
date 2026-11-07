@@ -28,7 +28,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 | Participant         | Event participation, Activity registration, QR self-scan, Attendance, BoothVisit, rewards and Activity rating. |
 | Partner / Exhibitor | Event application, Booth request/payment/settlement and Activity proposal.                                     |
 | Event Organizer     | Event operations, reviews, participation monitoring, public content and reports.                               |
-| System Admin        | Accounts, Role/UserRole and global Badge definitions; no Permission model or generic System Settings module.   |
+| System Admin        | Accounts, Role/UserRole and global Badge definitions; proposed for Sprint 11: Partner organization status, administrative audit log and a read-only system dashboard; no Permission model or generic System Settings module. |
 
 # 3. In Scope
 
@@ -184,6 +184,8 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Badge definitions and total-Points thresholds
 
+- Partner organization status and an append-only administrative audit log, proposed for Sprint 11
+
 - Payment Gateway credentials and webhook endpoints are backend environment configuration, not an Admin UI or Use Case in MVP.
 
 - Admin Notification APIs/UI expose genuine empty and failure states. Sprint 10 does not fabricate
@@ -323,3 +325,18 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
   fake real-time delivery and local-only read truth are outside the active slice.
 - Exact type/reference pairs, API DTOs, migration constraints and 52 Acceptance Criteria are governed by
   the active Sprint 10 baseline, Use Case Specifications, API Contract and Physical ERD overlay.
+
+# 9. Sprint 11 Delivery Boundary (proposed)
+
+- Sprint 11 completes the existing Admin Use Cases and adds `UC-A04` and `UC-A05`, giving 28 active MVP Use
+  Cases when the baseline is approved.
+- `BR-112` through `BR-120` govern accounts, roles, Partner organization status, the audit log, the dashboard and
+  password reset.
+- Locking a Partner organization blocks new work only. It creates no automatic cancellation or refund.
+- Admin screens and APIs outside this scope are removed: facilities, assets and booth catalog on Admin, generic
+  System Settings, Permission management and Admin password reset.
+- Read-only system-wide Payment and Event views are optional and enter only if the Sprint 11 baseline schedules
+  them. They add no Use Case and cannot change data.
+- Admin alert producers, Admin emergency cancellation, refunds and manual Payment changes remain out of scope.
+- Exact criteria, API DTOs and migration constraints are governed by the Sprint 11 baseline, API Contract and
+  Physical ERD overlay.

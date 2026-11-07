@@ -12,7 +12,7 @@ Hệ thống có 5 Actor chính. Guest và Participant có thể là cùng một
 | Participant            | Người dùng đã đăng nhập        | Join Event, Activity registration, tự quét QR, Attendance, BoothVisit, rewards và rating. |
 | Partner / Exhibitor    | Nhà xuất bản / đơn vị tham gia | Apply Event, chọn Booth, đề xuất Activity.                                                |
 | Event Organizer        | Ban quản lý / Ban tổ chức      | Quản lý nhiều Event, duyệt và vận hành nghiệp vụ.                                         |
-| System Admin           | Quản trị hệ thống              | Account, Role/UserRole và Badge toàn hệ thống.                                            |
+| System Admin           | Quản trị hệ thống              | Account, Role/UserRole và Badge toàn hệ thống; đề xuất Sprint 11 thêm tổ chức đối tác, nhật ký quản trị và Dashboard toàn hệ thống. |
 
 # 2. Guest / Public Visitor
 
@@ -82,8 +82,14 @@ Organizer thuộc Ban quản lý Đường Sách. Mỗi Event có organizerUserI
 
 Admin quản trị hệ thống, không thay Organizer điều hành Event.
 
-- Manage Accounts: xem trạng thái, khóa hoặc mở khóa tài khoản.
+- Manage Accounts: tạo, xem, sửa thông tin và khóa/mở tài khoản kèm lý do; không xem hoặc đặt lại mật khẩu.
 
 - Manage Roles: gán/gỡ PARTNER, ORGANIZER hoặc ADMIN qua UserRole; role nâng cao yêu cầu verified email. Tài khoản mới mặc định PARTICIPANT; MVP không có Permission/RolePermission entity.
 
 - Manage Badges: quản lý danh mục Badge, ngưỡng total Points và trạng thái sử dụng.
+
+- Review Audit Logs (đề xuất Sprint 11): xem, tìm và lọc nhật ký thao tác quản trị; nhật ký chỉ đọc.
+
+- Manage Partner Organizations (đề xuất Sprint 11): xem tổ chức đối tác và khóa/mở tổ chức kèm lý do; không sửa hồ sơ hay xóa tổ chức.
+
+- Xem Dashboard toàn hệ thống từ số liệu thật; không phải Use Case riêng.
