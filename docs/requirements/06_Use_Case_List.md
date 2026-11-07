@@ -3,7 +3,7 @@
 Active MVP baseline updated 03/11/2026 for Sprint 10 role-scoped Notification delivery;
 Post-MVP references are listed separately
 
-System Admin amendment proposed 07/11/2026 for Sprint 11: UC-A04 and UC-A05 take effect when the baseline is approved.
+System Admin amendment active 07/11/2026 for Sprint 11: UC-A04 and UC-A05 are active.
 
 # 1. Quy tắc đặt tên Use Case
 
@@ -83,8 +83,8 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 | UC-A01 | Manage Accounts | Tạo, xem, sửa thông tin và khóa/mở tài khoản theo BR-112 đến BR-114; Admin không xem hoặc đặt lại mật khẩu. |
 | UC-A02 | Manage Roles | Gán/gỡ PARTNER, ORGANIZER hoặc ADMIN qua UserRole theo BR-115; role nâng cao yêu cầu verified email. Tài khoản mới mặc định PARTICIPANT; không có Permission/RolePermission entity. |
 | UC-A03 | Manage Badges | Quản lý Badge và ngưỡng total Points dùng để unlock Badge. |
-| UC-A04 | Review Audit Logs | Đề xuất Sprint 11: xem, tìm và lọc nhật ký thao tác quản trị theo BR-118; nhật ký chỉ đọc. |
-| UC-A05 | Manage Partner Organizations | Đề xuất Sprint 11: xem tổ chức đối tác và khóa/mở tổ chức kèm lý do theo BR-116 và BR-117; không sửa hồ sơ hay xóa tổ chức. |
+| UC-A04 | Review Audit Logs | Xem, tìm và lọc nhật ký thao tác quản trị theo BR-118; nhật ký chỉ đọc. |
+| UC-A05 | Manage Partner Organizations | Xem tổ chức đối tác và khóa/mở tổ chức kèm lý do theo BR-116 và BR-117; không sửa hồ sơ hay xóa tổ chức. |
 
 ## Post-MVP reference
 
@@ -104,7 +104,7 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 <thead>
 <tr class="header">
 <th>Tổng số Use Case<br />
-26 active MVP Use Case; Sprint 11 đề xuất thêm UC-A04 và UC-A05, thành 28 khi baseline được duyệt. Các Post-MVP reference không tính vào tổng này. Participant vẫn có 4 Use Case lớn; Sprint 6 mở rộng flow/Acceptance Criteria bên trong các Use Case đã có, không tăng tổng số. Chi tiết status, deadline, capacity, QR window, No-show, correction audit, Notification, Certificate và Rating đi vào Use Case Specification/Business Rules thay vì tách thêm oval.</th>
+28 active MVP Use Case, gồm UC-A04 và UC-A05 do Sprint 11 thêm. Các Post-MVP reference không tính vào tổng này. Participant vẫn có 4 Use Case lớn; Sprint 6 mở rộng flow/Acceptance Criteria bên trong các Use Case đã có, không tăng tổng số. Chi tiết status, deadline, capacity, QR window, No-show, correction audit, Notification, Certificate và Rating đi vào Use Case Specification/Business Rules thay vì tách thêm oval.</th>
 </tr>
 </thead>
 <tbody>
@@ -143,8 +143,8 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 
 # 6. Sprint 11 traceability note
 
-- Sprint 11 đề xuất thêm hai top-level Use Case của System Admin: `UC-A04 Review Audit Logs` và
-  `UC-A05 Manage Partner Organizations`. Tổng số active MVP Use Case thành 28 khi baseline được duyệt.
+- Sprint 11 thêm hai top-level Use Case của System Admin: `UC-A04 Review Audit Logs` và
+  `UC-A05 Manage Partner Organizations`. Tổng số active MVP Use Case là 28.
 - Không thêm Actor mới. Admin vẫn quản trị hệ thống và không thay Organizer điều hành Event.
 - `UC-A01` và `UC-A02` được làm rõ theo BR-112 đến BR-115. Chặn tài khoản bị khóa trên toàn hệ thống là System
   behavior hỗ trợ `UC-A01`, không phải Use Case riêng.

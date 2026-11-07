@@ -1,15 +1,15 @@
 # Sprint 11 System Admin Management
 
-- Status: `PROPOSED - AWAITING TEAM REVIEW`
+- Status: `ACTIVE - ACTIVATED 2026-11-07`
+- Approved documentation: PR #141, merge commit `7604f06`
 - Prepared date: `2026-11-07`
 - Previous completed Sprint: Sprint 10 Role-Scoped In-App Notifications
 - Current production schema baseline: immutable Flyway migrations `V1` through `V17`
-- Planned schema change: one new migration, expected `V18`; recheck the next free version before reservation
+- Reserved schema change: one new migration, `V18`, Developer A only
 - Business Rules: `BR-112` through `BR-120` in `docs/requirements/05_Business_Rules.md`
 - Use Cases: `UC-A01` through `UC-A05` and the password-reset part of `UC-G03`
 
-This document proposes the Sprint 11 scope. It authorizes no code until the team approves it and
-`docs/sprints/CURRENT_SPRINT.md` activates it.
+This document is the active Sprint 11 baseline. It authorizes only the reviewed delivery units below.
 
 ## 1. Goal
 
@@ -37,7 +37,7 @@ Payment or Activity statuses.
 | `UC-G03 Manage Account Access` | Complete the missing password reset |
 
 The Admin dashboard and profile are part of the Admin workspace. The Partner and Organizer effects of a locked
-organization refine existing Use Cases. The active MVP Use Case count becomes 28 when this baseline is approved.
+organization refine existing Use Cases. The active MVP Use Case count is 28.
 
 ## 3. Current state
 

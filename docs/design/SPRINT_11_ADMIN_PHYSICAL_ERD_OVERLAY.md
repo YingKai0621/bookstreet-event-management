@@ -1,9 +1,9 @@
 # Sprint 11 System Admin Physical ERD Overlay
 
-- Status: `PROPOSED - AWAITING TEAM REVIEW`
+- Status: `ACTIVE - ACTIVATED 2026-11-07`
 - Prepared date: `2026-11-07`
 - Current applied baseline: Flyway `V1` through `V17`
-- Planned migration: one new migration, expected `V18__create_admin_audit_log.sql`
+- Reserved migration: `V18__create_admin_audit_log.sql`, Developer A only
 - Related Sprint baseline: `docs/sprints/sprint-11.md`
 - Reviewed API contract: `docs/api/sprint-11-api-contract.md`
 
