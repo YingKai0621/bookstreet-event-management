@@ -42,7 +42,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest(properties = {
@@ -499,7 +499,7 @@ class PartnerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject("select cancelled_at from activity_proposals "
                 + "where activity_proposal_id = ?", Instant.class, proposalId))
                 .isEqualTo(firstCancelledAt);
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(proposalId)));
     }
 
@@ -545,7 +545,7 @@ class PartnerActivityProposalIntegrationTests {
                 .isEqualTo(firstCancelledAt);
         assertThat(jdbc.queryForObject("select cancellation_reason from activities "
                 + "where activity_id = ?", String.class, activityId)).isEqualTo(reason);
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(activityId)
                         && event.messageType()
                         == ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER));

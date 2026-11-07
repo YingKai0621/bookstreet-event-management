@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -259,9 +259,9 @@ class OrganizerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject("select count(*) from notifications where "
                 + "activity_proposal_id in (?, ?) and recipient_role = 'PARTNER'",
                 Integer.class, changesId, rejectId)).isEqualTo(2);
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_NEEDS_CHANGES));
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_REJECTED));
     }
 
@@ -354,7 +354,7 @@ class OrganizerActivityProposalIntegrationTests {
                   and status = 'DRAFT'
                 """, Integer.class, activityId, eventId, stageId,
                 Timestamp.from(start), Timestamp.from(end))).isOne();
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
     }
 
@@ -449,7 +449,7 @@ class OrganizerActivityProposalIntegrationTests {
             assertThat(jdbc.queryForObject(
                     "select count(*) from activities where source_proposal_id = ?",
                     Integer.class, proposalId)).isOne();
-            verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+            verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                     event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
         } finally {
             start.countDown();

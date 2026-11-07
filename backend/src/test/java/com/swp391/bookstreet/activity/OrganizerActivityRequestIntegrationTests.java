@@ -31,6 +31,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -371,7 +372,7 @@ class OrganizerActivityRequestIntegrationTests {
         assertThat(jdbc.queryForObject("select count(*) from notifications where "
                 + "activity_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
                 Integer.class, requestId, partnerUserId)).isOne();
-        verify(partnerMailService).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.CHANGE_REQUEST_APPROVED
                         && event.referenceId().equals(requestId)));
     }
@@ -490,11 +491,11 @@ class OrganizerActivityRequestIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"));
         assertThat(activityStatus(cancellationRejectedActivityId)).isEqualTo("DRAFT");
-        verify(partnerMailService).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000)).sendMessage(anyString(), argThat(event ->
                 event.messageType()
                         == ActivityPartnerMessageType.CANCELLATION_REQUEST_APPROVED
                         && event.referenceId().equals(cancellationId)));
-        verify(partnerMailService).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000)).sendMessage(anyString(), argThat(event ->
                 event.messageType()
                         == ActivityPartnerMessageType.CANCELLATION_REQUEST_REJECTED
                         && event.referenceId().equals(cancellationRejectedId)));
