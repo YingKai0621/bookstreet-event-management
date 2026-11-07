@@ -79,8 +79,10 @@ did not re-derive every clause of every criterion line by line.
   candidate, a passed deadline, an inactive organization or a pending payment.
 - `PaymentSprint03IntegrationTests` and `NotificationAmendmentIntegrationTests` cover `AC-O-S10-11`.
 - `organizer-notifications-ui.spec.ts` covers the inbox and every Organizer navigation target.
-- `AC-O-S10-02` through `AC-O-S10-05` combine producer unit tests with manual verification in section 5, by
-  decision of the project owner. They have no automated test through the real submission flow.
+- `PartnerActivityProposalIntegrationTests` covers `AC-O-S10-03` through the real submit, review, edit and
+  resubmit flow.
+- `AC-O-S10-02`, `AC-O-S10-04` and `AC-O-S10-05` combine producer unit tests with manual verification in section
+  5, by decision of the project owner. They have no automated test through the real submission flow.
 
 ### 3.5 Admin `AC-A-S10-01` through `AC-A-S10-05`
 
@@ -146,7 +148,7 @@ Known limits to keep in mind:
 
 - Live connections are per application instance. Running several backends would need shared delivery.
 - After a backend restart, a tab may not reconnect until it is hidden and shown again, or reloaded.
-- `AC-O-S10-02` through `AC-O-S10-05` have no automated test through the real submission flow.
+- `AC-O-S10-02`, `AC-O-S10-04` and `AC-O-S10-05` have no automated test through the real submission flow.
 - Mobile layout for Partner, Organizer and Admin was deferred by the project owner.
 - Existing frontend lint warnings and production bundle splitting remain general technical debt.
 
