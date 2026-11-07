@@ -2,7 +2,6 @@ package com.swp391.bookstreet.chat;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
@@ -19,7 +18,7 @@ class ChatControllerIntegrationTests {
     @Autowired MockMvc mvc;
 
     @Test
-    void guestCanAskPersonalQuestionWithoutLeakingData() throws Exception {
+    void guestPersonalQuestionWithoutAiKeyIsUnavailableNotLeaked() throws Exception {
         var csrf = mvc.perform(get("/api/v1/auth/csrf"))
                 .andExpect(status().isOk()).andReturn();
         String token = com.jayway.jsonpath.JsonPath.read(
@@ -30,8 +29,7 @@ class ChatControllerIntegrationTests {
                         .header("X-XSRF-TOKEN", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"Tôi đã đăng ký hoạt động nào?\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value(org.hamcrest.Matchers.containsString("đăng nhập")));
+                .andExpect(status().isServiceUnavailable());
     }
 
     @Test

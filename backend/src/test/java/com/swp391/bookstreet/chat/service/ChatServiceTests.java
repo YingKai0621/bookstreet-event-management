@@ -1,49 +1,49 @@
 package com.swp391.bookstreet.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.ArgumentMatchers.anyString;
 
-import tools.jackson.databind.ObjectMapper;
 import com.swp391.bookstreet.activity.service.PublicActivityService;
-import com.swp391.bookstreet.activity.dto.PublicActivityResponse;
-import com.swp391.bookstreet.activity.dto.ActivityPageResponse;
-import com.swp391.bookstreet.activity.dto.PublicActivityLocationResponse;
-import com.swp391.bookstreet.chat.service.ChatService;
-import com.swp391.bookstreet.chat.service.GeminiChatClient;
-import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.event.dto.EventPageResponse;
 import com.swp391.bookstreet.event.dto.EventSummaryResponse;
 import com.swp391.bookstreet.event.entity.EventStatus;
+import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.registration.service.ParticipantActivityRegistrationService;
 import com.swp391.bookstreet.registration.service.ParticipantEventRegistrationService;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 class ChatServiceTests {
+    private final ObjectMapper mapper = new ObjectMapper();
     private final EventService events = mock(EventService.class);
     private final PublicActivityService activities = mock(PublicActivityService.class);
     private final ParticipantEventRegistrationService myEvents =
             mock(ParticipantEventRegistrationService.class);
     private final ParticipantActivityRegistrationService myActivities =
             mock(ParticipantActivityRegistrationService.class);
+    private final com.swp391.bookstreet.booth.service.EventBoothService booths =
+            mock(com.swp391.bookstreet.booth.service.EventBoothService.class);
+    private final com.swp391.bookstreet.notification.service.ParticipantNotificationService
+            notifications = mock(
+                    com.swp391.bookstreet.notification.service.ParticipantNotificationService.class);
+    private final ChatTools tools = new ChatTools(events, activities, myEvents, myActivities,
+            booths, notifications);
     private final GeminiChatClient ai = mock(GeminiChatClient.class);
-    private final ChatService service = new ChatService(events, activities, myEvents,
-            myActivities, ai, Clock.systemUTC());
+    private final ChatService service = new ChatService(tools, ai, mapper, Clock.systemUTC());
 
     @AfterEach
     void clearSecurity() {
@@ -51,263 +51,188 @@ class ChatServiceTests {
     }
 
     @Test
-    void guestCannotReadPersonalRegistrations() {
-        var result = service.reply("Tôi đã đăng ký hoạt động nào?");
-        assertThat(result.answer()).contains("đăng nhập");
-        verifyNoInteractions(myEvents, myActivities, ai);
-    }
+    void modelAnswersDirectlyWithoutToolCalls() {
+        when(ai.generate(anyString(), anyList(), anyList())).thenReturn(text("Chào bạn!"));
 
-    @Test
-    void unknownQuestionDoesNotSearchWithoutValidatedIntent() {
-        var result = service.reply("Điều gì nằm ngoài hệ thống?");
-        assertThat(result.answer()).contains("chưa tìm được");
-        verify(ai).classify(anyString());
-        verify(ai, never()).answer(anyString(), anyString());
+        var result = service.reply("Xin chào");
+
+        assertThat(result.answer()).isEqualTo("Chào bạn!");
+        assertThat(result.sources()).isEmpty();
         verifyNoInteractions(events, activities, myEvents, myActivities);
     }
 
     @Test
-    void unconfiguredModelDoesNotPretendToAnswer() {
-        var client = new GeminiChatClient(new ObjectMapper(), "", "gemini-3.5-flash-lite");
-        assertThatThrownBy(() -> client.answer("Câu hỏi", "Nguồn"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("503");
-    }
-
-    @Test
-    void emptyPublicSearchDoesNotInventWeekendEvents() {
-        when(events.listPublic(0, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(), 0, 30, 0, 0));
-        var datedService = new ChatService(events, activities, myEvents, myActivities, ai,
-                Clock.fixed(Instant.parse("2026-10-26T03:00:00Z"), ZoneOffset.UTC));
-        var result = datedService.reply("Cuối tuần này có sự kiện nào?");
-        assertThat(result.answer()).contains("chưa thấy sự kiện công khai")
-                .contains("31/10–01/11/2026");
-        verifyNoInteractions(ai);
-    }
-
-    @Test
-    void emptyWeekendActivitySearchExplainsTheMissingSchedule() {
-        when(activities.list(0, 30, "startAt,asc", null, null, null, null, null))
-                .thenReturn(new com.swp391.bookstreet.activity.dto.ActivityPageResponse<>(
-                        List.of(), 0, 30, 0, 0));
-        var datedService = new ChatService(events, activities, myEvents, myActivities, ai,
-                Clock.fixed(Instant.parse("2026-10-26T03:00:00Z"), ZoneOffset.UTC));
-
-        var result = datedService.reply("Cuối tuần này có hoạt động gì?");
-
-        assertThat(result.answer()).contains("chưa thấy hoạt động công khai")
-                .contains("31/10–01/11/2026");
-        verifyNoInteractions(ai);
-    }
-
-    @Test
-    void publicEventContextUsesReadableStatusAndLocalTime() {
+    void executesRequestedToolAndFeedsSanitizedResultBack() {
         var event = new EventSummaryResponse(7L, "Ngày hội sách", "Gặp gỡ tác giả",
-                Instant.parse("2026-11-01T02:00:00Z"),
-                Instant.parse("2026-11-01T10:00:00Z"), null, null,
-                EventStatus.PUBLISHED, null, null);
+                Instant.parse("2026-11-01T02:00:00Z"), Instant.parse("2026-11-01T10:00:00Z"),
+                null, null, EventStatus.PUBLISHED, null, null);
         when(events.listPublic(0, 30, "startAt,asc", null))
                 .thenReturn(new EventPageResponse<>(List.of(event), 0, 30, 1, 1));
-        when(ai.answer(anyString(), anyString())).thenReturn("Có Ngày hội sách vào 9 giờ.");
+        when(ai.generate(anyString(), anyList(), anyList()))
+                .thenReturn(call("search_events", "{\"keyword\":\"hoi sach\"}"))
+                .thenReturn(text("Có Ngày hội sách lúc 09:00 ngày 01/11 https://evil.example"));
 
-        service.reply("Có sự kiện nào?");
+        var result = service.reply("Có sự kiện hội sách nào?");
 
-        var context = ArgumentCaptor.forClass(String.class);
-        verify(ai).answer(anyString(), context.capture());
-        assertThat(context.getValue()).contains("09:00 ngày 01/11/2026")
-                .contains("sắp diễn ra")
-                .doesNotContain("PUBLISHED", "2026-11-01T02:00:00Z");
+        assertThat(result.answer()).isEqualTo("Có Ngày hội sách lúc 09:00 ngày 01/11");
+        assertThat(result.sources()).extracting("url").containsExactly("/su-kien/7");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<JsonNode>> contents = ArgumentCaptor.forClass(List.class);
+        verify(ai, times(2)).generate(anyString(), contents.capture(), anyList());
+        String sentBack = contents.getAllValues().get(1).toString();
+        assertThat(sentBack).contains("functionResponse", "Ngày hội sách",
+                        "01/11/2026 lúc 09:00", "sắp diễn ra")
+                .doesNotContain("PUBLISHED", "eventId", "2026-11-01T02:00:00Z");
     }
 
     @Test
-    void activityHowToAnswerDoesNotIncludeCatalogOrAccountRules() {
-        when(ai.answer(anyString(), anyString())).thenReturn("Bạn mở hoạt động và chọn Đăng ký nhé.");
+    void guestPersonalLookupReturnsLoginRequiredWithoutTouchingRegistrations() {
+        when(ai.generate(anyString(), anyList(), anyList()))
+                .thenReturn(call("get_my_participation", "{}"))
+                .thenReturn(text("Bạn đăng nhập để mình xem nhé."));
 
-        service.reply("Hướng dẫn cách đăng ký hoạt động");
+        var result = service.reply("Tôi đã đăng ký hoạt động nào?");
 
-        var context = ArgumentCaptor.forClass(String.class);
-        verify(ai).answer(anyString(), context.capture());
-        assertThat(context.getValue()).contains("giữ chỗ")
-                .doesNotContain("Tên đăng nhập", "Username", "PARTICIPANT");
-        verifyNoInteractions(activities);
+        assertThat(result.sources()).extracting("url").contains("/login");
+        verifyNoInteractions(myEvents, myActivities);
     }
 
     @Test
-    void weekendParaphraseSearchesBothPublicCatalogsWithoutClassification() {
+    void guestCannotReadNotifications() {
+        var result = tools.execute("get_my_notifications", mapper.readTree("{}"));
+        assertThat(result.data()).containsEntry("error", "LOGIN_REQUIRED");
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void boothSearchResolvesEventByAccentInsensitiveNameAndHidesInternalFields() {
+        var event = new EventSummaryResponse(5L, "Không gian Sách, STEM và Công nghệ", "Mô tả",
+                Instant.parse("2026-12-13T02:00:00Z"), Instant.parse("2026-12-16T10:00:00Z"),
+                null, null, EventStatus.PUBLISHED, null, null);
         when(events.listPublic(0, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(), 0, 30, 0, 0));
+                .thenReturn(new EventPageResponse<>(List.of(event), 0, 30, 1, 1));
+        var booth = new com.swp391.bookstreet.booth.dto.BoothResponse(11L, "A01", "Gian truyện tranh",
+                "Gần cổng", 4, null, null, true, "COMIC", "ghi chú nội bộ");
+        var config = new com.swp391.bookstreet.booth.dto.EventBoothResponse(99L, 5L, booth,
+                new java.math.BigDecimal("500000"), true,
+                com.swp391.bookstreet.booth.entity.BoothAvailability.AVAILABLE);
+        when(booths.listPublic(5L, 0, 100, "code,asc", null, null))
+                .thenReturn(new com.swp391.bookstreet.booth.dto.BoothPageResponse<>(
+                        List.of(config), 0, 100, 1, 1));
+
+        var result = tools.execute("search_booths",
+                mapper.readTree("{\"eventName\":\"khong gian sach stem\"}"));
+
+        String data = mapper.valueToTree(result.data()).toString();
+        assertThat(data).contains("A01", "Gian truyện tranh", "còn trống", "500000")
+                .doesNotContain("ghi chú nội bộ", "boothId", "eventBoothConfigId");
+    }
+
+    @Test
+    void activitySearchRequiresEveryEventNameTermNotJustOne() {
+        var other = activity("Workshop A", "[Demo Scenarios] 01 - Đăng ký bình thường");
+        var wanted = activity("Workshop A", "[Demo Scenarios] 04 - Một hoạt động hết chỗ");
         when(activities.list(0, 30, "startAt,asc", null, null, null, null, null))
                 .thenReturn(new com.swp391.bookstreet.activity.dto.ActivityPageResponse<>(
-                        List.of(), 0, 30, 0, 0));
-        var datedService = new ChatService(events, activities, myEvents, myActivities, ai,
-                Clock.fixed(Instant.parse("2026-10-26T03:00:00Z"), ZoneOffset.UTC));
+                        List.of(other, other, other, other, other, other, other, other, wanted),
+                        0, 30, 9, 1));
 
-        var result = datedService.reply("Cuối tuần này có gì vui?");
+        var result = tools.execute("search_activities",
+                mapper.readTree("{\"eventName\":\"Demo Scenarios 04\"}"));
 
-        assertThat(result.answer()).contains("sự kiện hoặc hoạt động")
-                .contains("31/10–01/11/2026");
-        verifyNoInteractions(ai);
+        assertThat(mapper.valueToTree(result.data()).path("activities")).singleElement()
+                .satisfies(item -> assertThat(item.path("event").asString()).contains("04"));
     }
 
-    @Test
-    void nextWeekendUsesFollowingWeekRatherThanThisWeekend() {
-        when(events.listPublic(0, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(), 0, 30, 0, 0));
-        var datedService = new ChatService(events, activities, myEvents, myActivities, ai,
-                Clock.fixed(Instant.parse("2026-10-26T03:00:00Z"), ZoneOffset.UTC));
-
-        var result = datedService.reply("Cuối tuần sau có chương trình gì?");
-
-        assertThat(result.answer()).contains("07/11–08/11/2026");
-        verifyNoInteractions(ai);
-    }
-
-    @Test
-    void unknownPhrasingUsesValidatedClassificationBeforePublicSearch() {
-        when(ai.classify(anyString())).thenReturn(new ChatClassification(
-                ChatClassification.Kind.EVENT, ChatIntentResolver.Timeframe.NONE, false));
-        var event = new EventSummaryResponse(9L, "Ngày hội sách", "Gặp gỡ tác giả",
-                Instant.parse("2026-11-01T02:00:00Z"),
-                Instant.parse("2026-11-01T10:00:00Z"), null, null,
-                EventStatus.PUBLISHED, null, null);
-        when(events.listPublic(0, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(event), 0, 30, 1, 1));
-        when(ai.answer(anyString(), anyString())).thenReturn("Có Ngày hội sách.");
-
-        var result = service.reply("Có chương gì để dự?");
-
-        assertThat(result.answer()).contains("Ngày hội sách");
-        verify(ai).classify(anyString());
-        verify(ai).answer(anyString(), anyString());
-    }
-
-    @Test
-    void modelRoutedPersonalQuestionStillRequiresSession() {
-        when(ai.classify(anyString())).thenReturn(new ChatClassification(
-                ChatClassification.Kind.PERSONAL_ACTIVITY,
-                ChatIntentResolver.Timeframe.NONE, false));
-
-        var result = service.reply("Những buổi mà mình chọn trước đây?");
-
-        assertThat(result.answer()).contains("đăng nhập");
-        verifyNoInteractions(myEvents, myActivities);
-        verify(ai, never()).answer(anyString(), anyString());
-    }
-
-    @Test
-    void commonQrQuestionUsesCurrentSharedScanGuidance() {
-        when(ai.answer(anyString(), anyString())).thenReturn("Bạn quét mã QR của Ban tổ chức nhé.");
-
-        service.reply("Vì sao tôi không có mã QR của tôi?");
-
-        var context = ArgumentCaptor.forClass(String.class);
-        verify(ai).answer(anyString(), context.capture());
-        assertThat(context.getValue()).contains("Không có mã QR riêng")
-                .contains("/participant/activities")
-                .doesNotContain("/participant/attendance/scan");
-        verify(ai, never()).classify(anyString());
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "Xem gian hàng ở đâu?, /#gian-hang",
-            "Xem bản đồ ở đâu?, /#ban-do",
-            "Đăng nhập ở đâu?, /login",
-            "Tạo tài khoản thế nào?, /register",
-            "Làm sao rời sự kiện?, /participant/events",
-            "Xem thông báo ở đâu?, /participant/notifications",
-            "Lấy chứng nhận ở đâu?, /participant/certificates",
-            "Đánh giá ở đâu?, /participant/feedback",
-            "Xác minh email thế nào?, /participant/profile"
-    })
-    void guidanceLinksOpenTheRelevantScreen(String question, String expectedUrl) {
-        when(ai.answer(anyString(), anyString())).thenReturn("Bạn mở liên kết bên dưới nhé.");
-
-        var result = service.reply(question);
-
-        assertThat(result.sources()).extracting(source -> source.url()).contains(expectedUrl);
-        verifyNoInteractions(events, activities, myEvents, myActivities);
-    }
-
-    @Test
-    void commonEmailQuestionUsesReviewedGuidanceWithoutExtraApiCall() {
-        when(ai.answer(anyString(), anyString())).thenReturn("Email không bắt buộc nhé.");
-
-        service.reply("Email có bắt buộc không?");
-
-        var context = ArgumentCaptor.forClass(String.class);
-        verify(ai).answer(anyString(), context.capture());
-        assertThat(context.getValue()).contains("Email không bắt buộc");
-        verify(ai, never()).classify(anyString());
-    }
-
-    @Test
-    void availabilityQuestionExcludesClosedActivities() {
-        var closed = mock(PublicActivityResponse.class);
-        when(closed.registrationOpen()).thenReturn(false);
-        var open = mock(PublicActivityResponse.class);
-        when(open.registrationOpen()).thenReturn(true);
-        when(open.title()).thenReturn("Giao lưu tác giả");
-        when(open.eventName()).thenReturn("Ngày hội sách");
-        when(open.startAt()).thenReturn(Instant.parse("2026-11-01T02:00:00Z"));
-        when(open.endAt()).thenReturn(Instant.parse("2026-11-01T04:00:00Z"));
-        when(open.location()).thenReturn(new PublicActivityLocationResponse(
-                1L, "STAGE", "Sân khấu", null));
-        when(open.registrationRequired()).thenReturn(true);
-        when(open.availableSeats()).thenReturn(3L);
-        when(open.status()).thenReturn(com.swp391.bookstreet.activity.entity.ActivityStatus.PUBLISHED);
-        when(activities.list(0, 30, "startAt,asc", null, null, null, null, null))
-                .thenReturn(new ActivityPageResponse<>(List.of(closed, open), 0, 30, 2, 1));
-        when(ai.answer(anyString(), anyString())).thenReturn("Giao lưu tác giả còn chỗ.");
-
-        service.reply("Hoạt động nào còn suất?");
-
-        var context = ArgumentCaptor.forClass(String.class);
-        verify(ai).answer(anyString(), context.capture());
-        assertThat(context.getValue()).contains("Giao lưu tác giả");
-        verify(ai, never()).classify(anyString());
-    }
-
-    @Test
-    void spokenTalkSynonymFindsPublishedTalkshow() {
-        var talk = mock(PublicActivityResponse.class);
-        when(talk.title()).thenReturn("Giao lưu tác giả");
-        when(talk.activityType()).thenReturn("TALKSHOW");
-        when(talk.eventName()).thenReturn("Ngày hội sách");
-        when(talk.startAt()).thenReturn(Instant.parse("2026-10-31T03:00:00Z"));
-        when(talk.endAt()).thenReturn(Instant.parse("2026-10-31T04:30:00Z"));
-        when(talk.location()).thenReturn(new PublicActivityLocationResponse(
-                1L, "STAGE", "Sân khấu", null));
-        when(talk.status()).thenReturn(
+    private static com.swp391.bookstreet.activity.dto.PublicActivityResponse activity(
+            String title, String eventName) {
+        var activity = mock(com.swp391.bookstreet.activity.dto.PublicActivityResponse.class);
+        when(activity.title()).thenReturn(title);
+        when(activity.eventName()).thenReturn(eventName);
+        when(activity.startAt()).thenReturn(Instant.parse("2026-12-22T02:00:00Z"));
+        when(activity.endAt()).thenReturn(Instant.parse("2026-12-22T04:00:00Z"));
+        when(activity.status()).thenReturn(
                 com.swp391.bookstreet.activity.entity.ActivityStatus.PUBLISHED);
-        when(activities.list(0, 30, "startAt,asc", null, null, null, null, null))
-                .thenReturn(new ActivityPageResponse<>(List.of(talk), 0, 30, 1, 1));
-        when(ai.answer(anyString(), anyString())).thenReturn("Có buổi giao lưu tác giả.");
-        var datedService = new ChatService(events, activities, myEvents, myActivities, ai,
-                Clock.fixed(Instant.parse("2026-10-26T03:00:00Z"), ZoneOffset.UTC));
-
-        var result = datedService.reply("Thứ Bảy có buổi nói chuyện nào?");
-
-        assertThat(result.answer()).contains("giao lưu tác giả");
-        verify(ai, never()).classify(anyString());
+        return activity;
     }
 
     @Test
-    void publicSearchContinuesToLaterPageWhenFirstPageHasNoMatch() {
-        var event = new EventSummaryResponse(10L, "Ngày hội sách", "Gặp gỡ tác giả",
-                Instant.parse("2026-11-01T02:00:00Z"),
-                Instant.parse("2026-11-01T10:00:00Z"), null, null,
-                EventStatus.PUBLISHED, null, null);
+    void ambiguousEventNameAsksForClarificationInsteadOfPickingOne() {
         when(events.listPublic(0, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(), 0, 30, 1, 2));
-        when(events.listPublic(1, 30, "startAt,asc", null))
-                .thenReturn(new EventPageResponse<>(List.of(event), 1, 30, 1, 2));
-        when(ai.answer(anyString(), anyString())).thenReturn("Có Ngày hội sách.");
+                .thenReturn(new EventPageResponse<>(List.of(
+                        event(1L, "[Demo Scenarios] 01 - Đăng ký bình thường"),
+                        event(4L, "[Demo Scenarios] 04 - Một hoạt động hết chỗ")), 0, 30, 2, 1));
 
-        var result = service.reply("Có sự kiện nào?");
+        var result = tools.execute("get_event_details",
+                mapper.readTree("{\"eventName\":\"Demo Scenarios\"}"));
 
-        assertThat(result.answer()).contains("Ngày hội sách");
-        verify(events).listPublic(1, 30, "startAt,asc", null);
+        assertThat(result.data()).containsEntry("error", "AMBIGUOUS_EVENT");
+        verifyNoInteractions(activities, booths);
+    }
+
+    @Test
+    void exactEventNameWinsOverLongerNamesContainingIt() {
+        when(events.listPublic(0, 30, "startAt,asc", null))
+                .thenReturn(new EventPageResponse<>(List.of(
+                        event(1L, "Ngày hội sách mở rộng"), event(2L, "Ngày hội sách")),
+                        0, 30, 2, 1));
+        when(activities.list(0, 30, "startAt,asc", 2L, null, null, null, null))
+                .thenReturn(new com.swp391.bookstreet.activity.dto.ActivityPageResponse<>(
+                        List.of(), 0, 30, 0, 0));
+
+        var result = tools.execute("get_event_details",
+                mapper.readTree("{\"eventName\":\"ngay hoi sach\"}"));
+
+        assertThat(result.data()).containsEntry("name", "Ngày hội sách");
+    }
+
+    private static EventSummaryResponse event(Long id, String name) {
+        return new EventSummaryResponse(id, name, "Mô tả",
+                Instant.parse("2026-12-01T02:00:00Z"), Instant.parse("2026-12-01T10:00:00Z"),
+                null, null, EventStatus.PUBLISHED, null, null);
+    }
+
+    @Test
+    void unknownToolNameIsRejected() {
+        assertThat(tools.execute("run_sql", mapper.readTree("{}")).data())
+                .containsEntry("error", "UNKNOWN_TOOL");
+    }
+
+    @Test
+    void toolLoopIsBoundedAndFinalRoundOffersNoTools() {
+        when(ai.generate(anyString(), anyList(), anyList()))
+                .thenReturn(call("get_platform_guide", "{\"topic\":\"LOGIN\"}"));
+
+        var result = service.reply("Lặp mãi");
+
+        assertThat(result.answer()).contains("chưa tìm được");
+        verify(ai, times(5)).generate(anyString(), anyList(), anyList());
+        verify(ai).generate(anyString(), anyList(), org.mockito.ArgumentMatchers.eq(List.of()));
+    }
+
+    @Test
+    void historyRolesAreMappedToGeminiRoles() {
+        when(ai.generate(anyString(), anyList(), anyList())).thenReturn(text("Ok"));
+
+        service.reply("Còn gì nữa?", List.of(
+                new com.swp391.bookstreet.chat.dto.ChatTurn("user", "Hỏi"),
+                new com.swp391.bookstreet.chat.dto.ChatTurn("assistant", "Đáp")));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<JsonNode>> contents = ArgumentCaptor.forClass(List.class);
+        verify(ai).generate(anyString(), contents.capture(), any());
+        assertThat(contents.getValue()).extracting(node -> node.path("role").asString())
+                .containsExactly("user", "model", "user");
+    }
+
+    private GeminiChatClient.ModelTurn text(String answer) {
+        return new GeminiChatClient.ModelTurn(mapper.readTree(
+                "{\"role\":\"model\",\"parts\":[{\"text\":\"x\"}]}"), List.of(), answer);
+    }
+
+    private GeminiChatClient.ModelTurn call(String name, String args) {
+        return new GeminiChatClient.ModelTurn(mapper.readTree(
+                "{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"name\":\"" + name + "\"}}]}"),
+                List.of(new GeminiChatClient.FunctionCall(name, mapper.readTree(args))), "");
     }
 }
