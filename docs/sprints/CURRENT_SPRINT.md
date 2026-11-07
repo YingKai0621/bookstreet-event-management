@@ -1,120 +1,87 @@
 # Current Sprint
 
-There is no active Sprint. Sprint 10 is the latest completed Sprint, and Sprint 11 has no approved baseline
-yet. New feature or schema work requires an approved Sprint baseline first. Recommended Sprint 11 debt is
-listed in `docs/development/SPRINT_10_CLOSURE_REPORT.md` section 7.
+## Sprint 11 System Admin Management
 
-## Sprint 10 Role-Scoped In-App Notifications
-
-- Status: `COMPLETED - 2026-11-07`
-- Closure report: `docs/development/SPRINT_10_CLOSURE_REPORT.md`
-- Activation date: `2026-11-03`
-- Previous completed Sprint: `Sprint 09 Heritage Public Content`
-- Approved documentation: PR #116, merge commit `3a0a76b`
+- Status: `ACTIVE - FOUNDATION NEXT`
+- Activation date: `2026-11-07`
+- Activated by: project owner, Developer A (`YingKai0621`)
+- Previous completed Sprint: `Sprint 10 Role-Scoped In-App Notifications`, closed in
+  `docs/development/SPRINT_10_CLOSURE_REPORT.md`
+- Approved documentation: PR #141, merge commit `7604f06`
 - Current implemented schema: Flyway migrations `V1` through `V17`
-- Sprint 10 foundation: PR #122, merge commit `280588c`
-- Partner inbox and producers: PR #124 (`7a8518a`) and PR #125 (`5fde175`)
-- Organizer inbox and producers: PR #126, merge commit `e9a0355`
-- Implemented Sprint 10 migrations: `V16` and amendment `V17`, authored by Developer A (`YingKai0621`)
-- Sprint baseline: `docs/sprints/sprint-10.md`
-- Current-state audit: `docs/development/SPRINT_10_ROLE_NOTIFICATIONS_CURRENT_STATE_AUDIT.md`
-- Documentation audit: `docs/development/SPRINT_10_DOCUMENTATION_AUDIT.md`
-- Use Case Specifications: `docs/use-cases/sprint-10-use-case-specifications.md`
-- API Contract: `docs/api/sprint-10-api-contract.md`
+- Reserved migration: `V18__create_admin_audit_log.sql`, Developer A only
+- Sprint baseline: `docs/sprints/sprint-11.md`
+- Use Case Specifications: `docs/use-cases/sprint-11-use-case-specifications.md`
+- API Contract: `docs/api/sprint-11-api-contract.md`
 - Physical ERD source: `docs/design/12_Physical_ERD_Report.md` plus
-  `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
-- Implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
-- Three-developer assignment: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
+  `docs/design/SPRINT_11_ADMIN_PHYSICAL_ERD_OVERLAY.md`
+- Implementation plan: `docs/sprints/SPRINT_11_IMPLEMENTATION_PLAN.md`
+- Three-developer assignment: `docs/sprints/SPRINT_11_TEAM_ASSIGNMENT.md`
 
 ## Sprint goal
 
-Extend the implemented Participant Notification foundation into one durable role-scoped inbox:
+Turn the Admin workspace into a real administration area:
 
-1. Preserve the six existing Participant types and behavior, plus the `ACTIVITY_STARTING_SOON` reminder.
-2. Deliver approved committed outcomes to the affected Partner representative.
-3. Deliver approved actionable work items to the owning Event Organizer.
-4. Provide Admin with real role-isolated list/read infrastructure but no type or producer.
-5. Keep multi-role accounts isolated by both authenticated User and current workspace role.
+1. Accounts, roles and Badges work through real, validated, audited operations.
+2. A locked account or removed role stops working immediately, across the whole system.
+3. Admin can lock a Partner organization, which blocks new work without cancelling existing work.
+4. Every administrative change appears in an append-only audit log.
+5. The dashboard shows only real system-wide data.
+6. Users can recover their own account through a safe password-reset flow.
 
 ## Scope and acceptance baseline
 
-The completed implementation was limited to:
+The active baseline is `BR-112` through `BR-120`, `UC-A01` through `UC-A05`, the password-reset part of `UC-G03`, and
+**51 Acceptance Criteria**:
 
-- one existing PostgreSQL `notifications` table extended by implemented migrations V16 and V17
-- exact audiences `PARTICIPANT`, `PARTNER`, `ORGANIZER`, and `ADMIN`
-- four endpoint families with list, unread count, mark-one, and mark-all operations
-- the closed Participant, Partner, and Organizer type/reference/transition matrices
-- Admin genuine empty/failure behavior with no producer
-- atomic producer writes, stable deduplication and first-read concurrency semantics
-- real role-local frontend preview/full inbox, filters, read state and allowlisted navigation
-- refresh on workspace entry, inbox/popover open, confirmed read mutation and the `BR-111` signal
+- 9 account criteria: `AC-A01-S11-01` through `AC-A01-S11-09`
+- 6 role criteria: `AC-A02-S11-01` through `AC-A02-S11-06`
+- 2 Badge criteria: `AC-A03-S11-01` and `AC-A03-S11-02`
+- 5 audit criteria: `AC-A04-S11-01` through `AC-A04-S11-05`
+- 5 organization criteria: `AC-A05-S11-01` through `AC-A05-S11-05`
+- 6 locked organization criteria: `AC-E-S11-01` through `AC-E-S11-06`
+- 3 dashboard criteria: `AC-D-S11-01` through `AC-D-S11-03`
+- 3 workspace criteria: `AC-ADM-S11-01` through `AC-ADM-S11-03`
+- 6 password-reset criteria: `AC-G03-S11-01` through `AC-G03-S11-06`
+- 6 regression criteria: `AC-S11-REG-01` through `AC-S11-REG-06`
 
-The approved baseline contains **58 Acceptance Criteria**, including the 2026-11-06 amendments defined by
-`BR-110` and `BR-111` in `docs/sprints/sprint-10.md` sections 12 and 13:
-
-- 13 shared foundation criteria: `AC-N-S10-01` through `AC-N-S10-13`
-- 8 Participant criteria: `AC-P-S10-01` through `AC-P-S10-08`
-- 15 Partner criteria: `AC-E-S10-01` through `AC-E-S10-15`
-- 11 Organizer criteria: `AC-O-S10-01` through `AC-O-S10-11`
-- 5 Admin criteria: `AC-A-S10-01` through `AC-A-S10-05`
-- 6 regression criteria: `AC-S10-REG-01` through `AC-S10-REG-06`
+Read-only Payment and Event views under `AC-OPT-S11` stay outside the baseline unless recorded as scheduled.
 
 ## Ownership
 
-- Developer A is `YingKai0621`, authored V16 and owns the shared Notification foundation,
-  Participant compatibility, Admin foundation, shared frontend wiring and final integration evidence.
-- Developer B is the Partner work-package label and owns Partner producers and Partner frontend. The
-  teammate taking this package coordinates its branch before PR 2 begins; no personal name is required.
-- Developer C is the Organizer work-package label and owns Organizer producers and Organizer frontend.
-  The teammate taking this package coordinates its branch before PR 3 begins; no personal name is required.
-- Developer B's payment/settlement work merges before Developer C adds Booth re-selection integration.
+- Developer A is `YingKai0621` and owns V18, the audit foundation, Session enforcement, security, removals, shared guards,
+  password reset and closure.
+- Developer B owns accounts, roles and the Admin profile, including their screens.
+- Developer C owns Partner organizations and their effects, the dashboard, Badge audit and the Sprint 10 debt items, including
+  their screens.
+- Developers B and C start after Developer A's foundation pull request merges.
 
-## Delivery history
+## Current implementation unit
 
-PR #122 merged the Developer A foundation into `main` at `280588c`. The delivered foundation includes:
-
-- immutable V16 role-scoped Notification migration with clean/V15-upgrade verification
-- shared Notification entity, repository, writer, query/read services and DTO mapping
-- all 16 role endpoint contracts with exact authority
-- atomic mark-one and role-aware mark-all behavior
-- Participant backend compatibility and real database-backed Admin operations with no producer
-- focused migration, repository, service, controller, security and concurrency tests
-
-PR #124 and PR #125 delivered the Partner inbox and approved Partner producers. PR #126 delivered the
-Organizer inbox and approved Organizer producers. Developer A then delivered Admin/shared frontend
-integration, the `BR-110` amendment in PR #133, acceptance evidence in PR #136, the `BR-111` live signal in
-PR #137, and Sprint closure.
+Developer A's foundation pull request, PR A1, covering delivery units `S11-1` and `S11-2`.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL remains durable truth; Redis remains Session-only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
 - Hibernate remains `ddl-auto: validate`; V1 through V17 are immutable.
-- V16 is applied history. Developers B and C must not edit or replace it.
-- Clients cannot create Notification rows or supply recipient/audience.
-- Every approved producer joins the owning domain transaction; existing email remains after commit.
-- No Admin producer, combined inbox, NotificationType table, sender, preference, outbox, SMS, push,
-  WebSocket, polling, mock fallback or localStorage read truth is allowed. The only SSE is the content-free
-  `BR-111` signal.
-- BR-81 equality is inclusive: Organizer Booth selection is allowed at the exact request deadline and
-  rejected only when backend time is later. The canonical predicate and boundary tests must preserve it.
+- Only Developer A creates or changes V18. Recheck the next free version immediately before creating it.
+- Every administrative change uses the shared audit writer, and every organization check uses the shared guard.
+- Admin never reads or sets another User's password, and no fixed password stays in application code.
+- Locking an account or organization never cancels records or creates a refund.
+- Admin does not operate Events for an Organizer.
 - Do not commit `.env`, credentials, local database URLs, demo-only data or local scripts.
 
 ## Explicitly out of scope
 
-- notification deletion, archive, pin, snooze, reply or assignment
-- generic broadcast/composer behavior
-- email behavior changes, SMS, mobile push or real-time transport other than the `BR-111` signal
-- General Feedback broadcast
-- Participant-volume Organizer alerts
-- Admin security/account/system alert producers
-- lifecycle changes to Event, Booth, Payment, Activity, Feedback, Reward, Heritage, Certificate or Badge
+- Permission or RolePermission, generic System Settings, facilities, assets or booth catalog on Admin
+- Admin Notification types or producers
+- Admin emergency cancellation, refunds, manual Payment or Assignment changes
+- Admin editing a Partner profile or deleting an organization
+- a signed-in User changing their own password, which moves with password reset if that unit is deferred
+- mobile layout work for the Admin workspace
 
 ## Activation result
 
-Sprint 10 documentation was reviewed and merged through PR #116. The active Business Rules, Use Case List,
-MVP Scope, Sprint pointer and AI context were promoted on `2026-11-03`. Developer A reserved V16 after
-confirming updated `main` contained only immutable migrations V1 through V15. PR #122 subsequently
-implemented V16 and the shared role-scoped Notification backend foundation and merged it at `280588c` on
-`2026-11-04`. Partner PR #124/#125 and Organizer PR #126 followed. V1 through V17 are immutable, and Sprint 10
-closed on `2026-11-07`.
+The project owner activated Sprint 11 on `2026-11-07` after the baseline merged through PR #141. V18 was free on updated `main`,
+which holds migrations V1 through V17. Sprint 11 adds two Use Cases, for 28 active MVP Use Cases.

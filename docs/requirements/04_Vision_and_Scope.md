@@ -77,7 +77,7 @@ Xây dựng một nền tảng tập trung cho Đường Sách, giúp Ban tổ c
 | Participant            | Người dùng đã đăng nhập              | Join/Leave Event, đăng ký/hủy Activity, tự quét Activity/Booth QR, theo dõi Attendance, BoothVisit, rewards và rating.                                                                                 |
 | Partner / Exhibitor    | Nhà xuất bản / đơn vị tham gia       | Apply Event, chọn Booth, gửi Booth Request, Activity Proposal và các request thay đổi/hủy.                                                                                                             |
 | Event Organizer        | Ban quản lý / Ban tổ chức Đường Sách | Quản lý Event, duyệt request, cấu hình giá Booth, quản lý payment/booth/activity/report.                                                                                                               |
-| System Admin           | Quản trị hệ thống                    | Quản lý Account, Role/UserRole và Badge toàn hệ thống; đề xuất Sprint 11 thêm tổ chức đối tác, nhật ký quản trị và Dashboard toàn hệ thống. Payment Gateway credentials/webhook là backend environment configuration, không phải Admin Use Case; MVP không có module System Settings chung. |
+| System Admin           | Quản trị hệ thống                    | Quản lý Account, Role/UserRole, Badge, tổ chức đối tác, nhật ký quản trị và Dashboard toàn hệ thống. Payment Gateway credentials/webhook là backend environment configuration, không phải Admin Use Case; MVP không có module System Settings chung. |
 
 # 7. In Scope - MVP
 

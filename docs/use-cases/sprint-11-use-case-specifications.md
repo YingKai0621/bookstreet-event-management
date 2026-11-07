@@ -1,6 +1,6 @@
 # Sprint 11 System Admin Use Case Specifications
 
-- Status: `PROPOSED - AWAITING TEAM REVIEW`
+- Status: `ACTIVE - ACTIVATED 2026-11-07`
 - Prepared date: `2026-11-07`
 - Scope: `UC-A01` through `UC-A05`, the Admin workspace, the effects of a locked organization, and the password-reset part of `UC-G03`
 

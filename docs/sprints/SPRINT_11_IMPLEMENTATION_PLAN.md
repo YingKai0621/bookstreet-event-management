@@ -1,6 +1,6 @@
 # Sprint 11 System Admin Implementation Plan
 
-- Status: `PROPOSED - AWAITING TEAM REVIEW`
+- Status: `ACTIVE - ACTIVATED 2026-11-07`
 - Prepared date: `2026-11-07`
 - Scope baseline: `docs/sprints/sprint-11.md`
 - API contract: `docs/api/sprint-11-api-contract.md`
@@ -16,11 +16,9 @@
 
 ## 2. Pre-implementation gates
 
-1. The team reviews this baseline, especially the behavior changes in section 6.
-2. The team approves it, and an activation change updates `CURRENT_SPRINT.md`, `AI_CONTEXT.md`, and the proposed wording in the
-   requirement documents.
-3. Developer A rechecks the next free Flyway version on updated `main` and reserves it.
-4. Developers B and C claim their packages.
+1. Done: the project owner approved this baseline and activated it on `2026-11-07`.
+2. Done: V18 was free on updated `main` and is reserved for Developer A, who rechecks it before creating the file.
+3. Open: Developers B and C read the behavior changes in section 6 and claim their packages before starting.
 
 ## 3. Delivery sequence
 

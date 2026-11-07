@@ -14,9 +14,9 @@ V17. BR-103, BR-104 and BR-105 are read together with BR-110.
 **Live inbox update amendment (2026-11-06):** BR-111 adds one content-free Server-Sent Events signal, and
 BR-109 no longer excludes SSE.
 
-**System Admin amendment (2026-11-07, proposed for Sprint 11):** BR-112 through BR-120 define account,
-role, PartnerOrganization status, audit, dashboard and password-reset behavior. They take effect when the Sprint 11
-baseline is approved. BR-76 still governs newly granted roles.
+**System Admin amendment (2026-11-07, active for Sprint 11):** BR-112 through BR-120 define account,
+role, PartnerOrganization status, audit, dashboard and password-reset behavior. BR-76 still governs
+newly granted roles.
 
 # 1. Cách đọc
 

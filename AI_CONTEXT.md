@@ -280,8 +280,8 @@ is now 58 Acceptance Criteria.
 
 ## Next implementation task
 
-- No Sprint is active. Approve a Sprint 11 baseline before new feature or schema work. Recommended debt is
-  in `docs/development/SPRINT_10_CLOSURE_REPORT.md` section 7.
+- Sprint 11 System Admin Management is active. Developer A's foundation pull request comes first, then Developers B
+  and C. See `docs/sprints/CURRENT_SPRINT.md` and `docs/sprints/SPRINT_11_TEAM_ASSIGNMENT.md`.
 - BR-81 equality is resolved as inclusive: exact Booth request deadline is allowed; only a later backend
   time is rejected. Preserve the canonical predicate with focused boundary tests.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
@@ -291,6 +291,9 @@ is now 58 Acceptance Criteria.
 
 Sprint 10 Role-Scoped In-App Notifications is the latest completed Sprint as of 2026-11-07, with 58 Acceptance
 Criteria. See `docs/development/SPRINT_10_CLOSURE_REPORT.md`.
+
+Sprint 11 System Admin Management is the active Sprint as of 2026-11-07, with 51 Acceptance Criteria under `BR-112`
+through `BR-120`. It adds `UC-A04` and `UC-A05`, for 28 active MVP Use Cases, and reserves V18 for Developer A.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -343,7 +346,7 @@ use the completed Sprint 10 baseline, Use Case Specifications, API Contract, V16
 - Verification does not grant roles. Existing Sessions are not silently elevated; eligible advanced authorities take effect after re-login.
 - Email-verification endpoints, token policy and acceptance criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
 - The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
-- Forgot/Reset Password remains unimplemented and is not assigned to an active Sprint.
+- Forgot/Reset Password remains unimplemented and is the last, deferrable unit of active Sprint 11.
 
 ## Sprint 4 scope guard
 

@@ -1,6 +1,6 @@
 # Sprint 11 System Admin — Three-Developer Assignment
 
-- Status: `PROPOSED - AWAITING TEAM REVIEW`
+- Status: `ACTIVE - ACTIVATED 2026-11-07`
 - Prepared date: `2026-11-07`
 - Team size: exactly three developers
 - Scope baseline: `docs/sprints/sprint-11.md`
@@ -14,7 +14,6 @@ instructions each teammate and their AI follow.
 ## 1. Shared rules
 
 - Start each task from an updated `main`, use one branch per task, and keep each pull request focused.
-- Do not begin until the Sprint 11 baseline is approved and `docs/sprints/CURRENT_SPRINT.md` activates it.
 - Only Developer A creates or changes the Sprint 11 migration. Applied migrations are never edited.
 - Developers B and C start only after Developer A's foundation PR is merged.
 - Each package owns the screens for its features, unless the team records a different frontend owner.
