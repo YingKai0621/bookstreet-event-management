@@ -1,8 +1,13 @@
 # Current Sprint
 
+There is no active Sprint. Sprint 10 is the latest completed Sprint, and Sprint 11 has no approved baseline
+yet. New feature or schema work requires an approved Sprint baseline first. Recommended Sprint 11 debt is
+listed in `docs/development/SPRINT_10_CLOSURE_REPORT.md` section 7.
+
 ## Sprint 10 Role-Scoped In-App Notifications
 
-- Status: `ACTIVE - PARTNER/ORGANIZER MERGED; ADMIN/CLOSURE IN PROGRESS`
+- Status: `COMPLETED - 2026-11-07`
+- Closure report: `docs/development/SPRINT_10_CLOSURE_REPORT.md`
 - Activation date: `2026-11-03`
 - Previous completed Sprint: `Sprint 09 Heritage Public Content`
 - Approved documentation: PR #116, merge commit `3a0a76b`
@@ -33,7 +38,7 @@ Extend the implemented Participant Notification foundation into one durable role
 
 ## Scope and acceptance baseline
 
-The active implementation is limited to:
+The completed implementation was limited to:
 
 - one existing PostgreSQL `notifications` table extended by implemented migrations V16 and V17
 - exact audiences `PARTICIPANT`, `PARTNER`, `ORGANIZER`, and `ADMIN`
@@ -64,7 +69,7 @@ The approved baseline contains **58 Acceptance Criteria**, including the 2026-11
   The teammate taking this package coordinates its branch before PR 3 begins; no personal name is required.
 - Developer B's payment/settlement work merges before Developer C adds Booth re-selection integration.
 
-## Current implementation unit
+## Delivery history
 
 PR #122 merged the Developer A foundation into `main` at `280588c`. The delivered foundation includes:
 
@@ -76,15 +81,15 @@ PR #122 merged the Developer A foundation into `main` at `280588c`. The delivere
 - focused migration, repository, service, controller, security and concurrency tests
 
 PR #124 and PR #125 delivered the Partner inbox and approved Partner producers. PR #126 delivered the
-Organizer inbox and approved Organizer producers. The current implementation unit is Developer A's
-Admin/shared frontend integration and Sprint closure: genuine Admin empty/failure behavior, cross-role
-navigation and browser regression coverage, documentation synchronization, and final audit evidence.
+Organizer inbox and approved Organizer producers. Developer A then delivered Admin/shared frontend
+integration, the `BR-110` amendment in PR #133, acceptance evidence in PR #136, the `BR-111` live signal in
+PR #137, and Sprint closure.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL remains durable truth; Redis remains Session-only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`; V1 through V16 are immutable.
+- Hibernate remains `ddl-auto: validate`; V1 through V17 are immutable.
 - V16 is applied history. Developers B and C must not edit or replace it.
 - Clients cannot create Notification rows or supply recipient/audience.
 - Every approved producer joins the owning domain transaction; existing email remains after commit.
@@ -111,5 +116,5 @@ Sprint 10 documentation was reviewed and merged through PR #116. The active Busi
 MVP Scope, Sprint pointer and AI context were promoted on `2026-11-03`. Developer A reserved V16 after
 confirming updated `main` contained only immutable migrations V1 through V15. PR #122 subsequently
 implemented V16 and the shared role-scoped Notification backend foundation and merged it at `280588c` on
-`2026-11-04`. Partner PR #124/#125 and Organizer PR #126 are also merged. V1 through V16 are immutable;
-Admin/shared integration and final closure verification are the remaining Sprint 10 delivery unit.
+`2026-11-04`. Partner PR #124/#125 and Organizer PR #126 followed. V1 through V17 are immutable, and Sprint 10
+closed on `2026-11-07`.
