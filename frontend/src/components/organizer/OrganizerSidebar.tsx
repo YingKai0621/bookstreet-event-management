@@ -1,10 +1,9 @@
 import {
-  BarChart3,
-  Bell,
   Building2,
+  Bell,
   CalendarDays,
-  Globe2,
   Layers,
+  Landmark,
   LayoutDashboard,
   MessageSquare,
   Store,
@@ -31,7 +30,7 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
   language,
   activeTab,
   onSelectTab,
-  unreadNotificationsCount = 3,
+  unreadNotificationsCount = 0,
   isOpenMobile = false,
   onCloseMobile,
   onLogout: _onLogout
@@ -44,10 +43,9 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
     { id: 'venues' as OrganizerTab, icon: <Building2 size={18} />, labelVi: 'Địa điểm tổ chức', labelEn: 'Venues' },
     { id: 'activities' as OrganizerTab, icon: <Layers size={18} />, labelVi: 'Hoạt động', labelEn: 'Activities' },
     { id: 'participants' as OrganizerTab, icon: <Users size={18} />, labelVi: 'Người tham gia', labelEn: 'Participants' },
-    { id: 'reports' as OrganizerTab, icon: <BarChart3 size={18} />, labelVi: 'Báo cáo & Thống kê', labelEn: 'Reports' },
     { id: 'feedback' as OrganizerTab, icon: <MessageSquare size={18} />, labelVi: 'Góp ý', labelEn: 'Feedback' },
-    { id: 'public_content' as OrganizerTab, icon: <Globe2 size={18} />, labelVi: 'Nội dung công khai', labelEn: 'Public Content' },
     { id: 'notifications' as OrganizerTab, icon: <Bell size={18} />, labelVi: 'Thông báo', labelEn: 'Notifications', badge: unreadNotificationsCount },
+    { id: 'public_content' as OrganizerTab, icon: <Landmark size={18} />, labelVi: 'Di sản', labelEn: 'Heritage' },
     { id: 'profile' as OrganizerTab, icon: <User size={18} />, labelVi: 'Hồ sơ Organizer', labelEn: 'Profile' }
   ];
 

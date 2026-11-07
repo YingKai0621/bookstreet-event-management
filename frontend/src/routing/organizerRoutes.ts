@@ -18,11 +18,25 @@ const TAB_PATHS: Record<Exclude<OrganizerTab, 'event_detail'>, string> = {
 };
 
 const PATH_TABS = new Map(Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab as OrganizerTab]));
+const SUPPORTED_TABS = new Set<OrganizerTab>([
+  'overview',
+  'events',
+  'event_detail',
+  'booth_requests',
+  'booths',
+  'venues',
+  'activities',
+  'participants',
+  'feedback',
+  'public_content',
+  'notifications',
+  'profile',
+]);
 const EVENT_SCOPED_TABS: OrganizerTab[] = ['booth_requests', 'booths', 'activities', 'participants', 'reports'];
 const EVENT_LIST_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const EVENT_LIST_SORTS = new Set(['updated_desc', 'start_asc', 'title_asc']);
 const ACTIVITY_VIEWS = new Set(['activities', 'proposals', 'changes', 'cancellations']);
-const PARTICIPANT_VIEWS = new Set(['event', 'activity']);
+const PARTICIPANT_VIEWS = new Set(['event', 'activity', 'booth']);
 const EVENT_REGISTRATION_STATUSES = new Set(['ACTIVE', 'LEFT']);
 const PARTICIPATION_OUTCOMES = new Set(['ACTIVE', 'CANCELLED', 'ATTENDED', 'NO_SHOW']);
 const EVENT_DETAIL_SECTIONS = new Set(['overview', 'partners', 'booths', 'activities', 'participants', 'schedule', 'settings']);
@@ -48,7 +62,7 @@ export function resolveOrganizerRoute(pathname: string, search: string): Organiz
   }
 
   const tab = PATH_TABS.get(normalizedPath);
-  if (!tab) return null;
+  if (!tab || !SUPPORTED_TABS.has(tab)) return null;
 
   const params = new URLSearchParams(search);
   const eventId = EVENT_SCOPED_TABS.includes(tab) ? params.get('eventId')?.trim() || null : null;
@@ -84,6 +98,11 @@ export function normalizeOrganizerSearch(tab: OrganizerTab, search: string): URL
   }
 
   if (EVENT_SCOPED_TABS.includes(tab)) copyNonEmpty('eventId');
+  if (tab === 'booths') {
+    if (source.get('view') === 'map') normalized.set('view', 'map');
+    const locationId = source.get('locationId');
+    if (locationId && /^[1-9]\d*$/.test(locationId)) normalized.set('locationId', locationId);
+  }
   if (tab === 'activities') {
     const view = source.get('view') || source.get('activityView');
     if (view && ACTIVITY_VIEWS.has(view) && view !== 'activities') normalized.set('view', view);

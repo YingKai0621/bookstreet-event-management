@@ -17,6 +17,12 @@ import { AdminUserManagementView } from './AdminUserManagementView';
 import { FacilityManagementView } from './FacilityManagementView';
 import { OrganizerBoothManagementView } from '../organizer/OrganizerBoothManagementView';
 import { ADMIN_ROOT, ADMIN_TAB_PATHS, resolveAdminTab } from '../../routing/adminRoutes';
+import { useAuth } from '../../auth/useAuth';
+import { ApiError } from '../../services/apiClient';
+import {
+  ADMIN_NOTIFICATIONS_CHANGED,
+  adminNotificationsApi,
+} from '../../services/adminNotificationsApi';
 
 import {
   adminApi,
@@ -24,8 +30,6 @@ import {
 } from '../../services/adminApi';
 import {
   AdminAuditLogItem,
-  AdminBadgeRule,
-  AdminNotificationItem,
   AdminPermissionItem,
   AdminProfile,
   AdminRolePermissionConfig,
@@ -47,6 +51,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onLogout
 }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const resolvedTab = resolveAdminTab(location.pathname);
   const activeTab: AdminTab = resolvedTab ?? 'dashboard';
@@ -62,25 +67,63 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
   const [roleConfigs, setRoleConfigs] = useState<Record<AdminRoleType, AdminRolePermissionConfig>>({} as Record<AdminRoleType, AdminRolePermissionConfig>);
   const [permissions, setPermissions] = useState<AdminPermissionItem[]>([]);
-  const [badgeRules, setBadgeRules] = useState<AdminBadgeRule[]>([]);
   const [systemSettings, setSystemSettings] = useState<AdminSystemSettings>({
     general: { systemName: '', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
     security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },
     notifications: { sendWelcomeEmail: true, alertOnFailedLogins: true, notifyRoleChanges: true, dailyDigestEmail: false },
   });
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogItem[]>([]);
-  const [notifications, setNotifications] = useState<AdminNotificationItem[]>([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState<number | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationError, setNotificationError] = useState('');
   const [profile, setProfile] = useState<AdminProfile>({ id: '', name: '', role: '', department: '', email: '', phone: '', avatarInitials: '', lastLogin: '' });
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
   const [loadError, setLoadError] = useState('');
 
-  const refreshAdminChrome = useCallback(async () => {
-    const [loadedProfile, loadedNotifications] = await Promise.all([
-      adminApi.getProfile().catch(() => ({ id: '', name: 'Quản trị viên', role: 'ADMIN', department: '', email: '', phone: '', avatarInitials: 'AD', lastLogin: '' })),
-      adminApi.getNotifications().catch(() => []),
-    ]);
-    setProfile(loadedProfile);
-    setNotifications(loadedNotifications);
+  const refreshAdminProfile = useCallback(async () => {
+    try {
+      setProfile(await adminApi.getProfile());
+    } catch {
+      if (user) {
+        setProfile({
+          id: String(user.userId),
+          name: user.fullName,
+          role: 'ADMIN',
+          department: '',
+          email: user.email || '',
+          phone: '',
+          avatarInitials: user.fullName.split(' ').map(part => part[0]).slice(-2).join(''),
+          lastLogin: '',
+        });
+      }
+    }
+  }, [user]);
+
+  const refreshNotifications = useCallback(async () => {
+    setNotificationLoading(true);
+    setNotificationError('');
+    try {
+      const [page, count] = await Promise.all([
+        adminNotificationsApi.list({ page: 0, size: 5 }),
+        adminNotificationsApi.unreadCount(),
+      ]);
+      if (!Array.isArray(page.content)
+          || page.content.length !== 0
+          || page.totalElements !== 0
+          || count.unreadCount !== 0) {
+        throw new Error('Invalid Admin notification response');
+      }
+      setNotificationUnreadCount(count.unreadCount);
+    } catch (error) {
+      setNotificationUnreadCount(null);
+      setNotificationError(error instanceof ApiError && error.status === 401
+        ? 'Phiên đăng nhập đã hết hạn.'
+        : error instanceof ApiError && error.status === 403
+          ? 'Bạn không có quyền xem thông báo Admin.'
+          : 'Không tải được thông báo.');
+    } finally {
+      setNotificationLoading(false);
+    }
   }, []);
 
   const refreshAdminData = useCallback(async () => {
@@ -103,8 +146,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         ]);
         setRoleConfigs(loadedRoles);
         setPermissions(loadedPermissions);
-      } else if (activeTab === 'badges') {
-        setBadgeRules(await adminApi.getBadgeRules());
       } else if (activeTab === 'settings') {
         setSystemSettings(await adminApi.getSettings());
       } else if (activeTab === 'audit') {
@@ -118,10 +159,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
-    void refreshAdminChrome();
-  }, [refreshAdminChrome]);
+    // oxlint-disable-next-line react/set-state-in-effect -- Admin chrome data is synchronized with the active route by this async loader.
+    void refreshAdminProfile();
+  }, [refreshAdminProfile]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Workspace entry synchronizes the role-scoped Admin preview and badge.
+    void refreshNotifications();
+    window.addEventListener(ADMIN_NOTIFICATIONS_CHANGED, refreshNotifications);
+    return () => window.removeEventListener(ADMIN_NOTIFICATIONS_CHANGED, refreshNotifications);
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Route-specific admin data is loaded by this async boundary.
     void refreshAdminData();
   }, [refreshAdminData]);
 
@@ -168,24 +218,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setRoleConfigs(await adminApi.getRoles());
   };
 
-  // --- Handlers: Badge Rules ---
-  const handleAddBadgeRule = async (newRuleData: Omit<AdminBadgeRule, 'id'>) => {
-    await adminApi.createBadgeRule(newRuleData);
-    await refreshAdminData();
-  };
-
-  const handleUpdateBadgeRule = async (id: string, updates: Partial<AdminBadgeRule>) => {
-    await adminApi.updateBadgeRule(id, updates);
-    await refreshAdminData();
-  };
-
-  const handleToggleBadgeStatus = async (id: string) => {
-    const rule = badgeRules.find(item => item.id === id);
-    if (!rule) return;
-    await adminApi.updateBadgeRule(id, { status: rule.status === 'active' ? 'inactive' : 'active' });
-    await refreshAdminData();
-  };
-
   // --- Handlers: System Settings ---
   const handleSaveSettings = async (newSettings: AdminSystemSettings) => {
     await adminApi.saveSettings(newSettings);
@@ -196,24 +228,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setSystemSettings(await adminApi.getSettings());
   };
 
-  // --- Handlers: Notifications ---
-  const handleMarkAllNotifsAsRead = async () => {
-    await adminApi.markAllNotificationsRead();
-    setNotifications(await adminApi.getNotifications());
-  };
-
-  const handleMarkNotifAsRead = async (id: string) => {
-    await adminApi.markNotificationRead(id);
-    setNotifications(await adminApi.getNotifications());
-  };
-
   // --- Handlers: Profile ---
   const handleUpdateProfile = async (updates: Partial<AdminProfile>) => {
     await adminApi.updateProfile({ fullName: updates.name, email: updates.email, phone: updates.phone, avatarUrl: updates.avatarUrl, department: updates.department });
     setProfile(await adminApi.getProfile());
   };
-
-  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="admin-app-shell">
@@ -221,10 +240,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       <AdminTopBar
         language={language}
         profile={profile}
-        unreadCount={unreadNotificationsCount}
-        notifications={notifications}
-        onMarkAllNotifsRead={handleMarkAllNotifsAsRead}
-        onMarkNotifRead={handleMarkNotifAsRead}
+        unreadCount={notificationUnreadCount}
+        notificationLoading={notificationLoading}
+        notificationError={notificationError}
+        onNotificationPopoverOpen={() => { void refreshNotifications(); }}
         onOpenNotifications={() => navigateToTab('notifications')}
         onOpenProfile={() => navigateToTab('profile')}
         onLogout={onLogout}
@@ -241,7 +260,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             navigateToTab(tab);
             setIsMobileSidebarOpen(false);
           }}
-          unreadNotificationsCount={unreadNotificationsCount}
+          unreadNotificationsCount={notificationUnreadCount ?? 0}
           onLogout={onLogout}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -285,12 +304,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           )}
 
           {activeTab === 'badges' && (
-            <AdminBadgeRulesView
-              badgeRules={badgeRules}
-              onAddBadgeRule={handleAddBadgeRule}
-              onUpdateBadgeRule={handleUpdateBadgeRule}
-              onToggleBadgeStatus={handleToggleBadgeStatus}
-            />
+            <AdminBadgeRulesView />
           )}
 
           {activeTab === 'settings' && (
@@ -309,10 +323,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
           {activeTab === 'notifications' && (
             <AdminNotificationsView
-              notifications={notifications}
-              onMarkAllAsRead={handleMarkAllNotifsAsRead}
-              onMarkAsRead={handleMarkNotifAsRead}
-              onNavigateTab={(tab) => navigateToTab(tab as AdminTab)}
+              language={language}
             />
           )}
 

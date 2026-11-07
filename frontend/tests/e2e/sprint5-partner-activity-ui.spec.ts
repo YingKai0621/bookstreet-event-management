@@ -162,6 +162,9 @@ test('Partner Sprint 5 workspace loads the real event location and submits the e
   await page.getByRole('button', { name: 'Đề xuất hoạt động', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Đề xuất hoạt động mới' });
   await expect(dialog.getByLabel('Địa điểm *')).toContainText('Sân khấu trung tâm');
+  await expect(dialog.getByLabel('Bắt đầu *')).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  await dialog.getByLabel('Bắt đầu *').fill('2020-01-01T09:00');
+  await expect(dialog.getByLabel('Bắt đầu *')).toHaveJSProperty('validity.rangeUnderflow', true);
   await dialog.getByLabel('Tên hoạt động *').fill('Ngày đọc sách gia đình');
   await dialog.getByLabel('Loại hoạt động *').fill('Tọa đàm');
   await dialog.getByLabel('Địa điểm *').selectOption('41');
@@ -196,6 +199,14 @@ test('Partner navigates all Sprint 5 queues and uses controlled actions only', a
   await expect(activityDialog.getByRole('button', { name: 'Yêu cầu thay đổi' })).toBeVisible();
   await expect(activityDialog.getByText(/Điểm danh|QR tham dự/i)).toHaveCount(0);
   await activityDialog.getByRole('button', { name: 'Yêu cầu thay đổi' }).click();
+  await activityDialog.getByLabel('Trường cần đổi').selectOption('schedule');
+  await expect(activityDialog.getByLabel('Bắt đầu mới')).toHaveAttribute('min', /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  await activityDialog.getByLabel('Bắt đầu mới').fill('2020-01-01T09:00');
+  await activityDialog.getByLabel('Kết thúc mới').fill('2020-01-01T10:00');
+  await activityDialog.getByLabel('Lý do *').fill('Kiểm tra không cho đổi lịch về quá khứ.');
+  await activityDialog.getByRole('button', { name: 'Gửi yêu cầu' }).click();
+  await expect(activityDialog.getByRole('alert')).toContainText('Thời gian bắt đầu mới phải ở tương lai');
+  await activityDialog.getByLabel('Trường cần đổi').selectOption('title');
   await activityDialog.getByLabel('Nội dung mới').fill('Giao lưu tác giả Việt trẻ');
   await activityDialog.getByLabel('Lý do *').fill('Điều chỉnh tên để phản ánh đúng nội dung.');
   await activityDialog.getByRole('button', { name: 'Gửi yêu cầu' }).click();

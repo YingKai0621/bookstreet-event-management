@@ -1,4 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
+import { PartnerFilterSelect } from '../../components/partner/PartnerFilterSelect';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import {
   AlertCircle,
   ArrowRight,
@@ -18,9 +20,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import { paymentApi } from '../../services/paymentApi';
+import { boothScanUrl } from '../../security/boothScanToken';
 import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest } from '../../types/booth';
 import type { BoothAssignment } from '../../types/payment';
@@ -106,6 +110,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
   const loadGenerationRef = useRef(0);
 
   useModalDismiss(Boolean(selectedItem), () => setSelectedItem(null));
+  const detailBackdropHandlers = useBackdropClick(() => setSelectedItem(null));
 
   const applicationByEvent = useMemo(
     () => new Map(applications.map(application => [Number(application.eventId), application])),
@@ -114,10 +119,6 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
 
   const loadAssignments = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
-    setLoading(true);
-    setError('');
-    setNotice('');
-
     try {
       const requests = await boothApi.listAllPartnerRequests(undefined, 'COMPLETED');
       const results = await Promise.allSettled(
@@ -145,7 +146,15 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
     }
   }, []);
 
+  const refreshAssignments = () => {
+    setLoading(true);
+    setError('');
+    setNotice('');
+    void loadAssignments();
+  };
+
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The guarded async loader owns this initial remote-data request.
     void loadAssignments();
     return () => { loadGenerationRef.current += 1; };
   }, [loadAssignments]);
@@ -189,7 +198,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
           <h1 id="my-booths-title" className="workspace-page-title">{language === 'vi' ? 'Gian hàng của tôi' : 'My booths'}</h1>
           <p className="workspace-page-subtitle">Quản lý gian hàng đã được cấp, xem mã QR và theo dõi hoạt động tại từng sự kiện.</p>
         </div>
-        <button type="button" className="my-booths-refresh" onClick={() => void loadAssignments()} disabled={loading}>
+        <button type="button" className="my-booths-refresh" onClick={refreshAssignments} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'my-booths-spin' : ''} />
           {loading ? 'Đang cập nhật…' : 'Làm mới'}
         </button>
@@ -220,13 +229,13 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
         <div className="my-booths-alert is-error" role="alert">
           <AlertCircle size={18} />
           <span>{error}</span>
-          <button type="button" onClick={() => void loadAssignments()}>Thử lại</button>
+          <button type="button" onClick={refreshAssignments}>Thử lại</button>
         </div>
       )}
       {notice && <div className="my-booths-alert" role="status"><AlertCircle size={18} />{notice}</div>}
 
       <div className="my-booths-toolbar">
-        <div className="my-booths-search">
+        <SearchFieldLabel className="my-booths-search-group"><div className="my-booths-search">
           <Search size={17} />
           <input
             type="search"
@@ -236,18 +245,8 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             aria-label="Tìm gian hàng đã được cấp"
           />
           {search && <button type="button" onClick={() => setSearch('')} aria-label="Xóa từ khóa tìm kiếm"><X size={15} /></button>}
-        </div>
-        <label className="my-booths-time-filter">
-          <span>Thời gian sự kiện</span>
-          <select
-            aria-label="Lọc theo thời gian sự kiện"
-            value={filter}
-            onChange={event => setFilter(event.target.value as PhaseFilter)}
-          >
-            <option value="all">Tất cả thời gian</option>
-            {timedPhases.map(phase => <option value={phase} key={phase}>{phaseMeta[phase].label}</option>)}
-          </select>
-        </label>
+        </div></SearchFieldLabel>
+        <PartnerFilterSelect label="Thời gian sự kiện" ariaLabel="Lọc theo thời gian sự kiện" icon={CalendarDays} value={filter} options={[{ value: 'all', label: 'Tất cả thời gian' }, ...timedPhases.map(phase => ({ value: phase, label: phaseMeta[phase].label }))]} onChange={setFilter} />
       </div>
 
       <div className="my-booths-list-heading">
@@ -281,7 +280,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
           <button type="button" onClick={() => { setSearch(''); setFilter('all'); }}>Xóa bộ lọc</button>
         </div>
       ) : (
-        <PaginatedList items={visibleItems}>{pageItems => (<div className="my-booths-grid">
+        <PaginatedList items={visibleItems} pageSize={6}>{pageItems => (<div className="my-booths-grid">
           {pageItems.map(item => {
             const application = item.application;
             const eventTitle = application?.eventTitle || `Sự kiện #${item.assignment.eventId}`;
@@ -344,7 +343,7 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
       )}
 
       {selectedItem && (
-        <div className="my-booths-modal-backdrop" onClick={() => setSelectedItem(null)}>
+        <div className="my-booths-modal-backdrop" {...detailBackdropHandlers}>
           <section
             className="my-booths-qr-modal"
             role="dialog"
@@ -361,14 +360,14 @@ export const PartnerAssignedBoothsPage: React.FC<Props> = ({ language, applicati
             <p>{selectedApplication?.eventTitle || `Sự kiện #${selectedItem.assignment.eventId}`}</p>
             <div className="my-booths-qr-frame">
               <QRCodeSVG
-                value={selectedItem.assignment.qrToken}
+                value={boothScanUrl(selectedItem.assignment.qrToken)}
                 size={190}
                 title={`Mã QR gian hàng ${selectedItem.assignment.boothCode}`}
               />
             </div>
             <div className="my-booths-qr-note">
               <CheckCircle2 size={17} />
-              <span>Mã QR gắn với đúng Assignment #{selectedItem.assignment.boothAssignmentId}. Không chia sẻ ngoài phạm vi vận hành gian hàng.</span>
+              <span>Mã QR dành cho độc giả quét tại gian hàng để ghi nhận lượt ghé và nhận điểm.</span>
             </div>
             <Link to={`/partner/booths/${selectedItem.request.boothRequestId}`} className="my-booths-modal-detail">
               Xem đầy đủ thông tin cấp gian <ArrowRight size={16} />

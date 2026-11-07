@@ -185,6 +185,7 @@ async function mockOrganizerSprint5(page: Page, locationCount = 1) {
       return json(route, { content: [event], page: 0, size: 100, totalElements: 1, totalPages: 1 });
     }
     if (path.endsWith('/organizer/events/501/booth-configs')) return json(route, []);
+    if (path.endsWith('/organizer/booths') && method === 'GET') return json(route, pageOf([]));
     if (path.endsWith('/organizer/events/501/booth-requests')) return json(route, pageOf([]));
     if (path.endsWith('/organizer/events/501/applications')) {
       return json(route, { content: [], number: 0, size: 100, totalElements: 0, totalPages: 0 });
@@ -277,10 +278,11 @@ async function mockOrganizerSprint5(page: Page, locationCount = 1) {
       actions.push('reject-cancellation');
       return json(route, { ...cancellationRequest, status: 'REJECTED', reviewNote: request.postDataJSON().reviewNote });
     }
-    if (path.endsWith('/organizer/locations/41') && method === 'PATCH') {
+    if (/\/organizer\/locations\/\d+$/.test(path) && method === 'PATCH') {
+      const locationId = Number(path.split('/').pop());
       updatedLocationPayload = request.postDataJSON();
-      locations = locations.map(item => item.locationId === 41 ? { ...item, ...updatedLocationPayload } as typeof location : item);
-      return json(route, locations[0]);
+      locations = locations.map(item => item.locationId === locationId ? { ...item, ...updatedLocationPayload } as typeof location : item);
+      return json(route, locations.find(item => item.locationId === locationId));
     }
     if (path.endsWith('/organizer/locations') && method === 'GET') {
       const query = new URL(request.url()).searchParams;
@@ -352,14 +354,15 @@ test('Organizer opens authoritative detail, edits Activity and reads revision hi
   await detail.getByRole('button', { name: 'Chỉnh sửa' }).click();
 
   const edit = page.getByRole('dialog', { name: `Chỉnh sửa “${activity.title}”` });
-  await edit.getByLabel('URL hình ảnh').fill('https://cdn.example.com/activity-updated.jpg');
-  await edit.getByLabel(/Lý do thay đổi/).fill('Cập nhật hình ảnh đại diện theo nội dung đã duyệt.');
+  await expect(edit.getByLabel('URL hình ảnh')).toHaveCount(0);
+  await edit.getByLabel('Sức chứa').fill('101');
+  await edit.getByLabel(/Lý do thay đổi/).fill('Điều chỉnh sức chứa theo kế hoạch đã duyệt.');
   await edit.getByRole('button', { name: 'Lưu thay đổi' }).click();
 
   await expect(page.getByText(`Đã cập nhật hoạt động “${activity.title}”.`)).toBeVisible();
   expect(state.getUpdatedActivityPayload()).toMatchObject({
-    imageUrl: 'https://cdn.example.com/activity-updated.jpg',
-    changeReason: 'Cập nhật hình ảnh đại diện theo nội dung đã duyệt.',
+    capacity: 101,
+    changeReason: 'Điều chỉnh sức chứa theo kế hoạch đã duyệt.',
   });
 });
 
@@ -453,6 +456,7 @@ test('Organizer reviews Proposal, Change Request and Cancellation Request via de
 
 test('Organizer loads and creates a shared activity location through Organizer API', async ({ page }) => {
   const state = await mockOrganizerSprint5(page);
+  const longDescription = Array.from({ length: 151 }, (_, index) => `từ${index + 1}`).join(' ');
   await page.goto('/portal');
 
   await page.getByRole('button', { name: 'Địa điểm tổ chức', exact: true }).click();
@@ -466,20 +470,44 @@ test('Organizer loads and creates a shared activity location through Organizer A
   await dialog.getByLabel(/Tên địa điểm/).fill('Phòng workshop B');
   await dialog.getByLabel(/Loại địa điểm/).selectOption('WORKSHOP');
   await dialog.getByLabel(/Sức chứa tối đa/).fill('45');
+  await dialog.getByLabel('Mô tả').fill(longDescription);
+  await expect(dialog.getByText(/\/5\.000 ký tự$/)).toBeVisible();
   await expect(dialog.getByLabel('Tọa độ X')).toHaveCount(0);
   await expect(dialog.getByLabel('Tọa độ Y')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Lưu địa điểm' }).click();
 
-  await expect(page.getByText('Đã thêm địa điểm tổ chức mới.', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/organizer\/booths\?view=map&locationId=42/);
+  const marker = page.getByRole('button', { name: /WORKSHOP-B – Phòng workshop B/ });
+  await expect(marker).toBeVisible();
+  await marker.scrollIntoViewIfNeeded();
+  const position = await marker.boundingBox();
+  if (!position) throw new Error('New location marker has no position');
+  await page.mouse.move(position.x + position.width / 2, position.y + position.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(position.x + position.width / 2 + 50, position.y + position.height / 2 + 30, { steps: 5 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Lưu sơ đồ', exact: true }).click();
+  await expect.poll(() => typeof state.getUpdatedLocationPayload()?.mapX).toBe('number');
+  expect(state.getUpdatedLocationPayload()?.mapX).not.toBe(50);
+  expect(state.getUpdatedLocationPayload()).not.toHaveProperty('name');
+  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 địa điểm.');
+  const savedX = state.getUpdatedLocationPayload()?.mapX;
+  await page.reload();
+  await expect(marker).toBeVisible();
+  await expect(marker).toHaveCSS('left', /.+px/);
+  const leftPercent = await marker.evaluate(element => element.style.left);
+  expect(Number.parseFloat(leftPercent)).toBe(savedX);
   expect(state.getCreatedLocationPayload()).toMatchObject({
     code: 'WORKSHOP-B',
     name: 'Phòng workshop B',
     locationType: 'WORKSHOP',
     maxCapacity: 45,
+    description: longDescription,
     mapX: null,
     mapY: null,
   });
 
+  await page.goto('/organizer/venues');
   await page.getByRole('button', { name: 'Sửa Sân khấu trung tâm' }).click();
   const editDialog = page.getByRole('dialog', { name: 'Chỉnh sửa địa điểm' });
   await editDialog.getByLabel(/Trạng thái/).selectOption('false');

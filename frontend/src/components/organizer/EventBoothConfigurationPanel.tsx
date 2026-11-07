@@ -21,6 +21,7 @@ import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
 import type { EventBooth } from '../../types/booth';
 import type { OrganizerEvent } from '../../types/organizer';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import { BoothIllustration } from './BoothIllustration';
 import './Sprint2Booth.css';
 import './OrganizerPortal.css';
@@ -126,6 +127,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
   }, [event.id]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The generation-guarded loader synchronizes this panel with the selected event.
     void loadData();
     return () => {
       generationRef.current += 1;
@@ -182,8 +184,8 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
       return;
     }
 
-    if (draftEnabled && rentalPrice <= 0) {
-      setDrawerError('Hãy nhập giá thuê lớn hơn 0 trước khi mở cho thuê.');
+    if (rentalPrice > 0 && rentalPrice < 5000) {
+      setDrawerError('Giá thuê phải bằng 0 (miễn phí) hoặc từ 5.000 VNĐ trở lên.');
       return;
     }
 
@@ -217,7 +219,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
   // Mini statistics (Phễu vận hành: Tổng số gian -> Đã có giá thuê -> Đang cho thuê)
   const totalCount = rows.length;
   const configuredPriceCount = useMemo(
-    () => rows.filter(row => row.rentalPrice !== null && row.rentalPrice > 0).length,
+    () => rows.filter(row => row.rentalPrice !== null).length,
     [rows],
   );
   const enabledCount = useMemo(() => rows.filter(row => row.enabled).length, [rows]);
@@ -413,7 +415,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
                   <span className="org-booth-price-unit">VNĐ</span>
                 </div>
                 <small className="org-booth-field-hint">
-                  Giá thuê cho toàn bộ sự kiện (chưa bao gồm VAT và dịch vụ phát sinh).
+                  Nhập 0 cho gian hàng miễn phí; giá có thu phí phải từ 5.000 VNĐ trở lên.
                 </small>
               </div>
             </section>
@@ -505,7 +507,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
           </div>
           <div className="org-booth-stat-content">
             <span className="org-booth-stat-val">{configuredPriceCount} gian hàng</span>
-            <span className="org-booth-stat-label">Gian hàng đã có giá thuê</span>
+            <span className="org-booth-stat-label">Gian hàng đã cấu hình giá</span>
           </div>
         </div>
 
@@ -537,7 +539,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
       {/* 3. Toolbar (Search, Filter Pills, Category Select, Sort Select) */}
       <div className="org-booth-toolbar">
         {/* Search Input */}
-        <div className="org-booth-search-box">
+        <WorkspaceFieldLabel className="org-booth-search-field" label="Tìm kiếm"><div className="org-booth-search-box">
           <Search size={16} className="org-booth-search-icon" aria-hidden="true" />
           <input
             type="text"
@@ -549,7 +551,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
             }}
             aria-label="Tìm kiếm gian hàng"
           />
-        </div>
+        </div></WorkspaceFieldLabel>
 
         {/* Filter Pills */}
         <div className="org-booth-filter-pills" role="radiogroup" aria-label="Lọc theo trạng thái cho thuê">
@@ -586,7 +588,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
         </div>
 
         {/* Category Select */}
-        <div className="org-booth-select-wrap">
+        <WorkspaceFieldLabel className="org-booth-category-field" label="Loại gian hàng"><div className="org-booth-select-wrap">
           <select
             value={categoryFilter}
             onChange={e => {
@@ -602,10 +604,10 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
               </option>
             ))}
           </select>
-        </div>
+        </div></WorkspaceFieldLabel>
 
         {/* Sort Select */}
-        <div className="org-booth-select-wrap">
+        <WorkspaceFieldLabel className="org-booth-sort-field" label="Sắp xếp"><div className="org-booth-select-wrap">
           <select
             value={sortBy}
             onChange={e => {
@@ -620,7 +622,7 @@ export const EventBoothConfigurationPanel: React.FC<Props> = ({ language, event,
             <option value="price_asc">Giá thuê: Thấp đến cao</option>
             <option value="price_desc">Giá thuê: Cao đến thấp</option>
           </select>
-        </div>
+        </div></WorkspaceFieldLabel>
       </div>
 
       {/* 4. Content Area: Loading, Empty, or Card Grid */}

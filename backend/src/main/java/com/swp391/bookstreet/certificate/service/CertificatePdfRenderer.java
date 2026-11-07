@@ -4,20 +4,38 @@ import com.swp391.bookstreet.activity.entity.Activity;
 import com.swp391.bookstreet.certificate.entity.Certificate;
 import com.swp391.bookstreet.common.exception.ApiException;
 import com.swp391.bookstreet.event.entity.Event;
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
-import java.time.ZoneOffset;
+import java.io.InputStream;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CertificatePdfRenderer {
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")
-            .withZone(ZoneOffset.UTC);
+    private static final PDRectangle PAGE_SIZE = new PDRectangle(842, 595);
+    private static final float SIDEBAR_WIDTH = 276;
+    private static final Color NAVY = new Color(10, 39, 78);
+    private static final Color DEEP_NAVY = new Color(7, 29, 61);
+    private static final Color ORANGE = new Color(247, 83, 23);
+    private static final Color CREAM = new Color(250, 247, 237);
+    private static final Color INK = new Color(11, 39, 78);
+    private static final Color BLUE_RULE = new Color(100, 124, 151);
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
+            .ofPattern("dd/MM/yyyy")
+            .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
 
     private volatile boolean simulateFailure = false;
 
@@ -42,145 +60,287 @@ public class CertificatePdfRenderer {
     }
 
     private byte[] generatePdf(Certificate certificate, Activity activity, Event event) throws Exception {
-        String recipient = sanitize(certificate.getRecipientNameSnapshot());
-        String activityTitle = sanitize(activity.getTitle());
-        String eventName = sanitize(event.getName());
-        String code = sanitize(certificate.getCertificateCode());
-        String issuedAt = DATE_FORMATTER.format(certificate.getIssuedAt());
-        String status = certificate.getStatus().name();
+        try (PDDocument document = new PDDocument(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            document.getDocument().setVersion(1.4f);
+            document.getDocumentCatalog().setVersion("1.4");
+            PDPage page = new PDPage(PAGE_SIZE);
+            document.addPage(page);
+            PDFont regular;
+            PDFont bold;
+            try (InputStream regularStream = new ClassPathResource("fonts/NotoSans-Regular.ttf").getInputStream();
+                    InputStream boldStream = new ClassPathResource("fonts/NotoSans-Bold.ttf").getInputStream()) {
+                regular = PDType0Font.load(document, regularStream, true);
+                bold = PDType0Font.load(document, boldStream, true);
+            }
 
-        ByteArrayOutputStream contentStream = new ByteArrayOutputStream();
-        StringBuilder cs = new StringBuilder();
+            try (PDPageContentStream canvas = new PDPageContentStream(document, page)) {
+                drawBackground(canvas);
+                drawBookStreetArtwork(canvas);
+                drawCertificateDetails(canvas, regular, bold, certificate, activity, event);
+            }
 
-        // Decorative borders (A4 Landscape: 842 x 595)
-        cs.append("q\n");
-        // Gold outer border
-        cs.append("0.77 0.61 0.15 RG 3 w\n");
-        cs.append("25 25 792 545 re S\n");
-        // Inner thin border
-        cs.append("0.77 0.61 0.15 RG 1 w\n");
-        cs.append("31 31 780 533 re S\n");
-
-        // Header
-        appendCenteredText(cs, "DUONG SACH TP. HO CHI MINH - BOOK STREET EVENT", "/F1", 16, 515);
-        appendCenteredText(cs, "GIAY CHUNG NHAN THAM GIA HOAT DONG", "/F1", 24, 465);
-        appendCenteredText(cs, "CERTIFICATE OF ATTENDANCE", "/F2", 13, 442);
-
-        // Recipient Introduction
-        appendCenteredText(cs, "Chung nhan duoc trao cho / This certificate is proudly presented to:", "/F2", 12, 385);
-
-        // Recipient Name
-        appendCenteredText(cs, recipient.toUpperCase(), "/F1", 22, 345);
-
-        // Body: Activity and Event
-        appendCenteredText(cs, "Da tham gia hoan thanh hoat dong / For successfully completing the activity:", "/F2", 12, 295);
-        appendCenteredText(cs, activityTitle, "/F1", 16, 268);
-        appendCenteredText(cs, "Trong khuon kho su kien / As part of the event:", "/F2", 12, 230);
-        appendCenteredText(cs, eventName, "/F1", 15, 205);
-
-        // Divider
-        cs.append("0.77 0.61 0.15 RG 0.75 w\n");
-        cs.append("70 145 m 772 145 l S\n");
-
-        // Footer details
-        cs.append("BT\n/F2 10 Tf\n0.2 0.2 0.2 rg\n");
-        cs.append("70 120 Td (Ma chung nhan / Certificate ID: ").append(escapePdf(code)).append(") Tj\n");
-        cs.append("0 -18 Td (Ngay cap / Issued at: ").append(escapePdf(issuedAt)).append(") Tj\n");
-        cs.append("0 -18 Td (Trang thai / Status: ").append(escapePdf(status)).append(") Tj\n");
-        cs.append("ET\n");
-
-        cs.append("BT\n/F1 10 Tf\n0.2 0.2 0.2 rg\n");
-        cs.append("540 120 Td (XAC NHAN CUA BAN TO CHUC) Tj\n");
-        cs.append("/F2 10 Tf\n");
-        cs.append("0 -18 Td (Book Street Event Management System) Tj\n");
-        cs.append("0 -18 Td (He thong xac thuc dien tu) Tj\n");
-        cs.append("ET\n");
-
-        cs.append("Q\n");
-
-        byte[] streamBytes = cs.toString().getBytes(StandardCharsets.US_ASCII);
-
-        // Assemble PDF 1.4 objects
-        List<byte[]> objects = new ArrayList<>();
-
-        // Obj 1: Catalog
-        objects.add("<< /Type /Catalog /Pages 2 0 R >>".getBytes(StandardCharsets.US_ASCII));
-
-        // Obj 2: Pages
-        objects.add("<< /Type /Pages /Kids [3 0 R] /Count 1 >>".getBytes(StandardCharsets.US_ASCII));
-
-        // Obj 3: Page (842 x 595 - A4 Landscape)
-        objects.add(("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Contents 6 0 R " +
-                "/Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> >>").getBytes(StandardCharsets.US_ASCII));
-
-        // Obj 4: Font Helvetica-Bold
-        objects.add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>".getBytes(StandardCharsets.US_ASCII));
-
-        // Obj 5: Font Helvetica
-        objects.add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".getBytes(StandardCharsets.US_ASCII));
-
-        // Obj 6: Contents stream
-        ByteArrayOutputStream streamObj = new ByteArrayOutputStream();
-        streamObj.write(("<< /Length " + streamBytes.length + " >>\nstream\n").getBytes(StandardCharsets.US_ASCII));
-        streamObj.write(streamBytes);
-        streamObj.write("\nendstream".getBytes(StandardCharsets.US_ASCII));
-        objects.add(streamObj.toByteArray());
-
-        // Write full PDF with exact XREF offsets
-        ByteArrayOutputStream pdf = new ByteArrayOutputStream();
-        pdf.write("%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n".getBytes(StandardCharsets.ISO_8859_1));
-
-        List<Integer> offsets = new ArrayList<>();
-        offsets.add(0); // obj 0 dummy
-
-        for (int i = 0; i < objects.size(); i++) {
-            offsets.add(pdf.size());
-            int objNum = i + 1;
-            pdf.write((objNum + " 0 obj\n").getBytes(StandardCharsets.US_ASCII));
-            pdf.write(objects.get(i));
-            pdf.write("\nendobj\n".getBytes(StandardCharsets.US_ASCII));
+            document.save(output, CompressParameters.NO_COMPRESSION);
+            return output.toByteArray();
         }
+    }
 
-        int xrefOffset = pdf.size();
-        pdf.write(("xref\n0 " + (objects.size() + 1) + "\n").getBytes(StandardCharsets.US_ASCII));
-        pdf.write("0000000000 65535 f \n".getBytes(StandardCharsets.US_ASCII));
-        for (int i = 1; i <= objects.size(); i++) {
-            pdf.write(String.format("%010d 00000 n \n", offsets.get(i)).getBytes(StandardCharsets.US_ASCII));
+    private void drawBackground(PDPageContentStream canvas) throws Exception {
+        canvas.setNonStrokingColor(CREAM);
+        canvas.addRect(0, 0, PAGE_SIZE.getWidth(), PAGE_SIZE.getHeight());
+        canvas.fill();
+
+        canvas.setNonStrokingColor(NAVY);
+        canvas.addRect(0, 0, SIDEBAR_WIDTH, PAGE_SIZE.getHeight());
+        canvas.fill();
+
+        canvas.setStrokingColor(new Color(227, 217, 192));
+        canvas.setLineWidth(0.8f);
+        canvas.moveTo(SIDEBAR_WIDTH + 26, 30);
+        canvas.lineTo(816, 30);
+        canvas.lineTo(816, 565);
+        canvas.lineTo(SIDEBAR_WIDTH + 26, 565);
+        canvas.closePath();
+        canvas.stroke();
+    }
+
+    private void drawBookStreetArtwork(PDPageContentStream canvas) throws Exception {
+        // Large orange sun and layered open-book shapes echo the supplied Book Street artwork.
+        canvas.setNonStrokingColor(ORANGE);
+        addEllipse(canvas, 181, 438, 124, 124);
+        canvas.fill();
+
+        canvas.setNonStrokingColor(CREAM);
+        canvas.moveTo(154, 450);
+        canvas.lineTo(245, 421);
+        canvas.lineTo(267, 348);
+        canvas.lineTo(174, 373);
+        canvas.closePath();
+        canvas.fill();
+        canvas.moveTo(149, 444);
+        canvas.lineTo(239, 411);
+        canvas.lineTo(260, 334);
+        canvas.lineTo(169, 363);
+        canvas.closePath();
+        canvas.fill();
+
+        canvas.setNonStrokingColor(ORANGE);
+        canvas.moveTo(28, 280);
+        canvas.lineTo(158, 335);
+        canvas.lineTo(268, 302);
+        canvas.lineTo(268, 267);
+        canvas.lineTo(152, 293);
+        canvas.lineTo(28, 240);
+        canvas.closePath();
+        canvas.fill();
+
+        canvas.setNonStrokingColor(CREAM);
+        canvas.moveTo(35, 242);
+        canvas.lineTo(153, 284);
+        canvas.lineTo(238, 260);
+        canvas.lineTo(153, 306);
+        canvas.closePath();
+        canvas.fill();
+        canvas.setNonStrokingColor(new Color(243, 231, 201));
+        canvas.moveTo(153, 284);
+        canvas.lineTo(251, 257);
+        canvas.lineTo(218, 224);
+        canvas.lineTo(153, 250);
+        canvas.closePath();
+        canvas.fill();
+
+        // Stylized street-front arches at the foot of the panel.
+        canvas.setNonStrokingColor(new Color(244, 233, 207));
+        canvas.addRect(0, 0, SIDEBAR_WIDTH, 112);
+        canvas.fill();
+        drawArch(canvas, 13, 22, 50, 83, NAVY);
+        drawArch(canvas, 75, 22, 50, 83, NAVY);
+        drawArch(canvas, 137, 22, 50, 83, ORANGE);
+        drawArch(canvas, 199, 22, 50, 83, NAVY);
+
+        canvas.setNonStrokingColor(ORANGE);
+        canvas.moveTo(0, 0);
+        canvas.lineTo(SIDEBAR_WIDTH, 0);
+        canvas.lineTo(SIDEBAR_WIDTH, 19);
+        canvas.lineTo(0, 54);
+        canvas.closePath();
+        canvas.fill();
+    }
+
+    private void drawArch(PDPageContentStream canvas, float x, float y, float width, float height, Color color)
+            throws Exception {
+        canvas.setNonStrokingColor(color);
+        canvas.addRect(x, y, width, height - width / 2);
+        canvas.fill();
+        addEllipse(canvas, x, y + height - width, width, width);
+        canvas.fill();
+        canvas.setNonStrokingColor(new Color(244, 233, 207));
+        canvas.addRect(x + 9, y, width - 18, height - width / 2);
+        canvas.fill();
+        addEllipse(canvas, x + 9, y + height - width + 9, width - 18, width - 18);
+        canvas.fill();
+    }
+
+    private void addEllipse(PDPageContentStream canvas, float x, float y, float width, float height)
+            throws Exception {
+        float k = 0.55228475f;
+        float cx = x + width / 2;
+        float cy = y + height / 2;
+        float rx = width / 2;
+        float ry = height / 2;
+        canvas.moveTo(cx + rx, cy);
+        canvas.curveTo(cx + rx, cy + k * ry, cx + k * rx, cy + ry, cx, cy + ry);
+        canvas.curveTo(cx - k * rx, cy + ry, cx - rx, cy + k * ry, cx - rx, cy);
+        canvas.curveTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry);
+        canvas.curveTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy);
+        canvas.closePath();
+    }
+
+    private void drawCertificateDetails(PDPageContentStream canvas, PDFont regular, PDFont bold,
+            Certificate certificate, Activity activity, Event event) throws Exception {
+        float left = SIDEBAR_WIDTH + 27;
+        float right = 814;
+
+        drawText(canvas, bold, 10, 30, 544, "ĐƯỜNG SÁCH", CREAM);
+        drawText(canvas, regular, 8.3f, 30, 529, "TP. HỒ CHÍ MINH", CREAM);
+        canvas.setNonStrokingColor(new Color(15, 177, 224));
+        canvas.addRect(30, 511, 29, 5);
+        canvas.fill();
+        drawText(canvas, regular, 8, 30, 493, "B O O K", CREAM);
+        drawText(canvas, regular, 8, 30, 479, "S T R E E T", CREAM);
+        drawText(canvas, regular, 8, 30, 465, "E V E N T", CREAM);
+        drawText(canvas, regular, 7.2f, 30, 420, "SÁCH", CREAM);
+        drawText(canvas, regular, 7.2f, 30, 406, "KẾT NỐI", CREAM);
+        drawText(canvas, regular, 7.2f, 30, 392, "CON NGƯỜI", CREAM);
+        drawText(canvas, regular, 7.2f, 30, 378, "KIẾN TẠO", CREAM);
+        drawText(canvas, regular, 7.2f, 30, 364, "TƯƠNG LAI", CREAM);
+
+        drawText(canvas, bold, 13, left, 534, "CHỨNG NHẬN THAM GIA", ORANGE);
+        canvas.setStrokingColor(BLUE_RULE);
+        canvas.setLineWidth(0.7f);
+        canvas.moveTo(left + 205, 537);
+        canvas.lineTo(right, 537);
+        canvas.stroke();
+
+        drawText(canvas, bold, 31, left, 478, "GIẤY CHỨNG NHẬN", INK);
+        drawText(canvas, bold, 31, left, 440, "THAM GIA HOẠT ĐỘNG", INK);
+        drawText(canvas, regular, 12, left + 2, 411, "C E R T I F I C A T E   O F   A T T E N D A N C E", INK);
+
+        drawText(canvas, bold, 10.5f, left + 2, 365, "Chứng nhận được trao cho /", INK);
+        drawText(canvas, regular, 9.6f, left + 178, 365, "This certificate is proudly presented to", INK);
+
+        String recipient = safe(certificate.getRecipientNameSnapshot(), "Người tham dự").toUpperCase();
+        float nameSize = fittedSize(bold, recipient, 35, 20, right - left - 5);
+        List<String> recipientLines = wrap(bold, recipient, nameSize, right - left - 5, 2);
+        if (recipientLines.size() > 1) {
+            nameSize = fittedSize(bold, recipient, 25, 19, right - left - 5);
+            recipientLines = wrap(bold, recipient, nameSize, right - left - 5, 2);
         }
+        float nameY = 316;
+        float nameLineHeight = nameSize + 3;
+        drawLines(canvas, bold, nameSize, left + 2, nameY, recipientLines, INK, nameLineHeight);
+        float nameBottomY = nameY - (recipientLines.size() - 1) * nameLineHeight;
+        float nameRuleY = nameBottomY - 14;
+        canvas.setNonStrokingColor(ORANGE);
+        canvas.addRect(left + 2, nameRuleY, Math.min(textWidth(bold, nameSize, recipientLines.get(0)), 320), 4);
+        canvas.fill();
 
-        pdf.write(("trailer\n<< /Size " + (objects.size() + 1) + " /Root 1 0 R >>\n").getBytes(StandardCharsets.US_ASCII));
-        pdf.write("startxref\n".getBytes(StandardCharsets.US_ASCII));
-        pdf.write((xrefOffset + "\n%%EOF\n").getBytes(StandardCharsets.US_ASCII));
+        float activityLabelY = nameRuleY - 30;
+        drawText(canvas, regular, 10.5f, left + 2, activityLabelY, "Đã tham gia và hoàn thành hoạt động", INK);
+        List<String> activityLines = wrap(bold, safe(activity.getTitle(), "Hoạt động"), 15, right - left - 5, 2);
+        float activityTitleY = activityLabelY - 23;
+        drawLines(canvas, bold, 15, left + 2, activityTitleY, activityLines, INK, 19);
 
-        return pdf.toByteArray();
+        float eventLabelY = activityTitleY - activityLines.size() * 19 - 7;
+        drawText(canvas, regular, 10.3f, left + 2, eventLabelY, "Trong khuôn khổ sự kiện / As part of the event", INK);
+        List<String> eventLines = wrap(bold, safe(event.getName(), "Sự kiện"), 13.5f, right - left - 5, 2);
+        drawLines(canvas, bold, 13.5f, left + 2, eventLabelY - 25, eventLines, INK, 18);
+
+        float dividerY = 126;
+        canvas.setStrokingColor(BLUE_RULE);
+        canvas.setLineWidth(0.65f);
+        canvas.moveTo(left + 2, dividerY);
+        canvas.lineTo(right, dividerY);
+        canvas.stroke();
+
+        drawText(canvas, regular, 8.2f, left + 6, 100, "Mã chứng nhận", INK);
+        drawText(canvas, regular, 8.2f, left + 91, 100, ":", INK);
+        drawText(canvas, bold, 9, left + 105, 100, safe(certificate.getCertificateCode(), "—"), INK);
+        drawText(canvas, regular, 8.2f, left + 6, 81, "Ngày cấp", INK);
+        drawText(canvas, regular, 8.2f, left + 91, 81, ":", INK);
+        drawText(canvas, bold, 9, left + 105, 81, DATE_FORMATTER.format(certificate.getIssuedAt()), INK);
+        drawText(canvas, regular, 8.2f, left + 6, 62, "Trạng thái", INK);
+        drawText(canvas, regular, 8.2f, left + 91, 62, ":", INK);
+        drawText(canvas, bold, 9, left + 105, 62, certificate.getStatus().name(), INK);
+
+        float signatureX = left + 365;
+        canvas.setStrokingColor(BLUE_RULE);
+        canvas.moveTo(signatureX - 18, 55);
+        canvas.lineTo(signatureX - 18, 110);
+        canvas.stroke();
+        drawText(canvas, bold, 8.7f, signatureX, 101, "XÁC NHẬN CỦA BAN TỔ CHỨC", INK);
+        drawText(canvas, regular, 8.4f, signatureX, 81, "Book Street Event Management System", INK);
+        drawText(canvas, regular, 8.4f, signatureX, 62, "Hệ thống xác thực điện tử", INK);
     }
 
-    private void appendCenteredText(StringBuilder cs, String text, String font, int fontSize, int y) {
-        // Approximate width: average char width ~ 0.52 * fontSize for Helvetica
-        double approxWidth = text.length() * (fontSize * 0.52);
-        int x = Math.max(50, (int) Math.round((842 - approxWidth) / 2.0));
-
-        cs.append("BT\n")
-                .append(font).append(" ").append(fontSize).append(" Tf\n")
-                .append("0.1 0.1 0.1 rg\n")
-                .append(x).append(" ").append(y).append(" Td\n")
-                .append("(").append(escapePdf(text)).append(") Tj\n")
-                .append("ET\n");
+    private void drawText(PDPageContentStream canvas, PDFont font, float size, float x, float y,
+            String text, Color color) throws Exception {
+        canvas.beginText();
+        canvas.setFont(font, size);
+        canvas.setNonStrokingColor(color);
+        canvas.newLineAtOffset(x, y);
+        canvas.showText(text);
+        canvas.endText();
     }
 
-    private String sanitize(String input) {
-        if (input == null) return "";
-        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        String ascii = normalized.replaceAll("\\p{M}", "");
-        // Replace special Vietnamese characters like Đ/đ
-        ascii = ascii.replace("\u0110", "D").replace("\u0111", "d");
-        return ascii.trim();
+    private void drawLines(PDPageContentStream canvas, PDFont font, float size, float x, float y,
+            List<String> lines, Color color, float lineHeight) throws Exception {
+        for (int i = 0; i < lines.size(); i++) {
+            drawText(canvas, font, size, x, y - i * lineHeight, lines.get(i), color);
+        }
     }
 
-    private String escapePdf(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\")
-                .replace("(", "\\(")
-                .replace(")", "\\)");
+    private float fittedSize(PDFont font, String text, float preferred, float minimum, float maxWidth)
+            throws Exception {
+        float size = preferred;
+        while (size > minimum && textWidth(font, size, text) > maxWidth) size -= 0.5f;
+        return size;
+    }
+
+    private float textWidth(PDFont font, float size, String text) throws Exception {
+        return font.getStringWidth(text) / 1000f * size;
+    }
+
+    private List<String> wrap(PDFont font, String text, float size, float maxWidth, int maxLines) throws Exception {
+        List<String> lines = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.trim().split("\\s+")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && textWidth(font, size, candidate) > maxWidth) {
+                lines.add(line.toString());
+                line.setLength(0);
+                line.append(word);
+                if (lines.size() == maxLines) break;
+            } else {
+                line.setLength(0);
+                line.append(candidate);
+            }
+        }
+        if (lines.size() < maxLines && !line.isEmpty()) lines.add(line.toString());
+        if (lines.size() == maxLines && textWidth(font, size, lines.get(maxLines - 1)) > maxWidth) {
+            lines.set(maxLines - 1, fitEllipsis(font, text, size, maxWidth));
+        }
+        return lines;
+    }
+
+    private String fitEllipsis(PDFont font, String text, float size, float maxWidth) throws Exception {
+        String value = text;
+        while (!value.isEmpty() && textWidth(font, size, value + "…") > maxWidth) {
+            value = value.substring(0, value.length() - 1).stripTrailing();
+        }
+        return value + "…";
+    }
+
+    private String safe(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 }

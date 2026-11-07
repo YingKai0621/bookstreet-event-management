@@ -1,7 +1,27 @@
 import { Booth, EventItem } from '../types';
-import { HeritageProfile } from '../types/heritage';
+import {
+  HeritagePageResponse,
+  PublicHeritageDetail,
+  PublicHeritageListItem,
+} from '../types/heritage';
 import { apiClient } from './apiClient';
-import { boothApi } from './boothApi';
+import { boothApi, getCachedPublicEventBooths } from './boothApi';
+
+const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
+
+function assertHeritagePage(
+  value: unknown,
+): asserts value is HeritagePageResponse<PublicHeritageListItem> {
+  if (
+    !value
+    || typeof value !== 'object'
+    || !Array.isArray((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).content)
+    || !Number.isInteger((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).page)
+    || !Number.isInteger((value as Partial<HeritagePageResponse<PublicHeritageListItem>>).totalPages)
+  ) {
+    throw new Error('Dữ liệu di sản trả về không đúng định dạng.');
+  }
+}
 
 async function getPublishedEvents(): Promise<EventItem[]> {
   const first = await apiClient.get<PageResponse<PublicEventResponse>>('/events?page=0&size=100&sort=startAt,asc');
@@ -34,13 +54,38 @@ export interface PublicActivity {
   status: string;
   imageUrl: string | null;
   location: string;
+  locationDetail: PublicActivityLocation;
+}
+
+export interface PublicActivityLocation {
+  locationId: number;
+  code: string;
+  name: string;
+  locationType: 'BOOTH' | 'STAGE' | 'WORKSHOP' | 'AREA';
+  description: string | null;
+  maxCapacity: number | null;
+  mapX: number | null;
+  mapY: number | null;
+}
+
+export interface CreatePublicFeedbackRequest {
+  targetType: 'BOOK_STREET' | 'EVENT';
+  eventId?: number;
+  guestName?: string;
+  contactEmail?: string;
+  message: string;
+}
+
+export interface PublicFeedbackReceipt {
+  feedbackId: number;
+  receivedAt: string;
 }
 
 interface PublicActivityResponse {
   activityId: number;
   eventId: number;
   eventName: string;
-  location: { locationId: number; code: string; name: string; locationType: string };
+  location: PublicActivityLocation;
   title: string;
   description: string | null;
   activityType: string;
@@ -63,8 +108,9 @@ interface PublicEventResponse {
   startAt: string;
   endAt: string;
   partnerApplicationDeadlineAt: string | null;
+  participantRegistrationDeadlineAt: string | null;
   bannerUrl: string | null;
-  status: 'PUBLISHED';
+  status: 'PUBLISHED' | 'ONGOING';
 }
 
 interface PageResponse<T> {
@@ -98,8 +144,8 @@ function formatEventTime(value: string): string {
 }
 
 function formatEventSchedule(startAt: string, endAt: string): string {
-  const startDate = formatEventDate(startAt);
-  const endDate = formatEventDate(endAt);
+  const startDate = formatEventDate(startAt).split('-').reverse().join('/');
+  const endDate = formatEventDate(endAt).split('-').reverse().join('/');
   const startTime = formatEventTime(startAt);
   const endTime = formatEventTime(endAt);
   return startDate === endDate
@@ -116,6 +162,8 @@ function toEventItem(event: PublicEventResponse): EventItem {
     id: String(event.eventId),
     title: event.name,
     titleEn: event.name,
+    startAt: event.startAt,
+    endAt: event.endAt,
     type: 'exhibition',
     typeLabelVi: 'Sự kiện',
     typeLabelEn: 'Event',
@@ -126,6 +174,7 @@ function toEventItem(event: PublicEventResponse): EventItem {
     }).format(new Date(event.startAt)),
     timeStr: `${formatEventTime(event.startAt)} - ${formatEventTime(event.endAt)}`,
     scheduleStr: formatEventSchedule(event.startAt, event.endAt),
+    registrationDeadlineAt: event.participantRegistrationDeadlineAt,
     location: '',
     locationEn: '',
     priorityLevel: 'regular',
@@ -163,6 +212,7 @@ function toPublicActivity(activity: PublicActivityResponse): PublicActivity {
     status: activity.status,
     imageUrl: activity.imageUrl,
     location: activity.location?.name || activity.location?.code || '',
+    locationDetail: activity.location,
   };
 }
 
@@ -174,6 +224,18 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
         : categoryCode.includes('life') ? 'lifestyle'
           : categoryCode.includes('literature') ? 'literature' : 'other';
   const description = row.booth.description || row.booth.note || '';
+  const labelByCode: Record<string, { vi: string; en: string }> = {
+    LITERATURE: { vi: 'Văn học & Nghệ thuật', en: 'Literature & Arts' },
+    CHILDREN: { vi: 'Sách Thiếu nhi', en: "Children's Books" },
+    MANGA_COMICS: { vi: 'Truyện tranh & Manga', en: 'Manga & Comics' },
+    HISTORY_SOCIETY: { vi: 'Lịch sử & Xã hội', en: 'History & Society' },
+    ART_CULTURE: { vi: 'Nghệ thuật & Văn hóa', en: 'Arts & Culture' },
+    EDUCATION: { vi: 'Giáo dục & Kỹ năng', en: 'Education & Skills' },
+    TECHNOLOGY_SCIENCE: { vi: 'STEM & Công nghệ', en: 'STEM & Technology' },
+    LIFESTYLE: { vi: 'Phong cách sống', en: 'Lifestyle' },
+    CAFE: { vi: 'Cà phê sách', en: 'Book Cafe' },
+  };
+  const categoryLabel = labelByCode[row.booth.categoryCode || ''];
 
   return {
     id: String(row.booth.boothId),
@@ -182,8 +244,8 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
     nameEn: row.booth.name,
     publisher: '',
     category,
-    categoryLabelVi: row.booth.categoryCode || 'Gian hàng',
-    categoryLabelEn: row.booth.categoryCode || 'Booth',
+    categoryLabelVi: categoryLabel?.vi || 'Gian hàng',
+    categoryLabelEn: categoryLabel?.en || 'Booth',
     tagline: description,
     taglineEn: description,
     description,
@@ -197,7 +259,7 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
     maxCapacity: row.booth.maxCapacity,
     openHours: '',
     image: {
-      url: '',
+      url: row.booth.imageUrl || DEFAULT_BOOTH_IMAGE,
       alt: row.booth.name,
       source: '',
       license: '',
@@ -206,80 +268,71 @@ function toPublicBooth(row: Awaited<ReturnType<typeof boothApi.listAllPublicEven
   };
 }
 
-export function toHeritageProfile(heritage: Record<string, unknown>): HeritageProfile {
-  return {
-    id: String(heritage.slug || heritage.id),
-    code: String(heritage.code || ''),
-    name: String(heritage.name || ''),
-    nameEn: String(heritage.nameEn || heritage.name || ''),
-    province: String(heritage.province || ''),
-    provinceEn: String(heritage.provinceEn || heritage.province || ''),
-    category: String(heritage.category || ''),
-    categoryEn: String(heritage.categoryEn || heritage.category || ''),
-    period: String(heritage.period || ''),
-    periodEn: String(heritage.periodEn || heritage.period || ''),
-    address: String(heritage.address || ''),
-    addressEn: String(heritage.addressEn || heritage.address || ''),
-    briefDesc: String(heritage.briefDesc || ''),
-    briefDescEn: String(heritage.briefDescEn || heritage.briefDesc || ''),
-    highlights: Array.isArray(heritage.highlights) ? heritage.highlights.map(String) : [],
-    highlightsEn: Array.isArray(heritage.highlightsEn) ? heritage.highlightsEn.map(String) : [],
-    story: String(heritage.story || ''),
-    storyEn: String(heritage.storyEn || heritage.story || ''),
-    referenceSource: String(heritage.referenceSource || ''),
-    updatedDate: heritage.updatedAt ? new Date(String(heritage.updatedAt)).toLocaleDateString('vi-VN') : '',
-    image: {
-      url: String(heritage.imageUrl || ''),
-      alt: String(heritage.imageAlt || heritage.name || ''),
-      source: String(heritage.imageSource || ''),
-      license: String(heritage.imageLicense || ''),
-    },
-    mapCoordinates: {
-      x: Number(heritage.mapX || 0),
-      y: Number(heritage.mapY || 0),
-      areaName: String(heritage.mapAreaName || ''),
-    },
-  };
-}
+const publicActivitiesCache = new Map<string, { rows?: PublicActivity[]; inflight?: Promise<PublicActivity[]> }>();
 
 export const publicApi = {
   getEvents: getPublishedEvents,
+  getCachedBooths(eventId: string): Booth[] | undefined {
+    if (!eventId) return [];
+    const rows = getCachedPublicEventBooths(eventId);
+    return rows ? rows.filter(row => row.enabled).map(toPublicBooth) : undefined;
+  },
+  getCachedActivities(eventId?: string): PublicActivity[] | undefined {
+    return publicActivitiesCache.get(eventId ?? '__all__')?.rows;
+  },
   async getBooths(eventId: string): Promise<Booth[]> {
     if (!eventId) return [];
     const rows = await boothApi.listAllPublicEventBooths(eventId);
-    return rows.map(toPublicBooth);
+    return rows.filter(row => row.enabled).map(toPublicBooth);
   },
-  async getHeritages(): Promise<HeritageProfile[]> {
-    // Heritage persistence/API belongs to a future module and is not part of the
-    // active backend schema. Keep current public screens empty instead of issuing
-    // a request that is guaranteed to return 401/404.
-    return [];
+  async getHeritages(): Promise<PublicHeritageListItem[]> {
+    const first = await apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
+      '/heritages?page=0&size=100',
+    );
+    assertHeritagePage(first);
+    const remaining = first.totalPages > 1
+      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+        apiClient.get<HeritagePageResponse<PublicHeritageListItem>>(
+          `/heritages?page=${index + 1}&size=100`,
+        )))
+      : [];
+    remaining.forEach(assertHeritagePage);
+    return [first, ...remaining]
+      .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
+      .flatMap(page => Array.isArray(page?.content) ? page.content : Array.isArray(page) ? page : []);
   },
   async getActivities(eventId?: string): Promise<PublicActivity[]> {
+    const cacheKey = eventId ?? '__all__';
+    const cached = publicActivitiesCache.get(cacheKey);
+    if (cached?.rows) return cached.rows;
+    if (cached?.inflight) return cached.inflight;
+
     const endpoint = (page: number) => {
       const params = new URLSearchParams({ page: String(page), size: '100', sort: 'startAt,asc' });
       if (eventId) params.set('eventId', eventId);
       return `/activities?${params.toString()}`;
     };
-    const first = await apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(0));
-    const remaining = first.totalPages > 1
-      ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
-        apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(index + 1))))
-      : [];
-    return [first, ...remaining]
-      .sort((left, right) => left.page - right.page)
-      .flatMap(page => page.content)
-      .map(toPublicActivity);
+    const inflight = (async () => {
+      const first = await apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(0));
+      const remaining = (first.totalPages ?? 0) > 1
+        ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+          apiClient.get<PageResponse<PublicActivityResponse>>(endpoint(index + 1))))
+        : [];
+      const rows = [first, ...remaining]
+        .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
+        .flatMap(page => Array.isArray(page?.content) ? page.content : Array.isArray(page) ? page : [])
+        .map(toPublicActivity);
+      publicActivitiesCache.set(cacheKey, { rows });
+      return rows;
+    })().catch(error => {
+      publicActivitiesCache.delete(cacheKey);
+      throw error;
+    });
+    publicActivitiesCache.set(cacheKey, { inflight });
+    return inflight;
   },
-  getHeritageBySlug: (slug: string) => apiClient.get(`/public/heritages/${slug}`),
-  submitFeedback: (payload: {
-    rating: number;
-    comments?: string;
-    contactEmail?: string;
-    targetScope?: string;
-    heritageId?: string;
-    boothId?: string;
-    targetName?: string;
-    source?: string;
-  }) => apiClient.post('/public/feedbacks', payload),
+  getHeritage: (publicCode: string) =>
+    apiClient.get<PublicHeritageDetail>(`/heritages/${encodeURIComponent(publicCode)}`),
+  submitFeedback: (payload: CreatePublicFeedbackRequest) =>
+    apiClient.post<PublicFeedbackReceipt>('/public/feedbacks', payload),
 };

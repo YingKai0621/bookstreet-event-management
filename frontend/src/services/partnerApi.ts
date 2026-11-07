@@ -1,4 +1,4 @@
-import { PartnerEventApplication, PartnerNotification, PartnerOrganization, PartnerReportStats } from '../types';
+import { PartnerEventApplication, PartnerOrganization, PartnerReportStats } from '../types';
 import type {
   ActivityCancellationRequestListQuery,
   ActivityListQuery,
@@ -69,10 +69,9 @@ export interface PartnerAvailableEvent {
   endAt: string;
   partnerApplicationDeadlineAt: string | null;
   bannerUrl: string;
+  status: PublicEventResponse['status'];
   acceptingApplications: boolean;
 }
-
-const formatDate = (value: unknown) => value ? new Date(String(value)).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
 
 const formatDateTime = (value: unknown) => value ? new Date(String(value)).toLocaleString('vi-VN', {
   dateStyle: 'medium',
@@ -120,6 +119,7 @@ function toAvailableEvent(event: PublicEventResponse): PartnerAvailableEvent {
     endAt: event.endAt,
     partnerApplicationDeadlineAt: event.partnerApplicationDeadlineAt,
     bannerUrl: event.bannerUrl || '',
+    status: event.status,
     acceptingApplications: deadline !== null && deadline > Date.now(),
   };
 }
@@ -212,6 +212,8 @@ export const partnerApi = {
         dateRange: event ? `${formatDateTime(event.startAt)} - ${formatDateTime(event.endAt)}` : '',
         startAt: event?.startAt,
         endAt: event?.endAt,
+        eventStatus: event?.status,
+        eventAvailable: Boolean(event),
         location: '',
         imageUrl: event?.bannerUrl || '',
         status: application.status.toLowerCase() as PartnerEventApplication['status'],
@@ -303,16 +305,8 @@ export const partnerApi = {
     apiClient.post<PartnerActivityCancellationRequestResponse>(
       `/partner/activity-cancellation-requests/${encodeURIComponent(requestId)}/withdraw`,
     ),
-  async getNotifications(): Promise<PartnerNotification[]> {
-    const items = await apiClient.get<Array<Record<string, unknown>>>('/partner/notifications');
-    return items.map(item => ({
-      id: String(item.id), title: String(item.title), time: formatDate(item.createdAt),
-      type: ['activity', 'booth', 'event', 'reminder', 'system'].includes(String(item.kind)) ? String(item.kind) as PartnerNotification['type'] : 'system',
-      isRead: Boolean(item.isRead), link: item.link ? String(item.link) : undefined,
-    }));
-  },
-  markNotificationRead: (id: string) => apiClient.patch(`/partner/notifications/${encodeURIComponent(id)}/read`, {}),
-  markAllNotificationsRead: () => apiClient.patch('/partner/notifications/read-all', {}),
-  getReports: (eventId?: string) => apiClient.get<PartnerReportStats>(`/partner/reports${eventId ? `?eventId=${encodeURIComponent(eventId)}` : ''}`),
-  changePassword: (currentPassword: string, newPassword: string) => apiClient.post('/partner/password', { currentPassword, newPassword }),
+  getReports: async (_eventId?: string): Promise<PartnerReportStats> =>
+    Promise.reject(new Error('Báo cáo đối tác chưa có API backend trong phạm vi hiện tại.')),
+  changePassword: async (_currentPassword: string, _newPassword: string): Promise<void> =>
+    Promise.reject(new Error('Đổi mật khẩu chưa có API backend trong phạm vi hiện tại.')),
 };

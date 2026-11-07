@@ -327,6 +327,22 @@ test('participant can cancel and re-register the same activity registration', as
   expect(requestedPaths.filter(path => path === 'POST /api/v1/participant/activities/91/register')).toHaveLength(1);
 });
 
+test('the overview calendar shows ISO-dated activity registrations and updates after cancellation', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2027-01-10T03:00:00Z'));
+  await mockParticipantWorkflow(page);
+  await page.goto('/participant');
+  const entry = page.locator('.participant-calendar-entry[data-calendar-id="activity-91"]');
+  await expect(entry).toHaveAttribute('data-registered', 'true');
+  await expect(entry).toContainText('Đã đăng ký');
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/participant/activities/detail/91');
+  await page.getByRole('button', { name: 'Hủy đăng ký' }).click();
+  await expect(page.getByText('Đã hủy đăng ký', { exact: true })).toBeVisible();
+  await page.goto('/participant');
+  await expect(entry).toHaveAttribute('data-registered', 'false');
+  await expect(entry).toContainText('Chưa đăng ký');
+});
+
 test('activity detail requires an exact registration and reports attendance honestly', async ({ page }) => {
   await mockParticipantWorkflow(page);
 

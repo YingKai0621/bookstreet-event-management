@@ -36,7 +36,7 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Explore Events, Activities, Booths, Booth Map and Heritage content without login.
 
-- Submit General Feedback without login for exactly one target: BOOK_STREET, EVENT or HERITAGE. Location and Activity are not GeneralFeedback targets.
+- Submit General Feedback without login for exactly one target: BOOK_STREET or EVENT. Heritage, Location and Activity are not GeneralFeedback targets.
 
 ## Participant Event Participation
 
@@ -146,9 +146,15 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 ## Communication & Feedback
 
-- Durable in-app notifications are stored for Activity schedule/Location change, Activity/Event
-  cancellation and Certificate issue/revocation; the affected User can read and mark only their own
-  notifications
+- One durable PostgreSQL in-app inbox is role-scoped for Participant, Partner, Organizer and Admin.
+  Every list/read operation isolates both the authenticated User and exact workspace role.
+
+- Participant keeps the six implemented Activity/Event/Certificate/Badge notification types. Partner
+  receives only approved committed workflow outcomes; the owning Organizer receives only approved review
+  work items. Admin receives a real inbox foundation with no type or producer in Sprint 10.
+
+- Notification and its approved domain transition commit atomically with stable deduplication. Parent
+  cancellation and terminal-outcome suppression prevents redundant child/intermediate rows.
 
 - Optional verified-email delivery runs after commit and cannot roll back domain state; no
   NotificationType entity or senderUserId
@@ -179,6 +185,9 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 - Badge definitions and total-Points thresholds
 
 - Payment Gateway credentials and webhook endpoints are backend environment configuration, not an Admin UI or Use Case in MVP.
+
+- Admin Notification APIs/UI expose genuine empty and failure states. Sprint 10 does not fabricate
+  Security, Account, login, role-change, Badge or system-health alerts.
 
 # 4. Important MVP Boundaries
 
@@ -235,6 +244,9 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 - Check-out, attendance duration, face recognition, GPS/geofencing and device fingerprinting
 
 - Generic Organizer notification composer, SMS/push delivery and transactional message outbox
+
+- Combined cross-role inbox, client-created Notification, polling, WebSocket delivery, SSE beyond the BR-111 signal, notification
+  preferences, delete/archive/pin/snooze and Admin alert producers
 
 - Sponsor management
 
@@ -298,3 +310,16 @@ Tập trung vào Event - Partner - Booth - Booth Payment - Activity - Participan
 
 - Exact statuses, timing boundaries, cancellation precedence, correction cascades, idempotency and
   lock ordering are governed by `05_Business_Rules.md`; this scope document does not redefine them.
+
+# 8. Sprint 10 Delivery Boundary
+
+- Sprint 10 extends the existing `notifications` table rather than creating a generic messaging system.
+- The active slice refines `UC-P01`, `UC-P03`, `UC-E01`–`UC-E06` and `UC-O03`–`UC-O06`; Admin receives
+  infrastructure only and no new top-level Use Case.
+- Exactly four role endpoint families provide list, unread count, mark-one and mark-all operations.
+- Partner and Organizer producers are limited to the approved transition matrices and suppression rules;
+  Participant meaning remains backward compatible and Admin has no producer.
+- Refresh occurs on workspace entry, inbox/popover open, confirmed read mutation and the BR-111 signal. Background polling,
+  fake real-time delivery and local-only read truth are outside the active slice.
+- Exact type/reference pairs, API DTOs, migration constraints and 52 Acceptance Criteria are governed by
+  the active Sprint 10 baseline, Use Case Specifications, API Contract and Physical ERD overlay.

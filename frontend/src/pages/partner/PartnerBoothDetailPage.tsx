@@ -20,6 +20,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import { paymentApi } from '../../services/paymentApi';
+import { boothScanUrl } from '../../security/boothScanToken';
 import { paymentMoney, paymentStatusLabel, paymentTime, positiveId } from '../../services/paymentPresentation';
 import type { Language, PartnerEventApplication } from '../../types';
 import type { BoothRequest, PageResponse } from '../../types/booth';
@@ -205,12 +206,12 @@ export function PartnerBoothDetailPage({ language, applications }: Props) {
               <span><QrCode size={17} /> Mã nhận diện gian hàng</span>
               <div>
                 <QRCodeSVG
-                  value={assignment.qrToken}
+                  value={boothScanUrl(assignment.qrToken)}
                   size={180}
                   title={`Mã QR gian hàng ${assignment.boothCode}`}
                 />
               </div>
-              <figcaption>Chỉ sử dụng mã QR này trong phạm vi vận hành gian hàng.</figcaption>
+              <figcaption>Trưng bày tại gian hàng để độc giả quét, ghi nhận lượt ghé và nhận điểm.</figcaption>
             </figure>
           </section>
 

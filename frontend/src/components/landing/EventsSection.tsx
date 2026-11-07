@@ -1,5 +1,7 @@
+import '../participant/EventFeedback.css';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { AlertTriangle, CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
+import { CheckCircle2, ChevronRight, Clock, MapPin, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
@@ -7,15 +9,16 @@ import { EventItem, Language, ParticipantProfile } from '../../types';
 import { IconEventTicket } from './CustomIcons';
 import './EventsSection.css';
 import { EventCoverflow } from '../ui/EventCoverflow';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
-const parseEventDate = (value: string) => {
-  const parts = value.includes('/') ? value.split('/') : value.split('-');
-  if (parts.length !== 3) return null;
-
-  const [first, second, third] = parts.map(Number);
-  const [year, month, day] = value.includes('/') ? [third, second, first] : [first, second, third];
-  const date = new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime()) ? null : date;
+const formatRegistrationDeadline = (value: string) => {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
 };
 
 const startOfWeek = (date: Date) => {
@@ -26,6 +29,7 @@ const startOfWeek = (date: Date) => {
 };
 
 interface EventsSectionProps {
+  registeredEventIds?: ReadonlySet<string>;
   language: Language;
   events?: EventItem[];
   isLoading?: boolean;
@@ -33,21 +37,31 @@ interface EventsSectionProps {
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  onLeaveEvent?: (eventId: string) => void | Promise<void>;
+  selectedEventId?: string;
+  onSelectEventId?: (eventId: string) => void;
 }
 
 export const EventsSection: React.FC<EventsSectionProps> = ({ 
   language, 
+  registeredEventIds = new Set<string>(),
   events = [],
   isLoading = false,
   isParticipantAuthenticated = false,
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
   onJoinEvent,
+  onLeaveEvent,
+  selectedEventId,
+  onSelectEventId,
 }) => {
   const [activeEventDetail, setActiveEventDetail] = useState<EventItem | null>(null);
   const [showRegisterModal, setShowRegisterModal] = useState<EventItem | null>(null);
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [detailUnregisterError, setDetailUnregisterError] = useState<string | null>(null);
+  const [isUnregisteringDetail, setIsUnregisteringDetail] = useState(false);
+  const registrationNow = useDeadlineClock([activeEventDetail?.registrationDeadlineAt, showRegisterModal?.registrationDeadlineAt]);
   const [closingSheet, setClosingSheet] = useState<'detail' | 'register' | null>(null);
   const sheetDragStartY = React.useRef<number | null>(null);
   const didSheetDrag = React.useRef(false);
@@ -57,8 +71,10 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   const closeEventSheet = React.useCallback((sheet: 'detail' | 'register') => {
     if (closingSheet) return;
     const finishClose = () => {
-      if (sheet === 'detail') setActiveEventDetail(null);
-      else {
+      if (sheet === 'detail') {
+        setActiveEventDetail(null);
+        setDetailUnregisterError(null);
+      } else {
         setShowRegisterModal(null);
         setRegisteredSuccess(false);
       }
@@ -77,34 +93,24 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
 
   useModalDismiss(Boolean(activeEventDetail), () => closeEventSheet('detail'));
   useModalDismiss(Boolean(showRegisterModal), () => closeEventSheet('register'));
+  const detailBackdropHandlers = useBackdropClick(() => closeEventSheet('detail'));
+  const registrationBackdropHandlers = useBackdropClick(() => closeEventSheet('register'));
 
-  const { displayedEvents, weekEventIds } = React.useMemo(() => {
+  const weekEventIds = React.useMemo(() => {
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const weekStart = startOfWeek(today);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Hiển thị tất cả sự kiện sắp diễn ra từ hôm nay trở đi, hoặc danh sách sự kiện có sẵn
-    const upcomingEvents = events.filter((event) => {
-      const eventDate = parseEventDate(event.dateStr);
-      if (!eventDate) return true;
-      return eventDate >= startOfToday;
-    });
-
-    const activeEvents = upcomingEvents.length > 0 ? upcomingEvents : events;
-
-    return {
-      displayedEvents: activeEvents,
-      weekEventIds: new Set(activeEvents.filter((event) => {
-        const eventDate = parseEventDate(event.dateStr);
-        return eventDate && eventDate >= weekStart && eventDate <= weekEnd;
-      }).map((event) => event.id)),
-    };
+    return new Set(events.filter((event) => {
+      const eventDate = event.startAt ? new Date(event.startAt) : new Date(event.dateStr);
+      return !Number.isNaN(eventDate.getTime()) && eventDate >= weekStart && eventDate <= weekEnd;
+    }).map((event) => event.id));
   }, [events]);
 
   const handleOpenRegister = (evt: EventItem) => {
+    if (registeredEventIds.has(evt.id)) return;
     setClosingSheet(null);
     setSheetDragOffset(0);
     setShowRegisterModal(evt);
@@ -131,17 +137,20 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
         </div>
 
         <EventCoverflow
-          events={displayedEvents}
+          registeredEventIds={registeredEventIds}
+          events={events}
           language={language}
           weekEventIds={weekEventIds}
           isLoading={isLoading}
+          selectedEventId={selectedEventId}
+          onSelectEvent={onSelectEventId}
           onDetails={setActiveEventDetail}
           onRegister={handleOpenRegister}
         />
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách sự kiện */}
         <div className="section-bottom-see-more-row">
           <Link
-            to="/su-kien"
+            to={selectedEventId ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}` : '/su-kien'}
             className="btn-section-see-more-borderless"
             aria-label="Xem thêm toàn bộ lịch hoạt động sự kiện"
           >
@@ -155,7 +164,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {activeEventDetail && createPortal(
         <div
           className="modal-overlay event-detail-modal-overlay"
-          onClick={() => closeEventSheet('detail')}
+          {...detailBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="event-detail-modal-title"
@@ -217,23 +226,55 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
             </h3>
             <div className="modal-meta-box">
               <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${activeEventDetail.dateStr} (${activeEventDetail.timeStr})`}</p>
+              {activeEventDetail.registrationDeadlineAt && (
+                <p><strong>{language === 'vi' ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatRegistrationDeadline(activeEventDetail.registrationDeadlineAt)}</p>
+              )}
               <p><strong>{language === 'vi' ? 'Địa điểm:' : 'Location:'}</strong> {language === 'vi' ? activeEventDetail.location : activeEventDetail.locationEn}</p>
               <p><strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {activeEventDetail.speaker}</p>
             </div>
             <p className="modal-body-desc">
               {language === 'vi' ? activeEventDetail.summary : activeEventDetail.summaryEn}
             </p>
-            <button
-              type="button"
-              className="btn-figma-primary"
-              onClick={() => {
-                const e = activeEventDetail;
-                setActiveEventDetail(null);
-                handleOpenRegister(e);
-              }}
-            >
-              {language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event'}
-            </button>
+            {detailUnregisterError && (
+              <p className="participant-inline-error" role="alert" style={{ color: '#DC2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                {detailUnregisterError}
+              </p>
+            )}
+            {registeredEventIds.has(activeEventDetail.id) && isParticipantAuthenticated && onLeaveEvent ? (
+              <button
+                type="button"
+                className="btn-figma-primary"
+                style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+                disabled={isUnregisteringDetail}
+                onClick={async () => {
+                  setIsUnregisteringDetail(true);
+                  setDetailUnregisterError(null);
+                  try {
+                    await onLeaveEvent(activeEventDetail.id);
+                    setActiveEventDetail(null);
+                  } catch (error) {
+                    setDetailUnregisterError(error instanceof Error ? error.message : (language === 'vi' ? 'Không thể hủy đăng ký sự kiện.' : 'Failed to cancel registration.'));
+                  } finally {
+                    setIsUnregisteringDetail(false);
+                  }
+                }}
+              >
+                {isUnregisteringDetail ? (language === 'vi' ? 'Đang hủy đăng ký...' : 'Cancelling...') : (language === 'vi' ? 'Hủy đăng ký' : 'Cancel Registration')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-figma-primary"
+                disabled={registeredEventIds.has(activeEventDetail.id) || registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow)}
+                onClick={() => {
+                  const e = activeEventDetail;
+                  setActiveEventDetail(null);
+                  handleOpenRegister(e);
+                }}
+              >
+                {registeredEventIds.has(activeEventDetail.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(activeEventDetail.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Đăng ký tham gia sự kiện này' : 'Register for this Event')}
+              </button>
+            )}
           </div>
         </div>,
         document.body,
@@ -243,13 +284,13 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       {showRegisterModal && createPortal(
         <div
           className="modal-overlay registration-modal-overlay"
-          onClick={() => closeEventSheet('register')}
+          {...registrationBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="registration-modal-title"
         >
           <div
-            className={`modal-content modal-register-content ${closingSheet === 'register' ? 'is-closing' : ''}`}
+            className={`modal-content modal-register-content ${registeredSuccess ? 'event-feedback-modal' : ''} ${closingSheet === 'register' ? 'is-closing' : ''}`}
             style={closingSheet !== 'register' && (isSheetDragging || sheetDragOffset !== 0) ? { transform: `translateY(${sheetDragOffset}px)`, transition: isSheetDragging ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' } : undefined}
             onClick={(e) => e.stopPropagation()}
           >
@@ -322,10 +363,19 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                         <Clock size={14} />
                         {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${showRegisterModal.dateStr} • ${showRegisterModal.timeStr}`}
                       </span>
-                      <span className="reg-meta-item">
-                        <MapPin size={14} />
-                        {language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn}
-                      </span>
+                      {(language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn) && (
+                        <span className="reg-meta-item">
+                          <MapPin size={14} />
+                          {language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn}
+                        </span>
+                      )}
+                      {showRegisterModal.registrationDeadlineAt && (
+                        <span className="reg-meta-item">
+                          <Clock size={14} />
+                          {language === 'vi' ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                          {formatRegistrationDeadline(showRegisterModal.registrationDeadlineAt)}
+                        </span>
+                      )}
                       {showRegisterModal.speaker && (
                         <span className="reg-meta-item reg-speaker-line">
                           <strong>{language === 'vi' ? 'Diễn giả:' : 'Speaker:'}</strong> {showRegisterModal.speaker}
@@ -333,15 +383,6 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                       )}
                     </div>
                   </div>
-                </div>
-
-                <div className="alert-figma-notice">
-                  <AlertTriangle size={18} />
-                  <span>
-                    {language === 'vi' 
-                      ? 'Mỗi tài khoản ghi danh cho chính mình. Sau khi đăng ký hoạt động, bạn sẽ quét mã QR do Ban tổ chức hiển thị tại nơi diễn ra để điểm danh.'
-                      : 'Each account joins for itself. After registering for an activity, scan the QR displayed by the Organizer at the venue to check in.'}
-                  </span>
                 </div>
 
                 {!isParticipantAuthenticated && (
@@ -378,6 +419,8 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   onSubmit={async (e) => {
                     e.preventDefault();
                     if (!isParticipantAuthenticated) return;
+                    if (registeredEventIds.has(showRegisterModal.id)) return;
+                    if (registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt)) return;
                     if (showRegisterModal && onJoinEvent) {
                       try {
                         setRegistrationError(null);
@@ -391,18 +434,20 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   className="figma-reg-form"
                 >
                   {registrationError && <p role="alert" className="app-loading-state">{registrationError}</p>}
-                  <button type="submit" className="btn-figma-primary reg-submit-button">
+                  <button type="submit" className="btn-figma-primary reg-submit-button" disabled={registeredEventIds.has(showRegisterModal.id) || registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt, registrationNow)}>
                     <CheckCircle2 size={18} />
-                    <span>{language === 'vi' ? 'Xác nhận Đăng ký Tham dự' : 'Confirm Registration'}</span>
+                    <span>{registeredEventIds.has(showRegisterModal.id) ? (language === 'vi' ? 'Đã đăng ký' : 'Registered') : registrationDeadlinePassed(showRegisterModal.registrationDeadlineAt, registrationNow) ? (language === 'vi' ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (language === 'vi' ? 'Xác nhận Đăng ký Tham dự' : 'Confirm Registration')}</span>
                   </button>
                 </form>
               </>
             ) : (
               <div className="success-box-center">
-                <CheckCircle2 size={52} color="#15803D" style={{ margin: '0 auto 0.75rem' }} />
-                <h3 id="registration-modal-title" className="modal-heading-title" style={{ color: '#1B2B25' }}>
-                  {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
-                </h3>
+                <div className="event-feedback-header">
+                  <span className="event-feedback-icon"><CheckCircle2 size={32} aria-hidden="true" /></span>
+                  <h3 id="registration-modal-title" className="modal-heading-title">
+                    {language === 'vi' ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
+                  </h3>
+                </div>
                 <p className="success-event-badge">
                   {language === 'vi' ? showRegisterModal.title : showRegisterModal.titleEn}
                 </p>
@@ -411,7 +456,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                     ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp và quét mã QR hoạt động tại nơi diễn ra để điểm danh.'
                     : 'Your account has joined this event. Register for an activity and scan its QR at the venue to check in.'}
                 </p>
-                <div className="success-actions-row" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div className="success-actions-row">
                   {isParticipantAuthenticated && (
                     <Link
                       to="/participant/events"

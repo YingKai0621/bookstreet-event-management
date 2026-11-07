@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Language, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
+import { LeaveEventDialog } from '../../components/participant/LeaveEventDialog';
 
 interface MyEventsPageProps {
   language: Language;
@@ -22,34 +23,14 @@ export const MyEventsPage = ({
   loadError,
   onRetry,
   onLeaveEvent,
-  onJoinEvent,
 }: MyEventsPageProps) => {
   const vi = language === 'vi';
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'ended' | 'left'>('ongoing');
-  const [actionId, setActionId] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [activeTab, setActiveTab] = useState<'ongoing' | 'ended'>('ongoing');
+  const [leavingEvent, setLeavingEvent] = useState<ParticipantEvent | null>(null);
 
   const ongoingCount = events.filter(event => event.status === 'ongoing' && event.isJoined).length;
   const endedCount = events.filter(event => event.status === 'ended' && event.isJoined).length;
-  const leftCount = events.filter(event => !event.isJoined || event.status === 'left').length;
-  const filteredEvents = events.filter(event => {
-    if (activeTab === 'ongoing') return event.status === 'ongoing' && event.isJoined;
-    if (activeTab === 'ended') return event.status === 'ended' && event.isJoined;
-    return !event.isJoined || event.status === 'left';
-  });
-
-  const runAction = async (event: ParticipantEvent) => {
-    setActionId(event.id);
-    setActionError('');
-    try {
-      if (event.isJoined) await onLeaveEvent(event.id);
-      else await onJoinEvent?.(event.id);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : (vi ? 'Không thể cập nhật đăng ký sự kiện.' : 'Unable to update the event registration.'));
-    } finally {
-      setActionId('');
-    }
-  };
+  const filteredEvents = events.filter(event => event.isJoined && event.status === activeTab);
 
   return (
     <div className="participant-my-events-view">
@@ -67,12 +48,9 @@ export const MyEventsPage = ({
         <button type="button" className={`participant-tab-btn ${activeTab === 'ended' ? 'is-active' : ''}`} onClick={() => setActiveTab('ended')}>
           {vi ? `Đã kết thúc (${endedCount})` : `Ended (${endedCount})`}
         </button>
-        <button type="button" className={`participant-tab-btn ${activeTab === 'left' ? 'is-active' : ''}`} onClick={() => setActiveTab('left')}>
-          {vi ? `Đã rời (${leftCount})` : `Left (${leftCount})`}
-        </button>
       </div>
 
-      {actionError && <p className="participant-inline-error" role="alert">{actionError}</p>}
+      {leavingEvent && <LeaveEventDialog eventName={leavingEvent.title} language={language} onClose={() => setLeavingEvent(null)} onConfirm={() => onLeaveEvent(leavingEvent.id)} />}
 
       {isLoading ? (
         <div className="participant-data-state" role="status">
@@ -99,14 +77,14 @@ export const MyEventsPage = ({
               <article key={event.id} className="participant-event-card">
                 <div className="event-card-media">
                   <img src={event.imageUrl} alt="" />
-                  <span className={`event-status-pill ${event.status}`}>
-                    {event.status === 'ended'
-                      ? (vi ? 'Đã kết thúc' : 'Ended')
-                      : event.isJoined ? (vi ? 'Đang tham gia' : 'Joined') : (vi ? 'Đã rời' : 'Left')}
-                  </span>
                 </div>
                 <div className="event-card-body">
-                  <h2 className="event-card-title">{event.title}</h2>
+                  <div className="participant-event-card-heading">
+                    <h2 className="event-card-title">{event.title}</h2>
+                    <span className={`event-status-pill ${event.status}`}>
+                      {event.status === 'ended' ? (vi ? 'Đã kết thúc' : 'Ended') : (vi ? 'Đang tham gia' : 'Joined')}
+                    </span>
+                  </div>
                   <div className="event-card-meta">
                     <div className="event-meta-item"><Calendar size={15} /><span>{event.dateRange}</span></div>
                     <div className="event-meta-item"><MapPin size={15} /><span>{event.location}</span></div>
@@ -119,15 +97,8 @@ export const MyEventsPage = ({
                       {vi ? 'Xem hoạt động' : 'View activities'}<ArrowRight size={14} />
                     </Link>
                     {event.isJoined && event.canLeave && (
-                      <button type="button" className="btn-part-danger-outline" disabled={actionId === event.id} onClick={() => {
-                        if (window.confirm(vi ? 'Bạn có chắc chắn muốn rời sự kiện này?' : 'Are you sure you want to leave this event?')) void runAction(event);
-                      }}>
-                        {actionId === event.id ? (vi ? 'Đang xử lý...' : 'Working...') : (vi ? 'Rời sự kiện' : 'Leave')}
-                      </button>
-                    )}
-                    {!event.isJoined && onJoinEvent && (
-                      <button type="button" className="btn-part-secondary" disabled={actionId === event.id} onClick={() => void runAction(event)}>
-                        {actionId === event.id ? (vi ? 'Đang xử lý...' : 'Working...') : (vi ? 'Tham gia lại' : 'Rejoin')}
+                      <button type="button" className="btn-part-danger-outline" onClick={() => setLeavingEvent(event)}>
+                        {vi ? 'Rời sự kiện' : 'Leave'}
                       </button>
                     )}
                   </div>

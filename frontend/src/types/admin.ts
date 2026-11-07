@@ -87,17 +87,6 @@ export interface AdminAuditLogItem {
   ipAddress: string;
 }
 
-export interface AdminNotificationItem {
-  id: string;
-  title: string;
-  content: string;
-  category: 'security' | 'account' | 'system' | 'role';
-  timeAgo: string;
-  isRead: boolean;
-  isImportant?: boolean;
-  targetTab?: string;
-}
-
 export interface AdminProfile {
   id: string;
   name: string;

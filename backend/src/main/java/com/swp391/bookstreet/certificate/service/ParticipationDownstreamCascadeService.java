@@ -10,7 +10,7 @@ import com.swp391.bookstreet.auth.entity.User;
 import com.swp391.bookstreet.auth.repository.UserRepository;
 import com.swp391.bookstreet.certificate.entity.Certificate;
 import com.swp391.bookstreet.certificate.repository.CertificateRepository;
-import com.swp391.bookstreet.notification.entity.ParticipantNotification;
+import com.swp391.bookstreet.notification.entity.Notification;
 import com.swp391.bookstreet.notification.entity.ParticipantNotificationType;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationCommand;
 import com.swp391.bookstreet.notification.service.ParticipantNotificationWriter;
@@ -96,7 +96,7 @@ public class ParticipationDownstreamCascadeService implements ParticipationDowns
 
         Long notificationId = null;
         if (certificateChanged) {
-            ParticipantNotification notification = notifications.write(
+            Notification notification = notifications.write(
                     certificateNotification(context, certificate,
                             ParticipantNotificationType.CERTIFICATE_ISSUED,
                             command.transitionKey(), command.occurredAt()));
@@ -133,7 +133,7 @@ public class ParticipationDownstreamCascadeService implements ParticipationDowns
 
         Long notificationId = null;
         if (certificateChanged) {
-            ParticipantNotification notification = notifications.write(
+            Notification notification = notifications.write(
                     certificateNotification(context, certificate,
                             ParticipantNotificationType.CERTIFICATE_REVOKED,
                             command.transitionKey(), command.occurredAt()));

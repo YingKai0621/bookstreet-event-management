@@ -2,6 +2,7 @@ package com.swp391.bookstreet.security.config;
 
 import com.swp391.bookstreet.security.handler.RestAccessDeniedHandler;
 import com.swp391.bookstreet.security.handler.RestAuthenticationEntryPoint;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +35,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfiguration {
 
     @Bean
@@ -143,6 +146,8 @@ public class SecurityConfiguration {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
 
         http.authorizeHttpRequests(authorize -> authorize
+                // The original request was authorized; this only finishes an open notification stream.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                 .requestMatchers(
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",
@@ -154,11 +159,30 @@ public class SecurityConfiguration {
                         "/swagger-ui/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/media/event-banners/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/media/booth-images/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/assets/heritage/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/events", "/api/v1/events/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/activities", "/api/v1/activities/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/heritages", "/api/v1/heritages/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/public/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/chat/messages").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/{eventId}/applications").hasRole("PARTNER")
+                .requestMatchers("/api/v1/participant/notifications", "/api/v1/participant/notifications/**")
+                .hasRole("PARTICIPANT")
+                .requestMatchers("/api/v1/partner/notifications", "/api/v1/partner/notifications/**")
+                .hasRole("PARTNER")
+                .requestMatchers("/api/v1/organizer/notifications", "/api/v1/organizer/notifications/**")
+                .hasRole("ORGANIZER")
+                .requestMatchers("/api/v1/admin/notifications", "/api/v1/admin/notifications/**")
+                .hasRole("ADMIN")
                 .requestMatchers("/api/v1/participant/**").hasRole("PARTICIPANT")
+                .requestMatchers("/api/v1/organizer/feedbacks", "/api/v1/organizer/feedbacks/**")
+                .hasRole("ORGANIZER")
+                .requestMatchers("/api/v1/organizer/heritages", "/api/v1/organizer/heritages/**")
+                .hasRole("ORGANIZER")
+                .requestMatchers("/api/v1/organizer/heritage-images", "/api/v1/organizer/heritage-images/**")
+                .hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

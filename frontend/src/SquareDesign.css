@@ -1,0 +1,429 @@
+/* Presentation changes belong only to authenticated role content and its portals.
+   Public/landing/auth pages and shared navigation retain their original CSS. */
+@scope (.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell, .leave-event-dialog, .org-modal-backdrop, .org-crop-modal-backdrop, .org-booth-drawer-backdrop, .org-partner-drawer-backdrop) to (.role-sidebar, .participant-top-bar, .partner-top-bar, .organizer-topbar, .admin-topbar) {
+/* Shared workspace palette and geometry. Feature-owned shapes, including
+   circular indicators and switch thumbs, retain their intended radius. */
+:scope {
+  --workspace-canvas: #f3f6f4;
+  --workspace-paper: #ffffff;
+  --workspace-ink: #182924;
+  --workspace-muted: #5c7069;
+  --workspace-line: #d7e2dc;
+  --workspace-soft: #edf3ef;
+  --workspace-accent: #e9bc63;
+  --workspace-shadow: 0 3px 12px rgb(24 41 36 / 4%);
+  --workspace-floating-shadow: 0 16px 48px rgb(24 41 36 / 16%);
+  --workspace-control-radius: 8px;
+  --workspace-action-radius: 10px;
+  --workspace-tag-radius: 4px;
+  --workspace-tag-success-bg: #edf7f1;
+  --workspace-tag-success-line: #cce5d8;
+  --workspace-tag-success-ink: #216147;
+  --workspace-tag-neutral-bg: #f3f5f4;
+  --workspace-tag-neutral-line: #dfe5e2;
+  --workspace-tag-neutral-ink: #667970;
+  --workspace-card-radius: 0px;
+}
+
+/* One action geometry across role content. Group containers remain structural
+   surfaces; individual tab choices are lightly rounded for a clear inner layer. */
+@layer workspace-button-geometry {
+  button {
+    border-radius: var(--workspace-action-radius) !important;
+  }
+
+  /* Statistic cards remain major square surfaces even when clickable. */
+  :is(.obr-kpi-card, .org-dashboard-kpi, .kpi-card, .adm-kpi-card,
+      .booth-kpi-card, .summary-stat-card, .partner-stat-card,
+      .partner-workspace-stat, .org-metric-card, .org-booth-stat-card,
+      .facility-stat, .my-booths-summary-card) {
+    border-radius: 0 !important;
+  }
+
+  :is(.event-hub-application-cta > a, .my-booth-actions > a,
+      .my-booth-actions > button, .s2-request-scope > strong, select) {
+    border-radius: var(--workspace-action-radius) !important;
+  }
+
+  .s2-request-scope-toggle {
+    border-radius: var(--workspace-action-radius) !important;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  :is(button[role="tab"], [role="tablist"] button,
+      .participant-tab-btn, .partner-tab-btn, .org-tab-btn,
+      .adm-tab-pill, .adm-role-tab-btn, .org-event-status-tab,
+      .obr-filter-tab, .s2-filter-tab, .event-hub-filter,
+      .participant-view-tabs button, .participant-tabs-bar button,
+      .partner-filter-pills button, .paw-tabs button, .oaw-tabs button,
+      .adm-notif-tabs button, .booth-visit-modes button,
+      .s2-request-scope-toggle button) {
+    border-radius: var(--workspace-control-radius) !important;
+  }
+
+  /* Underlined tabs need straight bottom corners so their selection line
+     stays flat. Filled, inset tab choices retain all four rounded corners. */
+  :is(.participant-tabs-bar .participant-tab-btn, .org-tab-btn) {
+    border-radius: var(--workspace-control-radius) var(--workspace-control-radius) 0 0 !important;
+  }
+
+  .participant-notification-filters .participant-tab-btn {
+    border-radius: var(--workspace-control-radius) !important;
+  }
+
+  .paw-tabs button {
+    border-radius: 0 !important;
+  }
+
+  .event-hub-select-menu button {
+    border-radius: 0 !important;
+  }
+}
+
+/* Large surfaces anchor the workspace with square edges. Only their outer
+   shells are reset: nested controls, badges, icons and indicators keep curves.
+   The layer protects this rule from lazy route CSS and inline card radii. */
+@layer workspace-surfaces {
+  :is(.participant-summary-grid, .participant-featured-banner,
+      .participant-mobile-agenda, .participant-agenda-empty-box,
+      .participant-data-state, .participant-event-summary,
+      .participant-event-summary-counts, .participant-rating-summary,
+      .participant-calendar-wrapper, .event-detail-hero,
+      .calendar-modal-event-card, .calendar-event-card, .certificate-card-row,
+      .certificate-empty-card, .badge-item-card, .reward-history-section,
+      .rewards-collection-section, .attendance-scan-card, .booth-scan-card,
+      .booth-scan-visit-card, .partner-todo-section, .partner-card-form,
+      .booth-map-container, .booth-map-svg-wrap, .notifications-list-container,
+      .partner-empty-state, .my-booths-loading, .my-booths-empty,
+      .event-card-article, .event-app-form-box, .event-hub-hero,
+      .event-hub-loading, .event-hub-empty, .s3-payment-history,
+      .booth-kpi-grid, .booth-card-item, .booth-empty-state,
+      .adm-modal-box, .adm-profile-details-grid, .adm-profile-form,
+      .facility-panel, .review-list-pane, .org-modal-box, .org-toolbar,
+      .org-event-list, .org-event-form-section, .participant-detail-summary,
+      .participant-history-empty, .s2-booth-spec-card, .s2-partner-request-empty,
+      .booth-visit-summary > div, .s2-booth-summary article,
+      .participant-notification-filters, .org-dashboard-kpi,
+      .obr-event-bar, .obr-toolbar, .org-event-toolbar, .booth-crud-toolbar, .organizer-feedback-toolbar,
+      .organizer-feedback-total, .organizer-feedback-card,
+      .facility-stat, .facility-panel) {
+    border-radius: 0 !important;
+  }
+
+  :is(.adm-card, .admin-card, .organizer-card, .adm-alert-card,
+      .adm-profile-card, .adm-profile-sec-card, .profile-card-container,
+      .adm-badge-item-card, .adm-chart-card, .adm-donut-card, .adm-filter-card,
+      .adm-kpi-card, .adm-notif-list-card, .adm-notif-tabs-card,
+      .adm-perm-module-card, .adm-progression-card, .adm-role-meta-card,
+      .adm-role-selector-card, .adm-settings-card, .adm-table-card,
+      .adm-table-container, .audit-content-card, .activity-row-card,
+      .badge-catalog-card, .dashboard-calendar-card, .detail-notes-card,
+      .event-application-card, .event-app-summary-card, .event-discovery-card,
+      .event-withdraw-summary-card, .heritage-admin-card, .heritage-management-card,
+      .heritage-management-panel, .kpi-card, .mobile-user-card,
+      .my-booth-card, .my-booths-summary-card, .oaw-card, .oaw-review-panel,
+      .obr-request-card, .organizer-feedback-card,
+      .org-booth-card, .org-booth-management-panel, .org-booth-spec-card,
+      .org-booth-stat-card, .org-dashboard-chart-card, .org-dashboard-panel,
+      .org-event-overview-card, .org-metric-card, .org-partner-table-shell,
+      .org-table-container, .participant-event-card, .participant-event-overview-card,
+      .participant-list-card, .participant-notification-card, .participant-rating-card,
+      .participant-state-card, .participant-table-wrap, .partner-active-event-card,
+      .partner-activity-row-card, .partner-card, .partner-chart-card,
+      .partner-event-card, .partner-stat-card, .partner-workspace-panel,
+      .partner-workspace-hero, .partner-workspace-stats, .partner-workspace-activity,
+      .partner-workspace-event, .partner-workspace-task, .partner-workspace-empty,
+      .partner-workspace-stat, .partner-workspace-table-wrap, .paw-card,
+      .paw-request-panel, .proposal-item-card, .quick-action-card,
+      .quick-shortcuts-panel, .reward-next-badge-card, .rewards-earn-card,
+      .s2-event-config-panel, .s2-hold-card, .s2-panel, .s2-partner-map-panel,
+      .s2-partner-request-card, .s2-request-card, .s3-assignment-card,
+      .s3-checkout-card, .schedule-table-wrap, .summary-stat-card, .timeline-card,
+      .venue-panel, .booth-card, .booth-detail-card, .booth-kpi-card,
+      .booth-physical-map-panel, .booth-selection-summary-card,
+      .booth-table-container, .booth-visit-panel, .booth-visit-table-wrap,
+      .adm-modal-content, .booth-modal-box, .org-modal-content,
+      .certificate-detail-modal, .direct-event-modal, .event-application-modal,
+      .event-feedback-modal, .my-booths-qr-modal, .oaw-modal, .oaw-create-modal,
+      .org-event-basic-modal, .org-event-form-modal, .org-event-lifecycle-modal,
+      .org-publish-event-modal,
+      .participant-rating-modal, .partner-modal-card, .s2-booth-request-modal,
+      .s2-modal, .participant-drawer, .org-booth-drawer, .org-partner-drawer) {
+    border-radius: 0 !important;
+  }
+}
+
+/* Compact labels are deliberately quieter than their square outer surfaces.
+   Tags use the same small corner, thin outline and typographic weight in every role. */
+:is(.code-badge, .booth-large-badge,
+    .organizer-location-type, .booth-category-badge, .activity-tag,
+    .event-cat-tag, .heritage-code-pill, .card-type-tag, .card-booth-tag,
+    .reader-role, .partner-booth-payment-status, .badge-state) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid #d5e4dc;
+  border-radius: var(--workspace-tag-radius) !important;
+  background: #f3f7f4;
+  color: #315d4c;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Statuses are rectangular markers with a small, readable state indicator.
+   Feature styles still choose semantic warning/error/success colours. */
+:is(.status-pill, .organizer-location-status, .adm-badge-status, .adm-badge-role,
+    .paw-status, .oaw-status, .heritage-status-pill, .event-status-pill,
+    .s3-checkout-status-pill, .s3-table-status-pill, .s2-hold-status-pill,
+    .participant-activity-status, .participant-registration-pill,
+    .participant-rating-status, .participant-status, .certificate-status-pill,
+    .heritage-management-status, .partner-workspace-status,
+    .organizer-feedback-status) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border-radius: var(--workspace-tag-radius) !important;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+:is(.organizer-location-status > i, .adm-status-dot, .org-event-status-dot,
+    .paw-status > i, .oaw-status > span, .event-status-pill > span) {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) {
+  background-color: var(--workspace-canvas);
+  color: var(--workspace-ink);
+}
+
+/* The analytics board is a major report surface, so its outer perimeter stays
+   square while its two chart panels retain their clear internal structure. */
+.org-dashboard-analytics {
+  border-radius: 0 !important;
+}
+
+/* Existing card owners across the four workspaces retain their own layout. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-card, .admin-card, .organizer-card, .org-dashboard-panel,
+      .org-dashboard-chart-card, .org-event-overview-card, .org-booth-management-panel,
+      .partner-workspace-panel, .partner-workspace-stat, .partner-card, .summary-stat-card, .partner-stat-card,
+      .participant-event-card, .participant-rating-card, .participant-event-overview-card,
+      .booth-kpi-card, .booth-card, .adm-badge-item-card, .adm-kpi-card, .org-metric-card, .adm-profile-card,
+      .adm-profile-sec-card, .booth-detail-card, .booth-selection-summary-card) {
+  border: 1px solid var(--workspace-line);
+  border-radius: var(--workspace-card-radius);
+  box-shadow: var(--workspace-shadow);
+}
+
+:is(.summary-stat-card, .partner-stat-card, .booth-kpi-card,
+    .adm-kpi-card, .org-metric-card, .partner-workspace-stat) {
+  border-top: 3px solid var(--workspace-accent) !important;
+  background: var(--workspace-paper);
+}
+
+:is(.participant-event-card, .participant-rating-card, .partner-card,
+    .summary-stat-card, .partner-stat-card, .booth-kpi-card):hover {
+  transform: none;
+  border-color: #a9beb2;
+  box-shadow: 0 5px 18px rgb(24 41 36 / 7%);
+}
+
+/* Form rhythm is shared; checkboxes, radios, sliders and upload controls keep
+   their native dimensions and semantics. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input:not([type]), input[type="text"], input[type="email"], input[type="password"],
+      input[type="search"], input[type="tel"], input[type="number"], input[type="url"],
+      input[type="date"], input[type="datetime-local"], input[type="time"], select, textarea) {
+  border: 1px solid var(--workspace-line);
+  background-color: var(--workspace-paper);
+  color: var(--workspace-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  min-height: 42px;
+  border-radius: var(--workspace-control-radius);
+  box-shadow: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+/* Search and sort share one visible control surface, including icon wrappers. */
+:is(.event-hub-search, .my-booths-search, .paw-search, .oaw-search,
+    .partner-event-search, .participant-search, .venue-search, .facility-search,
+    .organizer-feedback-search-control, .heritage-management-search,
+    .event-hub-select-field > div, .facility-filter,
+    .adm-filter-search, .obr-search-input, .booth-search-input,
+    .part-search-input input, input[type="search"]) {
+  min-height: 44px !important;
+  border: 1px solid #bfd1c7 !important;
+  border-radius: 10px !important;
+  background-color: #fff !important;
+  color: #193b30;
+  box-shadow: none;
+}
+
+:is(.event-hub-search, .my-booths-search, .paw-search, .oaw-search,
+    .partner-event-search, .participant-search, .venue-search, .facility-search,
+    .organizer-feedback-search-control, .heritage-management-search,
+    .event-hub-select-field > div, .facility-filter):focus-within {
+  border-color: #216147 !important;
+  box-shadow: 0 0 0 3px rgb(33 97 71 / 12%);
+  outline: none;
+}
+
+/* Inner fields borrow the wrapper border so icons and text form one control. */
+:is(.event-hub-search, .my-booths-search, .paw-search, .oaw-search,
+    .partner-event-search, .participant-search, .venue-search, .facility-search,
+    .organizer-feedback-search-control, .heritage-management-search,
+    .event-hub-select-field > div, .facility-filter) :is(input, select) {
+  min-width: 0;
+  min-height: 42px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) select {
+  min-height: 44px;
+  padding-inline: 12px 34px;
+  border-color: #bfd1c7;
+  border-radius: var(--workspace-action-radius) !important;
+  background-color: var(--workspace-paper);
+  color: #193b30;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) select:focus-visible {
+  border-color: #216147;
+  box-shadow: 0 0 0 3px rgb(33 97 71 / 12%);
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) select option {
+  padding: 10px 12px;
+  background: #fff;
+  color: #17382e;
+  font-weight: 600;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell) select option:checked {
+  background: #2167c5;
+  color: #fff;
+  box-shadow: 0 0 0 100vmax #2167c5 inset;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea):focus-visible {
+  outline: 2px solid #33745b;
+  outline-offset: 2px;
+  border-color: #33745b;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea):disabled {
+  background-color: var(--workspace-soft);
+  color: var(--workspace-muted);
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: #b33d32;
+}
+
+/* Keep semantic status colours owned by their feature, while shared actions use
+   the primary/secondary shape from the workspace hero. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(button, a):not(:where(.role-sidebar *, .participant-top-bar *, .partner-top-bar *, .organizer-topbar *, .admin-topbar *)):focus-visible {
+  outline: 2px solid #33745b;
+  outline-offset: 3px;
+}
+
+:is(.btn-part-primary, .btn-part-secondary, .btn-part-gold, .btn-part-danger,
+    .adm-btn-primary, .adm-btn-secondary, .btn-org-primary, .btn-org-secondary,
+    .partner-workspace-primary-action, .partner-workspace-secondary-action,
+    .participant-primary-action, .participant-refresh-button,
+    .event-card-primary-action, .event-card-secondary-action, .event-card-danger-action,
+    .facility-button, .s3-btn-primary, .s3-btn-secondary, .paw-button,
+    .org-dashboard-text-action, .btn-toolbar-refresh, .organizer-feedback-pagination button,
+    .compact-pagination button, .heritage-management-actions button,
+    .heritage-management-dialog-footer button, .venue-row-actions button,
+    .partner-filter-pills button) {
+  min-height: 42px;
+  border-radius: var(--workspace-action-radius) !important;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+
+/* Tables use quiet header bands and clear row separation instead of elevation. */
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) th {
+  background: var(--workspace-soft);
+  border-bottom: 1px solid var(--workspace-line);
+  color: #405c4e;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}
+
+:is(.participant-app-shell, .partner-app-shell, .organizer-app-shell, .admin-app-shell)
+  :is(.adm-table, .org-table, .booth-table, .partner-table) td {
+  border-bottom: 1px solid #e5ece7;
+  line-height: 1.55;
+}
+
+:is(.adm-table, .org-table, .booth-table, .partner-table) tbody tr:hover {
+  background-color: #f6f9f7;
+}
+
+.compact-pagination button {
+  border-radius: var(--workspace-control-radius);
+  border-color: var(--workspace-line);
+  min-height: 40px;
+  box-shadow: none;
+}
+
+.compact-pagination button:not(:disabled):hover {
+  background: var(--workspace-soft);
+  border-color: #a9beb2;
+}
+
+:is(.adm-modal-content, .booth-modal-box, .org-modal-content) {
+  border-radius: var(--workspace-card-radius);
+  border: 1px solid var(--workspace-line);
+  box-shadow: var(--workspace-floating-shadow);
+}
+
+
+}
+
+/* Public semantic labels follow the same non-pill language. Navigation,
+   avatars and genuinely circular controls are intentionally not included. */
+:is(.public-map-status, .booth-status) {
+  border-radius: 4px !important;
+}
+
+.category-pill-btn {
+  border-radius: 10px !important;
+}

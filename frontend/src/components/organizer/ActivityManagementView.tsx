@@ -1,5 +1,6 @@
 import { PaginatedList } from '../ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   AlertTriangle,
   Check,
@@ -58,6 +59,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
     setFormData(null);
     setShowDeleteConfirm(false);
   };
+  const detailBackdropHandlers = useBackdropClick(handleCloseModal);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,7 +413,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
 
       {/* Detail & Edit Modal if viewing or editing an activity */}
       {selectedActivity && formData && (
-        <div className="org-modal-backdrop" onClick={handleCloseModal}>
+        <div className="org-modal-backdrop" {...detailBackdropHandlers}>
           <div 
             className="org-modal-box" 
             style={{ 

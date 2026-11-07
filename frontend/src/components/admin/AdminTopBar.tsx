@@ -7,15 +7,15 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
-import { AdminNotificationItem, AdminProfile } from '../../types/admin';
+import { AdminProfile } from '../../types/admin';
 
 interface AdminTopBarProps {
   language: Language;
   profile: AdminProfile;
-  unreadCount: number;
-  notifications?: AdminNotificationItem[];
-  onMarkAllNotifsRead?: () => void;
-  onMarkNotifRead?: (id: string) => void;
+  unreadCount: number | null;
+  notificationLoading: boolean;
+  notificationError: string;
+  onNotificationPopoverOpen: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
   onLogout: () => void;
@@ -26,9 +26,9 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
   language,
   profile,
   unreadCount,
-  notifications = [],
-  onMarkAllNotifsRead,
-  onMarkNotifRead,
+  notificationLoading,
+  notificationError,
+  onNotificationPopoverOpen,
   onOpenNotifications,
   onOpenProfile,
   onLogout,
@@ -62,8 +62,6 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
     };
   }, []);
 
-  const latestNotifs = notifications.slice(0, 4);
-
   return (
     <header className="admin-topbar">
       {/* 1. Left: Brand Logo & Mobile Toggle */}
@@ -96,14 +94,17 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
             type="button"
             className={`admin-icon-button ${notifDropdownOpen ? 'is-active' : ''}`}
             onClick={() => {
-              setNotifDropdownOpen(!notifDropdownOpen);
+              const opening = !notifDropdownOpen;
+              setNotifDropdownOpen(opening);
               setDropdownOpen(false);
+              if (opening) onNotificationPopoverOpen();
             }}
-            aria-label="Xem thông báo hệ thống"
+            aria-label={unreadCount !== null && unreadCount > 0
+              ? `Xem thông báo (${unreadCount} chưa đọc)` : 'Xem thông báo'}
             title={language === 'vi' ? 'Thông báo quản trị' : 'Admin notifications'}
           >
             <Bell size={18} />
-            {unreadCount > 0 && <span className="admin-badge-dot"></span>}
+            {unreadCount !== null && unreadCount > 0 && <span className="admin-badge-dot"></span>}
           </button>
 
           {notifDropdownOpen && (
@@ -111,56 +112,37 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
               <div className="notif-dropdown-header">
                 <strong className="notif-header-title-text">{language === 'vi' ? 'Thông báo mới nhất' : 'Admin Notifications'}</strong>
                 <div className="notif-header-center">
-                  {unreadCount > 0 && (
+                  {unreadCount !== null && unreadCount > 0 && (
                     <span className="notif-unread-badge">
                       {unreadCount} {language === 'vi' ? 'mới' : 'new'}
                     </span>
                   )}
                 </div>
                 <div className="notif-header-right">
-                  {unreadCount > 0 && onMarkAllNotifsRead ? (
-                    <button 
-                      type="button"
-                      className="notif-mark-read-btn"
-                      onClick={() => onMarkAllNotifsRead()}
-                    >
-                      {language === 'vi' ? 'Đã đọc tất cả' : 'Mark all read'}
-                    </button>
-                  ) : (
-                    <span style={{ width: '60px' }}></span>
-                  )}
+                  <span style={{ width: '60px' }}></span>
                 </div>
               </div>
 
               <div className="notif-dropdown-list">
-                {latestNotifs.length === 0 ? (
-                  <div className="notif-dropdown-empty">
-                    <Bell size={24} style={{ opacity: 0.4, marginBottom: '0.4rem' }} />
-                    <p>{language === 'vi' ? 'Không có thông báo mới nào' : 'No notifications'}</p>
+                {notificationLoading ? (
+                  <div className="notif-dropdown-empty" role="status">
+                    <p>{language === 'vi' ? 'Đang tải thông báo...' : 'Loading notifications...'}</p>
+                  </div>
+                ) : notificationError ? (
+                  <div className="notif-dropdown-empty" role="alert">
+                    <p>{notificationError}</p>
+                    <button type="button" className="notif-view-all-link"
+                      onClick={onNotificationPopoverOpen}>
+                      {language === 'vi' ? 'Thử lại' : 'Retry'}
+                    </button>
                   </div>
                 ) : (
-                  latestNotifs.map((notif) => (
-                    <div 
-                      key={notif.id} 
-                      className={`notif-dropdown-item ${!notif.isRead ? 'unread' : ''}`}
-                      onClick={() => {
-                        if (!notif.isRead && onMarkNotifRead) {
-                          onMarkNotifRead(notif.id);
-                        }
-                        setNotifDropdownOpen(false);
-                        onOpenNotifications();
-                      }}
-                    >
-                      <div className="notif-item-indicator">
-                        {!notif.isRead && <span className="notif-blue-dot"></span>}
-                      </div>
-                      <div className="notif-item-content">
-                        <h4 className="notif-item-title">{notif.title}</h4>
-                        <p className="notif-item-desc">{notif.content}</p>
-                        <span className="notif-item-time">{notif.timeAgo}</span>
-                      </div>
-                    </div>
-                  ))
+                  <div className="notif-dropdown-empty">
+                    <Bell size={24} style={{ opacity: 0.4, marginBottom: '0.4rem' }} />
+                    <p>{language === 'vi'
+                      ? 'Hiện chưa có thông báo nào dành cho Admin.'
+                      : 'There are currently no notifications for Admin.'}</p>
+                  </div>
                 )}
               </div>
 
@@ -174,7 +156,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
                     onOpenNotifications();
                   }}
                 >
-                  {language === 'vi' ? 'Xem tất cả thông báo hệ thống →' : 'View all admin notifications →'}
+                  {language === 'vi' ? 'Mở trang thông báo →' : 'Open notifications →'}
                 </button>
               </div>
             </div>

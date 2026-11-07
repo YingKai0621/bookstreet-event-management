@@ -1,18 +1,23 @@
 # BookStreet AI Context
 
-Last updated: `2026-10-19`
+Last updated: `2026-11-07`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V9. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V17. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
-  Location/Activity schema and concurrency constraints.
+  Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
+  schema; V11 adds the configurable Activity Attendance early-scan window; V12 owns the Sprint 7
+  BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay. V13
+  adds the Booth image URL used by the demo/public experience. V14 owns the Sprint 8 General
+  Feedback schema. V15 owns the Sprint 9 Heritage schema. V16 owns the Sprint 10 role-scoped
+  Notification schema overlay and backfill. V17 adds the four `BR-110` Notification types.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover clean V1-to-V9 migration, the existing V8-to-V9 upgrade path and
-  the earlier Sprint migration/backfill paths.
+- Flyway migration tests cover the immutable migration chain through V17 and the relevant prior
+  Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
 - Sprint 1 authentication is implemented with JPA entities, repositories, services, REST controllers and Spring Security configuration.
@@ -36,13 +41,14 @@ Last updated: `2026-10-19`
 - Verified Sprint 1 demo accounts are seeded for the Organizer and Partner roles; their passwords exist in the repository only as BCrypt hashes.
 - Swagger/OpenAPI is available for local API exploration.
 - Browser security is implemented with an environment-configured CORS allowlist, configurable Session cookie attributes and a public `GET /api/v1/auth/csrf` token endpoint. CSRF remains required for every state-changing browser request.
-- GitHub Actions CI runs backend verification, including PostgreSQL-backed Event and Partner integration tests, and frontend lint/build for pushes and pull requests targeting `main`.
-- The backend test inventory contains 370 tests. The latest local Surefire report has zero failures
-  and zero errors; 171 database/environment-gated cases are skipped when PostgreSQL/Redis test
-  services are unavailable. GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis.
-  Coverage includes V8/V9 migrations, Event and Activity lifecycles, ownership, lock ordering,
-  Partner/Booth/Activity races, VNPay reconciliation and settlement/expiry boundaries. The
-  disposable VNPay spike suite retains 20 tests.
+- GitHub Actions CI runs backend verification, frontend lint/build and an isolated Playwright UI
+  regression job for pushes and pull requests targeting `main`. Live-data Playwright tests require
+  explicit `E2E_LIVE=true` and do not run merely because local credentials exist.
+- GitHub Actions runs `mvn verify` with PostgreSQL 17.11 and Redis. Automated coverage includes
+  migrations, Event and Activity lifecycles, ownership, lock ordering, Partner/Booth/Activity
+  races, VNPay reconciliation, participation, Attendance, Certificate, Rating and notification
+  behavior. Exact test totals are intentionally not frozen in this context file because the suite
+  changes during Sprint closure.
 - Organizer Event and Partner application Playwright flows are present for the real frontend/backend integration.
 - The focused Sprint 5 Partner/Organizer Activity Playwright suite has 9 passing scenarios.
 - Sprint 2 backend Booth selection, price-locked BoothHold and Hold expiry are implemented through
@@ -58,11 +64,76 @@ Last updated: `2026-10-19`
 - The delivered Sprint 5 scope covers shared Activity Locations, Partner Proposal review, official
   Activity lifecycle, Partner change/cancellation requests and public Activity discovery.
   Participant registration/attendance/rating/certificate commands remain out of Sprint 5 and are
-  now the approved active Sprint 6 scope.
-- Sprint 6 Participant Activity Registration and Attendance is active as of 2026-10-19. Its
-  approved baseline contains 65 Acceptance Criteria, 29 canonical endpoint headings, a seven-table
-  Physical ERD overlay and sole ownership of target migration V10 by Developer A. No Sprint 6 code
-  or V10 migration is implemented yet.
+  delivered in the completed Sprint 6 scope.
+- Sprint 6 Participant Activity Registration and Attendance is complete. Its approved
+  baseline contains 65 Acceptance Criteria and 30 canonical endpoint headings, including the
+  2026-10-27 owner-only Notification bulk-read amendment. The core backend, V10/V11 migrations and
+  Participant/Organizer frontend workflows are implemented on `main` through PR #83 (merge commit
+  `32e8121`). Delivered slices include Event and Activity registration, shared Activity Attendance
+  QR self-scan, Attendance lifecycle and cascade, Certificate issuance/list/detail, Activity
+  Rating, Participant notification inbox and Organizer participation monitoring with audited
+  Attendance correction.
+- The API/frontend reconciliation work through PR #83 removed unsupported Organizer/Partner
+  workspace network calls, wired the approved Organizer Event lifecycle/profile flows, aligned the
+  Participant registration schedule format and synchronized the selected public Event across
+  Event, Booth and map browsing. The implemented
+  `POST /participant/notifications/read-all` command is now an approved owner-only, idempotent
+  extension rather than contract drift.
+- Sprint 6 closure evidence is recorded in `docs/development/SPRINT_06_COMPLETION_REPORT.md`: all
+  65 AC are traceably mapped, the PostgreSQL-backed backend run passed 566/566 with no skips, the
+  focused Sprint 6 browser run passed 44/44, and lint/build plus migration paths are green.
+- Sprint 7 Booth Visit, Points and Badge Progression was activated on 2026-10-28. PR #86 (merge
+  commit `27a88e8`) approved and merged its current-state audit, product baseline, 41-AC Use Case
+  Specification, 12-endpoint API Contract plus four Notification extensions, and vertical-slice
+  three-developer work assignment. PR #92 (merge commit `2178ba6`) implemented V12, the shared
+  reward/Notification foundation, Participant Booth scan, Partner QR display, Participant Rewards
+  reads/UI and Badge Notification support. PR #93 (merge commit `1b95584`) implemented Organizer
+  BoothVisit monitoring plus Admin Badge CRUD and bounded award synchronization. PR #95 (merge
+  commit `573f15a`) added Participant reward/Badge Notification integration coverage, Certificate
+  PDF font hardening and the final frontend consistency fixes. The physical phone-on-LAN flow
+  passed during the 2026-10-30 classroom demo, Sprint 7 is completed, and PR #98 subsequently
+  added V13/demo public-experience improvements without changing the reward contract.
+- Sprint 7 implementation ownership is vertical: Developer A owns V12/reward writes plus Booth
+  scan/Partner QR UI; Developer B owns Organizer monitoring and Admin Badge/backfill APIs plus UI;
+  Developer C owns Participant reward reads/UI and integration closure.
+- Sprint 8 General Feedback Submission and Organizer Handling was activated on 2026-10-31. PR #100
+  (merge commit `a6f070c`) approved and merged the current-state audit, product baseline, Physical
+  ERD overlay, 28-AC Use Case Specification, six-operation API Contract, one-developer
+  Implementation Plan and clean documentation audit. PR #102 (merge commit `8384fe9`) delivered
+  V14, the public API, bounded process-local throttle and Landing Page integration. PR #103 (merge
+  commit `071b97a`) delivered the shared Organizer queue, detail, legal transitions and UI states.
+  Sprint 8 completed on 2026-11-01 with all 28 Acceptance Criteria traceably covered.
+- Sprint 8 delivers only `BOOK_STREET` and `EVENT` General Feedback. It uses one shared Organizer
+  queue, the `NEW -> IN_PROGRESS -> RESOLVED` lifecycle with reopen, one-way Guest communication
+  and a bounded process-local public-submission throttle. Redis remains dedicated to Session
+  storage and General Feedback has no rating/score.
+- Sprint 9 Heritage Public Content completed on 2026-11-01. PR #105 (merge commit `7e46809`)
+  approved its documentation baseline. PR #107 (merge commit `7ed4e0e`) delivered V15, the
+  PostgreSQL-backed Heritage domain, thirteen approved API operations, the real public
+  list/detail experience, shared Organizer management and focused automated coverage for all
+  28 Acceptance Criteria.
+- Sprint 9 delivers one shared Organizer-managed Heritage collection plus public reads for
+  published content. Its statuses are exactly `DRAFT`, `PUBLISHED` and `ARCHIVED`. Heritage remains
+  independent from General Feedback and is not a Feedback target.
+- Sprint 10 Role-Scoped In-App Notifications was activated on 2026-11-03 after PR #116 (merge commit
+  `3a0a76b`) approved its 52-Acceptance-Criteria baseline, Use Case Specifications, 16-operation API
+  Contract, Physical ERD overlay, implementation plan and three-developer ownership model.
+- Sprint 10 keeps the existing `notifications` table as the only durable inbox store. It preserves the
+  six Participant types, adds only the approved Partner outcome and Organizer work-item families, and
+  provides Admin with real role-isolated list/read infrastructure but no type or producer.
+- Developer A is `YingKai0621` and exclusively owns the shared Notification foundation, Participant/Admin
+  integration and implemented migration V16. Developer B and Developer C are stable work-package labels;
+  teammates claim and coordinate the documented Partner or Organizer role before starting its branch.
+- Sprint 10 PR #122 merged at `280588c` on 2026-11-04. It implements V16, role-aware Notification
+  persistence and constraints, the shared writer/query/read foundation, all four role endpoint families,
+  Participant backend compatibility, producer-free Admin operations, exact-role security, no-store
+  handling and focused migration/concurrency coverage. Partner PR #124/#125 and Organizer PR #126 are
+  also merged. PR #133, #136 and #137 added the `BR-110` producers, acceptance evidence and the `BR-111` live
+  signal. Sprint 10 closed on 2026-11-07.
+- The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
+  free version. One assigned Heritage Owner consumes that migration and owns the entity,
+  repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
+  Criteria.
 - Sprint 5 Activity invariants: Proposal Pending does not reserve a slot; approval atomically
   creates one Draft Activity; every non-cancelled official Activity conflicts by physical Location
   and half-open interval across Events; one Pending Activity request exists across change and
@@ -155,6 +226,47 @@ Last updated: `2026-10-19`
 - prepares registration/certificate/Attendance-QR configuration without implementing Participant
   registration or scan commands.
 
+`V10__create_sprint6_participation_schema.sql` creates:
+
+- `event_registrations`
+- `activity_registrations`
+- `attendances`
+- `attendance_adjustments`
+- `certificates`
+- `activity_ratings`
+- `notifications`
+
+`V11__activity_attendance_early_scan_minutes.sql`:
+
+- adds `activities.attendance_early_scan_minutes`;
+- defaults the early-scan window to 15 minutes and constrains it to `0..1440` minutes.
+
+`V12__create_sprint7_reward_schema.sql` is the implemented Sprint 7 migration. It creates
+BoothVisit, PointTransaction, Badge and UserBadge persistence and adds the smallest compatible
+`BADGE_UNLOCKED` Notification extension.
+
+`V13__add_booth_image_url.sql` adds the optional Booth image URL used by the current public/demo
+experience.
+
+`V14__create_sprint8_general_feedback_schema.sql` creates `general_feedbacks` with exact
+`BOOK_STREET`/`EVENT` target constraints, workflow metadata and Organizer queue indexes. V1
+through V14 are now immutable.
+
+`V15__create_sprint9_heritage_content_schema.sql` creates `heritage_contents` with the approved
+11-column shape, exact Draft/Published/Archived lifecycle constraints and public/Organizer query
+indexes. V1 through V15 are now immutable.
+
+`V16__role_scope_notifications.sql` extends the existing `notifications` table with exact recipient-role
+scope and approved Partner/Organizer references, backfills existing rows as `PARTICIPANT`, replaces the
+type/reference/deduplication constraints with role-aware equivalents and adds role-local inbox indexes.
+V1 through V17 are now immutable.
+
+`V17__extend_sprint10_notification_types.sql` replaces only the Notification type/role/reference check to add
+`ACTIVITY_STARTING_SOON`, `PARTNER_EVENT_PUBLISHED`, `PARTNER_BOOTH_HOLD_EXPIRING` and
+`ORGANIZER_BOOTH_PAYMENT_CONFIRMED` under `BR-110`. `BR-111` adds a content-free after-commit Server-Sent
+Events signal for the Participant, Partner and Organizer inboxes without schema change. The Sprint 10 baseline
+is now 58 Acceptance Criteria.
+
 ## Not yet implemented
 
 - Forgot/Reset Password
@@ -162,51 +274,65 @@ Last updated: `2026-10-19`
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
 - Frontend lint-warning cleanup and production bundle splitting
-- Active Sprint 6 Participant Activity registration, Attendance, Certificate, Rating and
-  notification implementation
+- General Feedback reporting and map data
+- Notification behavior outside the approved Sprint 10 type/reference/producer matrices, including any
+  Admin producer, combined inbox, composer, polling or real-time delivery beyond the `BR-111` signal
 
-## Active implementation task
+## Next implementation task
 
-- Begin only `S6-1`: Developer A creates V10, verifies clean V1-to-V10 and V9-to-V10 upgrades and
-  adds the shared persistence/notification-writer foundation.
-- Follow `docs/sprints/CURRENT_SPRINT.md` and
-  `docs/sprints/SPRINT_06_BACKEND_WORK_ASSIGNMENT.md`; do not merge around an unmet gate.
-- Keep the approved Sprint 6 exclusions closed; no Event QR, Participant-specific QR, BoothVisit,
-  Points, Badge, generic notification composer or unapproved compatibility route.
-- Keep browser-level payment/assignment E2E, frontend lint warnings, bundle splitting and optional
-  Activity setup-buffer policy visible in the technical-debt/backlog review.
-- Preserve the Sprint 4 Event-root lock order, unresolved-Payment safety rules, Sprint 5
-  Event → Location(s) → Activity/request lock order and approved Sprint 6 Participant lock order.
+- No Sprint is active. Approve a Sprint 11 baseline before new feature or schema work. Recommended debt is
+  in `docs/development/SPRINT_10_CLOSURE_REPORT.md` section 7.
+- BR-81 equality is resolved as inclusive: exact Booth request deadline is allowed; only a later backend
+  time is rejected. Preserve the canonical predicate with focused boundary tests.
+- General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
+  independent and creates no Notification broadcast.
 
-## Active and latest completed Sprint
+## Latest completed Sprint
 
-Sprint 06 Participant Activity Registration and Attendance is the active implementation Sprint as
-of 2026-10-19. Sprint 05 Activity Planning and Partner Proposal Workflow remains the latest
-completed Sprint.
+Sprint 10 Role-Scoped In-App Notifications is the latest completed Sprint as of 2026-11-07, with 58 Acceptance
+Criteria. See `docs/development/SPRINT_10_CLOSURE_REPORT.md`.
 
-Sprint 6 includes these approved Use Case slices:
+Sprint 8 includes these approved Use Case slices:
 
-- UC-G01 public Activity discovery debt
-- UC-P01 Event participation
-- UC-P02 Activity registration
-- UC-P03 participation tracking, notification and Certificate slice
-- UC-P04 Activity Rating
-- UC-O01 Sprint 6 Event update/cancellation slice
-- UC-O06 Sprint 6 Activity lifecycle/cascade slice
-- UC-O07 participation monitoring and audited correction
+- `UC-G04` public General Feedback submission for `BOOK_STREET` and `EVENT`
+- shared Organizer General Feedback queue and detail
+- explicit start, resolve and reopen workflow actions
+- real Landing Page and Organizer portal integration
+
+Sprint 9 includes these completed Use Case slices:
+
+- `UC-G01` public Heritage list and detail for published content
+- `UC-O09` shared Organizer Heritage management
+- exact Draft, Published and Archived lifecycle with optimistic concurrency
+- real public and Organizer Heritage frontend integration
 
 ## Current approved baselines
 
-- Requirement baseline: active MVP rules plus approved Sprint 6 Participant refinements
+- Requirement baseline: active MVP rules plus completed Sprint 7 reward, completed Sprint 8 General
+  Feedback, completed Sprint 9 Heritage and completed Sprint 10 role-scoped Notification decisions
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v8 plus the approved Sprint 6 Participant interpretation in the active Use Cases
-- Physical implementation source: immutable Flyway V1–V9; approved Sprint 6 Physical overlay is
-  the target for unimplemented V10
+- Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
+  interpretations
+- Physical implementation source: immutable Flyway V1–V17. V10 implements the Sprint 6
+  participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
+  approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
+  the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay and V16 applies the
+  Sprint 10 role-scoped Notification overlay.
+- Active Sprint baseline: `docs/sprints/sprint-10.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-10-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-10-api-contract.md`
+- Active Sprint Physical ERD overlay:
+  `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
+- Active Sprint implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
+- Active Sprint assignment: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
+- Latest completed Sprint remains Sprint 9 with closure evidence in
+  `docs/development/SPRINT_09_CLOSURE_REPORT.md`
 - Active MVP Use Case count: 26
 
-Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation
-source. Use the active Sprint 6 Physical ERD report and drawio source.
+Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation source.
+Use immutable V1–V17 and the current Physical ERD report as current physical truth. For Sprint 10 behavior
+use the completed Sprint 10 baseline, Use Case Specifications, API Contract, V16, V17 and the approved overlay.
 
 ## Authentication baseline
 

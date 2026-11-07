@@ -1,6 +1,7 @@
 package com.swp391.bookstreet.security.authorization;
 
 import com.swp391.bookstreet.auth.dto.RegisterRequest;
+import com.swp391.bookstreet.auth.entity.AccountStatus;
 import com.swp391.bookstreet.auth.entity.Role;
 import com.swp391.bookstreet.auth.entity.RoleCode;
 import com.swp391.bookstreet.auth.entity.User;
@@ -163,6 +164,26 @@ class AuthAuthorizationIntegrationTests {
     }
 
     @Test
+    void adminKeepsExistingOrganizerAccessButCannotAccessOrganizerFeedback() throws Exception {
+        String username = "admin" + uniqueSuffix();
+        register(username, username + "@example.com");
+        assignVerifiedRole(username, RoleCode.ADMIN);
+
+        Cookie sessionCookie = login(username);
+
+        mockMvc.perform(get("/api/v1/organizer/dashboard")
+                        .cookie(sessionCookie))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/organizer/feedbacks")
+                        .cookie(sessionCookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        deleteSession(sessionCookie);
+    }
+
+    @Test
     void unverifiedPartnerRoleCannotAccessPartnerEndpoint() throws Exception {
         String username = "uvpartner" + uniqueSuffix();
         register(username, username + "@example.com");
@@ -205,6 +226,88 @@ class AuthAuthorizationIntegrationTests {
 
         deleteSession(unverifiedSessionCookie);
         deleteSession(verifiedSessionCookie);
+    }
+
+    @Test
+    void unverifiedAdvancedRolesCannotUseTheirNotificationInboxes() throws Exception {
+        for (RoleCode role : List.of(RoleCode.PARTNER, RoleCode.ORGANIZER, RoleCode.ADMIN)) {
+            String username = "uvnotif" + uniqueSuffix();
+            register(username, username + "@example.com");
+            assignRoleWithoutVerifyingEmail(username, role);
+            Cookie sessionCookie = login(username);
+            String inbox = "/api/v1/" + role.name().toLowerCase() + "/notifications";
+
+            mockMvc.perform(get(inbox).cookie(sessionCookie))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+            mockMvc.perform(get(inbox + "/unread-count").cookie(sessionCookie))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(post(inbox + "/read-all").with(csrf()).cookie(sessionCookie))
+                    .andExpect(status().isForbidden());
+
+            deleteSession(sessionCookie);
+        }
+    }
+
+    @Test
+    void adminUsesOnlyTheAdminInboxAndParticipantCannotUseIt() throws Exception {
+        String adminName = "adminnotif" + uniqueSuffix();
+        register(adminName, adminName + "@example.com");
+        assignVerifiedRole(adminName, RoleCode.ADMIN);
+        Cookie adminSession = login(adminName);
+
+        mockMvc.perform(get("/api/v1/admin/notifications").cookie(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mockMvc.perform(get("/api/v1/organizer/notifications").cookie(adminSession))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mockMvc.perform(post("/api/v1/organizer/notifications/read-all").with(csrf()).cookie(adminSession))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/partner/notifications").cookie(adminSession))
+                .andExpect(status().isForbidden());
+
+        String participantName = "partnotif" + uniqueSuffix();
+        register(participantName, null);
+        Cookie participantSession = login(participantName);
+
+        mockMvc.perform(get("/api/v1/admin/notifications").cookie(participantSession))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        deleteSession(adminSession);
+        deleteSession(participantSession);
+    }
+
+    @Test
+    void disabledAccountCannotSignInOrKeepUsingNotificationsThroughExistingSession() throws Exception {
+        String username = "disnotif" + uniqueSuffix();
+        register(username, null);
+        Cookie sessionCookie = login(username);
+        mockMvc.perform(get("/api/v1/participant/notifications").cookie(sessionCookie))
+                .andExpect(status().isOk());
+
+        User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        user.setStatus(AccountStatus.DISABLED);
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson(username, RAW_PASSWORD)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_ACTIVE"));
+        mockMvc.perform(get("/api/v1/participant/notifications").cookie(sessionCookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mockMvc.perform(get("/api/v1/participant/notifications/unread-count").cookie(sessionCookie))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/participant/notifications/read-all").with(csrf()).cookie(sessionCookie))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/participant/notifications/1/read").with(csrf()).cookie(sessionCookie))
+                .andExpect(status().isForbidden());
+
+        deleteSession(sessionCookie);
     }
 
     private void register(String username, String email) {

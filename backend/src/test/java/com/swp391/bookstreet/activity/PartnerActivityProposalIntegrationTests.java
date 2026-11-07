@@ -42,7 +42,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest(properties = {
@@ -95,6 +95,8 @@ class PartnerActivityProposalIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?, ?)",
+                organizerId, partnerOneUserId, partnerTwoUserId);
         jdbc.update("delete from activity_revisions where activity_id in "
                 + "(select activity_id from activities where event_id in "
                 + "(select event_id from events where organizer_user_id = ?))", organizerId);
@@ -373,6 +375,57 @@ class PartnerActivityProposalIntegrationTests {
     }
 
     @Test
+    void resubmissionGivesTheOrganizerASecondWorkItemButEditingDoesNot() throws Exception {
+        Instant eventStart = future(5);
+        long eventId = insertEvent("PUBLISHED", eventStart,
+                eventStart.plus(Duration.ofDays(1)), future(2), 3);
+        insertApplication(eventId, partnerOneOrganizationId, "APPROVED");
+        long stageId = insertLocation("WORKITEM", "WORKSHOP", 80, true);
+        Instant start = eventStart.plus(Duration.ofHours(1));
+
+        long proposalId = submitProposal(eventId, stageId, "First version", start,
+                start.plusSeconds(1800), 40);
+        assertThat(organizerProposalTitles(proposalId))
+                .containsExactly("Có đề xuất hoạt động mới");
+
+        mvc.perform(post("/api/v1/organizer/activity-proposals/" + proposalId + "/request-changes")
+                        .with(organizer()).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reviewNote\":\"Please clarify the session format.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NEED_CHANGES"));
+        mvc.perform(patch(PROPOSALS + "/" + proposalId)
+                        .with(partner(partnerOneUserId)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"title\":\"Second version\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NEED_CHANGES"));
+        assertThat(organizerProposalTitles(proposalId)).hasSize(1);
+
+        mvc.perform(post(PROPOSALS + "/" + proposalId + "/resubmit")
+                        .with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+        assertThat(organizerProposalTitles(proposalId)).containsExactly(
+                "Có đề xuất hoạt động mới", "Đề xuất hoạt động đã được gửi lại");
+
+        mvc.perform(post(PROPOSALS + "/" + proposalId + "/resubmit")
+                        .with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isConflict());
+        assertThat(organizerProposalTitles(proposalId)).hasSize(2);
+    }
+
+    private List<String> organizerProposalTitles(long proposalId) {
+        return jdbc.queryForList("""
+                select title from notifications
+                where activity_proposal_id = ? and recipient_user_id = ?
+                  and recipient_role = 'ORGANIZER'
+                  and notification_type = 'ORGANIZER_ACTIVITY_PROPOSAL_SUBMITTED'
+                order by notification_id
+                """, String.class, proposalId, organizerId);
+    }
+
+    @Test
     void withdrawalIsIdempotentAndForeignMutationIsConcealed() throws Exception {
         Instant eventStart = future(5);
         long eventId = insertEvent("PUBLISHED", eventStart,
@@ -446,7 +499,7 @@ class PartnerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject("select cancelled_at from activity_proposals "
                 + "where activity_proposal_id = ?", Instant.class, proposalId))
                 .isEqualTo(firstCancelledAt);
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(proposalId)));
     }
 
@@ -492,7 +545,7 @@ class PartnerActivityProposalIntegrationTests {
                 .isEqualTo(firstCancelledAt);
         assertThat(jdbc.queryForObject("select cancellation_reason from activities "
                 + "where activity_id = ?", String.class, activityId)).isEqualTo(reason);
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(activityId)
                         && event.messageType()
                         == ActivityPartnerMessageType.ACTIVITY_CANCELLED_BY_ORGANIZER));

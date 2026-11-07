@@ -1,0 +1,17 @@
+.participant-calendar-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 14px; font-size: 12px; }
+.participant-calendar-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.participant-calendar-legend .is-registered { color: #185e48; }
+.participant-calendar-legend .is-unregistered { color: #80570e; }
+.participant-calendar-day.has-registrations { background: #e8f5ef !important; }
+.participant-calendar-status { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 3px 6px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+.participant-agenda-item.is-registered { padding-inline: 10px; border-left: 3px solid #185e48; background: #e8f5ef; }
+.participant-agenda-item.is-unregistered { padding-inline: 10px; border-left: 3px solid #b88a2d; background: #fffaed; }
+.participant-agenda-item.is-registered .participant-calendar-status { color: #185e48; background: #d1ebde; }
+.participant-agenda-item.is-unregistered .participant-calendar-status { color: #80570e; background: #fff0c5; }
+.calendar-modal-event-card.is-registered { background: #e8f5ef; border-color: #78b99d; }
+.participant-calendar-modal-backdrop button:disabled { opacity: .6; cursor: wait; }
+.participant-calendar-modal-backdrop button:disabled:not(.calendar-modal-close-btn) { cursor: not-allowed; box-shadow: none !important; background: #edf0ed !important; color: #596b62 !important; }
+.participant-calendar-mobile-dots { display: none; }
+@media (max-width: 640px) {
+  .participant-calendar-legend { margin-bottom: 8px; font-size: 11px; gap: 12px; }
+}

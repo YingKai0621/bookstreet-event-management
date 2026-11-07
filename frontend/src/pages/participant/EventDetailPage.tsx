@@ -1,8 +1,11 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
+import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, Search, Users, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { publicApi, type PublicActivity } from '../../services/publicApi';
+import { useParticipationRefresh } from '../../hooks/useParticipationRefresh';
+import { LeaveEventDialog } from '../../components/participant/LeaveEventDialog';
 import type { Language, ParticipantActivity, ParticipantEvent } from '../../types';
 import './ParticipantPages.css';
 
@@ -60,11 +63,13 @@ export const EventDetailPage = ({
   const [cancellingId, setCancellingId] = useState('');
   const [registeringId, setRegisteringId] = useState('');
   const [actionError, setActionError] = useState('');
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [catalogActivities, setCatalogActivities] = useState<PublicActivity[]>([]);
   const [catalogEventId, setCatalogEventId] = useState('');
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState('');
   const [catalogRevision, setCatalogRevision] = useState(0);
+  const participationRefresh = useParticipationRefresh();
   const requestedSection = searchParams.get('section');
   const section: EventSection = requestedSection === 'discover' || requestedSection === 'activities'
     ? requestedSection
@@ -94,7 +99,7 @@ export const EventDetailPage = ({
       })
       .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, [catalogRevision, currentEventId, isLoading, loadError]);
+  }, [catalogRevision, participationRefresh, currentEventId, isLoading, loadError]);
 
   const setSection = (nextSection: EventSection) => {
     const next = new URLSearchParams(searchParams);
@@ -175,6 +180,7 @@ export const EventDetailPage = ({
 
   return (
     <div className="event-detail-for-participant">
+      {leaveDialogOpen && <LeaveEventDialog eventName={currentEvent.title} language={language} onClose={() => setLeaveDialogOpen(false)} onConfirm={() => onLeaveEvent(currentEvent.id)} />}
       <button type="button" className="btn-part-secondary participant-back-button" onClick={() => navigate('/participant/events')}>
         <ArrowLeft size={15} />{vi ? 'Sự kiện của tôi' : 'My events'}
       </button>
@@ -217,9 +223,7 @@ export const EventDetailPage = ({
             {vi ? 'Xem hoạt động sự kiện' : 'Explore event activities'}
           </button>
           {currentEvent.isJoined && currentEvent.canLeave && (
-            <button type="button" className="btn-part-danger-outline" onClick={() => {
-              if (window.confirm(vi ? 'Bạn có chắc chắn muốn rời sự kiện này?' : 'Are you sure you want to leave this event?')) void onLeaveEvent(currentEvent.id);
-            }}>{vi ? 'Rời sự kiện' : 'Leave event'}</button>
+            <button type="button" className="btn-part-danger-outline" onClick={() => setLeaveDialogOpen(true)}>{vi ? 'Rời sự kiện' : 'Leave event'}</button>
           )}
         </section>
       ) : section === 'discover' ? (
@@ -230,7 +234,7 @@ export const EventDetailPage = ({
               <p>{vi ? 'Xem lịch, địa điểm và đăng ký những hoạt động còn mở.' : 'Review schedules and register for activities that are still open.'}</p>
             </div>
             {eventCatalog.length > 0 && (
-              <label className="part-search-input">
+              <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
                 <Search size={15} className="icon" />
                 <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
                 <input value={searchParams.get('search') || ''} onChange={event => {
@@ -239,7 +243,7 @@ export const EventDetailPage = ({
                   else next.delete('search');
                   setSearchParams(next, { replace: true });
                 }} placeholder={vi ? 'Tìm theo tên, địa điểm...' : 'Search name or venue...'} />
-              </label>
+              </label></SearchFieldLabel>
             )}
           </div>
 
@@ -293,7 +297,7 @@ export const EventDetailPage = ({
           <div className="participant-section-heading participant-section-heading--actions">
             <div><h2 id="registered-activities-title" className="section-heading-title">{vi ? 'Hoạt động thuộc sự kiện này' : 'Activities in this event'}</h2><p>{vi ? 'Chỉ hiển thị những đăng ký thuộc tài khoản hiện tại.' : 'Only registrations belonging to the current account are shown.'}</p></div>
             {eventActivities.length > 0 && (
-              <label className="part-search-input">
+              <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
                 <Search size={15} className="icon" />
                 <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
                 <input value={searchParams.get('search') || ''} onChange={event => {
@@ -302,7 +306,7 @@ export const EventDetailPage = ({
                   else next.delete('search');
                   setSearchParams(next, { replace: true });
                 }} placeholder={vi ? 'Tìm theo tên, địa điểm...' : 'Search name or venue...'} />
-              </label>
+              </label></SearchFieldLabel>
             )}
           </div>
 

@@ -1,22 +1,24 @@
 import {
   ParticipantActivity,
   ParticipantActivityRating,
-  ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
 } from '../types';
 import { apiClient } from './apiClient';
 import type { AttendanceScanResponse } from '../types/attendance';
+import type { BoothScanResponse } from '../types/reward';
 
 export type ParticipantNotificationType =
   | 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED'
   | 'ACTIVITY_CANCELLED'
   | 'EVENT_CANCELLED'
   | 'CERTIFICATE_ISSUED'
-  | 'CERTIFICATE_REVOKED';
+  | 'CERTIFICATE_REVOKED'
+  | 'BADGE_UNLOCKED'
+  | 'ACTIVITY_STARTING_SOON';
 
-export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE';
+export type ParticipantNotificationReferenceType = 'EVENT' | 'ACTIVITY' | 'CERTIFICATE' | 'BADGE';
 
 interface ParticipantNotificationResponse {
   notificationId: number;
@@ -81,6 +83,17 @@ interface EventRegistrationResponse {
   };
   status: 'ACTIVE' | 'LEFT';
   seatActiveActivityCount: number;
+}
+
+interface PublicEventSummaryResponse {
+  participantRegistrationDeadlineAt?: string | null;
+  eventId: number;
+  name: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  bannerUrl: string | null;
+  status: string;
 }
 
 export interface ActivityRegistrationResponse {
@@ -243,13 +256,17 @@ function mapCertificateDetail(detail: CertificateDetailResponse): ParticipantCer
 
 async function getAllPages<T>(endpoint: string): Promise<T[]> {
   const separator = endpoint.includes('?') ? '&' : '?';
-  const first = await apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=0&size=100`);
-  const remaining = first.totalPages > 1
-    ? await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) =>
+  const first = await apiClient.get<ParticipantPageResponse<T> | T[]>(`${endpoint}${separator}page=0&size=100`);
+  if (!first) return [];
+  if (Array.isArray(first)) return first;
+  const totalPages = typeof first.totalPages === 'number' ? first.totalPages : 1;
+  const remaining = totalPages > 1
+    ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) =>
       apiClient.get<ParticipantPageResponse<T>>(`${endpoint}${separator}page=${index + 1}&size=100`)))
     : [];
   return [first, ...remaining]
-    .sort((left, right) => left.page - right.page)
+    .filter(page => page && Array.isArray(page.content))
+    .sort((left, right) => (left.page ?? 0) - (right.page ?? 0))
     .flatMap(page => page.content);
 }
 
@@ -259,7 +276,7 @@ export interface ParticipantNotificationItem {
   title: string;
   message: string;
   isRead: boolean;
-  link: string;
+  link: string | null;
   createdAt: string;
   readAt?: string;
   referenceType: ParticipantNotificationReferenceType;
@@ -281,14 +298,26 @@ export interface ParticipantNotificationQuery {
   type?: ParticipantNotificationType;
 }
 
-function notificationLink(notification: ParticipantNotificationResponse): string {
-  if (notification.referenceType === 'EVENT') {
-    return `/participant/events/${encodeURIComponent(notification.referenceId)}`;
+function notificationLink(notification: ParticipantNotificationResponse): string | null {
+  const { type, referenceType, referenceId } = notification;
+  if (!Number.isSafeInteger(referenceId) || referenceId <= 0) return null;
+  switch (type) {
+    case 'EVENT_CANCELLED':
+      return referenceType === 'EVENT'
+        ? `/participant/events/${encodeURIComponent(referenceId)}` : null;
+    case 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED':
+    case 'ACTIVITY_CANCELLED':
+    case 'ACTIVITY_STARTING_SOON':
+      return referenceType === 'ACTIVITY'
+        ? `/participant/activities/detail/${encodeURIComponent(referenceId)}` : null;
+    case 'CERTIFICATE_ISSUED':
+    case 'CERTIFICATE_REVOKED':
+      return referenceType === 'CERTIFICATE' ? '/participant/certificates' : null;
+    case 'BADGE_UNLOCKED':
+      return referenceType === 'BADGE' ? '/participant/rewards' : null;
+    default:
+      return null;
   }
-  if (notification.referenceType === 'ACTIVITY') {
-    return `/participant/activities/detail/${encodeURIComponent(notification.referenceId)}`;
-  }
-  return '/participant/certificates';
 }
 
 function mapNotification(notification: ParticipantNotificationResponse): ParticipantNotificationItem {
@@ -331,23 +360,65 @@ export const participantApi = {
     return registrations.map(registration => mapActivityRegistrationWithEvents(registration, events));
   },
   async getEvents(): Promise<ParticipantEvent[]> {
-    const registrations = await getAllPages<EventRegistrationResponse>(
-      '/participant/event-registrations?sort=activatedAt,desc',
-    );
+    const [registrations, publicEvents] = await Promise.all([
+      getAllPages<EventRegistrationResponse>(
+        '/participant/event-registrations?sort=activatedAt,desc',
+      ),
+      getAllPages<PublicEventSummaryResponse>(
+        '/events?sort=startAt,asc',
+      ).catch(() => [] as PublicEventSummaryResponse[]),
+    ]);
+
+    const registrationMap = new Map<number, EventRegistrationResponse>();
+    registrations.forEach(reg => {
+      if (reg?.event?.eventId) {
+        registrationMap.set(reg.event.eventId, reg);
+      }
+    });
+
+    const mappedEvents: ParticipantEvent[] = [];
+    const seenEventIds = new Set<number>();
+
+    for (const pub of publicEvents) {
+      if (!pub?.eventId) continue;
+      seenEventIds.add(pub.eventId);
+      const reg = registrationMap.get(pub.eventId);
+      const joined = reg?.status === 'ACTIVE';
+      const isLeft = reg?.status === 'LEFT';
+      const ended = ['COMPLETED', 'CANCELLED'].includes(pub.status);
+      mappedEvents.push({
+        registrationDeadlineAt: pub.participantRegistrationDeadlineAt,
+        id: String(pub.eventId),
+        title: pub.name,
+        dateRange: formatDateRange(pub.startAt, pub.endAt),
+        location: 'Đường Sách TP.HCM',
+        imageUrl: pub.bannerUrl || '/duong_sach_logo.png',
+        status: isLeft ? 'left' : (ended ? 'ended' : 'ongoing'),
+        shortDesc: pub.description || '',
+        activitiesCount: reg ? reg.seatActiveActivityCount : 0,
+        isJoined: joined,
+        canLeave: joined && (reg?.seatActiveActivityCount ?? 0) === 0 && !ended,
+      });
+    }
+
+    for (const reg of registrations) {
+      if (reg?.event?.eventId && !seenEventIds.has(reg.event.eventId)) {
+        seenEventIds.add(reg.event.eventId);
+        mappedEvents.push(mapEventRegistration(reg));
+      }
+    }
+
+    return mappedEvents;
+  },
+  async getEventRegistrations(): Promise<ParticipantEvent[]> {
+    const registrations = await getAllPages<EventRegistrationResponse>('/participant/event-registrations?sort=activatedAt,desc');
     return registrations.map(mapEventRegistration);
   },
   joinEvent: (eventId: string) =>
     apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/join`),
+  mapEventRegistration,
   leaveEvent: (eventId: string) =>
     apiClient.post<EventRegistrationResponse>(`/participant/events/${encodeURIComponent(eventId)}/leave`),
-  async getBadges(): Promise<ParticipantBadge[]> {
-    const badges = await apiClient.get<Array<Record<string, unknown>>>('/participant/badges');
-    return badges.map(badge => ({
-      id: String(badge.id), code: String(badge.code || ''), title: String(badge.title), iconName: String(badge.iconName || 'book'),
-      earnedDate: badge.earnedDate ? new Date(String(badge.earnedDate)).toLocaleDateString('vi-VN') : '',
-      isLocked: Boolean(badge.isLocked),
-    }));
-  },
   async getCertificates(): Promise<ParticipantCertificate[]> {
     const certificates = await getAllPages<CertificateSummaryResponse>(
       '/participant/certificates?sort=issuedAt,desc',
@@ -374,6 +445,8 @@ export const participantApi = {
   mapActivityRegistration: mapActivityRegistrationWithEvents,
   scanAttendance: (token: string) =>
     apiClient.post<AttendanceScanResponse>('/participant/attendance-scans', { token }),
+  scanBooth: (token: string) =>
+    apiClient.post<BoothScanResponse>('/participant/booth-visits/scan', { token }),
   async getActivityRating(activityId: string): Promise<ParticipantActivityRating> {
     const rating = await apiClient.get<ActivityRatingResponse>(
       `/participant/activities/${encodeURIComponent(activityId)}/rating`,
@@ -419,7 +492,10 @@ export const participantApi = {
   },
   async getNotificationUnreadCount(): Promise<number> {
     const response = await apiClient.get<{ unreadCount: number }>('/participant/notifications/unread-count');
-    return Number.isFinite(response.unreadCount) ? response.unreadCount : 0;
+    if (!Number.isFinite(response.unreadCount)) {
+      throw new Error('Phản hồi số thông báo chưa đọc không đúng định dạng.');
+    }
+    return response.unreadCount;
   },
   async markNotificationRead(id: string): Promise<ParticipantNotificationItem> {
     const notification = await apiClient.post<ParticipantNotificationResponse>(

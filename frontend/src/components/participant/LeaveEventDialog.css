@@ -1,0 +1,25 @@
+.leave-event-dialog { box-sizing: border-box; width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 36px 32px 28px; overflow-y: auto; border: 1px solid #dce7e2; border-radius: 24px; background: #fff; color: #172421; font-family: var(--font-sans); box-shadow: 0 24px 80px #10251f30; }
+.leave-event-dialog::backdrop { background: #10251f99; }
+.leave-event-close { position: absolute; top: 16px; right: 16px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: #f3f6f4; color: #6c7d78; cursor: pointer; }
+.leave-event-close:hover { background: #f2f5f3; }
+.leave-event-header { display: flex; align-items: center; gap: 16px; padding-right: 20px; }
+.leave-event-heading { min-width: 0; }
+.leave-event-icon { flex-shrink: 0; display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid #f2d9d3; border-radius: 20px; background: #fff0eb; color: #ad3b2d; }
+.leave-event-dialog h2 { margin: 0 0 6px; font-family: var(--font-sans); font-size: 26px; line-height: 1.3; text-wrap: balance; }
+.leave-event-dialog p { margin: 0; color: #536b61; font-size: 14px; line-height: 1.65; text-wrap: pretty; }
+.leave-event-name { display: block; margin: 18px 0; padding: 15px 18px; border: 1px solid #dce7e2; border-left: 3px solid #9fafa5; border-radius: 12px; background: #f3f7f4; color: #17382e; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.leave-event-dialog .leave-event-note { font-size: 13px; }
+.leave-event-dialog .leave-event-error { margin-top: 16px; padding: 10px 12px; border: 1px solid #f0c7be; border-radius: 8px; background: #fff3ef; color: #a32f23; }
+.leave-event-actions { display: flex; gap: 10px; margin-top: 28px; }
+.leave-event-actions button { flex: 1; min-width: 0; min-height: 48px; padding: 10px 12px; border-radius: 12px; font: 600 14px var(--font-sans); cursor: pointer; }
+.leave-event-stay { border: 1px solid #ccd9d2; background: #fff; color: #244b3b; }
+.leave-event-stay:hover { background: #f3f7f4; }
+.leave-event-confirm { border: 1px solid #ad3b2d; background: #ad3b2d; color: #fff; }
+.leave-event-confirm:hover { background: #943226; }
+.leave-event-dialog button:focus-visible { outline: 3px solid #b3862a; outline-offset: 3px; }
+.leave-event-dialog button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 480px) { .leave-event-dialog { padding: 28px 24px 24px; border-radius: 20px; } }
+
+@media (max-width: 360px) { .leave-event-actions { flex-direction: column; } }
+
+@media (max-width: 480px) { .leave-event-header { gap: 12px; } .leave-event-icon { width: 52px; height: 52px; border-radius: 16px; } .leave-event-dialog h2 { font-size: 22px; } }

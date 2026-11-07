@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ApiError } from '../../services/apiClient';
 import { boothApi } from '../../services/boothApi';
 import type { Language } from '../../types';
@@ -52,8 +53,18 @@ const QUICK_REJECTION_REASONS = [
   'Đã hết hạn tiếp nhận và sắp xếp vị trí cho khu vực này.',
 ];
 
+const HOLD_STATUS_LABELS: Record<NonNullable<BoothRequest['hold']>['status'], string> = {
+  ACTIVE: 'Đang giữ chỗ',
+  CONSUMED: 'Đã cấp gian',
+  EXPIRED: 'Đã hết hạn',
+  RELEASED: 'Đã trả chỗ',
+};
+
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
+      return 'Đã hết hạn xét duyệt yêu cầu thuê gian hàng cho sự kiện này.';
+    }
     return error.fieldErrors.map(item => item.message).filter(Boolean).join(' ') || error.message;
   }
   return error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.';
@@ -78,13 +89,19 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   const [requestFilter, setRequestFilter] = useState<'ALL' | 'PENDING' | 'SELECTED' | 'COMPLETED' | 'OTHER'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [boothFilter, setBoothFilter] = useState('ALL');
+  const [approvingRequest, setApprovingRequest] = useState<BoothRequest | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<BoothRequest | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busyKey, setBusyKey] = useState('');
-  useModalDismiss(Boolean(rejectingRequest), () => setRejectingRequest(null));
+  useModalDismiss(Boolean(approvingRequest || rejectingRequest), () => {
+    if (busyKey) return;
+    setApprovingRequest(null);
+    setRejectingRequest(null);
+  });
+  const rejectBackdropHandlers = useBackdropClick(() => { if (!busyKey) setRejectingRequest(null); });
 
   const eventId = selectedEventId !== 'all' ? selectedEventId : events[0]?.id || '';
   const selectedEvent = events.find(event => event.id === eventId);
@@ -102,6 +119,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
 
     if (clearCurrent) {
       setRequests([]);
+      setApprovingRequest(null);
       setRejectingRequest(null);
       setReviewNote('');
       setSuccess('');
@@ -128,6 +146,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   }, [eventId]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- The generation-guarded loader resets and fetches requests for the selected event.
     void loadData(true);
     return () => {
       loadGenerationRef.current += 1;
@@ -178,24 +197,21 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   }, [boothFilter, completedRequests, otherRequests, pendingRequests, requestFilter, requests, searchTerm, selectedRequests]);
 
   const handleSelectRequest = async (request: BoothRequest) => {
-    if (
-      !eventId ||
-      !window.confirm(
-        `Duyệt và cấp giữ chỗ cho đối tác "${request.partnerOrganizationName}" tại gian "${request.boothCode}"?`,
-      )
-    ) {
-      return;
-    }
+    if (!eventId) return;
     const requestedEventId = eventId;
     setBusyKey(`request-${request.boothRequestId}`);
     setError('');
     try {
       await boothApi.selectRequest(requestedEventId, request.boothRequestId);
       if (currentEventIdRef.current !== requestedEventId) return;
+      setApprovingRequest(null);
       setSuccess(`Đã duyệt chọn gian "${request.boothCode}" cho "${request.partnerOrganizationName}".`);
       await loadData();
     } catch (caughtError) {
-      if (currentEventIdRef.current === requestedEventId) setError(apiMessage(caughtError));
+      if (currentEventIdRef.current === requestedEventId) {
+        setApprovingRequest(null);
+        setError(apiMessage(caughtError));
+      }
     } finally {
       setBusyKey('');
     }
@@ -227,7 +243,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
       <header className="obr-header">
         <div className="obr-title-group">
           <h1 id="organizer-booth-request-title" className="organizer-view-title workspace-page-title">
-            Yêu cầu gian hàng theo sự kiện
+            Yêu cầu cho thuê gian hàng theo sự kiện
           </h1>
           <p className="organizer-view-sub workspace-page-subtitle">
             Xét duyệt yêu cầu thuê, khóa giá và theo dõi thời hạn thanh toán giữ chỗ của đối tác.
@@ -448,7 +464,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
           <Store size={40} />
           <p>
             {searchTerm || boothFilter !== 'ALL'
-              ? 'Không tìm thấy yêu cầu thuê gian hàng phù hợp với bộ lọc hiện tại.'
+              ? 'Không tìm thấy yêu cầu thuê gian hàng nào. Hãy thử từ khóa hoặc gian hàng khác.'
               : 'Không có yêu cầu thuê gian hàng trong danh mục này.'}
           </p>
         </div>
@@ -497,7 +513,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
               </div>
 
               {/* Card Body: Notes on left, Financials/Hold on right */}
-              <div className="obr-card-body">
+              <div className={`obr-card-body${request.hold ? '' : ' is-notes-only'}`}>
                 <div className="obr-card-notes-col">
                   {request.requestNote ? (
                     <div className="obr-note-box partner-note s2-request-note-box">
@@ -530,73 +546,52 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                   )}
                 </div>
 
-                <div className="obr-card-hold-col s2-hold-card">
-                  {request.hold ? (
-                    <>
-                      <div className="obr-hold-pricing">
-                        <span className="obr-price-label s2-hold-price-label">Giá giữ chỗ:</span>
-                        <strong className="obr-price-val s2-hold-price-val">
-                          {money(request.hold.lockedRentalPrice)}
-                        </strong>
-                      </div>
-                      <div className="obr-hold-meta-list">
-                        <div className="obr-hold-meta-item">
-                          <span className="meta-key">
-                            <Info size={13} />
-                            Trạng thái Hold:
-                          </span>
-                          <span
-                            className={`obr-hold-status-chip s2-hold-status-badge status-${request.hold.status.toLowerCase()}`}
-                          >
-                            {request.hold.status}
-                          </span>
-                        </div>
-                        <div className="obr-hold-meta-item">
-                          <span className="meta-key">
-                            <Clock3 size={13} />
-                            Tạo giữ chỗ:
-                          </span>
-                          <span className="meta-val">{dateTime(request.hold.createdAt)}</span>
-                        </div>
-                        <div className="obr-hold-meta-item is-expiry">
-                          <span className="meta-key">
-                            <Hourglass size={13} />
-                            Hạn thanh toán:
-                          </span>
-                          <span className="meta-val">{dateTime(request.hold.expiresAt)}</span>
-                        </div>
-                        {request.hold.releasedAt && (
-                          <div className="obr-hold-meta-item">
-                            <span className="meta-key">
-                              <Check size={13} />
-                              Giải phóng:
-                            </span>
-                            <span className="meta-val">{dateTime(request.hold.releasedAt)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        gap: '0.4rem',
-                        color: '#64748B',
-                        padding: '1rem 0',
-                      }}
-                    >
-                      <Store size={26} style={{ color: '#94A3B8' }} />
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Chưa có thông tin giữ chỗ</span>
-                      <span style={{ fontSize: '0.74rem', color: '#94A3B8', textAlign: 'center' }}>
-                        Hold sẽ được kích hoạt ngay khi BQL duyệt cấp vị trí.
+                {request.hold && (
+                  <div className="obr-card-hold-col s2-hold-card">
+                  <div className="obr-hold-pricing">
+                    <span className="obr-price-label s2-hold-price-label">Giá giữ chỗ:</span>
+                    <strong className="obr-price-val s2-hold-price-val">
+                      {money(request.hold.lockedRentalPrice)}
+                    </strong>
+                  </div>
+                  <div className="obr-hold-meta-list">
+                    <div className="obr-hold-meta-item">
+                      <span className="meta-key">
+                        <Info size={13} />
+                        Trạng thái giữ chỗ:
+                      </span>
+                      <span
+                        className={`obr-hold-status-chip s2-hold-status-badge status-${request.hold.status.toLowerCase()}`}
+                      >
+                        {HOLD_STATUS_LABELS[request.hold.status]}
                       </span>
                     </div>
-                  )}
-                </div>
+                    <div className="obr-hold-meta-item">
+                      <span className="meta-key">
+                        <Clock3 size={13} />
+                        Tạo giữ chỗ:
+                      </span>
+                      <span className="meta-val">{dateTime(request.hold.createdAt)}</span>
+                    </div>
+                    <div className="obr-hold-meta-item is-expiry">
+                      <span className="meta-key">
+                        <Hourglass size={13} />
+                        Hạn thanh toán:
+                      </span>
+                      <span className="meta-val">{dateTime(request.hold.expiresAt)}</span>
+                    </div>
+                    {request.hold.releasedAt && (
+                      <div className="obr-hold-meta-item">
+                        <span className="meta-key">
+                          <Check size={13} />
+                          Trả chỗ lúc:
+                        </span>
+                        <span className="meta-val">{dateTime(request.hold.releasedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                  </div>
+                )}
               </div>
 
               {/* Card Footer Actions */}
@@ -617,7 +612,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                     <button
                       type="button"
                       className="obr-btn-approve btn-request-approve"
-                      onClick={() => void handleSelectRequest(request)}
+                      onClick={() => setApprovingRequest(request)}
                       disabled={busyKey === `request-${request.boothRequestId}`}
                     >
                       {busyKey === `request-${request.boothRequestId}` ? (
@@ -663,9 +658,69 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
         </div>)}</PaginatedList>
       )}
 
+      {/* Modal: Approve Request */}
+      {approvingRequest && (
+        <div
+          className="s2-modal-backdrop"
+          onClick={() => { if (!busyKey) setApprovingRequest(null); }}
+        >
+          <div
+            className="s2-modal s2-modal-small"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approve-booth-request-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="s2-modal-header">
+              <h2 id="approve-booth-request-title">Xác nhận duyệt yêu cầu</h2>
+              <button
+                type="button"
+                aria-label="Đóng"
+                disabled={Boolean(busyKey)}
+                onClick={() => setApprovingRequest(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="s2-stack-form">
+              <p>
+                Bạn sắp duyệt và cấp giữ chỗ cho đối tác{' '}
+                <strong>{approvingRequest.partnerOrganizationName}</strong> tại gian{' '}
+                <strong>{approvingRequest.boothCode}</strong>.
+              </p>
+              <p className="s2-modal-supporting-copy">
+                Giá thuê hiện tại của gian hàng sẽ được khóa cho yêu cầu này. Với gian hàng miễn phí,
+                hệ thống sẽ cấp gian ngay sau khi xác nhận.
+              </p>
+              <div className="s2-modal-actions" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn-org-secondary"
+                  disabled={Boolean(busyKey)}
+                  onClick={() => setApprovingRequest(null)}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="btn-org-primary"
+                  disabled={Boolean(busyKey)}
+                  onClick={() => void handleSelectRequest(approvingRequest)}
+                >
+                  {busyKey === `request-${approvingRequest.boothRequestId}` && (
+                    <Loader2 size={15} className="s2-spin" />
+                  )}
+                  Xác nhận duyệt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal: Reject Request */}
       {rejectingRequest && (
-        <div className="s2-modal-backdrop" onClick={() => setRejectingRequest(null)}>
+        <div className="s2-modal-backdrop" {...rejectBackdropHandlers}>
           <div className="s2-modal s2-modal-small" onClick={event => event.stopPropagation()}>
             <div className="s2-modal-header">
               <h2>Từ chối yêu cầu thuê gian hàng</h2>

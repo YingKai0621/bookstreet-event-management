@@ -1,9 +1,14 @@
-.bookstreet-chat{position:fixed;right:20px;bottom:20px;z-index:1000;font-family:inherit}
-.bookstreet-chat__toggle{border:0;border-radius:999px;background:#164f52;color:#fff;padding:13px 19px;box-shadow:0 6px 20px #0003;cursor:pointer;font-weight:700}
+.bookstreet-chat{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:1000;font-family:inherit;display:flex;flex-direction:column;align-items:flex-end}
+.bookstreet-chat__toggle{display:grid;place-items:center;flex-shrink:0;width:60px;height:60px;padding:0;border:2px solid #fff;border-radius:50%;background:#164f52;color:#fff;box-shadow:0 4px 16px #0003;cursor:pointer}
+.bookstreet-chat__toggle:hover{background:#103e40}
+.bookstreet-chat__toggle:focus-visible{outline:3px solid #e9bc63;outline-offset:3px}
+.bookstreet-chat__launcher{position:relative}
 .bookstreet-chat__panel{width:min(370px,calc(100vw - 32px));height:min(540px,calc(100dvh - 95px));margin-bottom:12px;display:flex;flex-direction:column;background:#fff;border:1px solid #d8e2df;border-radius:16px;overflow:hidden;box-shadow:0 12px 35px #0003}
-.bookstreet-chat__header{display:flex;justify-content:space-between;align-items:center;background:#164f52;color:white;padding:14px 16px}
-.bookstreet-chat__header small{display:block;font-size:12px;opacity:.85;margin-top:2px}
-.bookstreet-chat__header button{border:0;background:transparent;color:white;font-size:26px;cursor:pointer}
+.bookstreet-chat__header{display:flex;align-items:center;gap:12px;flex-shrink:0;background:#164f52;color:#fff;padding:18px;border-bottom:1px solid #d5b66b}
+.bookstreet-chat__avatar{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:14px;background:#ffffff12;border:1px solid #ffffff38;color:#f1d99a}
+.bookstreet-chat__heading{min-width:0}
+.bookstreet-chat__heading strong{display:block;font-size:16px;font-weight:700;line-height:1.4}
+.bookstreet-chat__header small{display:block;font-size:12px;line-height:1.5;color:#d0e3df;margin-top:3px}
 .bookstreet-chat__messages{flex:1;overflow-y:auto;padding:16px;background:#f7f8f5}
 .bookstreet-chat__intro{font-size:14px;color:#455;margin:6px 0 14px}
 .bookstreet-chat__message{max-width:92%;padding:10px 12px;margin:0 0 12px;border-radius:12px;background:#fff;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -16,4 +21,4 @@
 .bookstreet-chat__form button{border:0;border-radius:8px;background:#164f52;color:white;padding:0 14px;cursor:pointer}
 .bookstreet-chat__form button:disabled{opacity:.5;cursor:default}
 .bookstreet-chat__sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media(max-width:480px){.bookstreet-chat{right:12px;bottom:12px}.bookstreet-chat__panel{height:min(540px,calc(100dvh - 80px))}}
+@media(max-width:480px){.bookstreet-chat{right:12px;bottom:calc(12px + env(safe-area-inset-bottom))}.bookstreet-chat__toggle{width:48px;height:48px;border-width:1.5px}.bookstreet-chat__toggle svg{width:22px;height:22px}.bookstreet-chat__panel{height:min(540px,calc(100dvh - 100px - env(safe-area-inset-bottom)))}.bookstreet-chat__form input{font-size:16px}}

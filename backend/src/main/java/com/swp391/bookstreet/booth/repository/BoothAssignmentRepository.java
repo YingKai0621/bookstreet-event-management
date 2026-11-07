@@ -2,16 +2,39 @@ package com.swp391.bookstreet.booth.repository;
 
 import com.swp391.bookstreet.booth.entity.BoothAssignment;
 import com.swp391.bookstreet.booth.entity.BoothAssignmentStatus;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BoothAssignmentRepository extends JpaRepository<BoothAssignment, Long> {
+    interface ScanTarget {
+        Long getBoothAssignmentId();
+        Long getEventId();
+    }
+
     boolean existsByBoothHoldBoothHoldId(Long boothHoldId);
+
+    @Query("""
+            select assignment.boothAssignmentId as boothAssignmentId,
+                   assignment.boothHold.eventBoothConfig.eventId as eventId
+            from BoothAssignment assignment
+            where cast(assignment.qrToken as string) = :token
+            """)
+    Optional<ScanTarget> resolveScanTarget(@Param("token") String token);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select assignment
+            from BoothAssignment assignment
+            where assignment.boothAssignmentId = :assignmentId
+            """)
+    Optional<BoothAssignment> findByIdForUpdate(@Param("assignmentId") Long assignmentId);
 
     @Query("""
             select case when count(assignment) > 0 then true else false end

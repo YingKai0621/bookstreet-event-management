@@ -1,12 +1,21 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronsRight, MapPin, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
-import './BoothsSection.css';
 import { IconBookSpine, IconBookmark } from './CustomIcons';
+import { PublicEventContext } from './PublicEventContext';
+import './BoothsSection.css';
+
+const DEFAULT_BOOTH_IMAGE = '/images/booths/default-bookstall.png';
+
+function useDefaultBoothImage(event: React.SyntheticEvent<HTMLImageElement>): void {
+  const image = event.currentTarget;
+  if (!image.src.endsWith(DEFAULT_BOOTH_IMAGE)) image.src = DEFAULT_BOOTH_IMAGE;
+}
 
 interface BoothsSectionProps {
   language: Language;
@@ -15,7 +24,6 @@ interface BoothsSectionProps {
   error?: string;
   events?: EventItem[];
   selectedEventId?: string;
-  onSelectEventId?: (eventId: string) => void;
   onSelectBoothOnMap: (boothId: string) => void;
   searchQuery?: string;
   onSearchQueryChange?: (q: string) => void;
@@ -31,13 +39,16 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
   error = '',
   events = [],
   selectedEventId = '',
-  onSelectEventId,
   onSelectBoothOnMap,
   searchQuery: externalSearchQuery,
   onSearchQueryChange,
   focusedBoothId,
 }) => {
   const booths = initialBooths || EMPTY_BOOTHS;
+  const selectedEvent = events.find(event => event.id === selectedEventId);
+  const boothsCatalogUrl = selectedEventId
+    ? `/gian-hang?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/gian-hang';
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const setSearchQuery = onSearchQueryChange || setInternalSearchQuery;
@@ -68,6 +79,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       setIsBoothSheetClosing(false);
     }, 260);
   }, [activeModalBooth, isBoothSheetClosing]);
+  const boothBackdropHandlers = useBackdropClick(closeBoothModal);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)');
@@ -177,22 +189,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
 
         {/* Search & Category Filter Bar */}
         <div className="figma-stalls-controls">
-          {events.length > 0 && onSelectEventId && (
-            <label className="public-event-picker">
-              <span>{language === 'vi' ? 'Sự kiện công khai' : 'Published event'}</span>
-              <select
-                value={selectedEventId}
-                onChange={event => onSelectEventId(event.target.value)}
-                aria-label={language === 'vi' ? 'Sự kiện công khai' : 'Published event'}
-              >
-                {events.map(event => (
-                  <option key={event.id} value={event.id}>
-                    {language === 'vi' ? event.title : event.titleEn}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <PublicEventContext language={language} event={selectedEvent} />
           <div className="figma-search-bar">
             <Search size={18} className="search-ico" />
             <input
@@ -201,7 +198,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 language === 'vi'
-                  ? 'Tìm kiếm ki-ốt, nhà xuất bản, tên sách...'
+                  ? 'Tìm ki-ốt, NXB, tựa sách...'
                   : 'Search stalls, publishers, titles...'
               }
               className="figma-search-input"
@@ -263,9 +260,10 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
           tabIndex={0}
           role="region"
           aria-label="Danh sách gian hàng lướt ngang"
+          aria-busy={isLoading || undefined}
         >
-          {isLoading ? (
-            <div className="booths-carousel-page" style={{ opacity: 1 }}>
+          {isLoading && booths.length === 0 ? (
+            <div className="booths-carousel-page" style={{ opacity: 1 }} aria-busy="true">
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="figma-kiosk-card skeleton-card" aria-hidden="true">
                   <div className="kiosk-card-photo-wrapper skeleton-box" style={{ minHeight: '160px', width: '100%' }} />
@@ -288,21 +286,27 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                 </div>
               ))}
             </div>
+          ) : booths.length === 0 ? (
+            error ? null : (
+              <div className="booths-carousel-page booths-empty-state" role="status">
+                <p>{language === 'vi' ? 'Sự kiện này chưa có gian hàng được công bố.' : 'This event has no published bookstalls yet.'}</p>
+              </div>
+            )
           ) : displayedBooths.length === 0 ? (
-            <div style={{ width: '100%', textAlign: 'center', padding: '3.5rem 1rem', color: '#52605C' }}>
-              <p>{booths.length === 0 ? (language === 'vi' ? 'Sự kiện này chưa có gian hàng.' : 'This event has no booths yet.') : (language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.')}</p>
+            <div className="booths-carousel-page booths-empty-state" role="status">
+              <p>{language === 'vi' ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No bookstalls matched your criteria.'}</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout" initial={false} custom={carouselDirection}>
             <motion.div
-              key={activeCarouselPage}
-              className="booths-carousel-page"
+              key={`${selectedEventId || 'default'}-${activeCarouselPage}`}
+              className={`booths-carousel-page ${isLoading ? 'is-updating' : ''}`}
               custom={carouselDirection}
               variants={carouselMotion}
               initial={isMobileCarousel ? false : 'enter'}
               animate={isMobileCarousel ? false : 'center'}
               exit={isMobileCarousel ? undefined : 'exit'}
-              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
             >
             {displayedBooths.map((booth, idx) => {
               const isFocused = focusedBoothId === booth.id;
@@ -320,6 +324,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
                       alt={booth.image.alt}
                       loading="lazy"
                       className="kiosk-photo-img"
+                      onError={useDefaultBoothImage}
                     />}
                     <div className="kiosk-photo-overlay"></div>
                     <div className="kiosk-banner-tags">
@@ -373,7 +378,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               );
             })}
             {showExploreCard && (
-              <Link to="/gian-hang" className="booths-explore-card">
+              <Link to={boothsCatalogUrl} className="booths-explore-card">
                 <span>{language === 'vi' ? 'Khám phá thêm gian hàng' : 'Explore more bookstalls'}</span>
                 <ChevronsRight size={30} aria-hidden="true" />
               </Link>
@@ -386,7 +391,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
         {/* Nút Xem thêm nhỏ không có khung viền đặt dưới danh sách */}
         <div className="section-bottom-see-more-row">
           <Link
-            to="/gian-hang"
+            to={boothsCatalogUrl}
             className="btn-section-see-more-borderless"
             aria-label="Xem thêm toàn bộ gian hàng tại Đường Sách"
           >
@@ -400,7 +405,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
       {activeModalBooth && createPortal(
         <div
           className="modal-overlay booth-detail-modal-overlay"
-          onClick={closeBoothModal}
+          {...boothBackdropHandlers}
           role="dialog"
           aria-modal="true"
           aria-labelledby="booth-detail-modal-title"
@@ -450,7 +455,7 @@ export const BoothsSection: React.FC<BoothsSectionProps> = ({
               <X size={20} />
             </button>
             <div className="modal-booth-header-img">
-              {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" />}
+              {activeModalBooth.image.url && <img src={activeModalBooth.image.url} alt={activeModalBooth.image.alt} className="modal-top-img" onError={useDefaultBoothImage} />}
               <div className="modal-img-caption">
                 <span className="kiosk-number-badge">{activeModalBooth.code}</span>
               </div>

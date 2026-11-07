@@ -96,6 +96,7 @@ async function mockOrganizer(page: Page, options: { multipleEvents?: boolean } =
       return json(route, { content: events, page: 0, size: 100, totalElements: events.length, totalPages: 1 });
     }
     if (path.endsWith('/organizer/booths') && method === 'GET') return json(route, { content: physicalBooths, page: 0, size: 200, totalElements: physicalBooths.length, totalPages: 1 });
+    if (path.endsWith('/organizer/locations') && method === 'GET') return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
     if (path.endsWith('/organizer/booths') && method === 'POST') {
       const body = route.request().postDataJSON();
       expect(body).toMatchObject({ code: 'B01', name: 'Gian văn học', maxCapacity: 1 });
@@ -148,11 +149,14 @@ async function mockOrganizer(page: Page, options: { multipleEvents?: boolean } =
 
 async function mockPartner(page: Page, options: {
   quotaExceeded?: boolean;
+  requestDeadlinePassed?: boolean;
   selectedWithdrawalError?: 'PAYMENT_ATTEMPT_ALREADY_PENDING' | 'PAYMENT_RESULT_UNKNOWN';
   emptyEventFirst?: boolean;
+  refreshAddsApplication?: boolean;
   workflowStates?: boolean;
 } = {}): Promise<void> {
   let delayInitialEvent = true;
+  let applicationLoadCount = 0;
   let requests: Record<string, unknown>[] = [{
     boothRequestId: 80,
     eventId: 101,
@@ -248,6 +252,14 @@ async function mockPartner(page: Page, options: {
     booth: { ...physicalBooth, boothId: 13, code: 'C09', name: 'Gian sự kiện mùa xuân', mapX: 50, mapY: 55 },
     rentalPrice: 3_500_000,
   };
+  const unavailableBooth = {
+    ...eventBooth,
+    eventBoothConfigId: null,
+    booth: { ...physicalBooth, boothId: 14, code: 'D10', name: 'Gian chưa mở', mapX: 80, mapY: 60 },
+    rentalPrice: null,
+    enabled: false,
+    availability: 'UNAVAILABLE',
+  };
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -256,12 +268,16 @@ async function mockPartner(page: Page, options: {
     if (path.endsWith('/auth/csrf')) return json(route, { headerName: 'X-CSRF-TOKEN', token: 'test-token' });
     if (path.endsWith('/partner/organization')) return json(route, { partnerOrganizationId: 9, name: 'NXB Demo', description: 'Đối tác kiểm thử', categoryCode: 'PUBLISHER', logoUrl: null, contactEmail: 'partner@example.com', contactPhone: null, address: null, status: 'ACTIVE' });
     if (path.endsWith('/partner/applications')) {
+      applicationLoadCount += 1;
       const applicationWithRequest = { applicationId: 31, eventId: 101, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-02T00:00:00Z', withdrawnAt: null };
       const applicationWithoutRequests = { applicationId: 32, eventId: 102, partnerOrganizationId: 9, status: 'APPROVED', applicationNote: null, reviewNote: null, submittedAt: '2026-10-02T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', withdrawnAt: null };
-      const applications = options.emptyEventFirst
+      const allApplications = options.emptyEventFirst
         ? [applicationWithoutRequests, applicationWithRequest]
         : [applicationWithRequest, applicationWithoutRequests];
-      return json(route, { content: applications, page: 0, size: 100, totalElements: 2, totalPages: 1 });
+      const applications = options.refreshAddsApplication && applicationLoadCount === 1
+        ? [applicationWithRequest]
+        : allApplications;
+      return json(route, { content: applications, page: 0, size: 100, totalElements: applications.length, totalPages: 1 });
     }
     if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, secondEvent], page: 0, size: 100, totalElements: 2, totalPages: 1 });
     if (path.endsWith('/events/101/booths') && method === 'GET') {
@@ -269,7 +285,8 @@ async function mockPartner(page: Page, options: {
         delayInitialEvent = false;
         await new Promise(resolve => setTimeout(resolve, 400));
       }
-      return json(route, { content: [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth], page: 0, size: 200, totalElements: 2, totalPages: 1 });
+      const booths = [{ ...eventBooth, availability: 'ON_HOLD' }, availableBooth, unavailableBooth];
+      return json(route, { content: booths, page: 0, size: 200, totalElements: booths.length, totalPages: 1 });
     }
     if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: [secondEventBooth], page: 0, size: 200, totalElements: 1, totalPages: 1 });
     if (path.endsWith('/partner/booth-requests/80/payments') && method === 'GET') return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
@@ -284,6 +301,12 @@ async function mockPartner(page: Page, options: {
         return json(route, {
           code: 'BOOTH_QUOTA_EXCEEDED',
           message: "The Partner has reached this Event's Booth quota.",
+        }, 409);
+      }
+      if (options.requestDeadlinePassed) {
+        return json(route, {
+          code: 'BOOTH_REQUEST_DEADLINE_PASSED',
+          message: 'The Booth request deadline has passed.',
         }, 409);
       }
       const request = { boothRequestId: 88, eventId: 101, boothId: 12, boothCode: 'B02', partnerOrganizationId: 9, partnerOrganizationName: 'NXB Demo', status: 'PENDING', requestNote: body.requestNote, reviewNote: null, submittedAt: '2026-10-08T01:00:00Z', reviewedAt: null, selectedAt: null, completedAt: null, paymentExpiredAt: null, withdrawnAt: null, hold: null };
@@ -344,7 +367,7 @@ async function mockPublicMap(page: Page): Promise<void> {
     if (path.endsWith('/events') && method === 'GET') return json(route, { content: [event, eventWithoutPositions], page: 0, size: 100, totalElements: 2, totalPages: 1 });
     if (path.endsWith('/events/101/booths') && method === 'GET') return json(route, { content: booths, page: 0, size: 100, totalElements: booths.length, totalPages: 1 });
     if (path.endsWith('/events/102/booths') && method === 'GET') return json(route, { content: booths.slice(1), page: 0, size: 100, totalElements: 2, totalPages: 1 });
-    if (path.endsWith('/public/heritages')) return json(route, []);
+    if (path.endsWith('/heritages')) return json(route, { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 });
     return json(route, { code: 'TEST_ROUTE_NOT_MOCKED', message: `${method} ${path}` }, 404);
   });
 }
@@ -358,13 +381,11 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
   await page.getByPlaceholder('Ví dụ: A01, B02, C10').fill('B01');
   await page.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill('Gian văn học');
-  await page.getByLabel('Tọa độ X trên sơ đồ (%)').fill('50');
-  await page.getByLabel('Tọa độ Y trên sơ đồ (%)').fill('50');
   await page.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Đã thêm mới thành công gian hàng');
   await expect(page.getByText('B01', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  await page.getByRole('button', { name: 'Sơ đồ Không gian Đường Sách' }).click();
   const mapLayer = page.locator('.booth-map-image-layer');
   const newBoothMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(newBoothMarker).toBeVisible();
@@ -372,7 +393,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   const mapPopover = page.locator('.booth-marker-popover');
   await expect(mapPopover.getByText('Đang hoạt động', { exact: true })).toBeVisible();
   await expect(mapPopover.getByLabel('Trạng thái vật lý')).toHaveCount(0);
-  await mapPopover.getByRole('button', { name: 'Hoàn tất & Đồng bộ' }).click();
+  await mapPopover.getByRole('button', { name: 'Lưu thay đổi' }).click();
   expect(getConfigurationRequests()).toHaveLength(0);
 
   const mapBox = await mapLayer.boundingBox();
@@ -384,7 +405,7 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.mouse.move(mapBox!.x + mapBox!.width * 0.625, mapBox!.y + mapBox!.height * 0.48, { steps: 8 });
   await page.mouse.up();
   await page.getByRole('button', { name: 'Lưu sơ đồ' }).click();
-  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 gian hàng');
+  await expect(page.getByRole('status')).toContainText('Đã lưu tọa độ của 1 vị trí');
 
   await page.getByRole('button', { name: 'Sự kiện', exact: true }).click();
   await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click();
@@ -418,25 +439,37 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   await expect(enabledToggle).toBeChecked();
+  await rentalPrice.fill('0');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
+  await expect(rentalPrice).toHaveValue('0');
+  await rentalPrice.fill('5500000');
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã lưu cấu hình gian A05');
   expect(getConfigurationRequests()).toEqual([
     { rentalPrice: 5_500_000, enabled: true },
     { rentalPrice: 5_500_000, enabled: false },
+    { rentalPrice: 5_500_000, enabled: true },
+    { rentalPrice: 0, enabled: true },
     { rentalPrice: 5_500_000, enabled: true },
   ]);
   await page.getByRole('button', { name: 'Đóng', exact: true }).click();
 
   await page.getByRole('button', { name: 'Yêu cầu gian hàng', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Yêu cầu gian hàng theo sự kiện' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Yêu cầu (cho thuê )?gian hàng theo sự kiện/ })).toBeVisible();
   await expect(page.getByLabel('Sự kiện đang duyệt')).toHaveValue('101');
   await expect(page.getByRole('button', { name: 'Thêm gian hàng mới' })).toHaveCount(0);
   await expect(page.getByText('NXB Demo')).toBeVisible();
-  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Duyệt & Cấp giữ chỗ' }).click();
+  const approveDialog = page.getByRole('dialog', { name: 'Xác nhận duyệt yêu cầu' });
+  await expect(approveDialog).toContainText('NXB Demo');
+  await expect(approveDialog).toContainText('A05');
+  await approveDialog.getByRole('button', { name: 'Xác nhận duyệt' }).click();
   await expect(page.getByText('Đã chọn / Giữ chỗ', { exact: true })).toBeVisible();
   await expect(page.getByText(/5.500.000/)).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: 'Gian hàng', exact: true }).click();
-  await page.getByRole('button', { name: 'Sơ đồ gian hàng' }).click();
+  await page.getByRole('button', { name: 'Sơ đồ Không gian Đường Sách' }).click();
   const persistedMarker = page.getByRole('button', { name: /B01.*Đang hoạt động/ });
   await expect(persistedMarker).toBeVisible();
   const savedBoothPosition = getSavedBoothPosition();
@@ -464,6 +497,37 @@ test('Organizer event selector keeps the selected event in the URL and after rel
   await expect(page.getByText('NXB Mùa xuân')).toBeVisible();
 });
 
+test('Partner opens booth details as a viewport overlay on a direct map visit', async ({ page }) => {
+  await mockPartner(page);
+  await page.goto('/partner/booth-requests');
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByRole('button', { name: /B02.*Còn trống/ }).click();
+    const backdrop = page.locator('.booth-modal-backdrop');
+    await expect(backdrop).toHaveCSS('position', 'fixed');
+    const box = await backdrop.boundingBox();
+    expect(box!.x).toBe(0);
+    expect(box!.y).toBe(0);
+    // A stable scrollbar gutter can reserve up to 20px beside the overlay.
+    expect(box!.width).toBeGreaterThanOrEqual(viewport.width - 20);
+    expect(box!.width).toBeLessThanOrEqual(viewport.width);
+    expect(box!.height).toBe(viewport.height);
+    const modal = page.locator('.s2-booth-request-modal');
+    await expect(modal).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(modal.getByRole('heading', { name: 'Gian văn học' })).toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Gửi yêu cầu thuê gian' })).toBeVisible();
+    const modalBox = await modal.boundingBox();
+    expect(modalBox!.x).toBeGreaterThanOrEqual(0);
+    expect(modalBox!.x + modalBox!.width).toBeLessThanOrEqual(viewport.width);
+    await page.keyboard.press('Escape');
+    await expect(backdrop).toHaveCount(0);
+    await page.getByRole('button', { name: /A05.*Đang giữ chỗ/ }).click();
+    await expect(page.locator('.s2-booth-request-modal')).toContainText('Gian hàng hiện đang giữ chỗ.');
+    await expect(page.locator('.s2-booth-request-modal').getByRole('button', { name: 'Gửi yêu cầu thuê gian' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+  }
+});
+
 test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockPartner(page);
@@ -480,8 +544,9 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await eventPicker.selectOption('101');
   await expect(page.getByRole('button', { name: /B02.*Còn trống/ })).toBeVisible();
   const summary = page.getByRole('region', { name: 'Thống kê gian hàng của sự kiện' });
-  await expect(summary).toContainText('2');
-  await expect(summary).toContainText('Gian hàng được mở');
+  const enabledSummary = summary.locator('article').filter({ hasText: 'Gian hàng được mở' });
+  await expect(enabledSummary.locator('strong')).toHaveText('2');
+  await expect(enabledSummary).toContainText('Đã cấu hình cho thuê trong sự kiện');
   await expect(summary).toContainText('1');
   await expect(summary).toContainText('Gian hàng còn trống');
   await expect(summary).toContainText('Yêu cầu đã gửi');
@@ -535,25 +600,47 @@ test('Approved Partner browses an AVAILABLE Booth and submits a PENDING request'
   await expect(page).toHaveURL(/\/partner\/booths$/);
   await expect(page.getByRole('heading', { name: 'Gian hàng của tôi' })).toBeVisible();
   await page.goto('/partner/booths/select');
-  await expect(page).toHaveURL(/\/partner\/booth-requests$/);
+  await expect(page).toHaveURL(/\/partner\/booth-requests(?:\?eventId=\d+)?$/);
   await expect(page.getByRole('heading', { name: 'Chọn và thuê gian hàng' })).toBeVisible();
 });
 
-test('Partner defaults to an approved Event that already has Booth requests', async ({ page }) => {
+test('Partner defaults to the newest approved Event and can search by Event name', async ({ page }) => {
   await mockPartner(page, { emptyEventFirst: true });
   await page.goto('/partner/booth-requests');
 
   const eventPicker = page.getByLabel('Sự kiện tham gia');
-  await expect(eventPicker).toHaveValue('101');
+  await expect(eventPicker).toHaveValue('102');
   await page.getByRole('tab', { name: /Yêu cầu của tôi/ }).click();
-  await expect(page.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
-
-  await eventPicker.selectOption('102');
   await expect(page.getByText('Sự kiện này chưa có yêu cầu thuê gian hàng')).toBeVisible();
-  await expect(page.getByText(/Bạn có 1 yêu cầu tại sự kiện/)).toBeVisible();
-  await page.getByRole('button', { name: 'Xem yêu cầu ở sự kiện đó' }).click();
+
+  await page.getByLabel('Tìm sự kiện').fill('ngay hoi sach');
+  await expect(eventPicker.locator('option')).toHaveCount(1);
+  await eventPicker.selectOption('101');
   await expect(eventPicker).toHaveValue('101');
   await expect(page.getByRole('heading', { name: 'Gian A05' })).toBeVisible();
+});
+
+test('Partner refresh reloads newly approved Event applications', async ({ page }) => {
+  await mockPartner(page, { refreshAddsApplication: true });
+  await page.goto('/partner/booth-requests');
+
+  const eventPicker = page.getByLabel('Sự kiện tham gia');
+  await expect(eventPicker.locator('option')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Làm mới' }).click();
+  await expect(eventPicker.locator('option')).toHaveCount(2);
+  await expect(eventPicker.locator('option', { hasText: 'Hội sách Mùa xuân' })).toHaveCount(1);
+});
+
+test('Partner sees a Vietnamese Booth request deadline message', async ({ page }) => {
+  await mockPartner(page, { requestDeadlinePassed: true });
+  await page.goto('/partner/booth-requests');
+
+  await page.getByRole('button', { name: /B02.*Còn trống/ }).click();
+  await page.getByLabel('Ghi chú gửi Ban tổ chức').fill('Ưu tiên trưng bày sách văn học.');
+  await page.getByRole('button', { name: 'Gửi yêu cầu thuê gian' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('Đã hết hạn gửi yêu cầu thuê gian hàng cho sự kiện này.');
+  await expect(page.getByText('The Booth request deadline has passed.')).toHaveCount(0);
 });
 
 test('Partner request cards expose truthful workflow progress for every terminal branch', async ({ page }) => {
@@ -720,7 +807,7 @@ test('Partner sees a dedicated modal after reaching the Event Booth quota', asyn
   await expect(page.locator('.s2-partner-request-status')).toHaveText('Đã được chọn');
 });
 
-test('Public visitor switches published Events and sees only Booths with valid coordinates', async ({ page }) => {
+test('Public Event card synchronizes Booths and Map context with valid coordinates', async ({ page }) => {
   const emptySourceWarnings: string[] = [];
   page.on('console', message => {
     if (message.type() === 'error' && message.text().includes('empty string')) {
@@ -729,8 +816,8 @@ test('Public visitor switches published Events and sees only Booths with valid c
   });
   await mockPublicMap(page);
   await page.goto('/');
-  const eventPicker = page.getByLabel('Sự kiện công khai').first();
-  await expect(eventPicker).toHaveValue('101');
+  await expect(page.getByLabel(`Sự kiện đang xem: ${event.name}`).first()).toBeVisible();
+  await expect(page.getByLabel('Sự kiện công khai')).toHaveCount(0);
   const marker = page.getByRole('button', { name: /A05.*Còn trống/ });
   await expect(marker).toBeVisible();
   await expect(page.getByRole('button', { name: /C03/ })).toHaveCount(0);
@@ -739,10 +826,16 @@ test('Public visitor switches published Events and sees only Booths with valid c
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('5.000.000');
   await expect(page.getByLabel('Thông tin gian hàng theo sự kiện')).toContainText('Còn trống');
   await expect(page.getByRole('button', { name: /Gửi yêu cầu gian hàng/ })).toHaveCount(0);
-  await eventPicker.selectOption('102');
+  await page.getByRole('button', { name: 'Sự kiện tiếp theo' }).click();
+  await expect(page).toHaveURL(/\?eventId=102$/);
+  await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
-  await expect(page.getByText('Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.')).toBeVisible();
-  await eventPicker.selectOption('101');
+  await expect(page.getByText('Sự kiện này chưa có gian hàng hoặc địa điểm với đủ tọa độ để hiển thị trên bản đồ.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Sự kiện đang xem: Sự kiện chưa định vị').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /A05/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Sự kiện trước' }).click();
+  await expect(page).toHaveURL(/\?eventId=101$/);
   await expect(marker).toBeVisible();
   await expect(page.locator('img[src=""]')).toHaveCount(0);
   expect(emptySourceWarnings).toEqual([]);

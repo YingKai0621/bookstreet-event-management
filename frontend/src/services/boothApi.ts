@@ -10,6 +10,28 @@ import type {
 } from '../types/booth';
 import { apiClient } from './apiClient';
 
+const UPLOADED_BOOTH_IMAGE_PREFIX = '/api/v1/media/booth-images/';
+
+const publicEventBoothsCache = new Map<string, { rows?: EventBooth[]; inflight?: Promise<EventBooth[]> }>();
+
+function publicEventBoothsCacheKey(
+  eventId: string,
+  filters: { availability?: BoothAvailability; categoryCode?: string } = {},
+): string {
+  return `${eventId}|${filters.availability ?? ''}|${filters.categoryCode ?? ''}`;
+}
+
+export function getCachedPublicEventBooths(
+  eventId: string,
+  filters: { availability?: BoothAvailability; categoryCode?: string } = {},
+): EventBooth[] | undefined {
+  return publicEventBoothsCache.get(publicEventBoothsCacheKey(eventId, filters))?.rows;
+}
+
+export function clearPublicEventBoothsCache(): void {
+  publicEventBoothsCache.clear();
+}
+
 function withQuery(path: string, values: Record<string, string | number | boolean | undefined>): string {
   const query = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => {
@@ -44,20 +66,45 @@ export const boothApi = {
     withQuery('/organizer/booths', { page, size: 100, sort: 'code,asc', active }),
   ),
 
-  createPhysicalBooth: (input: CreatePhysicalBoothInput) =>
-    apiClient.post<PhysicalBooth>('/organizer/booths', input),
+  createPhysicalBooth: (input: CreatePhysicalBoothInput) => {
+    clearPublicEventBoothsCache();
+    return apiClient.post<PhysicalBooth>('/organizer/booths', input);
+  },
 
-  updatePhysicalBooth: (boothId: number, input: UpdatePhysicalBoothInput) =>
-    apiClient.patch<PhysicalBooth>(`/organizer/booths/${boothId}`, input),
+  updatePhysicalBooth: (boothId: number, input: UpdatePhysicalBoothInput) => {
+    clearPublicEventBoothsCache();
+    return apiClient.patch<PhysicalBooth>(`/organizer/booths/${boothId}`, input);
+  },
+
+  async uploadBoothImage(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.postForm<{ url: string }>(
+      '/organizer/booth-images',
+      formData,
+    );
+    return response.url;
+  },
+
+  deleteUploadedBoothImage(imageUrl: string): Promise<void> {
+    if (!imageUrl.startsWith(UPLOADED_BOOTH_IMAGE_PREFIX)) return Promise.resolve();
+    const fileName = imageUrl.slice(UPLOADED_BOOTH_IMAGE_PREFIX.length);
+    if (!fileName || fileName.includes('/')) return Promise.resolve();
+    return apiClient.delete<void>(
+      `/organizer/booth-images/${encodeURIComponent(fileName)}`,
+    );
+  },
 
   listEventBoothConfigurations: (eventId: string) =>
     apiClient.get<EventBooth[]>(`/organizer/events/${encodeURIComponent(eventId)}/booth-configs`),
 
-  configureEventBooth: (eventId: string, boothId: number, rentalPrice: number, enabled: boolean) =>
-    apiClient.put<EventBooth>(
+  configureEventBooth: (eventId: string, boothId: number, rentalPrice: number, enabled: boolean) => {
+    clearPublicEventBoothsCache();
+    return apiClient.put<EventBooth>(
       `/organizer/events/${encodeURIComponent(eventId)}/booth-configs/${boothId}`,
       { rentalPrice, enabled },
-    ),
+    );
+  },
 
   listPublicEventBooths: (
     eventId: string,
@@ -75,21 +122,41 @@ export const boothApi = {
   listAllPublicEventBooths: (
     eventId: string,
     filters: { availability?: BoothAvailability; categoryCode?: string } = {},
-  ) => loadAllPages<EventBooth>(page =>
-    withQuery(`/events/${encodeURIComponent(eventId)}/booths`, {
-      page,
-      size: 100,
-      sort: 'code,asc',
-      availability: filters.availability,
-      categoryCode: filters.categoryCode,
-    }),
-  ),
+  ) => {
+    const key = publicEventBoothsCacheKey(eventId, filters);
+    const existing = publicEventBoothsCache.get(key);
+    if (existing?.rows) return Promise.resolve(existing.rows);
+    if (existing?.inflight) return existing.inflight;
 
-  submitRequest: (eventId: string, boothId: number, requestNote: string | null) =>
-    apiClient.post<BoothRequest>(
+    const inflight = loadAllPages<EventBooth>(page =>
+      withQuery(`/events/${encodeURIComponent(eventId)}/booths`, {
+        page,
+        size: 100,
+        sort: 'code,asc',
+        availability: filters.availability,
+        categoryCode: filters.categoryCode,
+      }),
+    )
+      .then(rows => {
+        publicEventBoothsCache.set(key, { rows });
+        return rows;
+      })
+      .catch(error => {
+        publicEventBoothsCache.delete(key);
+        throw error;
+      });
+
+    publicEventBoothsCache.set(key, { inflight });
+    return inflight;
+  },
+
+  submitRequest: (eventId: string, boothId: number, requestNote: string | null) => {
+    clearPublicEventBoothsCache();
+    return apiClient.post<BoothRequest>(
       `/events/${encodeURIComponent(eventId)}/booth-requests`,
       { boothId, requestNote },
-    ),
+    );
+  },
 
   listPartnerRequests: (eventId?: string, status?: BoothRequestStatus) =>
     apiClient.get<PageResponse<BoothRequest>>(
@@ -110,8 +177,10 @@ export const boothApi = {
   getPartnerRequest: (boothRequestId: number) =>
     apiClient.get<BoothRequest>(`/partner/booth-requests/${boothRequestId}`),
 
-  withdrawRequest: (boothRequestId: number) =>
-    apiClient.post<BoothRequest>(`/partner/booth-requests/${boothRequestId}/withdraw`),
+  withdrawRequest: (boothRequestId: number) => {
+    clearPublicEventBoothsCache();
+    return apiClient.post<BoothRequest>(`/partner/booth-requests/${boothRequestId}/withdraw`);
+  },
 
   listOrganizerRequests: (eventId: string, boothId?: number, status?: BoothRequestStatus) =>
     apiClient.get<PageResponse<BoothRequest>>(
@@ -129,14 +198,18 @@ export const boothApi = {
       page, size: 100, sort: 'submittedAt,asc', boothId, status,
     })),
 
-  selectRequest: (eventId: string, boothRequestId: number) =>
-    apiClient.post<BoothRequest>(
+  selectRequest: (eventId: string, boothRequestId: number) => {
+    clearPublicEventBoothsCache();
+    return apiClient.post<BoothRequest>(
       `/organizer/events/${encodeURIComponent(eventId)}/booth-requests/${boothRequestId}/select`,
-    ),
+    );
+  },
 
-  rejectRequest: (eventId: string, boothRequestId: number, reviewNote: string) =>
-    apiClient.post<BoothRequest>(
+  rejectRequest: (eventId: string, boothRequestId: number, reviewNote: string) => {
+    clearPublicEventBoothsCache();
+    return apiClient.post<BoothRequest>(
       `/organizer/events/${encodeURIComponent(eventId)}/booth-requests/${boothRequestId}/reject`,
       { reviewNote },
-    ),
+    );
+  },
 };

@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -98,6 +98,7 @@ class OrganizerActivityProposalIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
         jdbc.update("delete from activities where event_id in "
                 + "(select event_id from events where organizer_user_id in (?, ?))",
                 organizerId, otherOrganizerId);
@@ -203,6 +204,13 @@ class OrganizerActivityProposalIntegrationTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("PROPOSAL_NOT_REVIEWABLE"));
         assertThat(proposalStatus(commandGuardId)).isEqualTo("CANCELLED");
+        mvc.perform(get(PROPOSALS + "/" + proposalId)
+                        .with(actor(organizerId, "ORGANIZER")))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_proposal_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = 'PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED'",
+                Integer.class, proposalId, partnerUserId)).isOne();
     }
 
     @Test
@@ -248,9 +256,12 @@ class OrganizerActivityProposalIntegrationTests {
         assertThat(jdbc.queryForObject(
                 "select count(*) from activities where source_proposal_id in (?, ?)",
                 Integer.class, changesId, rejectId)).isZero();
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "activity_proposal_id in (?, ?) and recipient_role = 'PARTNER'",
+                Integer.class, changesId, rejectId)).isEqualTo(2);
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_NEEDS_CHANGES));
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_REJECTED));
     }
 
@@ -343,7 +354,7 @@ class OrganizerActivityProposalIntegrationTests {
                   and status = 'DRAFT'
                 """, Integer.class, activityId, eventId, stageId,
                 Timestamp.from(start), Timestamp.from(end))).isOne();
-        verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+        verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
     }
 
@@ -438,7 +449,7 @@ class OrganizerActivityProposalIntegrationTests {
             assertThat(jdbc.queryForObject(
                     "select count(*) from activities where source_proposal_id = ?",
                     Integer.class, proposalId)).isOne();
-            verify(partnerMailService, times(1)).sendMessage(anyString(), argThat(event ->
+            verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                     event.messageType() == ActivityPartnerMessageType.PROPOSAL_APPROVED));
         } finally {
             start.countDown();

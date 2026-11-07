@@ -1,7 +1,9 @@
 import { clampPage, getPageCount, getPageOffset, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { ListPagination } from '../ui/ListPagination';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   CalendarDays,
+  Ban,
   Edit3,
   Eye,
   ImageOff,
@@ -9,6 +11,7 @@ import {
   Search,
   Send,
   SlidersHorizontal,
+  Trash2,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -27,6 +30,8 @@ interface EventManagementViewProps {
   onOpenCreateEvent: () => void;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (event: OrganizerEvent) => void;
+  onCancelEvent: (event: OrganizerEvent) => void;
+  onDeleteEvent: (event: OrganizerEvent) => void;
 }
 
 type StatusFilter = 'ALL' | OrganizerEventStatus;
@@ -81,6 +86,8 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
   onOpenCreateEvent,
   onEditEvent,
   onPublishEvent,
+  onCancelEvent,
+  onDeleteEvent,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const statusCandidate = searchParams.get('status');
@@ -212,19 +219,18 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
         </div>
 
         <div className="org-event-toolbar-controls">
-          <div className="organizer-search-box org-event-search-box">
+          <WorkspaceFieldLabel className="org-event-search-field" label={language === 'vi' ? 'Tìm kiếm' : 'Search'}><div className="organizer-search-box org-event-search-box">
             <Search size={16} />
             <input value={searchQuery} onChange={event => updateSearch(event.target.value)} placeholder={language === 'vi' ? 'Tìm tên sự kiện...' : 'Search event name...'} />
-          </div>
-          <label className="org-event-sort-control">
+          </div></WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="org-event-sort-field" label={language === 'vi' ? 'Sắp xếp' : 'Sort'}><label className="org-event-sort-control">
             <SlidersHorizontal size={16} aria-hidden="true" />
-            <span className="sr-only">{language === 'vi' ? 'Sắp xếp sự kiện' : 'Sort events'}</span>
             <select value={sortBy} onChange={event => updateSort(event.target.value as EventSort)}>
               <option value="updated_desc">{language === 'vi' ? 'Cập nhật gần nhất' : 'Recently updated'}</option>
               <option value="start_asc">{language === 'vi' ? 'Sắp diễn ra' : 'Starting soon'}</option>
               <option value="title_asc">{language === 'vi' ? 'Tên A–Z' : 'Name A–Z'}</option>
             </select>
-          </label>
+          </label></WorkspaceFieldLabel>
           <span className="org-event-result-count" aria-live="polite">{processedEvents.length} {language === 'vi' ? 'kết quả' : 'results'}</span>
         </div>
       </section>
@@ -296,9 +302,13 @@ export const EventManagementView: React.FC<EventManagementViewProps> = ({
                         <Send size={15} />{language === 'vi' ? 'Công bố' : 'Publish'}
                       </button>
                       <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                      <button type="button" className="btn-org-danger" onClick={() => onDeleteEvent(event)}><Trash2 size={15} />{language === 'vi' ? 'Xóa' : 'Delete'}</button>
                     </>
                   ) : (
-                    <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                    <>
+                      <button type="button" className="btn-org-primary org-event-action-primary" onClick={() => onSelectEvent(event.id)}><Eye size={15} />{language === 'vi' ? 'Xem chi tiết' : 'View details'}</button>
+                      {event.apiStatus === 'PUBLISHED' && <button type="button" className="btn-org-danger" onClick={() => onCancelEvent(event)}><Ban size={15} />{language === 'vi' ? 'Hủy sự kiện' : 'Cancel event'}</button>}
+                    </>
                   )}
                 </div>
               </article>

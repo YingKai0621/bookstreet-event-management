@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -13,19 +12,18 @@ import {
   User,
   X
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
-import { Language, PartnerNotification, PartnerOrganization } from '../../types';
+import { Language, PartnerOrganization } from '../../types';
+import { PARTNER_NOTIFICATIONS_CHANGED, notifyPartnerNotificationsChanged,
+  partnerNotificationTarget, partnerNotificationsApi, type PartnerNotificationItem } from '../../services/partnerNotificationsApi';
 import './PartnerLayout.css';
 
 interface PartnerLayoutProps {
   language: Language;
   organization: PartnerOrganization;
-  unreadNotificationsCount?: number;
-  notifications?: PartnerNotification[];
-  onMarkAllAsRead?: () => void;
-  onMarkItemAsRead?: (id: string) => void;
   onLogout: () => void;
   children: React.ReactNode;
 }
@@ -33,10 +31,6 @@ interface PartnerLayoutProps {
 export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   language,
   organization,
-  unreadNotificationsCount = 0,
-  notifications = [],
-  onMarkAllAsRead,
-  onMarkItemAsRead,
   onLogout,
   children,
 }) => {
@@ -45,6 +39,60 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState<PartnerNotificationItem[]>([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationError, setNotificationError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [notificationPending, setNotificationPending] = useState(false);
+
+  const refreshNotifications = useCallback(async () => {
+    setNotificationLoading(true);
+    setNotificationError('');
+    try {
+      const [page, count] = await Promise.all([
+        partnerNotificationsApi.list({ size: 4 }), partnerNotificationsApi.unreadCount(),
+      ]);
+      if (!Array.isArray(page.content) || !Number.isFinite(count.unreadCount)) throw new Error('Invalid notification response');
+      setNotifications(page.content);
+      setUnreadNotificationsCount(count.unreadCount);
+    } catch (error) {
+      setNotificationError((error as { status?: number })?.status === 401
+        ? 'Phiên đăng nhập đã hết hạn.' : (error as { status?: number })?.status === 403
+          ? 'Bạn không có quyền xem thông báo Partner.' : 'Không tải được thông báo.');
+    } finally { setNotificationLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    void refreshNotifications();
+    window.addEventListener(PARTNER_NOTIFICATIONS_CHANGED, refreshNotifications);
+    return () => window.removeEventListener(PARTNER_NOTIFICATIONS_CHANGED, refreshNotifications);
+  }, [refreshNotifications]);
+
+  useNotificationStream('partner');
+  useNotificationLiveRefresh(refreshNotifications);
+
+  async function markAll() {
+    if (notificationPending) return;
+    setNotificationPending(true); setActionError('');
+    try { await partnerNotificationsApi.markAllRead(); notifyPartnerNotificationsChanged(); }
+    catch { setActionError('Không thể đánh dấu đã đọc. Vui lòng thử lại.'); }
+    finally { setNotificationPending(false); }
+  }
+
+  async function openNotification(item: PartnerNotificationItem) {
+    if (notificationPending) return;
+    setNotificationPending(true); setActionError('');
+    try {
+      if (!item.read) await partnerNotificationsApi.markRead(item.notificationId);
+      notifyPartnerNotificationsChanged();
+      const target = partnerNotificationTarget(item);
+      if (target) { setNotifDropdownOpen(false); navigate(target); }
+      else setActionError('Nội dung này hiện không mở được từ thông báo.');
+    } catch { setActionError('Không thể đánh dấu đã đọc. Vui lòng thử lại.'); }
+    finally { setNotificationPending(false); }
+  }
 
   // Close popups on click outside or Esc
   React.useEffect(() => {
@@ -116,19 +164,12 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       icon: <Layers size={18} />,
     },
     {
-      id: 'reports',
-      path: '/partner/reports',
-      labelVi: 'Báo cáo & Thống kê',
-      labelEn: 'Reports',
-      icon: <BarChart3 size={18} />,
-    },
-    {
       id: 'notifications',
       path: '/partner/notifications',
       labelVi: 'Thông báo',
       labelEn: 'Notifications',
       icon: <Bell size={18} />,
-      badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined
+      badge: unreadNotificationsCount ?? 0,
     },
     {
       id: 'profile',
@@ -146,7 +187,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     return location.pathname.startsWith(itemPath);
   };
 
-  const latestNotifications = notifications.slice(0, 4);
+  const latestNotifications = notifications;
 
   return (
     <div className="partner-app-shell">
@@ -186,10 +227,11 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
               onClick={() => {
                 setNotifDropdownOpen(!notifDropdownOpen);
                 setUserDropdownOpen(false);
+                if (!notifDropdownOpen) void refreshNotifications();
               }}
             >
               <Bell size={18} />
-              {unreadNotificationsCount > 0 && <span className="partner-notif-dot"></span>}
+              {unreadNotificationsCount !== null && unreadNotificationsCount > 0 && <span className="partner-notif-dot"></span>}
             </button>
 
             {notifDropdownOpen && (
@@ -197,18 +239,19 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 <div className="notif-dropdown-header">
                   <strong className="notif-header-title-text">{language === 'vi' ? 'Thông báo mới nhất' : 'Recent Notifications'}</strong>
                   <div className="notif-header-center">
-                    {unreadNotificationsCount > 0 && (
+                    {unreadNotificationsCount !== null && unreadNotificationsCount > 0 && (
                       <span className="notif-unread-badge">
                         {unreadNotificationsCount} {language === 'vi' ? 'mới' : 'new'}
                       </span>
                     )}
                   </div>
                   <div className="notif-header-right">
-                    {unreadNotificationsCount > 0 && onMarkAllAsRead ? (
+                    {unreadNotificationsCount !== null && unreadNotificationsCount > 0 ? (
                       <button 
                         type="button"
                         className="notif-mark-read-btn"
-                        onClick={() => onMarkAllAsRead()}
+                        onClick={() => void markAll()}
+                        disabled={notificationPending}
                       >
                         {language === 'vi' ? 'Đã đọc tất cả' : 'Mark all read'}
                       </button>
@@ -219,34 +262,28 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 </div>
 
                 <div className="notif-dropdown-list">
-                  {latestNotifications.length === 0 ? (
+                  {actionError && <p role="alert">{actionError}</p>}
+                  {notificationLoading ? <p role="status">Đang tải thông báo...</p> : notificationError ? <div role="alert"><p>{notificationError}</p><button type="button" onClick={() => void refreshNotifications()}>Thử lại</button></div> : latestNotifications.length === 0 ? (
                     <div className="notif-dropdown-empty">
                       <Bell size={24} style={{ opacity: 0.4, marginBottom: '0.4rem' }} />
                       <p>{language === 'vi' ? 'Không có thông báo nào' : 'No notifications'}</p>
                     </div>
                   ) : (
                     latestNotifications.map((notif) => (
-                      <div 
-                        key={notif.id} 
-                        className={`notif-dropdown-item ${!notif.isRead ? 'unread' : ''}`}
-                        onClick={() => {
-                          if (!notif.isRead && onMarkItemAsRead) {
-                            onMarkItemAsRead(notif.id);
-                          }
-                          if (notif.link) {
-                            setNotifDropdownOpen(false);
-                            navigate(notif.link);
-                          }
-                        }}
+                      <button type="button"
+                        key={notif.notificationId}
+                        disabled={notificationPending}
+                        className={`notif-dropdown-item ${!notif.read ? 'unread' : ''}`}
+                        onClick={() => void openNotification(notif)}
                       >
                         <div className="notif-item-indicator">
-                          {!notif.isRead && <span className="notif-blue-dot"></span>}
+                          {!notif.read && <span className="notif-blue-dot"></span>}
                         </div>
                         <div className="notif-item-content">
                           <h4 className="notif-item-title">{notif.title}</h4>
-                          <span className="notif-item-time">{notif.time}</span>
+                          <span className="notif-item-time">{new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(notif.createdAt))}</span>
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>

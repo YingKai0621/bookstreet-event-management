@@ -1,7 +1,7 @@
 import gsap from 'gsap';
-import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Image as ImageIcon, MapPin } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Language } from '../../types';
 import { HeritageProfile } from '../../types/heritage';
 import { IconHeritageSeal } from './CustomIcons';
@@ -11,28 +11,38 @@ interface HeritageSectionProps {
   language: Language;
   heritageList?: HeritageProfile[];
   isLoading?: boolean;
+  error?: string;
 }
 
-const VISIBLE_LANDMARKS = 7;
-const HALF_FAN = 3;
+const VISIBLE_LANDMARKS = 3;
+const HALF_FAN = 1;
 const FAN_SLOTS = [
-  { rotation: -20, scale: 0.79, y: 3.9, zIndex: 4 },
-  { rotation: -13, scale: 0.86, y: 2.25, zIndex: 6 },
-  { rotation: -6.5, scale: 0.94, y: 0.8, zIndex: 8 },
+  { rotation: -7, scale: 0.94, y: 0.9, zIndex: 8 },
   { rotation: 0, scale: 1, y: 0, zIndex: 10 },
-  { rotation: 6.5, scale: 0.94, y: 0.8, zIndex: 8 },
-  { rotation: 13, scale: 0.86, y: 2.25, zIndex: 6 },
-  { rotation: 20, scale: 0.79, y: 3.9, zIndex: 4 },
+  { rotation: 7, scale: 0.94, y: 0.9, zIndex: 8 },
 ];
 
-const imageFor = (item: HeritageProfile) => item.image?.url || '';
-const imageAlt = (item: HeritageProfile) => item.image?.alt || `Ảnh tư liệu: ${item.name}`;
+const imageAlt = (item: HeritageProfile) => `Ảnh minh họa: ${item.title}`;
 const EMPTY_HERITAGE_LIST: HeritageProfile[] = [];
 
-export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heritageList, isLoading = false }) => {
+function FanImage({ item, vi }: { item: HeritageProfile; vi: boolean }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!item.imageUrl || failedSrc === item.imageUrl) {
+    return <span className="heritage-fan-image-fallback"><ImageIcon size={34} />{vi ? 'Chưa có ảnh' : 'No image yet'}</span>;
+  }
+  return <img src={item.imageUrl} alt={imageAlt(item)} loading="eager" decoding="async" onError={() => setFailedSrc(item.imageUrl)} />;
+}
+
+export const HeritageSection: React.FC<HeritageSectionProps> = ({
+  language,
+  heritageList,
+  isLoading = false,
+  error = '',
+}) => {
   const vi = language === 'vi';
+  const navigate = useNavigate();
   const landmarks = heritageList || EMPTY_HERITAGE_LIST;
-  const [centerIndex, setCenterIndex] = useState(HALF_FAN);
+  const [centerIndex, setCenterIndex] = useState(Math.min(HALF_FAN, Math.max(0, landmarks.length - 1)));
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const cardRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const hasEntered = useRef(false);
@@ -40,6 +50,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
   const travelDirection = useRef<-1 | 1>(1);
   const swipeStartX = useRef<number | null>(null);
   const didSwipe = useRef(false);
+  const activeIndex = landmarks.length ? centerIndex % landmarks.length : 0;
 
   const getVisibleMap = useCallback(() => {
     const visible = new Map<number, number>();
@@ -47,16 +58,23 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
     if (!total) return visible;
 
     if (total <= VISIBLE_LANDMARKS) {
-      landmarks.forEach((_, index) => visible.set(index, index));
+      visible.set(activeIndex, HALF_FAN);
+      if (total === 2) {
+        const otherIndex = (activeIndex + 1) % total;
+        visible.set(otherIndex, activeIndex === 0 ? 2 : 0);
+      } else if (total === 3) {
+        visible.set((activeIndex - 1 + total) % total, 0);
+        visible.set((activeIndex + 1) % total, 2);
+      }
       return visible;
     }
 
     for (let slot = 0; slot < VISIBLE_LANDMARKS; slot += 1) {
-      const cardIndex = (centerIndex + slot - HALF_FAN + total) % total;
+      const cardIndex = (activeIndex + slot - HALF_FAN + total) % total;
       visible.set(cardIndex, slot);
     }
     return visible;
-  }, [centerIndex, landmarks]);
+  }, [activeIndex, landmarks]);
 
   const previousHoveredSlot = useRef<number | undefined>(undefined);
 
@@ -65,7 +83,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
     const wasVisible = previousVisible.current;
     const isMobile = window.innerWidth <= 760;
     // Spacing between cards
-    const spacing = Math.min(window.innerWidth * 0.13, isMobile ? 72 : 185);
+    const spacing = Math.min(window.innerWidth * 0.16, isMobile ? 72 : 230);
     const verticalUnit = isMobile ? 8 : 16;
     const hoveredSlot = hoveredIndex === null ? undefined : visibleMap.get(hoveredIndex);
     const offsetFor = (slotIndex: number) => (slotIndex - HALF_FAN) * spacing;
@@ -203,21 +221,24 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
   };
 
   const focusCard = (event: React.MouseEvent<HTMLAnchorElement>, index: number) => {
+    event.preventDefault();
     if (didSwipe.current) {
-      event.preventDefault();
       didSwipe.current = false;
       return;
     }
-    if (index === centerIndex) return;
-    event.preventDefault();
-    travelDirection.current = index > centerIndex ? 1 : -1;
+    if (event.currentTarget.getAttribute('aria-current') === 'true') {
+      navigate(event.currentTarget.getAttribute('href') || '/di-san');
+      return;
+    }
+    const selectedSlot = getVisibleMap().get(index);
+    travelDirection.current = selectedSlot !== undefined && selectedSlot < HALF_FAN ? -1 : 1;
     setHoveredIndex(null);
     setCenterIndex(index);
   };
 
   const visibleCards = getVisibleMap();
 
-  if (isLoading || landmarks.length === 0) {
+  if (isLoading) {
     return (
       <section className="figma-heritage-section" id="di-san" aria-busy="true">
         <div className="container">
@@ -237,7 +258,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
               {FAN_SLOTS.map((slot, index) => {
                 const isCenter = index === HALF_FAN;
                 const isMobile = typeof window !== 'undefined' && window.innerWidth <= 760;
-                const spacing = isMobile ? 60 : 160;
+                const spacing = isMobile ? 60 : 205;
                 const xOffset = (index - HALF_FAN) * spacing;
                 return (
                   <div
@@ -272,6 +293,39 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
     );
   }
 
+  if (landmarks.length === 0) {
+    return (
+      <section className="figma-heritage-section" id="di-san">
+        <div className="container">
+          <div className="figma-section-header heritage-fan-header">
+            <span className="figma-eyebrow">
+              <IconHeritageSeal size={16} color="var(--figma-gold)" style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              {vi ? 'HÀNH TRÌNH DI SẢN' : 'HERITAGE TRAIL'}
+            </span>
+            <h2 className="figma-section-title">
+              {vi ? 'Khám phá di sản qua từng trang ảnh' : 'Discover heritage through every card'}
+            </h2>
+            <p className="figma-section-subtitle" role={error ? 'alert' : undefined}>
+              {error
+                ? (vi ? 'Chưa thể tải nội dung di sản. Vui lòng thử lại sau.' : 'Heritage content is unavailable. Please try again later.')
+                : (vi ? 'Hiện chưa có nội dung di sản được công bố.' : 'There is no published heritage content yet.')}
+            </p>
+          </div>
+          <div className="section-bottom-see-more-row heritage-section-more-row">
+            <Link
+              to="/di-san"
+              className="btn-section-see-more-borderless heritage-btn-see-more-borderless"
+              aria-label={vi ? 'Mở không gian di sản' : 'Open heritage collection'}
+            >
+              <span>{vi ? 'Mở không gian di sản' : 'Open heritage collection'}</span>
+              <ChevronRight size={17} className="see-more-arrow-icon heritage-more-icon" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="figma-heritage-section" id="di-san">
       <div className="container">
@@ -286,7 +340,7 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           </p>
         </div>
 
-        <div className="heritage-fan-shell" aria-label={vi ? 'Mười điểm di tích' : 'Ten heritage landmarks'} onMouseLeave={() => setHoveredIndex(null)}>
+        <div className="heritage-fan-shell" aria-label={vi ? 'Các điểm di sản' : 'Heritage landmarks'} onMouseLeave={() => setHoveredIndex(null)}>
           <div
             className="heritage-fan-stage"
             onPointerDown={(event) => {
@@ -306,28 +360,25 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
           >
             {landmarks.map((heritage, index) => (
               <Link
-                to={`/di-san/${heritage.id}`}
-                key={heritage.id}
+                to={`/di-san/${encodeURIComponent(heritage.publicCode)}`}
+                key={heritage.publicCode}
                 ref={element => { cardRefs.current[index] = element; }}
                 className="heritage-fan-card"
-                aria-label={`${vi ? 'Khám phá' : 'Explore'} ${vi ? heritage.name : heritage.nameEn}`}
+                aria-label={`${vi ? 'Khám phá' : 'Explore'} ${heritage.title}`}
+                aria-current={index === activeIndex ? 'true' : undefined}
                 tabIndex={visibleCards.has(index) ? 0 : -1}
                 onClick={event => focusCard(event, index)}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onFocus={() => setHoveredIndex(index)}
                 onBlur={() => setHoveredIndex(null)}
               >
-                <img
-                  src={imageFor(heritage) || undefined}
-                  alt={imageAlt(heritage)}
-                  loading="eager"
-                  decoding="async"
-                />
+                <FanImage item={heritage} vi={vi} />
                 <span className="heritage-fan-shade" aria-hidden="true" />
-                <span className="heritage-fan-code">{heritage.code}</span>
                 <span className="heritage-fan-copy">
-                  <span className="heritage-fan-place"><MapPin size={13} /> {vi ? heritage.province : heritage.provinceEn}</span>
-                  <strong>{vi ? heritage.name : heritage.nameEn}</strong>
+                  {heritage.locationText && (
+                    <span className="heritage-fan-place"><MapPin size={13} /> {heritage.locationText}</span>
+                  )}
+                  <strong>{heritage.title}</strong>
                   <span className="heritage-fan-open">{vi ? 'Mở câu chuyện' : 'Open story'} <ArrowRight size={15} /></span>
                 </span>
               </Link>
@@ -338,17 +389,26 @@ export const HeritageSection: React.FC<HeritageSectionProps> = ({ language, heri
         {landmarks.length > 1 && (
           <div className="heritage-fan-controls" aria-label={vi ? 'Điều hướng di tích' : 'Heritage navigation'}>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(-1)} aria-label={vi ? 'Di tích trước' : 'Previous landmark'}><ChevronLeft size={20} /></button>
-            <div className="heritage-fan-dots" aria-label={vi ? `${centerIndex + 1} trên ${landmarks.length}` : `${centerIndex + 1} of ${landmarks.length}`}>
-              {landmarks.map((heritage, index) => <span key={heritage.id} className={index === centerIndex ? 'is-active' : ''} />)}
+            <div className="heritage-fan-progress" aria-live="polite" aria-atomic="true">
+              {landmarks.length <= 8 && (
+                <div className="heritage-fan-dots" aria-hidden="true">
+                  {landmarks.map((heritage, index) => <span key={heritage.publicCode} className={index === activeIndex ? 'is-active' : ''} />)}
+                </div>
+              )}
+              <span className="heritage-fan-counter"><strong>{activeIndex + 1}</strong> / {landmarks.length} {vi ? 'di sản' : 'stories'}</span>
             </div>
             <button type="button" className="heritage-fan-control" onClick={() => cycle(1)} aria-label={vi ? 'Di tích tiếp theo' : 'Next landmark'}><ChevronRight size={20} /></button>
           </div>
         )}
 
-        <div className="heritage-section-more-row">
-          <Link to="/di-san" className="heritage-btn-see-more-borderless">
+        <div className="section-bottom-see-more-row heritage-section-more-row">
+          <Link
+            to="/di-san"
+            className="btn-section-see-more-borderless heritage-btn-see-more-borderless"
+            aria-label={vi ? `Xem đầy đủ ${landmarks.length} điểm di sản` : `View all ${landmarks.length} landmarks`}
+          >
             <span>{vi ? `Xem đầy đủ ${landmarks.length} điểm di sản` : `View all ${landmarks.length} landmarks`}</span>
-            <ChevronRight size={18} className="heritage-more-icon" />
+            <ChevronRight size={17} className="see-more-arrow-icon heritage-more-icon" />
           </Link>
         </div>
       </div>

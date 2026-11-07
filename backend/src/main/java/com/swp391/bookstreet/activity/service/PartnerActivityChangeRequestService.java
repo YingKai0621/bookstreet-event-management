@@ -15,6 +15,7 @@ import com.swp391.bookstreet.activity.security.ActivityCurrentUser;
 import com.swp391.bookstreet.booth.entity.Location;
 import com.swp391.bookstreet.booth.entity.LocationType;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
+import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -38,6 +39,7 @@ public class PartnerActivityChangeRequestService {
     private final ActivityValidationService validation;
     private final ActivityScheduleGuard scheduleGuard;
     private final ActivityConstraintTranslator constraintTranslator;
+    private final OrganizerWorkItemNotificationService organizerNotifications;
     private final Clock clock;
 
     public PartnerActivityChangeRequestService(ActivityRepository activityRepository,
@@ -47,7 +49,8 @@ public class PartnerActivityChangeRequestService {
             ActivityLifecycleCoordinator lifecycleCoordinator,
             ActivityLifecycleService lifecycleService, ActivityValidationService validation,
             ActivityScheduleGuard scheduleGuard,
-            ActivityConstraintTranslator constraintTranslator, Clock clock) {
+            ActivityConstraintTranslator constraintTranslator,
+            OrganizerWorkItemNotificationService organizerNotifications, Clock clock) {
         this.activityRepository = activityRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
@@ -58,6 +61,7 @@ public class PartnerActivityChangeRequestService {
         this.validation = validation;
         this.scheduleGuard = scheduleGuard;
         this.constraintTranslator = constraintTranslator;
+        this.organizerNotifications = organizerNotifications;
         this.clock = clock;
     }
 
@@ -133,6 +137,7 @@ public class PartnerActivityChangeRequestService {
             constraintTranslator.rethrow(error);
             throw error;
         }
+        organizerNotifications.activityChangeRequestSubmitted(locks.event(), change);
         return ActivityChangeRequestResponse.from(change);
     }
 

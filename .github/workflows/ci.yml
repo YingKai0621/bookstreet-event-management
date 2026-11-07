@@ -7,18 +7,24 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event.label.name || 'standard' }}
   cancel-in-progress: true
 
 jobs:
   backend:
     name: Backend tests
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -54,6 +60,8 @@ jobs:
       POSTGRES_USER: bookstreet
       POSTGRES_PASSWORD: bookstreet_ci_password
       EVENT_TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/bookstreet_event_test
+      EVENT_TEST_DATABASE_USER: bookstreet
+      EVENT_TEST_DATABASE_PASSWORD: bookstreet_ci_password
       REDIS_HOST: localhost
       REDIS_PORT: 6379
 
@@ -80,6 +88,7 @@ jobs:
 
   frontend:
     name: Frontend checks
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -105,3 +114,35 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+  frontend-e2e:
+    name: Frontend Playwright tests
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, 'run-e2e'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright UI regression suite
+        working-directory: frontend
+        run: npm run test:e2e

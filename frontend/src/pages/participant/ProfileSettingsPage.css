@@ -9,14 +9,14 @@
 .reader-avatar-wrapper { position: relative; flex-shrink: 0; }
 .reader-profile-page .profile-avatar-large { width: 72px; height: 72px; font-size: 1.6rem; overflow: hidden; border: 3px solid white; }
 .reader-profile-page .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
-.reader-avatar-button { position: absolute; right: -2px; bottom: -2px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 3px solid white; background: #185e48; color: white; cursor: pointer; }
+.reader-avatar-button { position: absolute; right: -2px; bottom: -2px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 3px solid white; background: #185e48; color: white; cursor: pointer; }
 .reader-profile-page .profile-names { min-width: 0; }
 .reader-profile-eyebrow { font-size: .68rem; letter-spacing: .12em; color: #637771; font-weight: 700; }
 .reader-profile-page .profile-names h2 { margin: 8px 0 6px; font-size: clamp(1.3rem, 2vw, 1.8rem); overflow-wrap: anywhere; }
 .reader-profile-page .profile-names p { font-size: .9rem; overflow-wrap: anywhere; }
 .reader-role, .reader-coming-soon { display: inline-block; padding: 5px 10px; margin-top: 10px; border-radius: 6px; background: #e1efe7; color: #185e48; font-size: .75rem; font-weight: 600; }
 .reader-profile-page .reader-edit-button { width: auto; min-height: 44px; flex-shrink: 0; }
-.reader-profile-body { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr); gap: clamp(24px, 4vw, 48px); padding: 22px 28px; }
+.reader-profile-body { display: block; max-width: 780px; padding: 22px 28px; }
 .reader-section-heading { display: flex; align-items: center; gap: 10px; color: #185e48; }
 .reader-section-heading h3 { margin: 0; font-size: 1.08rem; color: #172421; }
 .reader-section-description { font-size: .85rem; color: #637771; line-height: 1.5; margin: 8px 0 12px; }

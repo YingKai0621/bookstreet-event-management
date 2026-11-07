@@ -20,7 +20,7 @@ Guest không cần tài khoản để xem nội dung public.
 
 - Explore Book Street: xem/tìm Event, Activity, Booth, Booth Map và Heritage content.
 
-- Submit General Feedback: gửi góp ý về đúng một target BOOK_STREET, EVENT hoặc HERITAGE mà không cần đăng nhập.
+- Submit General Feedback: gửi góp ý về đúng một target BOOK_STREET hoặc EVENT mà không cần đăng nhập. Heritage không nhận GeneralFeedback.
 
 - Create Account: đăng ký bằng username, full name, password và confirm password. Username là duy nhất không phân biệt hoa thường; email là tùy chọn đối với Participant. Confirm password chỉ dùng để kiểm tra và không lưu database.
 

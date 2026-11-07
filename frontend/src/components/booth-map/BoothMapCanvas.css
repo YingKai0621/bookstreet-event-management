@@ -235,6 +235,24 @@
   color: #0369A1;
 }
 
+.booth-map-marker.status-physical.kind-stage {
+  background: #FEF3C7;
+  border-color: #D97706;
+  color: #92400E;
+}
+
+.booth-map-marker.status-physical.kind-workshop {
+  background: #EDE9FE;
+  border-color: #7C3AED;
+  color: #5B21B6;
+}
+
+.booth-map-marker.status-physical.kind-area {
+  background: #DCFCE7;
+  border-color: #16A34A;
+  color: #166534;
+}
+
 .booth-map-marker.status-physical_inactive {
   background: #E2E8F0;
   border: 1.5px dashed #94A3B8;
@@ -244,6 +262,10 @@
 
 .booth-map-legend-dot.physical { background: #0284C7; }
 .booth-map-legend-dot.physical-inactive { background: #94A3B8; }
+.booth-map-legend-dot.kind-booth { background: #0284C7; }
+.booth-map-legend-dot.kind-stage { background: #D97706; }
+.booth-map-legend-dot.kind-workshop { background: #7C3AED; }
+.booth-map-legend-dot.kind-area { background: #16A34A; }
 
 .booth-map-marker:hover,
 .booth-map-marker:focus-visible,
@@ -506,4 +528,37 @@
   .booth-map-toolbar-actions { flex-wrap: wrap; }
   .booth-marker-popover { width: calc(100vw - 32px); }
   .popover-body-grid { grid-template-columns: 1fr; }
+}
+
+/* Newly created booth marker highlight */
+.booth-map-marker.is-newly-created {
+  z-index: 35 !important;
+  animation: newlyCreatedPulse 1.8s infinite ease-in-out;
+  border-color: #D97706 !important;
+}
+
+.booth-map-marker .newly-created-badge {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #D97706;
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+
+}
+
+@keyframes newlyCreatedPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px #E9BC63, 0 0 16px rgba(233, 188, 99, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(233, 188, 99, 0.4), 0 0 26px rgba(233, 188, 99, 0.5);
+  }
 }

@@ -18,6 +18,7 @@ import { BoothPaymentCheckoutCard } from '../../components/partner/BoothPaymentC
 import { boothApi } from '../../services/boothApi';
 import { ApiError } from '../../services/apiClient';
 import { paymentApi } from '../../services/paymentApi';
+import { boothScanUrl } from '../../security/boothScanToken';
 import { paymentMoney, paymentStatusLabel, paymentTime, positiveId } from '../../services/paymentPresentation';
 import type { BoothRequest, PageResponse } from '../../types/booth';
 import type { BoothAssignment, BoothPayment } from '../../types/payment';
@@ -239,9 +240,9 @@ export function BoothPaymentPage() {
 
               <figure className="s3-assignment-qr">
                 <div className="s3-qr-box">
-                  <QRCodeSVG value={assignment.qrToken} size={150} title={`Mã QR gian hàng ${assignment.boothCode}`} />
+                  <QRCodeSVG value={boothScanUrl(assignment.qrToken)} size={150} title={`Mã QR gian hàng ${assignment.boothCode}`} />
                 </div>
-                <figcaption>Mã QR nhận diện gian hàng</figcaption>
+                <figcaption>QR lượt ghé dành cho độc giả</figcaption>
               </figure>
             </section>
           )}
@@ -270,7 +271,6 @@ export function BoothPaymentPage() {
                     {history.content.map(item => {
                       const isPendingItem = item.status === 'PENDING';
                       const isSuccessItem = item.status === 'SUCCESS';
-                      const isFailedItem = item.status === 'FAILED' || item.status === 'TIMEOUT';
                       return (
                         <tr key={item.boothPaymentId} className={focused?.boothPaymentId === item.boothPaymentId ? 'is-focused' : ''}>
                           <td>

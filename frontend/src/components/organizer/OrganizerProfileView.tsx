@@ -1,6 +1,5 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
-  Bell,
   Building2,
   Check,
   Edit3,
@@ -12,9 +11,10 @@ import {
   User,
   X
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerProfile } from '../../types/organizer';
+import '../ui/RoleProfileDesign.css';
 
 interface OrganizerProfileViewProps {
   language: Language;
@@ -31,14 +31,9 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
 }) => {
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
-  const [editEmail, setEditEmail] = useState(profile.email);
   const [editPhone, setEditPhone] = useState(profile.phone);
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl || '');
-
-  // Notifications toggles state
-  const [notifyNewBooth, setNotifyNewBooth] = useState(profile.notificationPreferences?.newBooth ?? true);
-  const [notifyNewActivity, setNotifyNewActivity] = useState(profile.notificationPreferences?.newActivity ?? true);
-  const [notifyDailyEmail, setNotifyDailyEmail] = useState(profile.notificationPreferences?.dailyEmail ?? true);
+  const [profileSource, setProfileSource] = useState(profile);
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -47,14 +42,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   useModalDismiss(showLogoutConfirm, () => setShowLogoutConfirm(false));
 
-  useEffect(() => {
-    setEditEmail(profile.email);
+  if (profileSource !== profile) {
+    setProfileSource(profile);
     setEditPhone(profile.phone);
     setEditAvatarUrl(profile.avatarUrl || '');
-    setNotifyNewBooth(profile.notificationPreferences?.newBooth ?? true);
-    setNotifyNewActivity(profile.notificationPreferences?.newActivity ?? true);
-    setNotifyDailyEmail(profile.notificationPreferences?.dailyEmail ?? true);
-  }, [profile]);
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -67,9 +59,8 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
     e.preventDefault();
     try {
       await onUpdateProfile({
-      email: editEmail,
-      phone: editPhone,
-      avatarUrl: editAvatarUrl
+        phone: editPhone,
+        avatarUrl: editAvatarUrl,
       });
       setIsEditing(false);
       showToast(language === 'vi' ? 'Đã lưu thay đổi thông tin cá nhân thành công!' : 'Profile changes saved successfully!');
@@ -79,27 +70,9 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
   };
 
   const handleCancelEdit = () => {
-    setEditEmail(profile.email);
     setEditPhone(profile.phone);
     setEditAvatarUrl(profile.avatarUrl || '');
     setIsEditing(false);
-  };
-
-  const handleToggleNotification = async (key: 'booth' | 'activity' | 'email') => {
-    const next = {
-      newBooth: key === 'booth' ? !notifyNewBooth : notifyNewBooth,
-      newActivity: key === 'activity' ? !notifyNewActivity : notifyNewActivity,
-      dailyEmail: key === 'email' ? !notifyDailyEmail : notifyDailyEmail,
-    };
-    try {
-      await onUpdateProfile({ notificationPreferences: next });
-      setNotifyNewBooth(next.newBooth);
-      setNotifyNewActivity(next.newActivity);
-      setNotifyDailyEmail(next.dailyEmail);
-      showToast(language === 'vi' ? 'Đã cập nhật tùy chọn thông báo' : 'Notification preference updated');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Không thể cập nhật tùy chọn');
-    }
   };
 
   return (
@@ -223,7 +196,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 <span>Organizer / Điều hành sự kiện</span>
               </div>
 
-              <p style={{ 
+              <p className="org-profile-email" style={{
                 fontSize: '0.82rem', 
                 color: '#4B5563', 
                 lineHeight: 1.45, 
@@ -231,7 +204,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                 paddingBottom: '0.85rem',
                 borderBottom: '1px solid #E5E7EB'
               }}>
-                {profile.organization || '—'}
+                {profile.email || '—'}
               </p>
 
               {/* Status and metadata */}
@@ -253,31 +226,25 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     {language === 'vi' ? 'Đang hoạt động' : 'Active'}
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Lần đăng nhập:</span>
-                  <span style={{ color: '#13241F', fontWeight: 500 }}>Hôm nay, 08:30</span>
-                </div>
               </div>
             </div>
 
             {/* Session / Account Card */}
-            <div className="organizer-card" style={{ padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.5rem 0' }}>
-                {language === 'vi' ? 'Phiên làm việc' : 'Session Management'}
-              </h3>
-
-              <div style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, marginBottom: '1rem' }}>
-                <div>Trình duyệt hiện tại: <strong>Chrome trên Windows</strong></div>
-                <div style={{ marginTop: 2 }}>Kết nối mã hóa phiên an toàn.</div>
+            <div className="organizer-card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem 1.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#13241F', margin: '0 0 0.25rem 0' }}>
+                  {language === 'vi' ? 'Phiên làm việc' : 'Session'}
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.45, margin: 0 }}>
+                  {language === 'vi' ? 'Đăng xuất khỏi tài khoản trên thiết bị này.' : 'Sign out of your account on this device.'}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(true)}
                 style={{
-                  width: '100%',
-                  padding: '7px 12px',
+                  padding: '7px 16px',
                   background: 'transparent',
                   border: '1px solid #EF4444',
                   color: '#EF4444',
@@ -383,7 +350,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
               </div>
 
               {/* Form Layout: 2 Columns on Desktop */}
-              <form onSubmit={handleSaveProfile}>
+              <form className={`org-profile-form${isEditing ? ' is-editing' : ''}`} onSubmit={handleSaveProfile}>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -417,7 +384,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={profile.role}
+                      value={profile.role === 'ORGANIZER' ? (language === 'vi' ? 'Ban tổ chức' : 'Organizer') : profile.role}
                       disabled
                       style={{
                         width: '100%',
@@ -432,11 +399,11 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
 
                   {/* Cơ quan / Tổ chức trực thuộc */}
-                  <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ gridColumn: '1 / -1', ...(profile.organization ? {} : { display: 'none' }) }}>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Cơ quan / Tổ chức trực thuộc' : 'Affiliated Organization'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Building2 size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="text"
@@ -534,23 +501,22 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Email công vụ' : 'Work Email'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Mail size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="email"
-                        value={isEditing ? editEmail : profile.email}
-                        onChange={e => setEditEmail(e.target.value)}
-                        disabled={!isEditing}
+                        value={profile.email}
+                        disabled
                         style={{
                           width: '100%',
                           padding: '8px 12px 8px 34px',
                           borderRadius: 7,
-                          border: isEditing ? '1px solid #13241F' : '1px solid #E5E7EB',
-                          background: isEditing ? '#FFFFFF' : '#F9FAFB',
+                          border: '1px solid #E5E7EB',
+                          background: '#F9FAFB',
                           color: '#1F2937',
                           fontSize: '0.85rem',
                           outline: 'none',
-                          boxShadow: isEditing ? '0 0 0 3px rgba(19, 36, 31, 0.08)' : 'none'
+                          boxShadow: 'none',
                         }}
                       />
                     </div>
@@ -561,7 +527,7 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: 5 }}>
                       {language === 'vi' ? 'Số điện thoại liên hệ' : 'Contact Phone'}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="org-profile-input-with-icon" style={{ position: 'relative' }}>
                       <Phone size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                       <input
                         type="tel"
@@ -584,108 +550,6 @@ export const OrganizerProfileView: React.FC<OrganizerProfileViewProps> = ({
                   </div>
                 </div>
               </form>
-            </div>
-
-            {/* 4. Notification Preferences Card with Modern Toggle Switches */}
-            <div className="organizer-card" style={{ padding: '1.5rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                paddingBottom: '0.9rem',
-                borderBottom: '1px solid #E5E7EB',
-                marginBottom: '1rem'
-              }}>
-                <Bell size={18} color="#13241F" />
-                <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: '#13241F', margin: 0 }}>
-                  {language === 'vi' ? 'Cài đặt thông báo điều hành' : 'Notification Preferences'}
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {/* Row 1 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đơn đăng ký gian hàng mới' : 'New Booth Registration Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có hồ sơ gian hàng mới.' : 'Alerts when a new booth application is submitted.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewBooth ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('booth')}
-                    role="switch"
-                    aria-checked={notifyNewBooth}
-                    aria-label="Thông báo đơn đăng ký gian hàng mới"
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 2 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  borderBottom: '1px solid #F3F4F6'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Thông báo đề xuất hoạt động cần duyệt' : 'Activity Proposal Alerts'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Nhận thông báo khi có đề xuất tọa đàm, workshop mới.' : 'Alerts when new activity proposals need review.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyNewActivity ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('activity')}
-                    role="switch"
-                    aria-checked={notifyNewActivity}
-                    aria-label="Thông báo đề xuất hoạt động cần duyệt"
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-
-                {/* Row 3 */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0'
-                }}>
-                  <div style={{ paddingRight: '1rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1F2937', marginBottom: 2 }}>
-                      {language === 'vi' ? 'Nhận tóm tắt báo cáo định kỳ qua Email' : 'Periodic Summary via Email'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                      {language === 'vi' ? 'Gửi báo cáo tổng hợp lưu lượng người tham gia vào cuối ngày.' : 'Daily digest of attendee volume and operations.'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`org-toggle-switch ${notifyDailyEmail ? 'is-active' : ''}`}
-                    onClick={() => handleToggleNotification('email')}
-                    role="switch"
-                    aria-checked={notifyDailyEmail}
-                    aria-label="Nhận tóm tắt báo cáo định kỳ qua Email"
-                  >
-                    <span className="org-toggle-switch-thumb" />
-                  </button>
-                </div>
-              </div>
             </div>
 
           </div>

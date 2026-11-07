@@ -118,6 +118,8 @@ class PaymentSprint03IntegrationTests {
 
     @AfterEach
     void cleanUp() {
+        jdbc.update("delete from notifications where recipient_user_id in (?, ?)",
+                organizer, partner);
         jdbc.update("""
                 delete from booth_assignments where booth_hold_id in (
                     select hold.booth_hold_id from booth_holds hold
@@ -175,6 +177,9 @@ class PaymentSprint03IntegrationTests {
                 join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
                 where hold.booth_request_id = ?
                 """, Integer.class, fixture.requestId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId(), partner)).isOne();
         assertThat(jdbc.queryForObject("""
                 select count(*) from booth_payments payment
                 join booth_holds hold on hold.booth_hold_id = payment.booth_hold_id
@@ -375,11 +380,21 @@ class PaymentSprint03IntegrationTests {
                 join booth_holds hold on hold.booth_hold_id = assignment.booth_hold_id
                 where hold.booth_request_id = ?
                 """, Integer.class, fixture.requestId())).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId(), partner)).isOne();
 
         mvc.perform(get("/api/v1/payments/vnpay/ipn").param("vnp_TxnRef",
                         "BSP" + paymentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("02"));
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_role = 'PARTNER'",
+                Integer.class, fixture.requestId())).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'ORGANIZER' "
+                + "and notification_type = 'ORGANIZER_BOOTH_PAYMENT_CONFIRMED'",
+                Integer.class, fixture.requestId(), organizer)).isOne();
     }
 
     @Test
@@ -506,6 +521,46 @@ class PaymentSprint03IntegrationTests {
                         .with(identity(partner, "PARTNER")).with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("PAYMENT_RESULT_UNKNOWN"));
+    }
+
+    @Test
+    void failedPaymentAfterHoldDeadlineCreatesOnePartnerPaymentExpiredOutcome() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        Instant now = Instant.now();
+        jdbc.update("update booth_holds set created_at = ?, expires_at = ? "
+                        + "where booth_request_id = ?", Timestamp.from(now.minusSeconds(7200)),
+                Timestamp.from(now.minusSeconds(3600)), fixture.requestId());
+        expiryService.expireDueHolds(now);
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+        VnPayResult cancelled = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "24", "02", "765437", "customer cancelled after deadline");
+
+        settlementService.acceptIpn(cancelled, now);
+        settlementService.acceptIpn(cancelled, now);
+        expiryService.expireDueHolds(now);
+
+        assertRequestAndHold(fixture.requestId(), "PAYMENT_EXPIRED", "EXPIRED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "booth_request_id = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = 'PARTNER_BOOTH_REQUEST_STATUS_CHANGED'",
+                Integer.class, fixture.requestId(), partner)).isOne();
+    }
+
+    @Test
+    void failedPaymentWhileHoldIsActiveCreatesNoPartnerOutcome() throws Exception {
+        Fixture fixture = fixture(10_000, "SELECTED");
+        insertHold(fixture.configId(), fixture.requestId(), 10_000);
+        PendingPayment pending = createPendingPayment(fixture.requestId());
+        VnPayResult cancelled = new VnPayResult(true, "BSP" + pending.paymentId(),
+                "1000000", "24", "02", "765438", "customer cancelled");
+
+        settlementService.acceptIpn(cancelled, Instant.now());
+
+        assertRequestAndHold(fixture.requestId(), "SELECTED", "ACTIVE");
+        assertThat(jdbc.queryForObject("select count(*) from notifications "
+                + "where booth_request_id = ?", Integer.class, fixture.requestId())).isZero();
     }
 
     @Test

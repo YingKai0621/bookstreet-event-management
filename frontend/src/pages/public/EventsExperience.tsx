@@ -1,5 +1,7 @@
+import '../../components/participant/EventFeedback.css';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,8 +15,12 @@ import {
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ApiError } from '../../services/apiError';
 import { EventItem, Language, ParticipantProfile } from '../../types';
+import './HeritageExperience.css';
 import './EventsExperience.css';
+import { useDeadlineClock } from '../../hooks/useDeadlineClock';
+import { registrationDeadlinePassed } from '../../utils/registrationDeadline';
 
 interface EventsExperienceProps {
   language: Language;
@@ -24,7 +30,10 @@ interface EventsExperienceProps {
   onOpenRegisterModal?: (event: EventItem) => void;
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
+  registeredEventIds?: ReadonlySet<string>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
+  onLeaveEvent?: (eventId: string) => void | Promise<void>;
+  selectedEventId?: string;
 }
 
 function decodePathIdentifier(value: string | undefined): string | null {
@@ -36,6 +45,15 @@ function decodePathIdentifier(value: string | undefined): string | null {
   }
 }
 
+function formatVietnameseDateTime(value: string): string {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
+}
+
 export const EventsExperience: React.FC<EventsExperienceProps> = ({
   language,
   open,
@@ -43,7 +61,10 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   isLoading = false,
   isParticipantAuthenticated = false,
   participantProfile: _participantProfile,
+  registeredEventIds = new Set<string>(),
   onJoinEvent,
+  onLeaveEvent,
+  selectedEventId = '',
 }) => {
   const vi = language === 'vi';
   const navigate = useNavigate();
@@ -59,9 +80,26 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   const [registeredEvent, setRegisteredEvent] = useState<EventItem | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
-  useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate('/'));
-  useModalDismiss(Boolean(activeModalEvent), () => navigate('/su-kien'));
+  const [detailUnregisterError, setDetailUnregisterError] = useState<string | null>(null);
+  const [isUnregisteringDetail, setIsUnregisteringDetail] = useState(false);
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const registrationNow = useDeadlineClock(events.map(event => event.registrationDeadlineAt));
+  const eventCatalogUrl = selectedEventId
+    ? `/su-kien?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/su-kien';
+  const publicHomeUrl = selectedEventId
+    ? `/?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/';
+  const eventDetailUrl = (eventId: string) =>
+    `/su-kien/${encodeURIComponent(eventId)}?eventId=${encodeURIComponent(eventId)}`;
+  const openEventDetail = (event: EventItem) => {
+    navigate(eventDetailUrl(event.id));
+  };
+  useModalDismiss(open && !activeModalEvent && !registeredEvent, () => navigate(publicHomeUrl));
+  useModalDismiss(Boolean(activeModalEvent), () => navigate(eventCatalogUrl));
   useModalDismiss(Boolean(registeredEvent), () => setRegisteredEvent(null));
+  const detailBackdropHandlers = useBackdropClick(() => navigate(eventCatalogUrl));
+  const registrationBackdropHandlers = useBackdropClick(() => setRegisteredEvent(null));
 
   const eventTypes = [
     { id: 'all', labelVi: 'Tất cả sự kiện', labelEn: 'All Events', count: events.length },
@@ -70,7 +108,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
     { id: 'workshop', labelVi: 'Workshop & Lễ hội', labelEn: 'Workshops & Festivals', count: events.filter(e => e.type === 'workshop').length },
   ];
 
-  const featuredEvent = events[0];
+  const featuredEvent = events.find(event => event.id === selectedEventId) || events[0];
 
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {
@@ -89,13 +127,18 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   }, [events, searchQuery, selectedType]);
 
   const handleClose = () => {
-    navigate('/');
+    navigate(publicHomeUrl);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (registeredEvent?.registrationDeadlineAt &&
+        Date.now() > new Date(registeredEvent.registrationDeadlineAt).getTime()) {
+      setDeadlinePassed(true);
+      return;
+    }
     if (!isParticipantAuthenticated) {
-      navigate('/login', { state: { from: registeredEvent ? `/su-kien/${registeredEvent.id}` : '/su-kien' } });
+      navigate('/login', { state: { from: registeredEvent ? eventDetailUrl(registeredEvent.id) : eventCatalogUrl } });
       return;
     }
     if (!registeredEvent || !onJoinEvent) return;
@@ -104,6 +147,10 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
       await onJoinEvent(registeredEvent.id);
       setRegisterSuccess(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'EVENT_REGISTRATION_DEADLINE_PASSED') {
+        setDeadlinePassed(true);
+        return;
+      }
       setRegistrationError(error instanceof Error ? error.message : 'Không thể đăng ký sự kiện');
     }
   };
@@ -169,7 +216,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/su-kien/${encodeURIComponent(featuredEvent.id)}`)}
+                onClick={() => openEventDetail(featuredEvent)}
                 role="button"
                 tabIndex={0}
                 aria-label={`Khám phá ${featuredEvent.title}`}
@@ -259,7 +306,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <article 
                   key={evt.id} 
                   className="event-card-item"
-                  onClick={() => navigate(`/su-kien/${encodeURIComponent(evt.id)}`)}
+                  onClick={() => openEventDetail(evt)}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="event-card-image">
@@ -280,7 +327,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                     <p className="heritage-card-summary">{vi ? evt.summary : evt.summaryEn}</p>
                     <div className="event-card-footer">
                       <span className="heritage-card-arrow-text">
-                        {vi ? 'Đăng ký & Xem chi tiết' : 'Register & Details'}
+                        {registrationDeadlinePassed(evt.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký · Xem chi tiết' : 'Registration deadline passed · View details') : (vi ? 'Đăng ký & Xem chi tiết' : 'Register & Details')}
                       </span>
                       <ArrowRight size={16} />
                     </div>
@@ -301,9 +348,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
         {/* Event Detail Modal — rendered via Portal */}
         {activeModalEvent && createPortal(
-          <div className="modal-overlay" onClick={() => navigate('/su-kien')} role="dialog" aria-modal="true">
+          <div className="modal-overlay" {...detailBackdropHandlers} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => navigate('/su-kien')} aria-label="Đóng">
+              <button className="modal-close" onClick={() => navigate(eventCatalogUrl)} aria-label="Đóng">
                 <X size={20} />
               </button>
               <div className="modal-booth-header-img">
@@ -320,6 +367,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               </h3>
               <div className="modal-meta-box">
                 <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${activeModalEvent.dateStr} (${activeModalEvent.timeStr})`}</p>
+                {activeModalEvent.registrationDeadlineAt && (
+                  <p><Clock size={15} style={{ verticalAlign: 'middle' }} /> <strong>{vi ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatVietnameseDateTime(activeModalEvent.registrationDeadlineAt)}</p>
+                )}
                 <p>📍 <strong>{vi ? 'Địa điểm:' : 'Location:'}</strong> {vi ? activeModalEvent.location : activeModalEvent.locationEn}</p>
                 {activeModalEvent.speaker && (
                   <p>🎙️ <strong>{vi ? 'Diễn giả / Chủ trì:' : 'Speaker:'}</strong> {activeModalEvent.speaker}</p>
@@ -331,20 +381,51 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
               <p className="modal-body-desc">
                 {vi ? activeModalEvent.summary : activeModalEvent.summaryEn}
               </p>
-              <button
-                type="button"
-                className="btn-figma-primary"
-                style={{ width: '100%' }}
-                onClick={() => {
-                  const ev = activeModalEvent;
-                  navigate('/su-kien');
-                  setRegisteredEvent(ev);
-                  setRegisterSuccess(false);
-                }}
-              >
-                <CheckCircle size={16} />
-                <span>{vi ? 'Tham gia sự kiện' : 'Join Event'}</span>
-              </button>
+              {detailUnregisterError && (
+                <p className="participant-inline-error" role="alert" style={{ color: '#DC2626', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                  {detailUnregisterError}
+                </p>
+              )}
+              {registeredEventIds.has(activeModalEvent.id) && isParticipantAuthenticated && onLeaveEvent ? (
+                <button
+                  type="button"
+                  className="btn-figma-primary"
+                  style={{ width: '100%', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+                  disabled={isUnregisteringDetail}
+                  onClick={async () => {
+                    setIsUnregisteringDetail(true);
+                    setDetailUnregisterError(null);
+                    try {
+                      await onLeaveEvent(activeModalEvent.id);
+                    } catch (error) {
+                      setDetailUnregisterError(error instanceof Error ? error.message : (vi ? 'Không thể hủy đăng ký sự kiện.' : 'Failed to cancel registration.'));
+                    } finally {
+                      setIsUnregisteringDetail(false);
+                    }
+                  }}
+                >
+                  <X size={16} />
+                  <span>{isUnregisteringDetail ? (vi ? 'Đang hủy đăng ký...' : 'Cancelling...') : (vi ? 'Hủy đăng ký' : 'Cancel Registration')}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-figma-primary"
+                  style={{ width: '100%' }}
+                  disabled={registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow)}
+                  onClick={() => {
+                    const ev = activeModalEvent;
+                    navigate(eventCatalogUrl);
+                    setRegisteredEvent(ev);
+                    setRegisterSuccess(false);
+                    setDeadlinePassed(false);
+                    setRegistrationError(null);
+                  }}
+                >
+                  <CheckCircle size={16} />
+                  <span>{registrationDeadlinePassed(activeModalEvent.registrationDeadlineAt, registrationNow) ? (vi ? 'Đã quá hạn đăng ký' : 'Registration deadline passed') : (vi ? 'Tham gia sự kiện' : 'Join Event')}</span>
+                </button>
+              )}
             </div>
           </div>,
           document.body
@@ -352,35 +433,48 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
 
         {/* Event Registration Modal — rendered via Portal */}
         {registeredEvent && createPortal(
-          <div className="modal-overlay registration-modal-overlay" onClick={() => setRegisteredEvent(null)} role="dialog" aria-modal="true" aria-labelledby="reg-modal-heading">
-            <div className="modal-content modal-register-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-overlay registration-modal-overlay" {...registrationBackdropHandlers} role="dialog" aria-modal="true" aria-labelledby="reg-modal-heading">
+            <div className={`modal-content modal-register-content ${registerSuccess ? 'event-feedback-modal' : ''}`} onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setRegisteredEvent(null)} aria-label="Đóng">
                 <X size={20} />
               </button>
 
-              {registerSuccess ? (
-                <div className="success-box-center" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <CheckCircle size={58} color="#15803D" style={{ margin: '0 auto 1rem' }} />
-                  <span className="reg-badge-tag" style={{ background: '#DCFCE7', color: '#15803D', marginBottom: '0.65rem' }}>
-                    {vi ? 'ĐÃ THAM GIA SỰ KIỆN' : 'EVENT JOINED'}
-                  </span>
-                  <h3 id="reg-modal-heading" className="modal-heading-title" style={{ color: '#1A2823', marginTop: '0.25rem' }}>
-                    {vi ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
-                  </h3>
-                  <div className="success-event-badge" style={{ margin: '0.85rem auto 1rem' }}>
+              {deadlinePassed || (!registerSuccess && registrationDeadlinePassed(registeredEvent.registrationDeadlineAt, registrationNow)) ? (
+                <div className="registration-deadline-notice" role="alert">
+                  <Clock size={46} aria-hidden="true" />
+                  <h3 id="reg-modal-heading">{vi ? 'Sự kiện đã hết hạn đăng ký' : 'Event registration has closed'}</h3>
+                  <p>{vi
+                    ? `Bạn không thể đăng ký tham gia “${registeredEvent.title}” vì thời hạn đã kết thúc. Hãy chọn một sự kiện khác còn mở đăng ký.`
+                    : `Registration for “${registeredEvent.title}” has closed. Please choose another event that is still open.`}</p>
+                  {registeredEvent.registrationDeadlineAt && <p>
+                    {vi ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                    <strong>{formatVietnameseDateTime(registeredEvent.registrationDeadlineAt)}</strong>
+                  </p>}
+                  <button type="button" className="btn-figma-primary" onClick={() => setRegisteredEvent(null)}>
+                    {vi ? 'Xem các sự kiện khác' : 'Browse other events'}
+                  </button>
+                </div>
+              ) : registerSuccess ? (
+                <div className="success-box-center">
+                  <div className="event-feedback-header">
+                    <span className="event-feedback-icon"><CheckCircle size={32} aria-hidden="true" /></span>
+                    <h3 id="reg-modal-heading" className="modal-heading-title">
+                      {vi ? 'Đăng ký tham dự thành công!' : 'Registration Successful!'}
+                    </h3>
+                  </div>
+                  <div className="success-event-badge">
                     {registeredEvent.title}
                   </div>
-                  <p className="modal-body-desc" style={{ maxWidth: '440px', margin: '0 auto 1.5rem', lineHeight: '1.6' }}>
+                  <p className="success-desc">
                     {vi
                       ? 'Tài khoản của bạn đã được ghi nhận tham gia sự kiện. Hãy đăng ký hoạt động phù hợp; khi đến nơi, quét mã QR hoạt động do Ban tổ chức hiển thị để điểm danh.'
                       : 'Your account has joined this event. Register for an activity, then scan the Activity QR displayed by the Organizer at the venue to check in.'}
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem', alignItems: 'center' }}>
+                  <div className="success-actions-row">
                     {isParticipantAuthenticated && (
                       <button
                         type="button"
                         className="btn-figma-primary"
-                        style={{ minWidth: '220px', padding: '0.75rem 1.5rem' }}
                         onClick={() => {
                           setRegisteredEvent(null);
                           navigate('/participant/events');
@@ -392,10 +486,9 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                     <button
                       type="button"
                       className={isParticipantAuthenticated ? 'btn-figma-secondary' : 'btn-figma-primary'}
-                      style={{ minWidth: '180px', padding: '0.75rem 2rem' }}
                       onClick={() => setRegisteredEvent(null)}
                     >
-                      {vi ? 'Hoàn tất' : 'Done'}
+                      {vi ? 'Đóng' : 'Close'}
                     </button>
                   </div>
                 </div>
@@ -431,6 +524,13 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                           <Clock size={14} />
                           {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${registeredEvent.dateStr} • ${registeredEvent.timeStr}`}
                         </span>
+                        {registeredEvent.registrationDeadlineAt && (
+                          <span className="reg-meta-item">
+                            <Clock size={14} />
+                            {vi ? 'Hạn đăng ký: ' : 'Registration deadline: '}
+                            {formatVietnameseDateTime(registeredEvent.registrationDeadlineAt)}
+                          </span>
+                        )}
                         <span className="reg-meta-item">
                           <MapPin size={14} />
                           {vi ? registeredEvent.location : registeredEvent.locationEn}
@@ -461,7 +561,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                       <span>{vi ? 'Đăng nhập để tham gia sự kiện bằng tài khoản của bạn.' : 'Sign in to join the event with your account.'}</span>
                       <Link
                         to="/login"
-                        state={{ from: registeredEvent ? `/su-kien/${registeredEvent.id}` : '/su-kien' }}
+                        state={{ from: registeredEvent ? eventDetailUrl(registeredEvent.id) : eventCatalogUrl }}
                         style={{ fontWeight: 700, color: '#17382E', textDecoration: 'underline' }}
                       >
                         {vi ? 'Đăng nhập' : 'Sign in'}

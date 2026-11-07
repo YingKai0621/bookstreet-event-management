@@ -8,17 +8,18 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MAP_IMAGE, MapLocationPoint } from '../../services/mapService';
 import { boothApi } from '../../services/boothApi';
+import { publicApi, type PublicActivity } from '../../services/publicApi';
 import { Booth, EventItem, Language } from '../../types';
 import type { EventBooth } from '../../types/booth';
 import { IconMapBookPin } from './CustomIcons';
-import { eventBoothToMarker } from '../booth-map/boothMapModel';
+import { eventBoothToMarker, markerStatusLabel, type BoothMapMarkerStatus } from '../booth-map/boothMapModel';
+import { PublicEventContext } from './PublicEventContext';
 import './InteractiveMap.css';
 
 interface InteractiveMapProps {
   language: Language;
   events?: EventItem[];
   selectedEventId: string;
-  onSelectEventId: (eventId: string) => void;
   booths?: Booth[];
   isLoading?: boolean;
   highlightedBoothId: string | null;
@@ -26,42 +27,107 @@ interface InteractiveMapProps {
 }
 
 const EMPTY_BOOTHS: Booth[] = [];
+const EMPTY_MAP_POINTS: MapLocationPoint[] = [];
+const EMPTY_EVENT_BOOTHS: EventBooth[] = [];
+
+const LOCATION_TYPE_LABELS: Record<string, { vi: string; en: string }> = {
+  STAGE: { vi: 'Sân khấu sự kiện', en: 'Event stage' },
+  WORKSHOP: { vi: 'Khu workshop', en: 'Workshop space' },
+  AREA: { vi: 'Khu hoạt động', en: 'Activity area' },
+};
+
+function publicCategoryLabel(categoryCode: string | null): string {
+  const labels: Record<string, string> = {
+    LITERATURE: 'Văn học & Nghệ thuật',
+    CHILDREN: 'Sách Thiếu nhi',
+    MANGA_COMICS: 'Truyện tranh & Manga',
+    HISTORY_SOCIETY: 'Lịch sử & Xã hội',
+    ART_CULTURE: 'Nghệ thuật & Văn hóa',
+    EDUCATION: 'Giáo dục & Kỹ năng',
+    TECHNOLOGY_SCIENCE: 'STEM & Công nghệ',
+    LIFESTYLE: 'Phong cách sống',
+    CAFE: 'Cà phê sách',
+  };
+  return categoryCode ? labels[categoryCode] || 'Gian hàng tổng hợp' : 'Gian hàng tổng hợp';
+}
+
+function publicBoothStatusLabelEn(status: BoothMapMarkerStatus): string {
+  switch (status) {
+    case 'AVAILABLE': return 'Available';
+    case 'ASSIGNED': return 'Rented';
+    case 'ON_HOLD': return 'On hold';
+    case 'UNAVAILABLE': return 'Unavailable';
+    default: return 'Active';
+  }
+}
+
+function formatActivityTime(activity: PublicActivity, language: Language): string {
+  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+  const start = new Date(activity.startAt);
+  const end = new Date(activity.endAt);
+  const date = new Intl.DateTimeFormat(locale, {
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric',
+  }).format(start);
+  const time = (value: Date) => new Intl.DateTimeFormat(locale, {
+    timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(value);
+  return `${date} · ${time(start)}–${time(end)}`;
+}
+
+function MapPreviewImage({ src, alt }: { src: string; alt: string }) {
+  const [failedSource, setFailedSource] = useState('');
+  if (failedSource === src) return null;
+  return (
+    <div className="preview-thumb">
+      <img
+        src={src}
+        alt={alt}
+        decoding="async"
+        onError={() => setFailedSource(src)}
+      />
+    </div>
+  );
+}
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   language,
   events = [],
   selectedEventId,
-  onSelectEventId,
   booths,
   isLoading = false,
   highlightedBoothId,
   onNavigateToBoothDetail,
 }) => {
   const allBooths = booths || EMPTY_BOOTHS;
-  const [mapPoints, setMapPoints] = useState<MapLocationPoint[]>([]);
-  const [eventBooths, setEventBooths] = useState<EventBooth[]>([]);
-  const [isMapLoading, setIsMapLoading] = useState(false);
-  const [mapError, setMapError] = useState('');
+  const selectedEvent = events.find(event => event.id === selectedEventId);
+  const mapRequestKey = selectedEventId ? `${language}:${selectedEventId}` : '';
+  const [loadedMap, setLoadedMap] = useState<{
+    requestKey: string;
+    points: MapLocationPoint[];
+    eventBooths: EventBooth[];
+    error: string;
+  }>({ requestKey: '', points: [], eventBooths: [], error: '' });
+  const isCurrentMap = loadedMap.requestKey === mapRequestKey;
+  const mapPoints = isCurrentMap ? loadedMap.points : EMPTY_MAP_POINTS;
+  const eventBooths = isCurrentMap ? loadedMap.eventBooths : EMPTY_EVENT_BOOTHS;
+  const mapError = isCurrentMap ? loadedMap.error : '';
+  const isMapLoading = Boolean(mapRequestKey && !isCurrentMap);
   const [mapImageUrl, setMapImageUrl] = useState<string>(DEFAULT_MAP_IMAGE);
   const [selectedPointId, setSelectedPointId] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true;
-    if (!selectedEventId) {
-      setMapPoints([]);
-      setEventBooths([]);
-      setSelectedPointId('');
-      setMapError('');
-      setIsMapLoading(false);
-      return () => { isMounted = false; };
-    }
+    if (!selectedEventId) return () => { isMounted = false; };
 
-    setIsMapLoading(true);
-    setMapError('');
-    boothApi.listAllPublicEventBooths(selectedEventId)
-      .then(rows => {
+    const requestedMapKey = mapRequestKey;
+    Promise.allSettled([
+      boothApi.listAllPublicEventBooths(selectedEventId),
+      publicApi.getActivities(),
+    ])
+      .then(([boothsResult, activitiesResult]) => {
         if (!isMounted) return;
-        const points = rows.flatMap(row => {
+        const rows = boothsResult.status === 'fulfilled' ? boothsResult.value : [];
+        const boothPoints = rows.flatMap(row => {
           const marker = eventBoothToMarker(row);
           if (!marker) return [];
           const status = marker.status.toLowerCase() as MapLocationPoint['status'];
@@ -72,35 +138,88 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             nameEn: marker.name,
             category: 'booth' as const,
             status,
-            statusLabelVi: marker.status === 'AVAILABLE' ? 'Còn trống'
-              : marker.status === 'ON_HOLD' ? 'Đang giữ chỗ'
-              : marker.status === 'ASSIGNED' ? 'Đã phân bổ' : 'Chưa mở',
-            statusLabelEn: marker.status,
+            statusLabelVi: markerStatusLabel(marker.status),
+            statusLabelEn: publicBoothStatusLabelEn(marker.status),
             x: marker.x,
             y: marker.y,
-            shortDesc: row.booth.description || row.booth.note || 'Chưa có mô tả.',
+            shortDesc: row.booth.description || row.booth.note || 'Không gian giới thiệu sách tại Đường Sách.',
             shortDescEn: row.booth.description || row.booth.note || '',
+            imageUrl: row.booth.imageUrl || undefined,
             features: [
-              row.booth.categoryCode ? `Danh mục: ${row.booth.categoryCode}` : '',
+              `Danh mục: ${publicCategoryLabel(row.booth.categoryCode)}`,
               `Sức chứa: ${row.booth.maxCapacity}`,
             ].filter(Boolean),
           } satisfies MapLocationPoint];
         });
-        setEventBooths(rows);
-        setMapPoints(points);
-        setSelectedPointId(current => points.some(point => point.id === current) ? current : points[0]?.id || '');
+
+        const activities = activitiesResult.status === 'fulfilled'
+          ? activitiesResult.value : [];
+        const activitiesByLocation = new Map<number, PublicActivity[]>();
+        activities.forEach(activity => {
+          const location = activity.locationDetail;
+          if (!location || location.locationType === 'BOOTH'
+              || location.mapX === null || location.mapY === null) return;
+          const existing = activitiesByLocation.get(location.locationId) || [];
+          existing.push(activity);
+          activitiesByLocation.set(location.locationId, existing);
+        });
+        const locationPoints = [...activitiesByLocation.values()].map(group => {
+          const first = group[0];
+          const location = first.locationDetail;
+          const selectedEventActivities = group.filter(activity => activity.eventId === selectedEventId);
+          const selectedActivity = selectedEventActivities[0];
+          const typeLabel = LOCATION_TYPE_LABELS[location.locationType]
+            || { vi: 'Địa điểm hoạt động', en: 'Activity location' };
+          return {
+            id: `location-${location.locationId}`,
+            code: location.code,
+            name: location.name,
+            nameEn: location.name,
+            category: location.locationType === 'STAGE' ? 'stage' as const : 'facility' as const,
+            status: 'available' as const,
+            statusLabelVi: typeLabel.vi,
+            statusLabelEn: typeLabel.en,
+            x: location.mapX ?? 0,
+            y: location.mapY ?? 0,
+            shortDesc: location.description || `${typeLabel.vi} của sự kiện.`,
+            shortDescEn: location.description || `${typeLabel.en} for this event.`,
+            imageUrl: selectedEventActivities.find(activity => activity.imageUrl)?.imageUrl
+              || group.find(activity => activity.imageUrl)?.imageUrl
+              || undefined,
+            openHours: selectedActivity ? formatActivityTime(selectedActivity, language) : undefined,
+            features: [
+              typeLabel.vi,
+              location.maxCapacity === null ? '' : `Sức chứa: ${location.maxCapacity}`,
+              selectedEventActivities.length > 1
+                ? `${selectedEventActivities.length} hoạt động trong sự kiện này`
+                : selectedActivity
+                  ? `Hoạt động: ${selectedActivity.title}`
+                  : 'Chưa có hoạt động trong sự kiện này',
+            ].filter(Boolean),
+          } satisfies MapLocationPoint;
+        });
+        const points = [...boothPoints, ...locationPoints];
+        let error = '';
+        if (boothsResult.status === 'rejected' && activitiesResult.status === 'rejected') {
+          console.warn('Không thể tải dữ liệu bản đồ', boothsResult.reason, activitiesResult.reason);
+          error = language === 'vi'
+            ? 'Không thể tải dữ liệu bản đồ của sự kiện này.'
+            : 'Could not load map data for this event.';
+        }
+        setLoadedMap({ requestKey: requestedMapKey, points, eventBooths: rows, error });
       })
       .catch(error => {
         if (!isMounted) return;
-        console.warn('Không thể tải gian hàng công khai', error);
-        setEventBooths([]);
-        setMapPoints([]);
-        setSelectedPointId('');
-        setMapError(language === 'vi' ? 'Không thể tải gian hàng của sự kiện này.' : 'Could not load booths for this event.');
-      })
-      .finally(() => { if (isMounted) setIsMapLoading(false); });
+        console.warn('Không thể tải dữ liệu bản đồ công khai', error);
+        setLoadedMap({
+          requestKey: requestedMapKey,
+          points: [],
+          eventBooths: [],
+          error: language === 'vi' ? 'Không thể tải dữ liệu bản đồ của sự kiện này.' : 'Could not load map data for this event.',
+        });
+      });
     return () => { isMounted = false; };
-  }, [language, selectedEventId]);
+  }, [language, mapRequestKey, selectedEventId]);
 
   // Preserve the approved illustrated image update hook used by the map editor.
   useEffect(() => {
@@ -213,7 +332,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   React.useEffect(() => {
     if (highlightedBoothId) {
       const match = mapPoints.find(point => point.code === allBooths.find(booth => booth.id === highlightedBoothId)?.code);
-      if (match) setSelectedPointId(match.id);
+      if (match) {
+        // oxlint-disable-next-line react/set-state-in-effect -- A parent navigation request selects the matching point after map data arrives.
+        setSelectedPointId(match.id);
+      }
     }
   }, [highlightedBoothId, mapPoints, allBooths]);
 
@@ -250,7 +372,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </p>
         </div>
 
-
+        <PublicEventContext language={language} event={selectedEvent} />
 
         {/* Map Blueprint & Detail Column Layout */}
         <div className="blueprint-map-layout">
@@ -331,7 +453,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     <button
                       key={point.id}
                       type="button"
-                      className={`illustrated-map-marker status-${point.status} ${isSelected ? 'is-selected' : ''}`}
+                      className={`illustrated-map-marker status-${point.status} category-${point.category || 'other'} ${isSelected ? 'is-selected' : ''}`}
                       style={{
                         left: `${point.x}%`,
                         top: `${point.y}%`,
@@ -341,7 +463,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         color: isSelected ? '#172421' : '#17382E',
                         boxShadow: isSelected ? '0 0 0 4px rgba(23, 56, 46, 0.35), 0 8px 24px rgba(0,0,0,0.3)' : '0 3px 8px rgba(0,0,0,0.18)'
                       }}
-                      aria-label={`${point.code} – ${language === 'vi' ? point.name : (point.nameEn || point.name)} – ${point.statusLabelVi}`}
+                      aria-label={`${point.code} – ${language === 'vi' ? point.name : (point.nameEn || point.name)} – ${language === 'vi' ? point.statusLabelVi : point.statusLabelEn}`}
                       aria-pressed={isSelected}
                       aria-controls="map-location-detail"
                       onPointerDown={(event) => {
@@ -453,7 +575,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     aria-label={language === 'vi' ? 'Thông tin gian hàng theo sự kiện' : 'Event booth information'}
                   >
                     <span className={`public-map-status status-${selectedPoint.status}`}>
-                      {selectedPoint.statusLabelVi}
+                      {language === 'vi' ? selectedPoint.statusLabelVi : selectedPoint.statusLabelEn}
                     </span>
                     <span>
                       {language === 'vi' ? 'Giá sự kiện' : 'Event price'}:{' '}
@@ -498,28 +620,28 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 )}
 
                 {/* Contact & Hours */}
-                <div className="panel-contact-list">
-                  <div className="contact-item">
+                {(selectedPoint.openHours || selectedPoint.phone) && <div className="panel-contact-list">
+                  {selectedPoint.openHours && <div className="contact-item">
                     <Clock size={15} />
-                    <span>{selectedPoint.openHours || (language === 'vi' ? 'Chưa có dữ liệu' : 'No data')}</span>
-                  </div>
+                    <span>{selectedPoint.openHours}</span>
+                  </div>}
                   {selectedPoint.phone && (
                     <div className="contact-item">
                       <Phone size={15} />
                       <span>{selectedPoint.phone}</span>
                     </div>
                   )}
-                </div>
+                </div>}
 
                 {/* Operator info */}
-                <div className="panel-booth-preview">
-                  <div className="preview-thumb">
-                    <img
-                      src={selectedPoint.imageUrl || activeBooth?.image.url || undefined}
+                {(activeBooth || selectedPoint.orgName || selectedPoint.imageUrl) && <div className="panel-booth-preview">
+                  {(selectedPoint.imageUrl || activeBooth?.image.url) && (
+                    <MapPreviewImage
+                      key={selectedPoint.imageUrl || activeBooth?.image.url}
+                      src={selectedPoint.imageUrl || activeBooth?.image.url || ''}
                       alt={selectedPoint.name}
-                      decoding="async"
                     />
-                  </div>
+                  )}
                   <div className="preview-info">
                     <span className="preview-label">
                       {selectedPoint.category === 'booth'
@@ -527,7 +649,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         : (language === 'vi' ? 'QUẢN LÝ KHÔNG GIAN' : 'SPACE MANAGEMENT')}
                     </span>
                     <p className="preview-name">
-                      {selectedPoint.orgName || activeBooth?.name || (language === 'vi' ? 'Chưa có dữ liệu' : 'No data')}
+                      {selectedPoint.orgName || activeBooth?.name || selectedPoint.name}
                     </p>
                     {activeBooth && (
                       <button
@@ -540,7 +662,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                       </button>
                     )}
                   </div>
-                </div>
+                </div>}
               </>
             ) : (
               <>
@@ -556,10 +678,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 </h3>
                 <p className="panel-unit-desc">
                   {!selectedEventId
-                    ? (language === 'vi' ? 'Chọn một sự kiện đã công bố để xem các gian hàng được cấu hình trên sơ đồ.' : 'Select a published event to view its configured booths on the map.')
+                    ? (language === 'vi' ? 'Chọn một sự kiện đã công bố để xem gian hàng và địa điểm hoạt động trên sơ đồ.' : 'Select a published event to view its booths and activity locations on the map.')
                     : mapError
                       ? mapError
-                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng nào với đủ tọa độ hợp lệ để hiển thị trên bản đồ.' : 'This event has no booths with complete valid coordinates to display on the map.')}
+                      : (language === 'vi' ? 'Sự kiện này chưa có gian hàng hoặc địa điểm với đủ tọa độ để hiển thị trên bản đồ.' : 'This event has no booths or locations with complete valid coordinates to display on the map.')}
                 </p>
                 <div className="panel-highlights-box">
                   <span className="highlights-header-label">
@@ -575,16 +697,6 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   <div className="contact-item">
                     <Clock size={15} />
                     <span>08:00 - 22:00</span>
-                  </div>
-                </div>
-                <div className="panel-booth-preview">
-                  <div className="preview-info">
-                    <span className="preview-label">
-                      {language === 'vi' ? 'QUẢN LÝ VẬN HÀNH' : 'MANAGEMENT'}
-                    </span>
-                    <p className="preview-name">
-                      {language === 'vi' ? 'Chưa có dữ liệu đơn vị quản lý' : 'Management data unavailable'}
-                    </p>
                   </div>
                 </div>
               </>

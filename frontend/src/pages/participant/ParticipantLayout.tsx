@@ -11,13 +11,16 @@ import {
   User,
   X
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
+import { ApiError } from '../../services/apiClient';
 import { participantApi, type ParticipantNotificationItem } from '../../services/participantApi';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantLayout.css';
+import './ParticipantMobile.css';
 
 interface ParticipantLayoutProps {
   language: Language;
@@ -45,35 +48,76 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const [notifications, setNotifications] = useState<ParticipantNotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationError, setNotificationError] = useState('');
+  const [notificationActionError, setNotificationActionError] = useState('');
+  const [notificationPending, setNotificationPending] = useState(false);
+  const vi = language === 'vi';
 
-  const handleMarkAsRead = async (id: string) => {
-    const wasUnread = notifications.some(notification => notification.id === id && !notification.isRead);
-    const updated = await participantApi.markNotificationRead(id);
-    setNotifications(prev => prev.map(notification => notification.id === id ? updated : notification));
-    if (wasUnread) setUnreadCount(current => Math.max(0, current - 1));
+  const refreshNotifications = useCallback(async () => {
+    setNotificationLoading(true);
+    setNotificationError('');
+    try {
+      const [items, count] = await Promise.all([
+        participantApi.getNotifications(),
+        participantApi.getNotificationUnreadCount(),
+      ]);
+      setNotifications(items);
+      setUnreadCount(count);
+      setNotificationClock(Date.now());
+    } catch (error) {
+      setNotificationError(error instanceof ApiError && error.status === 401
+        ? (vi ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : 'Your session has expired. Please sign in again.')
+        : error instanceof ApiError && error.status === 403
+          ? (vi ? 'Bạn không có quyền xem thông báo Participant.' : 'You cannot access Participant notifications.')
+          : (vi ? 'Không tải được thông báo. Vui lòng thử lại.' : 'Notifications could not be loaded. Please try again.'));
+    } finally {
+      setNotificationLoading(false);
+    }
+  }, [vi]);
+
+  const openNotification = async (notification: ParticipantNotificationItem) => {
+    if (notificationPending) return;
+    setNotificationPending(true);
+    setNotificationActionError('');
+    try {
+      // A successful mutation publishes participant:data-changed, which refreshes this inbox.
+      if (!notification.isRead) await participantApi.markNotificationRead(notification.id);
+      if (notification.link) {
+        setNotifDropdownOpen(false);
+        navigate(notification.link);
+      } else {
+        setNotificationActionError(vi
+          ? 'Nội dung được nhắc đến hiện không mở được từ thông báo này.'
+          : 'The referenced item cannot currently be opened from this notification.');
+      }
+    } catch {
+      setNotificationActionError(vi
+        ? 'Không thể đánh dấu đã đọc. Vui lòng thử lại.'
+        : 'The notification could not be marked as read. Please try again.');
+    } finally {
+      setNotificationPending(false);
+    }
   };
 
   useEffect(() => {
-    const loadNotifications = () => Promise.all([
-      participantApi.getNotifications(),
-      participantApi.getNotificationUnreadCount(),
-    ])
-      .then(([items, count]) => {
-        setNotifications(items);
-        setUnreadCount(count);
-        setNotificationClock(Date.now());
-      })
-      .catch(error => console.warn('Không thể tải thông báo', error));
-    void loadNotifications();
-    const clockInterval = window.setInterval(() => setNotificationClock(Date.now()), 60_000);
-    window.addEventListener('participant:data-changed', loadNotifications);
-    window.addEventListener('participant:notifications-changed', loadNotifications);
+    // oxlint-disable-next-line react/set-state-in-effect -- Workspace entry synchronizes the durable Participant inbox.
+    void refreshNotifications();
+    window.addEventListener('participant:data-changed', refreshNotifications);
+    window.addEventListener('participant:notifications-changed', refreshNotifications);
     return () => {
-      window.clearInterval(clockInterval);
-      window.removeEventListener('participant:data-changed', loadNotifications);
-      window.removeEventListener('participant:notifications-changed', loadNotifications);
+      window.removeEventListener('participant:data-changed', refreshNotifications);
+      window.removeEventListener('participant:notifications-changed', refreshNotifications);
     };
+  }, [refreshNotifications]);
+
+  useNotificationStream('participant');
+  useNotificationLiveRefresh(refreshNotifications);
+
+  useEffect(() => {
+    const clockInterval = window.setInterval(() => setNotificationClock(Date.now()), 60_000);
+    return () => window.clearInterval(clockInterval);
   }, []);
 
   const notificationTime = (createdAt: string) => new Intl.RelativeTimeFormat(language === 'vi' ? 'vi' : 'en', { numeric: 'auto' })
@@ -111,8 +155,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
     {
       id: 'rewards',
       path: '/participant/rewards',
-      labelVi: 'Điểm & Đổi thưởng',
-      labelEn: 'Rewards',
+      labelVi: 'Điểm & Huy hiệu',
+      labelEn: 'Points & Badges',
       icon: <Award size={18} />,
     },
     {
@@ -135,7 +179,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
       labelVi: 'Thông báo',
       labelEn: 'Notifications',
       icon: <Bell size={18} />,
-      badge: unreadCount,
+      badge: unreadCount ?? 0,
     },
     {
       id: 'profile',
@@ -164,6 +208,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
             className="participant-mobile-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle navigation"
+            aria-expanded={sidebarOpen}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -210,10 +255,14 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
               onClick={() => {
                 setNotifDropdownOpen(!notifDropdownOpen);
                 setUserDropdownOpen(false);
+                if (!notifDropdownOpen) {
+                  setNotificationActionError('');
+                  void refreshNotifications();
+                }
               }}
             >
               <Bell size={18} />
-              {unreadCount > 0 && <span className="notif-badge-dot"></span>}
+              {unreadCount !== null && unreadCount > 0 && <span className="notif-badge-dot"></span>}
             </button>
 
             {notifDropdownOpen && (
@@ -223,7 +272,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                     {language === 'vi' ? 'Thông báo' : 'Notifications'}
                   </strong>
                   <div className="notif-header-center">
-                    {unreadCount > 0 && (
+                    {unreadCount !== null && unreadCount > 0 && (
                       <span className="notif-unread-badge">
                         {unreadCount} {language === 'vi' ? 'thông báo mới' : 'new'}
                       </span>
@@ -233,7 +282,28 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                 </div>
 
                 <div className="notif-dropdown-list">
-                  {notifications.length === 0 ? (
+                  {notificationActionError && (
+                    <div className="notif-dropdown-empty" role="alert">
+                      <p>{notificationActionError}</p>
+                    </div>
+                  )}
+                  {notificationLoading ? (
+                    <div className="notif-dropdown-empty" role="status">
+                      <p>{vi ? 'Đang tải thông báo...' : 'Loading notifications...'}</p>
+                    </div>
+                  ) : notificationError ? (
+                    <div className="notif-dropdown-empty" role="alert">
+                      <p>{notificationError}</p>
+                      <button
+                        type="button"
+                        className="notif-view-all-link"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                        onClick={() => void refreshNotifications()}
+                      >
+                        {vi ? 'Thử lại' : 'Retry'}
+                      </button>
+                    </div>
+                  ) : notifications.length === 0 ? (
                     <div className="notif-dropdown-empty">
                       <Bell size={24} style={{ opacity: 0.35, marginBottom: '0.4rem' }} />
                       <p>{language === 'vi' ? 'Không có thông báo nào' : 'No notifications'}</p>
@@ -243,11 +313,7 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
                       <div 
                         key={notif.id}
                         className={`notif-dropdown-item ${!notif.isRead ? 'unread' : ''}`}
-                        onClick={() => {
-                          handleMarkAsRead(notif.id);
-                          setNotifDropdownOpen(false);
-                          if (notif.link) navigate(notif.link);
-                        }}
+                        onClick={() => void openNotification(notif)}
                       >
                         <div className="notif-item-indicator">
                           {!notif.isRead && <span className="notif-indicator-dot"></span>}
@@ -286,6 +352,8 @@ export const ParticipantLayout: React.FC<ParticipantLayoutProps> = ({
             <button
               type="button"
               className="participant-user-pill"
+              aria-label={language === 'vi' ? 'Tài khoản của bạn' : 'Your account'}
+              aria-expanded={userDropdownOpen}
               onClick={() => {
                 setUserDropdownOpen(!userDropdownOpen);
                 setNotifDropdownOpen(false);

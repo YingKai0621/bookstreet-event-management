@@ -53,10 +53,18 @@ spring:
     redis:
       namespace: bookstreet:session
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
 server:
   port: ${SERVER_PORT:8080}
   error:
     include-stacktrace: never
+
+rewards:
+  booth-visit-points: ${REWARDS_BOOTH_VISIT_POINTS:10}
 
 springdoc:
   swagger-ui:
@@ -64,9 +72,15 @@ springdoc:
       enabled: true
 
 bookstreet:
+  media:
+    event-banner-directory: ${EVENT_BANNER_UPLOAD_DIR:uploads/event-banners}
+    booth-image-directory: ${BOOTH_IMAGE_UPLOAD_DIR:uploads/booth-images}
+    heritage-image-directory: ${HERITAGE_IMAGE_UPLOAD_DIR:uploads/heritage-images}
   chatbot:
     api-key: ${GEMINI_API_KEY:${CHATBOT_API_KEY:}}
     model: ${CHATBOT_MODEL:gemini-3.5-flash-lite}
+  feedback:
+    throttle-hmac-secret: ${FEEDBACK_THROTTLE_HMAC_SECRET:}
   browser-security:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     session-cookie-secure: ${SESSION_COOKIE_SECURE:false}

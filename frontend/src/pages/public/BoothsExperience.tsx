@@ -1,5 +1,6 @@
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,6 +12,8 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Booth, EventItem, Language } from '../../types';
+import { PublicEventContext } from '../../components/landing/PublicEventContext';
+import './HeritageExperience.css';
 import './BoothsExperience.css';
 
 interface BoothsExperienceProps {
@@ -20,7 +23,6 @@ interface BoothsExperienceProps {
   events: EventItem[];
   selectedEventId: string;
   isLoading?: boolean;
-  onSelectEventId: (eventId: string) => void;
   error?: string;
   onSelectBoothOnMap?: (boothId: string) => void;
 }
@@ -41,7 +43,6 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   events,
   selectedEventId,
   isLoading = false,
-  onSelectEventId,
   error,
   onSelectBoothOnMap,
 }) => {
@@ -50,17 +51,22 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const selectedEvent = events.find(event => event.id === selectedEventId);
   const boothPathMatch = location.pathname.match(/^\/gian-hang\/([^/]+)\/?$/);
   const hasBoothDetailPath = boothPathMatch !== null;
   const routeBoothId = decodePathIdentifier(boothPathMatch?.[1]);
   const activeModalBooth = boothPathMatch
     ? booths.find(booth => booth.id === routeBoothId) || null
     : null;
-  useModalDismiss(open && !activeModalBooth, () => navigate('/'));
   const boothCatalogUrl = selectedEventId
     ? `/gian-hang?eventId=${encodeURIComponent(selectedEventId)}`
     : '/gian-hang';
+  const publicHomeUrl = selectedEventId
+    ? `/?eventId=${encodeURIComponent(selectedEventId)}`
+    : '/';
+  useModalDismiss(open && !activeModalBooth, () => navigate(publicHomeUrl));
   useModalDismiss(Boolean(activeModalBooth), () => navigate(boothCatalogUrl));
+  const boothBackdropHandlers = useBackdropClick(() => navigate(boothCatalogUrl));
 
   const categories = [
     { id: 'all', labelVi: 'Tất cả gian hàng', labelEn: 'All Stalls', count: booths.length },
@@ -89,11 +95,13 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
   }, [booths, searchQuery, selectedCategory]);
 
   const handleClose = () => {
-    navigate('/');
+    navigate(publicHomeUrl);
   };
 
   const handleLocateOnMap = (boothId: string) => {
-    navigate('/#ban-do');
+    navigate(selectedEventId
+      ? `/?eventId=${encodeURIComponent(selectedEventId)}#ban-do`
+      : '/#ban-do');
     if (onSelectBoothOnMap) {
       onSelectBoothOnMap(boothId);
     }
@@ -153,7 +161,16 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             </div>
 
             {/* Featured Showcase Card on the right */}
-            {featuredBooth && (
+            {isLoading ? (
+              <div className="heritage-featured skeleton-card" aria-hidden="true">
+                <div className="skeleton-dark" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+                <div style={{ width: '75%' }}>
+                  <div className="skeleton-dark" style={{ width: '130px', height: '12px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '85%', height: '28px', marginBottom: '10px' }} />
+                  <div className="skeleton-dark" style={{ width: '65%', height: '14px' }} />
+                </div>
+              </div>
+            ) : featuredBooth ? (
               <div
                 className="heritage-featured"
                 style={{ cursor: 'pointer' }}
@@ -175,6 +192,14 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                 </div>
                 <ArrowRight className="heritage-featured-arrow" size={24} />
               </div>
+            ) : (
+              <div className="heritage-featured" role="status">
+                <div>
+                  <span>{vi ? 'Dữ liệu gian hàng' : 'Bookstall data'}</span>
+                  <h2>{vi ? 'Chưa có gian hàng được công bố' : 'No published bookstalls yet'}</h2>
+                  <span>{vi ? 'Vui lòng quay lại sau.' : 'Please check back later.'}</span>
+                </div>
+              </div>
             )}
           </div>
         </section>
@@ -194,22 +219,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
               <h2>{vi ? 'Danh mục các gian hàng' : 'All Bookstalls & Publishers'}</h2>
             </div>
             <div className="booths-experience-controls">
-              {events.length > 0 && (
-                <label className="booths-experience-event-picker">
-                  <span>{vi ? 'Sự kiện công khai' : 'Published event'}</span>
-                  <select
-                    value={selectedEventId}
-                    onChange={event => onSelectEventId(event.target.value)}
-                    aria-label={vi ? 'Sự kiện công khai' : 'Published event'}
-                  >
-                    {events.map(event => (
-                      <option key={event.id} value={event.id}>
-                        {vi ? event.title : event.titleEn}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              <PublicEventContext language={language} event={selectedEvent} />
               <div className="heritage-search">
                 <Search size={16} />
                 <input
@@ -248,7 +258,35 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
             <span>{vi ? `${filteredBooths.length} gian hàng` : `${filteredBooths.length} pavilions`}</span>
           </div>
 
-          {filteredBooths.length === 0 ? (
+          {isLoading ? (
+            <div className="heritage-collection-grid" aria-busy="true">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <article
+                  key={item}
+                  className="heritage-collection-card skeleton-card"
+                  aria-hidden="true"
+                >
+                  <div className="heritage-card-image skeleton-box" style={{ borderRadius: 0 }} />
+                  <div className="heritage-card-body">
+                    <div className="skeleton-box" style={{ width: '45%', height: '12px', marginBottom: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '80%', height: '22px', marginBottom: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '100%', height: '14px', marginBottom: '6px' }} />
+                    <div className="skeleton-box" style={{ width: '70%', height: '14px', marginBottom: '16px' }} />
+                    <div className="heritage-card-footer">
+                      <div className="skeleton-box" style={{ width: '85px', height: '16px' }} />
+                      <div className="skeleton-box" style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : booths.length === 0 ? (
+            error ? null : (
+              <div className="heritage-empty-result" role="status">
+                <p>{vi ? 'Sự kiện này chưa có gian hàng được công bố.' : 'This event has no published bookstalls yet.'}</p>
+              </div>
+            )
+          ) : filteredBooths.length === 0 ? (
             <div className="heritage-empty-result">
               <p>{vi ? 'Không tìm thấy gian hàng phù hợp với từ khóa.' : 'No kiosks matched your query.'}</p>
               <button
@@ -282,11 +320,11 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
                     </span>
                     <h3>{vi ? booth.name : booth.nameEn}</h3>
                     <p>{vi ? booth.tagline : booth.taglineEn}</p>
-                    <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="heritage-card-footer">
                       <span className="heritage-card-arrow-text">
                         {vi ? 'Xem chi tiết' : 'View details'}
                       </span>
-                      <ArrowRight size={16} color="var(--figma-gold)" />
+                      <ArrowRight size={16} className="heritage-card-arrow-icon" />
                     </div>
                   </div>
                 </article>
@@ -305,7 +343,7 @@ export const BoothsExperience: React.FC<BoothsExperienceProps> = ({
 
         {/* Detail Modal — rendered via Portal to escape fixed-panel stacking context */}
         {activeModalBooth && createPortal(
-          <div className="modal-overlay" onClick={() => navigate(boothCatalogUrl)} role="dialog" aria-modal="true">
+          <div className="modal-overlay" {...boothBackdropHandlers} role="dialog" aria-modal="true">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => navigate(boothCatalogUrl)} aria-label="Đóng">
                 <X size={20} />

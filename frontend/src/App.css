@@ -79,6 +79,7 @@
 .btn-section-see-more-borderless:hover::after {
   transform: scaleX(1);
   transform-origin: left;
+  background-color: #C84C32;
 }
 
 .btn-section-see-more-borderless .see-more-arrow-icon {
@@ -195,3 +196,115 @@
   }
 }
 
+/* Route chunks keep navigation understandable while their code is downloaded. */
+.app-route-loading {
+  min-height: 100dvh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #f7f5ef;
+  color: #17382e;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-route-loading.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.app-section-loading {
+  min-height: 32rem;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #f7f5ef;
+  color: #526860;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-chunk-error {
+  min-height: 16rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: #fff8ec;
+  color: #713f12;
+  text-align: center;
+}
+
+.app-chunk-error.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  min-height: 100dvh;
+}
+
+.app-chunk-error button {
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #17382e;
+  border-radius: 8px;
+  background: #17382e;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Shared Section See More Pill Button */
+.section-bottom-see-more-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 0 1rem;
+}
+
+.btn-section-see-more-borderless {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 9999px;
+  background: rgba(23, 56, 46, 0.05);
+  border: 1px solid rgba(23, 56, 46, 0.12);
+  color: #17382e;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 200ms ease;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.btn-section-see-more-borderless:hover {
+  background: rgba(23, 56, 46, 0.1);
+  color: #c84c32;
+  border-color: rgba(200, 76, 50, 0.3);
+}
+
+.btn-section-see-more-borderless .see-more-arrow-icon {
+  flex-shrink: 0;
+  color: #b4863c;
+  transition: transform 200ms ease;
+}
+
+.btn-section-see-more-borderless:hover .see-more-arrow-icon {
+  transform: translateX(3px);
+  color: #c84c32;
+}
+
+@media (max-width: 600px) {
+  .btn-section-see-more-borderless {
+    font-size: 0.82rem;
+    padding: 0.5rem 0.95rem;
+  }
+}

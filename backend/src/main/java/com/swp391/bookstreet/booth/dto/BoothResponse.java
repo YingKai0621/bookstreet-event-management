@@ -13,12 +13,14 @@ public record BoothResponse(
         BigDecimal mapY,
         boolean active,
         String categoryCode,
-        String note
+        String note,
+        String imageUrl
 ) {
     public static BoothResponse from(Booth booth) {
         var location = booth.getLocation();
         return new BoothResponse(booth.getBoothId(), location.getCode(), location.getName(),
                 location.getDescription(), location.getMaxCapacity(), location.getMapX(),
-                location.getMapY(), location.isActive(), booth.getCategoryCode(), booth.getNote());
+                location.getMapY(), location.isActive(), booth.getCategoryCode(), booth.getNote(),
+                booth.getImageUrl());
     }
 }

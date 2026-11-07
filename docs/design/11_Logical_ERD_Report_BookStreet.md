@@ -36,7 +36,7 @@ Hình dưới đây là bản Logical ERD tổng quan. Các entity có nhiều q
 
 ![Logical ERD tổng quan](assets/BookStreet_Logical_ERD_v7.png)
 
-*Hình 1\. Logical ERD tổng quan của hệ thống Book Street*
+*Hình 1\. PNG tổng quan là ảnh legacy. File drawio nguồn và phần mô tả bên dưới là nguồn hiện hành. GeneralFeedback không còn quan hệ với HeritageContent.*
 
 Quan hệ EventRegistration \- BoothVisit được trình bày thêm ở hình chi tiết để sơ đồ tổng quan không bị rối. Đây vẫn là cùng một data model, không phải entity bị tách thành module độc lập.
 
@@ -452,23 +452,23 @@ Request dùng cùng năm trạng thái với Change Request; Activity và lịch
 
 **Vai trò:** Góp ý chung của Guest hoặc User về đúng một target tại một thời điểm.
 
-**Khi nào phát sinh:** Khi người dùng gửi góp ý về toàn Đường Sách, một Event hoặc một HeritageContent.
+**Khi nào phát sinh:** Khi người dùng gửi góp ý về toàn Đường Sách hoặc một Event.
 
-**Ý nghĩa và vòng đời:** XOR target bảo đảm feedback chỉ thuộc một trong ba loại BOOK\_STREET, EVENT hoặc HERITAGE. Guest không cần đăng nhập và có thể cung cấp tên hoặc email liên hệ tùy chọn.
+**Ý nghĩa và vòng đời:** XOR target bảo đảm feedback chỉ thuộc một trong hai loại BOOK\_STREET hoặc EVENT. Guest không cần đăng nhập và có thể cung cấp tên hoặc email liên hệ tùy chọn. HeritageContent không phải GeneralFeedback target.
 
-**Quan hệ chính:** Có optional submittedByUserId; optional eventId hoặc heritageContentId theo targetType.
+**Quan hệ chính:** Có optional submittedByUserId và optional eventId theo targetType.
 
-**Ví dụ:** Một góp ý về vệ sinh toàn Đường Sách, không đồng thời gắn Event và di sản.
+**Ví dụ:** Một góp ý về vệ sinh toàn Đường Sách, không đồng thời gắn một Event.
 
 ### **HeritageContent**
 
 **Vai trò:** Nội dung công khai giới thiệu di sản, lịch sử hoặc giá trị văn hóa của Đường Sách.
 
-**Khi nào phát sinh:** Khi Organizer hoặc Admin tạo và publish nội dung.
+**Khi nào phát sinh:** Khi Organizer tạo và publish nội dung.
 
 **Ý nghĩa và vòng đời:** HeritageContent có publicCode và trạng thái publish. Đây là nội dung hỗ trợ public experience, không phải workflow quản lý di sản phức tạp.
 
-**Quan hệ chính:** Có thể nhận GeneralFeedback khi targetType là HERITAGE.
+**Quan hệ chính:** Độc lập với GeneralFeedback. HeritageContent chỉ phục vụ quản lý và hiển thị nội dung công khai.
 
 **Ví dụ:** Bài viết về lịch sử hình thành Đường Sách.
 
@@ -525,7 +525,7 @@ Request dùng cùng năm trạng thái với Change Request; Activity và lịch
 | ActivityRevision chỉ là audit Physical | Giữ lịch sử old/new của reschedule/move/config change mà không làm phình lifecycle hoặc thêm Use Case. |
 | Refund không có active MVP workflow | V7 giữ khả năng biểu diễn REFUND cho tương lai; không có endpoint/service tạo refund trong active MVP. |
 | User-Badge dùng UserBadge | Quan hệ nhiều nhiều cần record earnedAt và uniqueness cho từng cặp User-Badge. |
-| GeneralFeedback dùng XOR target | Mỗi feedback chỉ phản ánh một target: toàn Đường Sách, một Event hoặc một HeritageContent. |
+| GeneralFeedback dùng XOR target | Mỗi feedback chỉ phản ánh một target: toàn Đường Sách hoặc một Event. HeritageContent không phải target. |
 
 # **12\. Kiểm tra nhất quán và kết luận**
 

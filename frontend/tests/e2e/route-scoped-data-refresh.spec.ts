@@ -52,10 +52,13 @@ async function mockRoleApi(page: Page, role: Role) {
     if (path === '/api/v1/organizer/activity-proposals') return json(route, pageResponse([]));
     if (path === '/api/v1/organizer/activity-change-requests') return json(route, pageResponse([]));
     if (path === '/api/v1/organizer/activity-cancellation-requests') return json(route, pageResponse([]));
+    if (path === '/api/v1/organizer/notifications') return json(route, pageResponse([]));
+    if (path === '/api/v1/organizer/notifications/unread-count') return json(route, { unreadCount: 0 });
     if (path === '/api/v1/admin/profile') {
       return json(route, { id: 7, fullName: 'ADMIN Test', email: 'admin@example.test', phone: '', department: '', lastActiveAt: null });
     }
-    if (path === '/api/v1/admin/notifications') return json(route, []);
+    if (path === '/api/v1/admin/notifications') return json(route, pageResponse([]));
+    if (path === '/api/v1/admin/notifications/unread-count') return json(route, { unreadCount: 0 });
     if (path === '/api/v1/admin/users') return json(route, []);
     if (path === '/api/v1/partner/organization') {
       return json(route, {
@@ -72,6 +75,8 @@ async function mockRoleApi(page: Page, role: Role) {
     }
     if (path === '/api/v1/partner/applications') return json(route, pageResponse([]));
     if (path === '/api/v1/partner/booth-requests') return json(route, pageResponse([]));
+    if (path === '/api/v1/partner/notifications') return json(route, pageResponse([]));
+    if (path === '/api/v1/partner/notifications/unread-count') return json(route, { unreadCount: 0 });
     if (path === '/api/v1/events') return json(route, pageResponse([]));
     if (path === '/api/v1/participant/event-registrations') return json(route, pageResponse([]));
     if (path === '/api/v1/participant/activity-registrations') return json(route, pageResponse([]));
@@ -106,10 +111,27 @@ test('Organizer loads only its active workspace and stays idle without polling',
   await expect(page.getByRole('heading', { name: 'Quản lý hoạt động' })).toBeVisible();
   expect(requests.count('/api/v1/events')).toBe(0);
   expect(requests.count('/api/v1/auth/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/notifications')).toBe(1);
+  expect(requests.count('/api/v1/organizer/notifications/unread-count')).toBe(1);
   expect(requests.count('/api/v1/participant/event-registrations')).toBe(0);
   expect(requests.count('/api/v1/participant/activity-registrations')).toBe(0);
   expect(requests.count('/api/v1/organizer/events')).toBe(1);
   expect(requests.count('/api/v1/organizer/activities')).toBe(1);
+  await expectIdleNetwork(page, requests.total);
+});
+
+test('Organizer profile uses the shared auth contract without loading unsupported APIs', async ({ page }) => {
+  const requests = await mockRoleApi(page, 'ORGANIZER');
+  await page.goto('/organizer/profile');
+
+  await expect(page.getByRole('heading', { name: 'Hồ sơ Ban Quản Lý' })).toBeVisible();
+  expect(requests.count('/api/v1/auth/profile')).toBe(1);
+  expect(requests.count('/api/v1/organizer/profile')).toBe(0);
+  expect(requests.count('/api/v1/organizer/notifications')).toBe(1);
+  expect(requests.count('/api/v1/organizer/notifications/unread-count')).toBe(1);
+  expect(requests.count('/api/v1/organizer/reports')).toBe(0);
+  expect(requests.count('/api/v1/organizer/feedbacks')).toBe(0);
   await expectIdleNetwork(page, requests.total);
 });
 
@@ -125,16 +147,17 @@ test('Admin user management does not preload unrelated tabs or poll in the backg
   expect(requests.count('/api/v1/participant/event-registrations')).toBe(0);
   expect(requests.count('/api/v1/admin/profile')).toBe(1);
   expect(requests.count('/api/v1/admin/notifications')).toBe(1);
+  expect(requests.count('/api/v1/admin/notifications/unread-count')).toBe(1);
   expect(requests.count('/api/v1/admin/users')).toBe(1);
   await expectIdleNetwork(page, requests.total);
 });
 
-test('Participant workspace does not load the public catalog and stays idle', async ({ page }) => {
+test('Participant workspace loads published events and stays idle', async ({ page }) => {
   const requests = await mockRoleApi(page, 'PARTICIPANT');
   await page.goto('/participant');
 
   await expect(page.getByRole('heading', { name: 'Xin chào, PARTICIPANT Test!' })).toBeVisible();
-  expect(requests.count('/api/v1/events')).toBe(0);
+  expect(requests.count('/api/v1/events')).toBe(1);
   expect(requests.count('/api/v1/heritages')).toBe(0);
   expect(requests.count('/api/v1/events/746/booths')).toBe(0);
   expect(requests.count('/api/v1/auth/profile')).toBe(1);
@@ -154,5 +177,8 @@ test('Partner workspace does not load Participant data or poll while idle', asyn
   expect(requests.count('/api/v1/partner/organization')).toBe(1);
   expect(requests.count('/api/v1/partner/applications')).toBe(1);
   expect(requests.count('/api/v1/partner/booth-requests')).toBe(1);
+  expect(requests.count('/api/v1/partner/notifications')).toBe(1);
+  expect(requests.count('/api/v1/partner/notifications/unread-count')).toBe(1);
+  expect(requests.count('/api/v1/partner/reports')).toBe(0);
   await expectIdleNetwork(page, requests.total);
 });

@@ -1,9 +1,10 @@
-import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Camera, Check, CheckCircle2, Edit3, Upload, UserRound } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
 import { Language, PartnerOrganization } from '../../types';
 import '../participant/ParticipantPages.css';
 import './PartnerPages.css';
+import '../../components/ui/RoleProfileDesign.css';
 
 interface PartnerProfilePageProps {
   language: Language;
@@ -24,6 +25,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
   const [contactEmail, setContactEmail] = useState(organization.email);
   const [contactPhone, setContactPhone] = useState(organization.phone);
   const [address, setAddress] = useState(organization.address);
+  const [organizationSource, setOrganizationSource] = useState(organization);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -65,7 +67,8 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     e.target.value = '';
   };
 
-  useEffect(() => {
+  if (organizationSource !== organization) {
+    setOrganizationSource(organization);
     setName(organization.name);
     setDescription(organization.shortDesc);
     setCategoryCode(organization.categoryCode || 'OTHER');
@@ -73,7 +76,7 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
     setContactEmail(organization.email);
     setContactPhone(organization.phone);
     setAddress(organization.address);
-  }, [organization]);
+  }
 
   const saveProfile = async () => {
     setIsSaving(true);
@@ -287,6 +290,13 @@ export const PartnerProfilePage: React.FC<PartnerProfilePageProps> = ({
         </div>
 
         {/* Organization Details Table / Fields */}
+        <div className="profile-information-heading">
+          <UserRound size={20} aria-hidden="true" />
+          <div>
+            <h3>{language === 'vi' ? 'Thông tin tổ chức' : 'Organization information'}</h3>
+            <p>{language === 'vi' ? 'Thông tin liên hệ và hồ sơ của tổ chức đối tác.' : 'Partner organization details and contact information.'}</p>
+          </div>
+        </div>
         <div className="profile-details-table">
           <div className="profile-detail-row">
             <span className="profile-detail-label">

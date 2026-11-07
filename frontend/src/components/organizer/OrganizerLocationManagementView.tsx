@@ -1,5 +1,6 @@
 import { getPageCount, getPageOffset, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { ListPagination } from '../ui/ListPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import {
   Building2,
   Check,
@@ -12,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { organizerApi } from '../../services/organizerApi';
 import type {
@@ -33,6 +35,8 @@ interface LocationForm {
 }
 
 const PAGE_SIZE = LIST_PAGE_SIZE;
+const DESCRIPTION_CHARACTER_LIMIT = 5000;
+const CARD_DESCRIPTION_CHARACTER_LIMIT = 180;
 const EMPTY_FORM: LocationForm = {
   code: '',
   name: '',
@@ -54,7 +58,17 @@ function safeError(cause: unknown, fallback: string): string {
   return message;
 }
 
+function truncateCardDescription(value: string): string {
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (normalized.length <= CARD_DESCRIPTION_CHARACTER_LIMIT) return normalized;
+
+  const candidate = normalized.slice(0, CARD_DESCRIPTION_CHARACTER_LIMIT);
+  const lastSpace = candidate.lastIndexOf(' ');
+  return `${candidate.slice(0, lastSpace > 0 ? lastSpace : CARD_DESCRIPTION_CHARACTER_LIMIT).trimEnd()}…`;
+}
+
 export function OrganizerLocationManagementView() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<OrganizerLocationResponse[]>([]);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
@@ -145,7 +159,7 @@ export function OrganizerLocationManagementView() {
     if (!/^[A-Z0-9_-]{1,30}$/.test(code)) return 'Mã gồm 1–30 ký tự A–Z, 0–9, dấu gạch ngang hoặc gạch dưới.';
     if (!name || name.length > 100) return 'Tên địa điểm phải có từ 1 đến 100 ký tự.';
     if (!Number.isInteger(capacity) || capacity < 1) return 'Sức chứa phải là số nguyên dương.';
-    if (form.description.trim().length > 5000) return 'Mô tả không được vượt quá 5.000 ký tự.';
+    if (form.description.length > DESCRIPTION_CHARACTER_LIMIT) return 'Mô tả không được vượt quá 5.000 ký tự.';
     return '';
   };
 
@@ -167,13 +181,14 @@ export function OrganizerLocationManagementView() {
         maxCapacity: Number(form.maxCapacity),
       };
       if (editing === 'new') {
-        await organizerApi.createActivityLocation({
+        const created = await organizerApi.createActivityLocation({
           ...common,
           locationType: form.locationType,
           mapX: null,
           mapY: null,
         } satisfies CreateOrganizerLocationRequest);
         setNotice('Đã thêm địa điểm tổ chức mới.');
+        navigate(`/organizer/booths?view=map&locationId=${created.locationId}`);
       } else {
         await organizerApi.updateActivityLocation(editing.locationId, {
           ...common,
@@ -212,7 +227,7 @@ export function OrganizerLocationManagementView() {
           {hasFilters && <button type="button" className="org-dashboard-text-action" onClick={clearFilters}><X size={15} />Xóa bộ lọc</button>}
         </div>
         <div className="venue-toolbar organizer-location-toolbar">
-          <label className="venue-search"><Search size={18} /><input aria-label="Tìm địa điểm" placeholder="Tìm theo mã, tên hoặc mô tả…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label>
+          <SearchFieldLabel className="venue-search-group"><label className="venue-search"><Search size={18} /><input aria-label="Tìm địa điểm" placeholder="Tìm theo mã, tên hoặc mô tả…" value={search} onChange={event => { setSearch(event.target.value); setPage(0); }} /></label></SearchFieldLabel>
           <label className="venue-filter"><span>Loại địa điểm</span><select aria-label="Lọc loại địa điểm" value={type} onChange={event => { setType(event.target.value as SharedLocationType | ''); setPage(0); }}><option value="">Tất cả loại</option><option value="STAGE">Sân khấu</option><option value="WORKSHOP">Phòng workshop</option><option value="AREA">Khu vực</option></select></label>
           <label className="venue-filter"><span>Trạng thái</span><select aria-label="Lọc trạng thái" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as LocationStatusFilter); setPage(0); }}><option value="all">Tất cả trạng thái</option><option value="active">Đang hoạt động</option><option value="inactive">Tạm ngưng</option></select></label>
           <button type="button" className="btn-org-secondary" disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Tải lại danh sách"><RefreshCw size={17} /></button>
@@ -221,7 +236,18 @@ export function OrganizerLocationManagementView() {
         {error ? <div className="venue-empty" role="alert"><p>{error}</p><button type="button" className="btn-org-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
           : loading ? <div className="venue-empty" role="status">Đang tải danh sách…</div>
             : rows.length === 0 ? <div className="venue-empty"><Building2 size={32} /><h3>{hasFilters ? 'Không tìm thấy địa điểm' : 'Chưa có địa điểm tổ chức'}</h3><p>{hasFilters ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem lại danh sách.' : 'Thêm địa điểm để bố trí không gian cho các hoạt động.'}</p><button type="button" className="btn-org-secondary" onClick={hasFilters ? clearFilters : openCreate}>{hasFilters ? 'Xóa bộ lọc' : 'Thêm địa điểm'}</button></div>
-              : <div className="venue-table-scroll"><table className="venue-table"><caption className="venue-sr-only">Danh sách địa điểm tổ chức</caption><thead><tr><th>Địa điểm</th><th>Loại</th><th>Sức chứa</th><th>Vị trí bản đồ</th><th>Trạng thái</th><th className="venue-actions">Thao tác</th></tr></thead><tbody>{rows.map(location => <tr key={location.locationId}><td><div className="venue-name"><span className="venue-row-icon"><Building2 size={19} /></span><span><strong>{location.name}</strong><small>{location.code}</small>{location.description && <p className="venue-description">{location.description}</p>}</span></div></td><td data-label="Loại địa điểm"><span className="organizer-location-type">{TYPE_LABELS[location.locationType as SharedLocationType]}</span></td><td data-label="Sức chứa"><span className="venue-capacity"><Users size={14} /><strong>{location.maxCapacity.toLocaleString('vi-VN')}</strong><span>người</span></span></td><td data-label="Vị trí bản đồ">{location.mapX === null || location.mapY === null ? <span className="venue-muted">Chưa đặt</span> : <span className="venue-coordinate"><MapPin size={14} />{location.mapX}, {location.mapY}</span>}</td><td data-label="Trạng thái"><span className={`organizer-location-status ${location.active ? 'is-active' : 'is-inactive'}`}><i />{location.active ? 'Đang hoạt động' : 'Tạm ngưng'}</span></td><td className="venue-action-cell"><div className="venue-row-actions"><button type="button" className="org-dashboard-text-action" onClick={() => openEdit(location)} aria-label={`Sửa ${location.name}`} title="Chỉnh sửa"><Pencil size={15} /><span>Chỉnh sửa</span></button></div></td></tr>)}</tbody></table></div>}
+              : <div className="venue-table-scroll"><table className="venue-table booth-table">
+                <caption className="venue-sr-only">Danh sách địa điểm tổ chức</caption>
+                <thead><tr><th>Mã địa điểm</th><th>Tên địa điểm</th><th>Loại</th><th>Sức chứa</th><th>Trạng thái</th><th className="venue-actions">Thao tác</th></tr></thead>
+                <tbody>{rows.map(location => <tr key={location.locationId}>
+                  <td><span className="venue-code"><span className="venue-row-icon" aria-hidden="true"><Building2 size={15} /></span><strong>{location.code}</strong></span></td>
+                  <td><div className="venue-name"><span><strong>{location.name}</strong>{location.description && <p className="venue-description">{truncateCardDescription(location.description)}</p>}</span></div></td>
+                  <td data-label="Loại địa điểm"><span className="organizer-location-type">{TYPE_LABELS[location.locationType as SharedLocationType]}</span></td>
+                  <td data-label="Sức chứa"><span className="venue-capacity"><Users size={14} /><strong>{location.maxCapacity.toLocaleString('vi-VN')}</strong><span>người</span></span></td>
+                  <td data-label="Trạng thái"><span className={`organizer-location-status ${location.active ? 'is-active' : 'is-inactive'}`}><i />{location.active ? 'Đang hoạt động' : 'Tạm ngưng'}</span></td>
+                  <td className="venue-action-cell"><div className="venue-row-actions"><button type="button" className="btn-booth-action edit" onClick={() => openEdit(location)} aria-label={`Sửa ${location.name}`} title="Chỉnh sửa"><Pencil size={15} /></button></div></td>
+                </tr>)}</tbody>
+              </table></div>}
 
         {!loading && !error && <footer className="venue-table-footer organizer-location-footer"><span>{totalElements === 0 ? '0 địa điểm' : `${getPageOffset(page + 1, PAGE_SIZE) + 1}–${getPageOffset(page + 1, PAGE_SIZE) + rows.length} trong ${totalElements} địa điểm`}</span><ListPagination page={page + 1} pages={getPageCount(totalElements, PAGE_SIZE)} onPage={value => setPage(toPageIndex(value))} /></footer>}
       </div>
@@ -237,10 +263,13 @@ export function OrganizerLocationManagementView() {
             <label>Trạng thái <span>*</span><select value={String(form.active)} onChange={event => setField('active', event.target.value === 'true')}><option value="true">Đang hoạt động</option><option value="false">Tạm ngưng</option></select></label>
             <label>Sức chứa tối đa <span>*</span><input type="number" required min="1" step="1" value={form.maxCapacity} onChange={event => setField('maxCapacity', event.target.value)} placeholder="Ví dụ: 120" /></label>
             </div>
-            <label className="organizer-location-wide">Mô tả<textarea maxLength={5000} rows={4} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length}/5000</small></label>
+            <label className="organizer-location-wide">Mô tả<textarea rows={4} maxLength={DESCRIPTION_CHARACTER_LIMIT} value={form.description} onChange={event => setField('description', event.target.value)} placeholder="Mô tả vị trí, tiện ích hoặc lưu ý sử dụng…" /><small>{form.description.length.toLocaleString('vi-VN')}/{DESCRIPTION_CHARACTER_LIMIT.toLocaleString('vi-VN')} ký tự</small></label>
           </div>
           {formError && <p className="venue-error" role="alert">{formError}</p>}
-          <div className="venue-dialog-footer"><button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button></div>
+          <div className="venue-dialog-footer">
+            {editing && editing !== 'new' && <button type="button" className="btn-org-secondary" disabled={saving} onClick={() => navigate(`/organizer/booths?view=map&locationId=${editing.locationId}`)}><MapPin size={16} />Đặt vị trí trên bản đồ</button>}
+            <button type="button" className="btn-org-secondary" disabled={saving} onClick={close}>Hủy</button><button type="submit" className="btn-org-primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu địa điểm'}</button>
+          </div>
         </form>
       </dialog>
     </section>

@@ -109,6 +109,12 @@ class EventApiIntegrationTests {
     void cleanup() {
         SecurityContextHolder.clearContext();
         if (owner != null && other != null) {
+            jdbc.update("delete from notifications where event_id in "
+                    + "(select event_id from events where organizer_user_id in (?, ?)) "
+                    + "or partner_event_application_id in (select application_id "
+                    + "from partner_event_applications where event_id in "
+                    + "(select event_id from events where organizer_user_id in (?, ?)))",
+                    owner, other, owner, other);
             jdbc.update("delete from events where organizer_user_id in (?, ?)", owner, other);
             jdbc.update("delete from users where user_id in (?, ?)", owner, other);
         }
@@ -180,7 +186,7 @@ class EventApiIntegrationTests {
     }
 
     @Test
-    void paymentWindowCrossingEventStartPreventsPublicationButNotDraftSave() throws Exception {
+    void paymentAndSetupWindowCanBeSavedInDraftButPreventsPublication() throws Exception {
         long id = createEvent();
         String boothRequestDeadline = eventStartAt.minus(Duration.ofMinutes(30)).toString();
 
@@ -197,9 +203,74 @@ class EventApiIntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
                 .andExpect(jsonPath("$.fieldErrors[0].field")
                         .value("boothPaymentWindowMinutes"));
+    }
+
+    @Test
+    void unusedCancellationCutoffsDoNotBlockPublication() throws Exception {
+        long id = createEvent();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "partnerWithdrawalCutoffAt": null,
+                                  "boothCancellationCutoffAt": null,
+                                  "activityCancellationCutoffAt": null
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+    }
+
+    @Test
+    void equalPartnerAndDownstreamDeadlinePreventsPublication() throws Exception {
+        long id = createEvent();
+        String partnerDeadline = jdbc.queryForObject(
+                "select partner_application_deadline_at from events where event_id = ?",
+                Instant.class, id).toString();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("{\"boothRequestDeadlineAt\":\"" + partnerDeadline + "\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EVENT_TIME_INVALID"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("boothRequestDeadlineAt"));
 
         assertThat(jdbc.queryForObject("select status from events where event_id = ?",
                 String.class, id)).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void zeroPartnerQuotasDoNotRequireBoothOrActivityDeadlines() throws Exception {
+        long id = createEvent();
+
+        mvc.perform(patch(ORGANIZER + "/" + id).with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "maxBoothsPerPartner": 0,
+                                  "maxActivitiesPerPartner": 0,
+                                  "boothRequestDeadlineAt": null,
+                                  "activityProposalDeadlineAt": null
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(ORGANIZER + "/" + id + "/publish").with(csrf())
+                        .with(authentication(identity(owner, true, "ORGANIZER"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
 
     @Test
@@ -744,6 +815,10 @@ class EventApiIntegrationTests {
                     .extracting(error -> ((PartnerApiException) error).getCode())
                     .isEqualTo("EVENT_NOT_ACCEPTING_APPLICATIONS");
         } finally {
+            jdbc.update("delete from notifications where event_id = ? "
+                    + "or partner_event_application_id in "
+                    + "(select application_id from partner_event_applications where event_id = ?)",
+                    eventId, eventId);
             jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
             jdbc.update("delete from partner_organizations where partner_organization_id = ?",
                     organizationId);
@@ -825,6 +900,10 @@ class EventApiIntegrationTests {
                     .isEqualTo(1);
         } finally {
             releaseApplication.countDown();
+            jdbc.update("delete from notifications where event_id = ? "
+                    + "or partner_event_application_id in "
+                    + "(select application_id from partner_event_applications where event_id = ?)",
+                    eventId, eventId);
             jdbc.update("delete from partner_event_applications where event_id = ?", eventId);
             jdbc.update("delete from partner_organizations where partner_organization_id = ?",
                     organizationId);
@@ -1193,7 +1272,7 @@ class EventApiIntegrationTests {
                         .with(authentication(identity(owner, true, "ORGANIZER")))
                         .contentType("application/json")
                         .content("{\"boothRequestDeadlineAt\":\""
-                                + eventStartAt.minus(Duration.ofMinutes(60)) + "\"}"))
+                                + eventStartAt.minus(Duration.ofHours(25)) + "\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -1501,6 +1580,8 @@ class EventApiIntegrationTests {
 
     private void deleteCancellationRecipients(List<CancellationRecipientFixture> recipients) {
         for (CancellationRecipientFixture recipient : recipients.reversed()) {
+            jdbc.update("delete from notifications where recipient_user_id = ? and recipient_role = 'PARTNER'",
+                    recipient.userId());
             jdbc.update("delete from partner_event_applications where application_id = ?",
                     recipient.applicationId());
             jdbc.update("delete from partner_organizations where partner_organization_id = ?",
@@ -1611,7 +1692,7 @@ class EventApiIntegrationTests {
         Instant boothRequestDeadlineAt = baseTime.plus(Duration.ofDays(20));
         Instant activityProposalDeadlineAt = baseTime.plus(Duration.ofDays(20));
         Instant partnerWithdrawalCutoffAt = baseTime.plus(Duration.ofDays(20));
-        Instant boothCancellationCutoffAt = baseTime.plus(Duration.ofDays(20));
+        Instant boothCancellationCutoffAt = baseTime.plus(Duration.ofDays(25));
         Instant activityCancellationCutoffAt = baseTime.plus(Duration.ofDays(25));
 
         eventStartAt = baseTime.plus(Duration.ofDays(30));

@@ -271,6 +271,7 @@
 /* 3. MAIN VIEWPORT & GENERIC CARDS */
 .admin-main-viewport {
   flex: 1;
+  min-width: 0;
   padding: 2.25rem 3rem 4rem;
   overflow-y: auto;
   max-width: 1440px;
@@ -984,6 +985,10 @@
   flex: 1;
   min-width: 220px;
 }
+.adm-filter-bar .adm-search-group { flex: 1; min-width: 220px; }
+.adm-filter-bar .adm-status-field { flex: 0 1 190px; min-width: 175px; }
+.adm-filter-bar .adm-status-field .adm-select-wrap,
+.adm-filter-bar .adm-status-field select { width: 100%; }
 
 .adm-search-icon {
   position: absolute;

@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Language, ParticipantProfile } from '../../types';
 import './ParticipantPages.css';
 import './ProfileSettingsPage.css';
+import '../../components/ui/RoleProfileDesign.css';
 import { authApi } from '../../services/authApi';
 
 interface ProfileSettingsPageProps {
@@ -16,6 +17,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone || '');
+  const [profileSource, setProfileSource] = useState({ name: profile.name, phone: profile.phone || '' });
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -24,10 +26,11 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
   const [resendAfter, setResendAfter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  if (profileSource.name !== profile.name || profileSource.phone !== (profile.phone || '')) {
+    setProfileSource({ name: profile.name, phone: profile.phone || '' });
     setName(profile.name);
     setPhone(profile.phone || '');
-  }, [profile.name, profile.phone]);
+  }
 
   const persist = async (updated: Partial<ParticipantProfile>) => {
     setIsSaving(true);
@@ -101,7 +104,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
                 {profile.avatar ? <img src={profile.avatar} alt={profile.name} /> : profile.name.slice(0, 2).toUpperCase()}
               </div>
               <button className="reader-avatar-button" type="button" disabled={isSaving} onClick={() => fileInputRef.current?.click()}
-                aria-label={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'} title={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'}><Camera size={20} /></button>
+                aria-label={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'} title={vi ? 'Đổi ảnh đại diện' : 'Change profile photo'}><Camera size={18} /></button>
               <input type="file" ref={fileInputRef} accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={isSaving} onChange={handleAvatarFileSelect} />
             </div>
             <div className="profile-names">
@@ -135,11 +138,7 @@ export const ProfileSettingsPage: React.FC<ProfileSettingsPageProps> = ({ langua
               {isEditing && <div className="reader-profile-actions"><button type="button" className="btn-part-secondary" disabled={isSaving} onClick={cancelEdit}><X size={17} />{vi ? 'Hủy' : 'Cancel'}</button><button type="submit" className="btn-part-primary" disabled={isSaving}><Check size={17} />{isSaving ? (vi ? 'Đang lưu...' : 'Saving...') : (vi ? 'Lưu' : 'Save')}</button></div>}
             </form>
           </section>
-          <section className="reader-profile-preferences" aria-labelledby="reader-preferences-title">
-            <div className="reader-section-heading"><Mail size={20} /><h3 id="reader-preferences-title">{vi ? 'Thông báo qua email' : 'Email notifications'}</h3></div>
-            <span className="reader-coming-soon">{vi ? 'Chưa khả dụng' : 'Not available yet'}</span>
-            <p className="reader-section-description">{vi ? 'Tùy chọn nhận lời nhắc hoạt động và thông tin sự kiện sẽ được mở khi tính năng sẵn sàng.' : 'Activity reminders and event updates will be available when this feature is ready.'}</p>
-          </section>
+
         </div>
       </div>
     </div>

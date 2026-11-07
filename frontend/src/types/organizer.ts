@@ -55,6 +55,9 @@ export interface OrganizerEventRequest {
   bannerUrl: string | null;
 }
 
+/** PATCH payload: only changed fields are sent, preserving lifecycle-locked settings. */
+export type OrganizerEventUpdateRequest = Partial<OrganizerEventRequest>;
+
 export interface OrganizerEventResponse extends OrganizerEventRequest {
   eventId: number;
   organizerUserId: number;
@@ -164,18 +167,6 @@ export interface OrganizerActivityItem {
   description: string;
   hasConflict?: boolean;
   conflictNotes?: string;
-}
-
-export interface OrganizerNotificationItem {
-  id: string;
-  title: string;
-  content: string;
-  category: 'booth' | 'activity' | 'participant' | 'feedback' | 'system';
-  timeAgo: string;
-  isRead: boolean;
-  isImportant?: boolean;
-  targetTab?: string;
-  relatedId?: string;
 }
 
 export interface OrganizerReport {

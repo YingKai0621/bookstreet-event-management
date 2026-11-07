@@ -8,9 +8,11 @@ import {
   ExternalLink,
   FileCheck2,
   FileX2,
+  Medal,
   RefreshCw,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNotificationLiveRefresh } from '../../hooks/useNotificationLiveUpdates';
 import { useNavigate } from 'react-router-dom';
 import { CompactPagination } from '../../components/ui/CompactPagination';
 import {
@@ -37,6 +39,8 @@ const typeOptions: ParticipantNotificationType[] = [
   'EVENT_CANCELLED',
   'CERTIFICATE_ISSUED',
   'CERTIFICATE_REVOKED',
+  'BADGE_UNLOCKED',
+  'ACTIVITY_STARTING_SOON',
 ];
 
 function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
@@ -46,14 +50,27 @@ function typeLabel(type: ParticipantNotificationType, vi: boolean): string {
     EVENT_CANCELLED: ['Sự kiện bị hủy', 'Event cancelled'],
     CERTIFICATE_ISSUED: ['Đã cấp chứng nhận', 'Certificate issued'],
     CERTIFICATE_REVOKED: ['Thu hồi chứng nhận', 'Certificate revoked'],
+    BADGE_UNLOCKED: ['Mở khóa huy hiệu', 'Badge unlocked'],
+    ACTIVITY_STARTING_SOON: ['Hoạt động sắp diễn ra', 'Activity starting soon'],
   };
   return labels[type][vi ? 0 : 1];
 }
 
+function emptyTitle(read: ReadFilter, type: TypeFilter, vi: boolean): string {
+  const label = type === 'all' ? '' : typeLabel(type, vi);
+  if (read === 'unread') {
+    if (label) return vi ? `Không có thông báo chưa đọc thuộc loại “${label}”` : `No unread “${label}” notifications`;
+    return vi ? 'Bạn đã đọc hết thông báo' : 'You are all caught up';
+  }
+  if (label) return vi ? `Chưa có thông báo thuộc loại “${label}”` : `No “${label}” notifications yet`;
+  return vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications';
+}
+
 function NotificationIcon({ type }: { type: ParticipantNotificationType }) {
-  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED') return <CalendarClock size={20} />;
+  if (type === 'ACTIVITY_SCHEDULE_OR_LOCATION_CHANGED' || type === 'ACTIVITY_STARTING_SOON') return <CalendarClock size={20} />;
   if (type === 'ACTIVITY_CANCELLED' || type === 'EVENT_CANCELLED') return <CalendarX size={20} />;
   if (type === 'CERTIFICATE_ISSUED') return <FileCheck2 size={20} />;
+  if (type === 'BADGE_UNLOCKED') return <Medal size={20} />;
   return <FileX2 size={20} />;
 }
 
@@ -84,12 +101,20 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
   const [actionError, setActionError] = useState('');
   const [readingId, setReadingId] = useState('');
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const silentRefresh = useRef(false);
+
+  useNotificationLiveRefresh(useCallback(() => {
+    silentRefresh.current = true;
+    setRevision(value => value + 1);
+  }, []));
 
   useEffect(() => {
     let active = true;
     // This effect synchronizes the server-paginated notification page with the selected filters.
+    // A live update keeps the list on screen instead of flashing the loading state.
     // oxlint-disable-next-line react/set-state-in-effect
-    setIsLoading(true);
+    if (!silentRefresh.current) setIsLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect
     setLoadError('');
     participantApi.getNotificationPage({
       page,
@@ -116,7 +141,9 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
           : (vi ? 'Không thể tải danh sách thông báo.' : 'Unable to load notifications.'));
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (!active) return;
+        silentRefresh.current = false;
+        setIsLoading(false);
       });
     return () => { active = false; };
   }, [page, readFilter, typeFilter, revision, vi]);
@@ -154,7 +181,11 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
       }
       setReadingId('');
     }
-    if (navigateAfter && notification.link.startsWith('/participant/')) navigate(notification.link);
+    if (!navigateAfter) return;
+    if (notification.link) navigate(notification.link);
+    else setActionError(vi
+      ? 'Nội dung được nhắc đến hiện không mở được từ thông báo này.'
+      : 'The referenced item cannot currently be opened from this notification.');
   };
 
   const markAllAsRead = async () => {
@@ -179,14 +210,14 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
   return (
     <div className="participant-notifications-page">
       <div className="participant-page-header participant-notifications-header">
-        <div>
+        <div className="participant-notifications-header-copy">
           <h1 className="participant-page-title workspace-page-title">
             {vi ? 'Thông báo' : 'Notifications'}
           </h1>
           <p className="participant-page-sub workspace-page-subtitle">
             {vi
-              ? 'Theo dõi thay đổi của sự kiện, hoạt động và chứng nhận.'
-              : 'Track changes to your events, activities, and certificates.'}
+              ? 'Theo dõi thay đổi của sự kiện, hoạt động, chứng nhận và huy hiệu.'
+              : 'Track changes to your events, activities, certificates, and badges.'}
           </p>
         </div>
         <button
@@ -238,13 +269,26 @@ export function ParticipantNotificationsPage({ language }: ParticipantNotificati
         </div>
       ) : items.length === 0 ? (
         <div className="participant-data-state">
-          <Bell size={30} aria-hidden="true" />
-          <strong>{isFiltered
-            ? (vi ? 'Không có kết quả phù hợp' : 'No matching notifications')
-            : (vi ? 'Bạn chưa có thông báo nào' : 'You have no notifications')}</strong>
-          <p>{isFiltered
-            ? (vi ? 'Hãy thay đổi bộ lọc để xem các thông báo khác.' : 'Change the filters to see other notifications.')
-            : (vi ? 'Thông báo mới về hoạt động và chứng nhận sẽ xuất hiện tại đây.' : 'Updates about activities and certificates will appear here.')}</p>
+          <div className="participant-empty-icon-circle">
+            <Bell size={28} strokeWidth={2.2} aria-hidden="true" />
+          </div>
+          <strong>{emptyTitle(readFilter, typeFilter, vi)}</strong>
+          <p>{vi
+            ? 'Thông báo mới về hoạt động, chứng nhận và huy hiệu sẽ xuất hiện tại đây.'
+            : 'Updates about activities, certificates, and badges will appear here.'}</p>
+          {isFiltered && (
+            <button
+              type="button"
+              className="btn-part-secondary participant-clear-filter-btn"
+              onClick={() => {
+                setReadFilter('all');
+                setTypeFilter('all');
+                setPage(0);
+              }}
+            >
+              {vi ? 'Xem tất cả thông báo' : 'View all notifications'}
+            </button>
+          )}
         </div>
       ) : (
         <>

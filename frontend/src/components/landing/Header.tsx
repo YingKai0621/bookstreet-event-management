@@ -37,9 +37,10 @@ interface HeaderProps {
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
   onParticipantLogout?: () => void;
+  selectedPublicEventId?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
+const HeaderComponent: React.FC<HeaderProps> = ({ 
   language, 
   onLanguageChange,
   isManagementPortal: _isManagementPortal = false,
@@ -50,12 +51,18 @@ export const Header: React.FC<HeaderProps> = ({
   isParticipantAuthenticated = false,
   participantProfile,
   onParticipantLogout,
+  selectedPublicEventId = '',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
   const [passedSections, setPassedSections] = useState<string[]>([]);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [prevIsHeritage, setPrevIsHeritage] = useState(isHeritage);
+  if (isHeritage !== prevIsHeritage) {
+    setPrevIsHeritage(isHeritage);
+    setIsHeaderVisible(true);
+  }
   const accountDropdownRef = useRef<HTMLDivElement>(null);
   const lastScrollYRef = useRef(0);
   const navigationHeaderHoldUntilRef = useRef(0);
@@ -139,8 +146,12 @@ export const Header: React.FC<HeaderProps> = ({
   }, [navLinks]);
 
   useEffect(() => {
+    const getActiveSlideSheet = () =>
+      document.querySelector<HTMLElement>('.heritage-sheet.is-open');
+
     const updateHeaderVisibility = () => {
-      const currentScrollY = window.scrollY;
+      const activeSheet = getActiveSlideSheet();
+      const currentScrollY = activeSheet ? activeSheet.scrollTop : window.scrollY;
       const scrollDelta = currentScrollY - lastScrollYRef.current;
 
       if (currentScrollY <= 12 || Date.now() < navigationHeaderHoldUntilRef.current) {
@@ -149,16 +160,29 @@ export const Header: React.FC<HeaderProps> = ({
         return;
       }
 
-      if (Math.abs(scrollDelta) >= 8) {
+      if (Math.abs(scrollDelta) >= 28) {
         setIsHeaderVisible(scrollDelta < 0);
         lastScrollYRef.current = currentScrollY;
       }
     };
 
-    lastScrollYRef.current = window.scrollY;
-    window.addEventListener('scroll', updateHeaderVisibility, { passive: true });
-    return () => window.removeEventListener('scroll', updateHeaderVisibility);
-  }, []);
+    const handleScrollEvent = (event: Event) => {
+      const target = event.target;
+      if (
+        target === document ||
+        target === window ||
+        (target instanceof HTMLElement && target.classList.contains('heritage-sheet'))
+      ) {
+        updateHeaderVisibility();
+      }
+    };
+
+    const activeSheet = getActiveSlideSheet();
+    const currentScrollY = activeSheet ? activeSheet.scrollTop : window.scrollY;
+    lastScrollYRef.current = currentScrollY;
+    window.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', handleScrollEvent, { capture: true });
+  }, [isHeritage]);
 
   // Tính toán phần trăm tiến trình đi ngang qua các nút menu (từ nút 0 đến nút 5)
   const getActiveProgressIndex = () => {
@@ -173,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const activeIndex = getActiveProgressIndex();
   // Khi ở đỉnh trang (trước Giới thiệu): 0%. Khi ở Giới thiệu: 0%. Khi ở Gian hàng: 20%. Khi ở Sự kiện: 40%... Khi ở Góp ý: 100%.
-  const progressPercent = activeIndex > 0 ? (activeIndex / (navLinks.length - 1)) * 100 : (activeIndex === 0 ? 0 : 0);
+  const progressPercent = activeIndex > 0 ? (activeIndex / (navLinks.length - 1)) * 100 : 0;
 
   useModalDismiss(mobileMenuOpen, () => setMobileMenuOpen(false));
 
@@ -203,6 +227,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Ticket Center Section: Navigation Items with horizontal connecting progress line */}
+          <div className="ticket-navigation-group">
           <nav className="ticket-nav-section" aria-label="Điều hướng chính">
             <div className="ticket-nav-timeline">
               {/* Baseline continuous track between item node centers */}
@@ -226,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
                   return (
                     <li key={item.href} className="ticket-nav-li">
                       <Link 
-                        to={`/${item.href}`}
+                        to={`/${selectedPublicEventId ? `?eventId=${encodeURIComponent(selectedPublicEventId)}` : ''}${item.href}`}
                         onClick={keepHeaderVisibleDuringNavigation}
                         className={`ticket-nav-item ${!isHeritage && isCurrent ? 'is-current' : ''} ${!isHeritage && isPassed ? 'is-passed' : ''}`}
                       >
@@ -243,6 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
               </ul>
             </div>
           </nav>
+          </div>
 
           {/* Ticket Right Section: Account + Language Switcher + Mobile Menu Toggle */}
           <div className="ticket-actions-section">
@@ -507,7 +533,7 @@ export const Header: React.FC<HeaderProps> = ({
                   return (
                     <li key={item.href}>
                       <Link 
-                        to={`/${item.href}`}
+                        to={`/${selectedPublicEventId ? `?eventId=${encodeURIComponent(selectedPublicEventId)}` : ''}${item.href}`}
                         onClick={() => {
                           keepHeaderVisibleDuringNavigation();
                           setMobileMenuOpen(false);
@@ -532,3 +558,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export const Header = React.memo(HeaderComponent);

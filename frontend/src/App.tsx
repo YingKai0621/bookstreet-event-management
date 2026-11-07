@@ -1,59 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import './RoleWorkspace.css';
 import { useAuth } from './auth/useAuth';
+import { useParticipationRefresh } from './hooks/useParticipationRefresh';
 import { AboutSection } from './components/landing/AboutSection';
-import { BoothsSection } from './components/landing/BoothsSection';
 import { EventsSection } from './components/landing/EventsSection';
 import { FeedbackSection } from './components/landing/FeedbackSection';
 import { Footer } from './components/landing/Footer';
 import { Header } from './components/landing/Header';
-import { HeritageSection } from './components/landing/HeritageSection';
 import { Hero } from './components/landing/Hero';
 import { InteractiveMap } from './components/landing/InteractiveMap';
-import { AdminPortal } from './components/admin/AdminPortal';
-import { ManagementPortal } from './components/organizer/ManagementPortal';
-import { BoothsExperience } from './pages/public/BoothsExperience';
-import { EventsExperience } from './pages/public/EventsExperience';
-import { HeritageExperience } from './pages/public/HeritageExperience';
-import { LoginPage } from './pages/public/LoginPage';
-import { RegisterPage } from './pages/public/RegisterPage';
-import { VerifyEmailPage } from './pages/public/VerifyEmailPage';
-import { PortalLoginPage } from './pages/organizer/PortalLoginPage';
-import { AdminLoginPage } from './pages/admin/AdminLoginPage';
-import { ActivityDetailPage } from './pages/participant/ActivityDetailPage';
-import { AttendanceScanPage } from './pages/participant/AttendanceScanPage';
-import { EventDetailPage } from './pages/participant/EventDetailPage';
-import { MyActivitiesPage } from './pages/participant/MyActivitiesPage';
-import { MyEventsPage } from './pages/participant/MyEventsPage';
-import { MyCertificatesPage } from './pages/participant/MyCertificatesPage';
-import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
-import { ActivityRatingsPage } from './pages/participant/ActivityRatingsPage';
-import { ParticipantNotificationsPage } from './pages/participant/ParticipantNotificationsPage';
-import { ParticipantLayout } from './pages/participant/ParticipantLayout';
-import { ProfileSettingsPage } from './pages/participant/ProfileSettingsPage';
-import { RewardsPage } from './pages/participant/RewardsPage';
-import { PartnerActivityWorkspacePage } from './pages/partner/PartnerActivityWorkspacePage';
-import { PartnerEventApplicationsPage } from './pages/partner/PartnerEventApplicationsPage';
-import { PartnerEventDiscoveryPage } from './pages/partner/PartnerEventDiscoveryPage';
-import { PartnerAssignedBoothsPage } from './pages/partner/PartnerAssignedBoothsPage';
-import { PartnerBoothDetailPage } from './pages/partner/PartnerBoothDetailPage';
-import { PartnerDashboard } from './pages/partner/PartnerDashboard';
-import { PartnerLayout } from './pages/partner/PartnerLayout';
-import { PartnerLoginPage } from './pages/partner/PartnerLoginPage';
-import { PartnerNotificationsPage } from './pages/partner/PartnerNotificationsPage';
-import { PartnerProfilePage } from './pages/partner/PartnerProfilePage';
-import { PartnerReportsPage } from './pages/partner/PartnerReportsPage';
-import { Sprint2PartnerBoothsPage } from './pages/partner/Sprint2PartnerBoothsPage';
-import { BoothPaymentPage } from './pages/partner/BoothPaymentPage';
-import { VnPayReturnPage } from './pages/partner/VnPayReturnPage';
 import { migrateLegacyOrganizerUrl } from './routing/organizerRoutes';
 import {
   clearAttendanceScanToken,
   PARTICIPANT_ATTENDANCE_SCAN_PATH,
 } from './security/attendanceScanToken';
+import {
+  clearBoothScanToken,
+  PARTICIPANT_BOOTH_SCAN_PATH,
+} from './security/boothScanToken';
 import { participantApi } from './services/participantApi';
+import { rewardApi } from './services/rewardApi';
 import { partnerApi } from './services/partnerApi';
 import { publicApi } from './services/publicApi';
 import { boothApi } from './services/boothApi';
@@ -61,25 +30,235 @@ import type { BoothRequest } from './types/booth';
 import {
   Booth,
   EventItem,
-  ExtendedHeritageProfile,
+  HeritageProfile,
   Language,
   ParticipantActivity,
-  ParticipantBadge,
   ParticipantCertificate,
   ParticipantEvent,
   ParticipantProfile,
   PartnerEventApplication,
-  PartnerNotification,
   PartnerOrganization,
-  PartnerReportStats,
   PartnerTodoItem
 } from './types';
 
 import './WorkspacePageHeading.css';
 
+const AdminPortal = lazy(() => import('./components/admin/AdminPortal').then(module => ({
+  default: module.AdminPortal,
+})));
+const ManagementPortal = lazy(() => import('./components/organizer/ManagementPortal').then(module => ({
+  default: module.ManagementPortal,
+})));
+const PortalLoginPage = lazy(() => import('./pages/organizer/PortalLoginPage').then(module => ({
+  default: module.PortalLoginPage,
+})));
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage').then(module => ({
+  default: module.AdminLoginPage,
+})));
+const BoothsSection = lazy(() => import('./components/landing/BoothsSection').then(module => ({
+  default: module.BoothsSection,
+})));
+const HeritageSection = lazy(() => import('./components/landing/HeritageSection').then(module => ({
+  default: module.HeritageSection,
+})));
+const BoothsExperience = lazy(() => import('./pages/public/BoothsExperience').then(module => ({
+  default: module.BoothsExperience,
+})));
+const EventsExperience = lazy(() => import('./pages/public/EventsExperience').then(module => ({
+  default: module.EventsExperience,
+})));
+const HeritageExperience = lazy(() => import('./pages/public/HeritageExperience').then(module => ({
+  default: module.HeritageExperience,
+})));
+const LoginPage = lazy(() => import('./pages/public/LoginPage').then(module => ({
+  default: module.LoginPage,
+})));
+const RegisterPage = lazy(() => import('./pages/public/RegisterPage').then(module => ({
+  default: module.RegisterPage,
+})));
+const VerifyEmailPage = lazy(() => import('./pages/public/VerifyEmailPage').then(module => ({
+  default: module.VerifyEmailPage,
+})));
+const ActivityDetailPage = lazy(() => import('./pages/participant/ActivityDetailPage').then(module => ({
+  default: module.ActivityDetailPage,
+})));
+const ActivityRatingsPage = lazy(() => import('./pages/participant/ActivityRatingsPage').then(module => ({
+  default: module.ActivityRatingsPage,
+})));
+const AttendanceScanPage = lazy(() => import('./pages/participant/AttendanceScanPage').then(module => ({
+  default: module.AttendanceScanPage,
+})));
+const BoothScanPage = lazy(() => import('./pages/participant/BoothScanPage').then(module => ({
+  default: module.BoothScanPage,
+})));
+const EventDetailPage = lazy(() => import('./pages/participant/EventDetailPage').then(module => ({
+  default: module.EventDetailPage,
+})));
+const MyActivitiesPage = lazy(() => import('./pages/participant/MyActivitiesPage').then(module => ({
+  default: module.MyActivitiesPage,
+})));
+const MyCertificatesPage = lazy(() => import('./pages/participant/MyCertificatesPage').then(module => ({
+  default: module.MyCertificatesPage,
+})));
+const MyEventsPage = lazy(() => import('./pages/participant/MyEventsPage').then(module => ({
+  default: module.MyEventsPage,
+})));
+const ParticipantDashboard = lazy(() => import('./pages/participant/ParticipantDashboard').then(module => ({
+  default: module.ParticipantDashboard,
+})));
+const ParticipantLayout = lazy(() => import('./pages/participant/ParticipantLayout').then(module => ({
+  default: module.ParticipantLayout,
+})));
+const ParticipantNotificationsPage = lazy(() => import('./pages/participant/ParticipantNotificationsPage').then(module => ({
+  default: module.ParticipantNotificationsPage,
+})));
+const ProfileSettingsPage = lazy(() => import('./pages/participant/ProfileSettingsPage').then(module => ({
+  default: module.ProfileSettingsPage,
+})));
+const RewardsPage = lazy(() => import('./pages/participant/RewardsPage').then(module => ({
+  default: module.RewardsPage,
+})));
+const BoothPaymentPage = lazy(() => import('./pages/partner/BoothPaymentPage').then(module => ({
+  default: module.BoothPaymentPage,
+})));
+const PartnerActivityWorkspacePage = lazy(() => import('./pages/partner/PartnerActivityWorkspacePage').then(module => ({
+  default: module.PartnerActivityWorkspacePage,
+})));
+const PartnerAssignedBoothsPage = lazy(() => import('./pages/partner/PartnerAssignedBoothsPage').then(module => ({
+  default: module.PartnerAssignedBoothsPage,
+})));
+const PartnerNotificationsPage = lazy(() => import('./pages/partner/PartnerNotificationsPage').then(module => ({
+  default: module.PartnerNotificationsPage,
+})));
+const PartnerBoothDetailPage = lazy(() => import('./pages/partner/PartnerBoothDetailPage').then(module => ({
+  default: module.PartnerBoothDetailPage,
+})));
+const PartnerDashboard = lazy(() => import('./pages/partner/PartnerDashboard').then(module => ({
+  default: module.PartnerDashboard,
+})));
+const PartnerEventApplicationsPage = lazy(() => import('./pages/partner/PartnerEventApplicationsPage').then(module => ({
+  default: module.PartnerEventApplicationsPage,
+})));
+const PartnerEventDiscoveryPage = lazy(() => import('./pages/partner/PartnerEventDiscoveryPage').then(module => ({
+  default: module.PartnerEventDiscoveryPage,
+})));
+const PartnerLayout = lazy(() => import('./pages/partner/PartnerLayout').then(module => ({
+  default: module.PartnerLayout,
+})));
+const PartnerLoginPage = lazy(() => import('./pages/partner/PartnerLoginPage').then(module => ({
+  default: module.PartnerLoginPage,
+})));
+const PartnerProfilePage = lazy(() => import('./pages/partner/PartnerProfilePage').then(module => ({
+  default: module.PartnerProfilePage,
+})));
+const Sprint2PartnerBoothsPage = lazy(() => import('./pages/partner/Sprint2PartnerBoothsPage').then(module => ({
+  default: module.Sprint2PartnerBoothsPage,
+})));
+const VnPayReturnPage = lazy(() => import('./pages/partner/VnPayReturnPage').then(module => ({
+  default: module.VnPayReturnPage,
+})));
+
+function RouteChunkFallback({ message, overlay = false }: { message: string; overlay?: boolean }) {
+  return <p className={`app-route-loading${overlay ? ' is-overlay' : ''}`} role="status">{message}</p>;
+}
+
+function SectionChunkFallback({ id, message }: { id: string; message: string }) {
+  return (
+    <section id={id} className="app-section-loading" aria-busy="true" aria-label={message}>
+      <span>{message}</span>
+    </section>
+  );
+}
+
+class ChunkErrorBoundary extends Component<
+  { children: ReactNode; message: string; overlay?: boolean },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Could not load an application chunk', error, info);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className={`app-chunk-error${this.props.overlay ? ' is-overlay' : ''}`} role="alert">
+        <strong>{this.props.message}</strong>
+        <button type="button" onClick={() => window.location.reload()}>Tải lại trang</button>
+      </div>
+    );
+  }
+}
+
+function AsyncContent({
+  children,
+  fallback,
+  errorMessage = 'Không thể tải nội dung này.',
+  overlay = false,
+}: {
+  children: ReactNode;
+  fallback: ReactNode;
+  errorMessage?: string;
+  overlay?: boolean;
+}) {
+  return (
+    <ChunkErrorBoundary message={errorMessage} overlay={overlay}>
+      <Suspense fallback={fallback}>{children}</Suspense>
+    </ChunkErrorBoundary>
+  );
+}
+
+function DeferredRouteChunk({
+  active,
+  message,
+  children,
+}: {
+  active: boolean;
+  message: string;
+  children: ReactNode;
+}) {
+  const [activated, setActivated] = useState(active);
+  if (active && !activated) setActivated(true);
+  if (!activated) return null;
+  return (
+    <AsyncContent
+      fallback={<RouteChunkFallback message={message} overlay />}
+      errorMessage="Không thể tải màn hình này."
+      overlay
+    >
+      {children}
+    </AsyncContent>
+  );
+}
+
 const EMPTY_PARTICIPANT_PROFILE: ParticipantProfile = {
   id: '', name: '', email: '', role: 'Participant', emailNotifications: false, points: 0,
 };
+
+const LANDING_EVENT_WINDOW_DAYS = 90;
+const LANDING_EVENT_LIMIT = 8;
+
+function getLandingEvents(events: EventItem[], now = Date.now()): EventItem[] {
+  const horizon = now + LANDING_EVENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const activeOrNear = events.filter(event => {
+    const startAt = event.startAt ? new Date(event.startAt).getTime() : Number.NaN;
+    const endAt = event.endAt ? new Date(event.endAt).getTime() : Number.NaN;
+    if (!Number.isFinite(startAt) || !Number.isFinite(endAt)) {
+      return event.status === 'happening' || event.status === 'upcoming';
+    }
+    return endAt >= now && startAt <= horizon;
+  });
+  const nearest = activeOrNear.length > 0
+    ? activeOrNear
+    : events.filter(event => !event.endAt || new Date(event.endAt).getTime() >= now);
+
+  return nearest.slice(0, LANDING_EVENT_LIMIT);
+}
 
 export function App() {
   const location = useLocation();
@@ -92,6 +271,8 @@ export function App() {
   const isRegisterRoute = location.pathname === '/register';
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
+  const isParticipantBoothScanRoute = location.pathname === PARTICIPANT_BOOTH_SCAN_PATH;
+  const isParticipantDashboardRoute = /^\/participant\/?$/.test(location.pathname);
   const isParticipantCertificatesRoute = location.pathname === '/participant/certificates';
   const isVnPayReturn = location.pathname === '/payment/vnpay/return';
   const isPartnerRoute = location.pathname.startsWith('/partner') || isVnPayReturn;
@@ -120,16 +301,23 @@ export function App() {
     clearAttendanceScanToken();
   }, [isLoginRoute, isParticipantAttendanceScanRoute]);
 
+  useEffect(() => {
+    if (isParticipantBoothScanRoute || isLoginRoute) return;
+    clearBoothScanToken();
+  }, [isLoginRoute, isParticipantBoothScanRoute]);
+
   // Partner State
   const [partnerOrg, setPartnerOrg] = useState<PartnerOrganization | null>(null);
   const [partnerApplications, setPartnerApplications] = useState<PartnerEventApplication[]>([]);
   const [partnerTodos, _setPartnerTodos] = useState<PartnerTodoItem[]>([]);
-  const [partnerNotifications, setPartnerNotifications] = useState<PartnerNotification[]>([]);
-  const [partnerReports, _setPartnerReports] = useState<PartnerReportStats | null>(null);
   const [partnerBoothRequests, setPartnerBoothRequests] = useState<BoothRequest[] | null>(null);
   const [partnerOverviewLoading, setPartnerOverviewLoading] = useState(true);
   const [partnerOverviewError, setPartnerOverviewError] = useState('');
   const [partnerBoothRequestsError, setPartnerBoothRequestsError] = useState('');
+  const [partnerDataRevision, setPartnerDataRevision] = useState(0);
+  const requestPartnerDataRefresh = useCallback(() => {
+    setPartnerDataRevision(revision => revision + 1);
+  }, []);
 
   const [language, setLanguage] = useState<Language>('vi');
   const [highlightedBoothId, setHighlightedBoothId] = useState<string | null>(null);
@@ -159,7 +347,7 @@ export function App() {
       cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
-  }, [location.key, location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, location.pathname, isSlidePageOpen, isPortalRoute]);
 
   useEffect(() => {
     if (isSlidePageOpen || isPortalRoute || !location.hash) return;
@@ -167,26 +355,56 @@ export function App() {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'instant' });
     });
     return () => cancelAnimationFrame(frame);
-  }, [location.key, location.hash, isSlidePageOpen, isPortalRoute]);
+  }, [location.hash, isSlidePageOpen, isPortalRoute]);
 
-  const [heritageList, setHeritageList] = useState<ExtendedHeritageProfile[]>([]);
-  const [booths, setBooths] = useState<Booth[]>([]);
+  const [heritageList, setHeritageList] = useState<HeritageProfile[]>([]);
+  const [heritageError, setHeritageError] = useState('');
+  const [loadedBooths, setLoadedBooths] = useState<{
+    eventId: string;
+    rows: Booth[];
+    error: string;
+  }>({ eventId: '', rows: [], error: '' });
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isPublicDataLoading, setIsPublicDataLoading] = useState(true);
-  const [isPublicBoothsLoading, setIsPublicBoothsLoading] = useState(false);
-  const [publicBoothsError, setPublicBoothsError] = useState('');
   const [selectedPublicEventId, setSelectedPublicEventId] = useState('');
-  const publicEventIdFromUrl = isBooths ? new URLSearchParams(location.search).get('eventId') : null;
-  const publicEventId = events.some(event => event.id === publicEventIdFromUrl)
-    ? publicEventIdFromUrl as string
-    : events.some(event => event.id === selectedPublicEventId)
-      ? selectedPublicEventId
-      : events[0]?.id || '';
+  const featuredPublicEvents = useMemo(() => getLandingEvents(events), [events]);
+  const publicContextEvents = isSlidePageOpen ? events : featuredPublicEvents;
+  const publicEventIdFromUrl = new URLSearchParams(location.search).get('eventId');
+  const defaultPublicEventId = publicContextEvents.find(event => event.status === 'happening')?.id
+    || publicContextEvents.find(event => event.status === 'upcoming')?.id
+    || publicContextEvents[0]?.id
+    || '';
+  const publicEventId = (selectedPublicEventId && publicContextEvents.some(event => event.id === selectedPublicEventId))
+    ? selectedPublicEventId
+    : (publicEventIdFromUrl && publicContextEvents.some(event => event.id === publicEventIdFromUrl))
+      ? (publicEventIdFromUrl as string)
+      : defaultPublicEventId;
+  const hasCurrentBooths = Boolean(publicEventId && loadedBooths.eventId === publicEventId);
+  const booths = hasCurrentBooths ? loadedBooths.rows : [];
+  const publicBoothsError = hasCurrentBooths ? loadedBooths.error : '';
+  const isPublicBoothsLoading = Boolean(isPublicRoute && publicEventId && !hasCurrentBooths);
 
   const selectPublicEvent = (eventId: string) => {
+    if (!publicContextEvents.some(event => event.id === eventId)) return;
     setSelectedPublicEventId(eventId);
-    if (isBooths) navigate(`/gian-hang?eventId=${encodeURIComponent(eventId)}`);
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', eventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+    }, { replace: true, preventScrollReset: true });
   };
+
+  useEffect(() => {
+    if (!isPublicRoute || isPublicDataLoading || !publicEventIdFromUrl || !publicEventId) return;
+    if (publicEventIdFromUrl === publicEventId) return;
+    const params = new URLSearchParams(location.search);
+    params.set('eventId', publicEventId);
+    navigate({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+    }, { replace: true, preventScrollReset: true });
+  }, [isPublicDataLoading, isPublicRoute, location.pathname, location.search, navigate, publicEventId, publicEventIdFromUrl]);
 
   // Load real data from Backend REST API
   useEffect(() => {
@@ -194,6 +412,7 @@ export function App() {
     let isMounted = true;
     const refreshPublicData = async () => {
       setIsPublicDataLoading(true);
+      setHeritageError('');
       const [eventsRes, heritagesRes] = await Promise.allSettled([
         publicApi.getEvents(),
         publicApi.getHeritages(),
@@ -205,17 +424,18 @@ export function App() {
       } else {
         console.warn('Could not fetch public events', eventsRes.reason);
         setEvents([]);
-        setBooths([]);
       }
 
       if (heritagesRes.status === 'fulfilled') {
-        setHeritageList(heritagesRes.value.map(h => ({
-          ...h,
-          status: 'published' as const,
-          qrStatus: 'active' as const,
-        })));
+        setHeritageList(heritagesRes.value);
       } else {
         console.warn('Could not fetch public heritages', heritagesRes.reason);
+        setHeritageList([]);
+        setHeritageError(
+          heritagesRes.reason instanceof Error
+            ? heritagesRes.reason.message
+            : 'Không thể tải nội dung di sản.',
+        );
       }
       setIsPublicDataLoading(false);
     };
@@ -227,31 +447,42 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    if (!isPublicRoute || !publicEventId) {
-      setBooths([]);
-      return () => { active = false; };
-    }
-    setIsPublicBoothsLoading(true);
-    setPublicBoothsError('');
-    publicApi.getBooths(publicEventId)
-      .then(rows => { if (active) setBooths(rows); })
+    if (!isPublicRoute || !publicEventId) return () => { active = false; };
+    const requestedEventId = publicEventId;
+    publicApi.getBooths(requestedEventId)
+      .then(rows => {
+        if (active) setLoadedBooths({ eventId: requestedEventId, rows, error: '' });
+      })
       .catch(error => {
         if (!active) return;
-        setBooths([]);
-        setPublicBoothsError(error instanceof Error ? error.message : 'Không tải được gian hàng.');
-      })
-      .finally(() => { if (active) setIsPublicBoothsLoading(false); });
+        setLoadedBooths({
+          eventId: requestedEventId,
+          rows: [],
+          error: error instanceof Error ? error.message : 'Không tải được gian hàng.',
+        });
+      });
     return () => { active = false; };
   }, [isPublicRoute, publicEventId]);
+
+  useEffect(() => {
+    if (!isPublicRoute || featuredPublicEvents.length === 0) return;
+    featuredPublicEvents.forEach(event => {
+      if (event.id && event.id !== publicEventId) {
+        void publicApi.getBooths(event.id).catch(() => {});
+      }
+    });
+  }, [featuredPublicEvents, isPublicRoute, publicEventId]);
 
   const [storedParticipantProfile, setParticipantProfile] = useState<ParticipantProfile>(EMPTY_PARTICIPANT_PROFILE);
   const [participantProfileError, setParticipantProfileError] = useState('');
   const [participantEvents, setParticipantEvents] = useState<ParticipantEvent[]>([]);
+  const [landingRegistrations, setLandingRegistrations] = useState<{ userId: number; eventIds: string[] } | null>(null);
   const [participantActivities, setParticipantActivities] = useState<ParticipantActivity[]>([]);
   const [participantParticipationLoading, setParticipantParticipationLoading] = useState(true);
   const [participantParticipationError, setParticipantParticipationError] = useState('');
   const [participantParticipationRevision, setParticipantParticipationRevision] = useState(0);
-  const [participantBadges, setParticipantBadges] = useState<ParticipantBadge[]>([]);
+  const participationRefresh = useParticipationRefresh((isParticipantRoute || isPublicRoute) && isParticipantAuthenticated && !isParticipantAttendanceScanRoute);
+  const [participantRewardPoints, setParticipantRewardPoints] = useState(0);
   const [participantCertificates, setParticipantCertificates] = useState<ParticipantCertificate[]>([]);
   const [participantCertificatesLoading, setParticipantCertificatesLoading] = useState(false);
   const [participantCertificatesError, setParticipantCertificatesError] = useState('');
@@ -271,13 +502,14 @@ export function App() {
     : EMPTY_PARTICIPANT_PROFILE;
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Account changes must synchronously discard all participant data from the previous session.
     setParticipantProfile(EMPTY_PARTICIPANT_PROFILE);
     setParticipantProfileError('');
     setParticipantEvents([]);
     setParticipantActivities([]);
     setParticipantParticipationLoading(true);
     setParticipantParticipationError('');
-    setParticipantBadges([]);
+    setParticipantRewardPoints(0);
     setParticipantCertificates([]);
     setParticipantCertificatesLoading(false);
     setParticipantCertificatesError('');
@@ -306,7 +538,28 @@ export function App() {
   }, [isParticipantRoute, isPublicRoute, participantUserId]);
 
   useEffect(() => {
-    if (participantUserId === undefined || !isParticipantRoute || isParticipantAttendanceScanRoute) return;
+    if (participantUserId === undefined || !isParticipantDashboardRoute) return;
+    let active = true;
+    const refreshRewardPoints = () => {
+      void rewardApi.getSummary()
+        .then(summary => {
+          if (active && Number.isFinite(summary.totalPoints)) {
+            setParticipantRewardPoints(summary.totalPoints);
+          }
+        })
+        .catch(error => console.warn('Không thể tải tổng điểm độc giả', error));
+    };
+    refreshRewardPoints();
+    window.addEventListener('participant:data-changed', refreshRewardPoints);
+    return () => {
+      active = false;
+      window.removeEventListener('participant:data-changed', refreshRewardPoints);
+    };
+  }, [isParticipantDashboardRoute, participantUserId]);
+
+  useEffect(() => {
+    if (participantUserId === undefined || !isParticipantRoute
+        || isParticipantAttendanceScanRoute || isParticipantBoothScanRoute) return;
     let active = true;
     const refreshParticipation = async () => {
       setParticipantParticipationLoading(true);
@@ -332,7 +585,17 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [isParticipantAttendanceScanRoute, isParticipantRoute, participantParticipationRevision, participantUserId]);
+  }, [isParticipantAttendanceScanRoute, isParticipantBoothScanRoute, isParticipantRoute,
+    participantParticipationRevision, participationRefresh, participantUserId]);
+
+  useEffect(() => {
+    if (!isPublicRoute || participantUserId === undefined) return;
+    let active = true;
+    participantApi.getEventRegistrations().then(registrations => {
+      if (active) setLandingRegistrations({ userId: participantUserId, eventIds: registrations.filter(event => event.isJoined).map(event => event.id) });
+    }).catch(error => console.warn('Không tải được trạng thái đăng ký sự kiện', error));
+    return () => { active = false; };
+  }, [isPublicRoute, participantUserId, participationRefresh, participantEvents]);
 
   useEffect(() => {
     if (participantUserId === undefined || !isParticipantCertificatesRoute) return;
@@ -366,8 +629,6 @@ export function App() {
     setPartnerOverviewLoading(true);
     setPartnerOverviewError('');
     setPartnerBoothRequestsError('');
-    setPartnerNotifications([]);
-    _setPartnerReports(null);
     const refreshPartnerData = () => {
       const profileRequest = partnerApi.getProfile();
       void Promise.allSettled([
@@ -407,11 +668,13 @@ export function App() {
     };
     refreshPartnerData();
     window.addEventListener('duongsach:data-changed', refreshPartnerData);
+    window.addEventListener('focus', refreshPartnerData);
     return () => {
       active = false;
       window.removeEventListener('duongsach:data-changed', refreshPartnerData);
+      window.removeEventListener('focus', refreshPartnerData);
     };
-  }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute]);
+  }, [authenticatedUser?.fullName, isPartnerAuthenticated, isPartnerRoute, location.pathname, partnerDataRevision]);
 
   // Participant Action Handlers
   const applyParticipantActivityRegistration = (
@@ -475,14 +738,46 @@ export function App() {
   };
 
   const handleJoinParticipantEvent = async (eventId: string) => {
-    await participantApi.joinEvent(eventId);
-    setParticipantEvents(await participantApi.getEvents());
+    const userId = currentParticipantId.current;
+    const registration = await participantApi.joinEvent(eventId);
+    if (currentParticipantId.current !== userId) return;
+    const event = participantApi.mapEventRegistration(registration);
+    if (userId !== undefined) setLandingRegistrations(current => ({
+      userId,
+      eventIds: [...new Set([...(current?.userId === userId ? current.eventIds : []), event.id])],
+    }));
+    setParticipantEvents(current => {
+      const existing = current.find(item => item.id === event.id);
+      return existing
+        ? current.map(item => item.id === event.id ? { ...existing, ...event } : item)
+        : [event, ...current];
+    });
+    try {
+      const events = await participantApi.getEvents();
+      if (currentParticipantId.current === userId) setParticipantEvents(events);
+    } catch {
+      // The command has committed; keep its authoritative response if refresh fails.
+    }
   };
 
   const handleLeaveParticipantEvent = async (eventId: string) => {
-    await participantApi.leaveEvent(eventId);
-    setParticipantEvents(await participantApi.getEvents());
-    navigate('/participant');
+    const userId = currentParticipantId.current;
+    const registration = await participantApi.leaveEvent(eventId);
+    if (currentParticipantId.current !== userId) return;
+    const event = participantApi.mapEventRegistration(registration);
+    if (userId !== undefined) setLandingRegistrations(current => current?.userId === userId
+      ? { userId, eventIds: current.eventIds.filter(id => id !== event.id) }
+      : current);
+    setParticipantEvents(current => current.map(item => item.id === event.id ? { ...item, ...event } : item));
+    try {
+      const events = await participantApi.getEvents();
+      if (currentParticipantId.current === userId) setParticipantEvents(events);
+    } catch {
+      // Keep authoritative leave response if refresh fails.
+    }
+    if (location.pathname.startsWith('/participant/events')) {
+      navigate('/participant');
+    }
   };
 
   const handleUpdateProfile = async (updated: Partial<ParticipantProfile>) => {
@@ -513,6 +808,8 @@ export function App() {
   };
 
   const handleParticipantLogout = () => {
+    clearAttendanceScanToken();
+    clearBoothScanToken();
     void handleLogout();
   };
 
@@ -556,14 +853,16 @@ export function App() {
 
     if (!isPortalAuthenticated) {
       return (
-        <PortalLoginPage 
-          language={language}
-          onLoginSuccess={() => navigate(
-            migrateLegacyOrganizerUrl(location.pathname, location.search)
-              || `${location.pathname}${location.search}`,
-            { replace: true },
-          )}
-        />
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đăng nhập Ban tổ chức..." />}>
+          <PortalLoginPage
+            language={language}
+            onLoginSuccess={() => navigate(
+              migrateLegacyOrganizerUrl(location.pathname, location.search)
+                || `${location.pathname}${location.search}`,
+              { replace: true },
+            )}
+          />
+        </AsyncContent>
       );
     }
 
@@ -572,35 +871,47 @@ export function App() {
 
     return (
       <div className="duongsach-app-root portal-mode-active">
-        <ManagementPortal
-          language={language}
-          onLogout={handlePortalLogout}
-        />
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian Ban tổ chức..." />}>
+          <ManagementPortal
+            language={language}
+            onLogout={handlePortalLogout}
+          />
+        </AsyncContent>
       </div>
     );
   }
 
   // NẾU ĐANG TRUY CẬP ROUTE /login (TRANG ĐĂNG NHẬP ĐỘC GIẢ)
-  if (location.pathname === '/verify-email') return <VerifyEmailPage language={language} key={location.key} />;
+  if (location.pathname === '/verify-email') {
+    return (
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang xác minh email..." />}>
+        <VerifyEmailPage language={language} key={location.key} />
+      </AsyncContent>
+    );
+  }
 
   if (isLoginRoute) {
     return (
-      <LoginPage 
-        language={language}
-        onLoginSuccess={(targetUrl?: string) => {
-          navigate(targetUrl || '/');
-        }}
-      />
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đăng nhập..." />}>
+        <LoginPage
+          language={language}
+          onLoginSuccess={(targetUrl?: string) => {
+            navigate(targetUrl || '/');
+          }}
+        />
+      </AsyncContent>
     );
   }
 
   // NẾU ĐANG TRUY CẬP ROUTE /register (TRANG ĐĂNG KÝ THÀNH VIÊN ĐỘC GIẢ)
   if (isRegisterRoute) {
     return (
-      <RegisterPage 
-        language={language}
-        onRegisterSuccess={() => navigate('/login')}
-      />
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đăng ký..." />}>
+        <RegisterPage
+          language={language}
+          onRegisterSuccess={() => navigate('/login')}
+        />
+      </AsyncContent>
     );
   }
 
@@ -616,13 +927,29 @@ export function App() {
 
     if (isParticipantAttendanceScanRoute) {
       return (
-        <ParticipantLayout
-          language={language}
-          profile={participantProfile}
-          onLogout={handleParticipantLogout}
-        >
-          <AttendanceScanPage language={language} />
-        </ParticipantLayout>
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian người tham gia..." />}>
+          <ParticipantLayout
+            language={language}
+            profile={participantProfile}
+            onLogout={handleParticipantLogout}
+          >
+            <AttendanceScanPage language={language} />
+          </ParticipantLayout>
+        </AsyncContent>
+      );
+    }
+
+    if (isParticipantBoothScanRoute) {
+      return (
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian người tham gia..." />}>
+          <ParticipantLayout
+            language={language}
+            profile={participantProfile}
+            onLogout={handleParticipantLogout}
+          >
+            <BoothScanPage language={language} />
+          </ParticipantLayout>
+        </AsyncContent>
       );
     }
 
@@ -632,21 +959,25 @@ export function App() {
     }
 
     return (
-      <ParticipantLayout
-        language={language}
-        profile={participantProfile}
-        onLogout={handleParticipantLogout}
-      >
-        <Routes>
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian người tham gia..." />}>
+        <ParticipantLayout
+          language={language}
+          profile={participantProfile}
+          onLogout={handleParticipantLogout}
+        >
+          <Routes>
           <Route path="/participant" element={
             <ParticipantDashboard
               language={language}
               profile={participantProfile}
+              totalPoints={participantRewardPoints}
               events={participantEvents}
               activities={participantActivities}
               totalCertificatesCount={participantProfile.certificatesCount ?? participantCertificates.length}
               onJoinEvent={handleJoinParticipantEvent}
+              onLeaveEvent={handleLeaveParticipantEvent}
               onRegisterActivity={handleRegisterActivity}
+              onCancelActivity={handleCancelActivity}
             />
           } />
           <Route path="/participant/events" element={
@@ -685,8 +1016,6 @@ export function App() {
           <Route path="/participant/rewards" element={
             <RewardsPage
               language={language}
-              profile={participantProfile}
-              badges={participantBadges}
             />
           } />
           <Route path="/participant/certificates" element={
@@ -723,20 +1052,11 @@ export function App() {
             <ParticipantNotificationsPage language={language} />
           } />
           <Route path="/participant/*" element={<Navigate to="/participant" replace />} />
-        </Routes>
-      </ParticipantLayout>
+          </Routes>
+        </ParticipantLayout>
+      </AsyncContent>
     );
   }
-
-  const handleMarkAllPartnerNotifsRead = async () => {
-    await partnerApi.markAllNotificationsRead();
-    setPartnerNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-  };
-
-  const handleMarkPartnerNotifRead = async (id: string) => {
-    await partnerApi.markNotificationRead(id);
-    setPartnerNotifications(prev => prev.map(notification => notification.id === id ? { ...notification, isRead: true } : notification));
-  };
 
   const handlePartnerLogout = () => {
     void handleLogout();
@@ -750,10 +1070,12 @@ export function App() {
 
     if (!isPartnerAuthenticated) {
       return (
-        <PartnerLoginPage
-          language={language}
-          onLoginSuccess={() => navigate(location.pathname + location.search, { replace: true })}
-        />
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đăng nhập đối tác..." />}>
+          <PartnerLoginPage
+            language={language}
+            onLoginSuccess={() => navigate(location.pathname + location.search, { replace: true })}
+          />
+        </AsyncContent>
       );
     }
 
@@ -766,16 +1088,13 @@ export function App() {
     };
 
     return (
-      <PartnerLayout
-        language={language}
-        organization={visiblePartnerOrg}
-        unreadNotificationsCount={partnerNotifications.filter(n => !n.isRead).length}
-        notifications={partnerNotifications}
-        onMarkAllAsRead={handleMarkAllPartnerNotifsRead}
-        onMarkItemAsRead={handleMarkPartnerNotifRead}
-        onLogout={handlePartnerLogout}
-      >
-        <Routes>
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian đối tác..." />}>
+        <PartnerLayout
+          language={language}
+          organization={visiblePartnerOrg}
+          onLogout={handlePartnerLogout}
+        >
+          <Routes>
           <Route path="/payment/vnpay/return" element={<VnPayReturnPage key={location.search} />} />
           <Route path="/partner/booth-requests/:requestId/payment" element={<BoothPaymentPage key={location.pathname} />} />
           <Route path="/partner" element={
@@ -819,6 +1138,7 @@ export function App() {
               language={language}
               applications={partnerApplications}
               allRequests={partnerBoothRequests}
+              onRefreshData={requestPartnerDataRefresh}
             />
           } />
           <Route path="/partner/activities" element={
@@ -833,19 +1153,8 @@ export function App() {
               applications={partnerApplications}
             />
           } />
-          <Route path="/partner/reports" element={
-            partnerReports
-              ? <PartnerReportsPage language={language} reportStats={partnerReports} />
-              : <p className="app-loading-state">Chưa có API báo cáo để tải dữ liệu từ hệ thống.</p>
-          } />
-          <Route path="/partner/notifications" element={
-            <PartnerNotificationsPage
-              language={language}
-              notifications={partnerNotifications}
-              onMarkAllAsRead={handleMarkAllPartnerNotifsRead}
-              onMarkItemAsRead={handleMarkPartnerNotifRead}
-            />
-          } />
+          <Route path="/partner/reports" element={<Navigate to="/partner" replace />} />
+          <Route path="/partner/notifications" element={<PartnerNotificationsPage language={language} />} />
           <Route path="/partner/organization" element={<Navigate to="/partner/profile" replace />} />
           <Route path="/partner/profile" element={
             <PartnerProfilePage
@@ -864,8 +1173,9 @@ export function App() {
             />
           } />
           <Route path="/partner/*" element={<Navigate to="/partner" replace />} />
-        </Routes>
-      </PartnerLayout>
+          </Routes>
+        </PartnerLayout>
+      </AsyncContent>
     );
   }
 
@@ -882,19 +1192,23 @@ export function App() {
 
     if (!isAdminAuthenticated) {
       return (
-        <AdminLoginPage
-          language={language}
-          onLoginSuccess={() => navigate(`${location.pathname}${location.search}`, { replace: true })}
-        />
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đăng nhập quản trị..." />}>
+          <AdminLoginPage
+            language={language}
+            onLoginSuccess={() => navigate(`${location.pathname}${location.search}`, { replace: true })}
+          />
+        </AsyncContent>
       );
     }
 
     return (
       <div className="duongsach-app-root admin-mode-active">
-        <AdminPortal
-          language={language}
-          onLogout={handleAdminLogout}
-        />
+        <AsyncContent fallback={<RouteChunkFallback message="Đang tải không gian quản trị..." />}>
+          <AdminPortal
+            language={language}
+            onLogout={handleAdminLogout}
+          />
+        </AsyncContent>
       </div>
     );
   }
@@ -904,7 +1218,7 @@ export function App() {
     <div className="duongsach-app-root">
       {/* 1. Header công khai */}
       <Header 
-        isHeritage={isHeritage}
+        isHeritage={isSlidePageOpen}
         onToggleHeritage={() => navigate(isHeritage ? '/' : '/di-san')}
         language={language} 
         onLanguageChange={(lang) => setLanguage(lang)}
@@ -912,6 +1226,7 @@ export function App() {
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
         onParticipantLogout={handleParticipantLogout}
+        selectedPublicEventId={publicEventId}
       />
 
       <div className={`main-app-container ${isSlidePageOpen ? 'heritage-active-bg' : ''}`} inert={isSlidePageOpen} aria-hidden={isSlidePageOpen || undefined}>
@@ -931,44 +1246,57 @@ export function App() {
 
           {/* 4. Experience Stroll: "Dạo một vòng Đường Sách" */}
           {/* 5. Bookstalls with Real Photography & Staggered Reveal */}
-          <BoothsSection 
-            language={language}
-            booths={booths}
-            isLoading={isPublicDataLoading || isPublicBoothsLoading}
-            error={publicBoothsError}
-            events={events}
-            selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
-            onSelectBoothOnMap={handleSelectBoothOnMap}
-            searchQuery={boothSearchQuery}
-            onSearchQueryChange={setBoothSearchQuery}
-            focusedBoothId={focusedBoothId}
-          />
+          <AsyncContent
+            fallback={<SectionChunkFallback id="gian-hang" message="Đang tải gian hàng..." />}
+            errorMessage="Không thể tải khu vực gian hàng."
+          >
+            <BoothsSection
+              language={language}
+              booths={booths}
+              isLoading={isPublicDataLoading || isPublicBoothsLoading}
+              error={publicBoothsError}
+              events={publicContextEvents}
+              selectedEventId={publicEventId}
+              onSelectBoothOnMap={handleSelectBoothOnMap}
+              searchQuery={boothSearchQuery}
+              onSearchQueryChange={setBoothSearchQuery}
+              focusedBoothId={focusedBoothId}
+            />
+          </AsyncContent>
 
           {/* 6. Events Schedule with Real Photography & Bookstall Proposal Flow */}
           <EventsSection 
             language={language} 
-            events={events}
+            registeredEventIds={new Set(landingRegistrations?.userId === participantUserId ? landingRegistrations?.eventIds : [])}
+            events={publicContextEvents}
             isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
             onJoinEvent={handleJoinParticipantEvent}
+            onLeaveEvent={handleLeaveParticipantEvent}
+            selectedEventId={publicEventId}
+            onSelectEventId={selectPublicEvent}
           />
 
           {/* 6.5 Heritage Trail Section - Di sản văn hóa */}
-          <HeritageSection
-            language={language}
-            heritageList={heritageList}
-            isLoading={isPublicDataLoading}
-          />
+          <AsyncContent
+            fallback={<SectionChunkFallback id="di-san" message="Đang tải nội dung di sản..." />}
+            errorMessage="Không thể tải khu vực di sản."
+          >
+            <HeritageSection
+              language={language}
+              heritageList={heritageList}
+              isLoading={isPublicDataLoading}
+              error={heritageError}
+            />
+          </AsyncContent>
 
           {/* 7. Interactive Map (Paper Unfolding Effect) */}
           <InteractiveMap 
             language={language}
-            events={events}
+            events={publicContextEvents}
             selectedEventId={publicEventId}
-            onSelectEventId={selectPublicEvent}
             booths={booths}
             isLoading={isPublicDataLoading}
             highlightedBoothId={highlightedBoothId}
@@ -977,8 +1305,8 @@ export function App() {
 
           {/* 9. Feedback Section in Figma Dark Teal Container */}
           <FeedbackSection 
-            language={language} 
-            onScrollToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            language={language}
+            events={events}
           />
         </main>
 
@@ -987,27 +1315,41 @@ export function App() {
       </div>
 
       {/* Full Dedicated Sliding Experience Pages (Right to Left Transition) */}
-      <HeritageExperience language={language} open={isHeritage} heritageList={heritageList} />
-      <BoothsExperience 
-        language={language} 
-        open={isBooths} 
-        booths={booths} 
-        events={events}
-        isLoading={isPublicDataLoading || isPublicBoothsLoading}
-        selectedEventId={publicEventId}
-        onSelectEventId={selectPublicEvent}
-        error={publicBoothsError}
-        onSelectBoothOnMap={handleSelectBoothOnMap} 
-      />
-      <EventsExperience 
-        language={language} 
-        open={isEvents} 
-        events={events} 
-        isLoading={isPublicDataLoading}
-        isParticipantAuthenticated={isParticipantAuthenticated}
-        participantProfile={participantProfile}
-        onJoinEvent={handleJoinParticipantEvent}
-      />
+      <DeferredRouteChunk active={isHeritage} message="Đang tải không gian di sản...">
+        <HeritageExperience
+          language={language}
+          open={isHeritage}
+          heritageList={heritageList}
+          isLoading={isPublicDataLoading}
+          listError={heritageError}
+        />
+      </DeferredRouteChunk>
+      <DeferredRouteChunk active={isBooths} message="Đang tải danh mục gian hàng...">
+        <BoothsExperience
+          language={language}
+          open={isBooths}
+          booths={booths}
+          events={events}
+          isLoading={isPublicDataLoading || isPublicBoothsLoading}
+          selectedEventId={publicEventId}
+          error={publicBoothsError}
+          onSelectBoothOnMap={handleSelectBoothOnMap}
+        />
+      </DeferredRouteChunk>
+      <DeferredRouteChunk active={isEvents} message="Đang tải danh mục sự kiện...">
+        <EventsExperience
+          language={language}
+          open={isEvents}
+          events={events}
+          isLoading={isPublicDataLoading}
+          isParticipantAuthenticated={isParticipantAuthenticated}
+          participantProfile={participantProfile}
+          registeredEventIds={new Set(landingRegistrations?.userId === participantUserId ? landingRegistrations?.eventIds : [])}
+          onJoinEvent={handleJoinParticipantEvent}
+          onLeaveEvent={handleLeaveParticipantEvent}
+          selectedEventId={publicEventId}
+        />
+      </DeferredRouteChunk>
 
     </div>
   );

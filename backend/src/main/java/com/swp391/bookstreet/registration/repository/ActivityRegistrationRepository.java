@@ -30,6 +30,39 @@ public interface ActivityRegistrationRepository extends JpaRepository<ActivityRe
         long getRatingCount();
     }
 
+    interface ActivityReminderRecipient {
+        Long getUserId();
+        Long getActivityId();
+        Long getStartEpochSecond();
+    }
+
+    @Query(value = """
+            select owner.user_id as "userId",
+                   activity.activity_id as "activityId",
+                   cast(extract(epoch from activity.start_at) as bigint) as "startEpochSecond"
+            from {h-schema}activities activity
+            join {h-schema}activity_registrations registration
+              on registration.activity_id = activity.activity_id
+            join {h-schema}event_registrations owner
+              on owner.event_registration_id = registration.event_registration_id
+            where activity.status = 'PUBLISHED'
+              and activity.start_at > :now
+              and activity.start_at <= :threshold
+              and registration.status = 'ACTIVE'
+              and not exists (
+                  select 1 from {h-schema}notifications notification
+                  where notification.recipient_user_id = owner.user_id
+                    and notification.recipient_role = 'PARTICIPANT'
+                    and notification.activity_id = activity.activity_id
+                    and notification.notification_type = 'ACTIVITY_STARTING_SOON'
+                    and notification.deduplication_key = 'activity-starting-soon-'
+                        || activity.activity_id || '-'
+                        || cast(extract(epoch from activity.start_at) as bigint))
+            order by activity.activity_id, owner.user_id
+            """, nativeQuery = true)
+    List<ActivityReminderRecipient> findActivityReminderRecipients(
+            @Param("now") java.time.Instant now, @Param("threshold") java.time.Instant threshold);
+
     Optional<ActivityRegistration> findByEventRegistrationIdAndActivityId(
             Long eventRegistrationId, Long activityId);
 

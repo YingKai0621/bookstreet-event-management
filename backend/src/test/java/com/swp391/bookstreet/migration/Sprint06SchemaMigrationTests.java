@@ -23,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @EnabledIfEnvironmentVariable(named = "EVENT_TEST_DATABASE_URL", matches = ".+")
 class Sprint06SchemaMigrationTests {
     private static final Instant CREATED_AT = Instant.parse("2026-10-19T00:00:00Z");
+    private static final MigrationVersion SPRINT_06_SCHEMA_VERSION =
+            MigrationVersion.fromVersion("11");
     private String schema;
 
     @BeforeEach
@@ -41,7 +43,7 @@ class Sprint06SchemaMigrationTests {
 
     @Test
     void cleanDatabaseMigratesThroughV10WithParticipationSchema() throws SQLException {
-        Flyway flyway = flyway(null);
+        Flyway flyway = flyway(SPRINT_06_SCHEMA_VERSION);
 
         flyway.migrate();
 
@@ -77,7 +79,7 @@ class Sprint06SchemaMigrationTests {
             activityId = insertActivity(connection, eventId, locationId);
         }
 
-        Flyway upgraded = flyway(null);
+        Flyway upgraded = flyway(SPRINT_06_SCHEMA_VERSION);
         upgraded.migrate();
 
         assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("11");
@@ -95,7 +97,7 @@ class Sprint06SchemaMigrationTests {
 
     @Test
     void registrationAndAttendanceStateConstraintsRejectInvalidRows() throws SQLException {
-        flyway(null).migrate();
+        flyway(SPRINT_06_SCHEMA_VERSION).migrate();
 
         try (Connection connection = connectToSchema()) {
             long participantId = userId(connection, "participantdemo");
@@ -140,7 +142,7 @@ class Sprint06SchemaMigrationTests {
 
     @Test
     void auditCertificateRatingAndNotificationGuardsAreEnforced() throws SQLException {
-        flyway(null).migrate();
+        flyway(SPRINT_06_SCHEMA_VERSION).migrate();
 
         try (Connection connection = connectToSchema()) {
             long participantId = userId(connection, "participantdemo");

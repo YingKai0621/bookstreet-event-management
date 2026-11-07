@@ -34,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class EventBoothService {
     private static final BigDecimal MINIMUM_PAID_RENTAL_PRICE = new BigDecimal("5000");
+    private static final List<EventStatus> PUBLIC_EVENT_STATUSES =
+            List.of(EventStatus.PUBLISHED, EventStatus.ONGOING);
 
     private final EventRepository eventRepository;
     private final EventRootLockService eventRootLockService;
@@ -175,7 +177,7 @@ public class EventBoothService {
     }
 
     private Event publicEvent(Long eventId) {
-        return eventRepository.findByEventIdAndStatus(eventId, EventStatus.PUBLISHED)
+        return eventRepository.findByEventIdAndStatusIn(eventId, PUBLIC_EVENT_STATUSES)
                 .orElseThrow(EventBoothService::eventNotFound);
     }
 

@@ -97,6 +97,7 @@ class EventActivityCascadeIntegrationTests {
 
     @AfterEach
     void cleanup() {
+        jdbc.update("delete from notifications where recipient_role = 'PARTNER'");
         jdbc.update("delete from notifications where event_id in "
                 + "(select event_id from events where organizer_user_id = ?)", organizerId);
         jdbc.update("delete from attendances where activity_registration_id in "
@@ -211,6 +212,12 @@ class EventActivityCascadeIntegrationTests {
                 .isEqualTo("EVENT_CANCELLATION");
         assertThat(dbStatus("activity_requests", "activity_request_id", requestId))
                 .isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "event_id = ? and recipient_role = 'PARTNER' and notification_type = 'PARTNER_EVENT_CANCELLED'",
+                Integer.class, eventId)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from notifications where "
+                + "recipient_role = 'PARTNER' and (activity_proposal_id = ? or activity_request_id = ?)",
+                Integer.class, proposalId, requestId)).isZero();
         Instant firstCancelledAt = jdbc.queryForObject(
                 "select cancelled_at from activities where activity_id = ?",
                 Instant.class, activityId);
@@ -322,6 +329,13 @@ class EventActivityCascadeIntegrationTests {
         jdbc.update("update activities set source_proposal_id = ? where activity_id = ?",
                 sourceProposalId, publishedId);
         long requestId = insertPendingChangeRequest(publishedId);
+        long partnerDraftLocation = insertLocation("COMPLETE-X", "STAGE", 30);
+        long partnerDraftId = insertActivity(eventId, partnerDraftLocation, "DRAFT",
+                now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(1)));
+        jdbc.update("update activities set source_proposal_id = ? where activity_id = ?",
+                insertApprovedProposal(applicationId, partnerDraftLocation,
+                        now.minus(Duration.ofHours(2))), partnerDraftId);
+        long suppressedRequestId = insertPendingChangeRequest(partnerDraftId);
 
         assertThat(lifecycleService.advanceDueEvents()).isGreaterThanOrEqualTo(1);
         assertThat(dbStatus("events", "event_id", eventId)).isEqualTo("COMPLETED");
@@ -337,6 +351,15 @@ class EventActivityCascadeIntegrationTests {
         assertThat(dbStatus("activity_requests", "activity_request_id", requestId))
                 .isEqualTo("CANCELLED");
         assertThat(lifecycleService.advanceDueEvents()).isZero();
+        assertThat(partnerRows("activity_proposal_id", proposalId,
+                "PARTNER_ACTIVITY_PROPOSAL_STATUS_CHANGED")).isOne();
+        assertThat(partnerRows("activity_request_id", requestId,
+                "PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED")).isOne();
+        assertThat(partnerRows("activity_id", partnerDraftId,
+                "PARTNER_ACTIVITY_CANCELLED")).isOne();
+        assertThat(partnerRows("activity_request_id", suppressedRequestId,
+                "PARTNER_ACTIVITY_CHANGE_REQUEST_STATUS_CHANGED")).isZero();
+        assertThat(partnerRows("activity_id", draftId, "PARTNER_ACTIVITY_CANCELLED")).isZero();
         verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.referenceId().equals(proposalId)
                         && event.messageType()
@@ -345,6 +368,12 @@ class EventActivityCascadeIntegrationTests {
                 event.referenceId().equals(requestId)
                         && event.messageType()
                         == ActivityPartnerMessageType.REQUEST_CLOSED_BY_SYSTEM));
+    }
+
+    private int partnerRows(String referenceColumn, long referenceId, String type) {
+        return jdbc.queryForObject("select count(*) from notifications where " + referenceColumn
+                + " = ? and recipient_user_id = ? and recipient_role = 'PARTNER' "
+                + "and notification_type = ?", Integer.class, referenceId, partnerUserId, type);
     }
 
     private long insertUser(String role) {

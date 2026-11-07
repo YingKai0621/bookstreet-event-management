@@ -2,6 +2,7 @@ import { PaginatedList } from '../ui/PaginatedList';
 import {
   AlertCircle,
   ArrowLeft,
+  Ban,
   CalendarDays,
   Check,
   ChevronRight,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   Send,
   Store,
+  Trash2,
   Users
 } from 'lucide-react';
 import React from 'react';
@@ -42,6 +44,8 @@ interface EventDetailViewProps {
   onBoothConfigurationChanged?: () => void | Promise<void>;
   onEditEvent: (event: OrganizerEvent) => void;
   onPublishEvent: (event: OrganizerEvent) => void;
+  onCancelEvent: (event: OrganizerEvent) => void;
+  onDeleteEvent: (event: OrganizerEvent) => void;
 }
 
 type DeadlineState = 'open' | 'elapsed' | 'missing';
@@ -104,7 +108,9 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   onRetryOperations,
   onBoothConfigurationChanged,
   onEditEvent,
-  onPublishEvent
+  onPublishEvent,
+  onCancelEvent,
+  onDeleteEvent,
 }) => {
   type EventSection = 'overview' | 'partners' | 'booths' | 'activities' | 'participants' | 'schedule' | 'settings';
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,6 +129,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
   const pendingPartnerCount = partnerApplications.filter((application) => application.status === 'pending').length;
   const pendingBoothRequestCount = boothRequests.filter((request) => request.status === 'PENDING').length;
   const activeHoldCount = boothRequests.filter((request) => request.hold?.status === 'ACTIVE').length;
+  const canEditEvent = event.apiStatus === 'DRAFT'
+    || event.apiStatus === 'PUBLISHED'
+    || event.apiStatus === 'ONGOING';
+  const editEventLabel = event.apiStatus === 'DRAFT'
+    ? (language === 'vi' ? 'Chỉnh sửa' : 'Edit')
+    : (language === 'vi' ? 'Chỉnh sửa thông tin' : 'Edit information');
 
   const operationMetrics = [
     {
@@ -167,36 +179,40 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
   const registrationDeadlines = [
     {
-      label: language === 'vi' ? 'Đăng ký đối tác' : 'Partner applications',
+      label: language === 'vi' ? 'Nhận hồ sơ đối tác đến' : 'Partner applications close',
       value: event.partnerApplicationDeadlineAt,
     },
     {
-      label: language === 'vi' ? 'Đăng ký người tham gia' : 'Participant registration',
+      label: language === 'vi' ? 'Nhận đăng ký người tham gia đến' : 'Participant registration closes',
       value: event.participantRegistrationDeadlineAt,
     },
   ];
 
   const otherDeadlines = [
-    {
-      label: language === 'vi' ? 'Yêu cầu gian hàng' : 'Booth requests',
+    ...(event.maxBoothsPerPartner > 0 ? [{
+      label: language === 'vi' ? 'Nhận yêu cầu gian hàng đến' : 'Booth requests close',
       value: event.boothRequestDeadlineAt,
-    },
-    {
-      label: language === 'vi' ? 'Đề xuất hoạt động' : 'Activity proposals',
+    }] : []),
+    ...(event.maxActivitiesPerPartner > 0 ? [{
+      label: language === 'vi' ? 'Nhận đề xuất hoạt động đến' : 'Activity proposals close',
       value: event.activityProposalDeadlineAt,
-    },
-    {
-      label: language === 'vi' ? 'Rút hồ sơ đối tác' : 'Partner withdrawal',
-      value: event.partnerWithdrawalCutoffAt,
-    },
-    {
-      label: language === 'vi' ? 'Hủy gian hàng' : 'Booth cancellation',
-      value: event.boothCancellationCutoffAt,
-    },
-    {
-      label: language === 'vi' ? 'Hủy hoạt động' : 'Activity cancellation',
-      value: event.activityCancellationCutoffAt,
-    },
+    }] : []),
+  ];
+
+  const configurationRows = [
+    ['Hạn cuối đăng ký đối tác', event.partnerApplicationDeadlineAt],
+    ...(event.maxBoothsPerPartner > 0
+      ? [['Hạn cuối yêu cầu gian hàng', event.boothRequestDeadlineAt]]
+      : []),
+    ...(event.maxActivitiesPerPartner > 0
+      ? [['Hạn cuối đề xuất hoạt động', event.activityProposalDeadlineAt]]
+      : []),
+    ['Hạn cuối đăng ký người tham gia', event.participantRegistrationDeadlineAt],
+    ...(event.maxBoothsPerPartner > 0
+      ? [['Thời gian thanh toán gian hàng', formatHoldWindow(event.boothPaymentWindowMinutes, language)]]
+      : []),
+    ['Số gian hàng tối đa / đối tác', String(event.maxBoothsPerPartner)],
+    ['Số hoạt động tối đa / đối tác', String(event.maxActivitiesPerPartner)],
   ];
 
   const deadlineLabel = (state: DeadlineState) => {
@@ -219,16 +235,28 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
             <OrganizerEventStatusChip language={language} status={event.apiStatus} />
           </div>
           <div className="org-event-detail-actions">
-            {event.apiStatus === 'DRAFT' && (
+            {canEditEvent && (
               <button type="button" className="btn-org-secondary" onClick={() => onEditEvent(event)}>
                 <Edit3 size={16} />
-                {language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
+                {editEventLabel}
               </button>
             )}
             {event.apiStatus === 'DRAFT' && (
               <button type="button" className="btn-org-primary org-event-detail-publish" onClick={() => onPublishEvent(event)}>
                 <Send size={16} />
                 {language === 'vi' ? 'Công bố' : 'Publish'}
+              </button>
+            )}
+            {event.apiStatus === 'DRAFT' && (
+              <button type="button" className="btn-org-danger" onClick={() => onDeleteEvent(event)}>
+                <Trash2 size={16} />
+                {language === 'vi' ? 'Xóa bản nháp' : 'Delete draft'}
+              </button>
+            )}
+            {event.apiStatus === 'PUBLISHED' && (
+              <button type="button" className="btn-org-danger" onClick={() => onCancelEvent(event)}>
+                <Ban size={16} />
+                {language === 'vi' ? 'Hủy sự kiện' : 'Cancel event'}
               </button>
             )}
           </div>
@@ -381,9 +409,9 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               </dl>
             </section>
 
-            <section className="org-event-overview-card">
+            {otherDeadlines.length > 0 && <section className="org-event-overview-card">
               <div className="org-event-card-title">
-                <h2>{language === 'vi' ? 'Mốc thời hạn khác' : 'Other deadlines'}</h2>
+                <h2>{language === 'vi' ? 'Thời hạn dành cho đối tác' : 'Partner deadlines'}</h2>
               </div>
               <div className="org-event-deadline-list">
                 {otherDeadlines.map((deadline) => {
@@ -399,7 +427,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                   );
                 })}
               </div>
-            </section>
+            </section>}
           </div>
         </div>
       )}
@@ -499,35 +527,28 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
       )}
 
       {activeTab === 'settings' && (
-        <div className="organizer-card" style={{ maxWidth: '760px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <section className="organizer-card org-event-config" aria-labelledby="event-config-title">
+          <div className="org-event-config-header">
             <div>
-              <h2 style={{ margin: 0 }}>Cấu hình sự kiện</h2>
-              <p style={{ margin: '0.35rem 0 0', color: '#556B65', fontSize: '0.82rem' }}>Các giá trị đang được lưu trên backend.</p>
+              <h2 id="event-config-title">Cấu hình sự kiện</h2>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <div className="org-event-config-actions">
               <button type="button" className="btn-org-secondary" onClick={onNavigateToBoothsMap}>
                 <Store size={15} />
                 {language === 'vi' ? 'Sơ đồ gian hàng' : 'Booth map'}
               </button>
-              {event.apiStatus === 'DRAFT' && <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}><Edit3 size={15} />Chỉnh sửa</button>}
+              {canEditEvent && (
+                <button type="button" className="btn-org-primary" onClick={() => onEditEvent(event)}>
+                  <Edit3 size={15} />
+                  {editEventLabel}
+                </button>
+              )}
             </div>
           </div>
-          <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '0.75rem 1rem', margin: 0 }}>
-            {[
-              ['Hạn đối tác đăng ký', event.partnerApplicationDeadlineAt],
-              ['Hạn yêu cầu gian hàng', event.boothRequestDeadlineAt],
-              ['Hạn đề xuất hoạt động', event.activityProposalDeadlineAt],
-              ['Hạn người tham gia đăng ký', event.participantRegistrationDeadlineAt],
-              ['Hạn đối tác rút hồ sơ', event.partnerWithdrawalCutoffAt],
-              ['Hạn hủy gian hàng', event.boothCancellationCutoffAt],
-              ['Hạn hủy hoạt động', event.activityCancellationCutoffAt],
-              ['Thời hạn thanh toán gian hàng', `${event.boothPaymentWindowMinutes} phút`],
-              ['Số gian hàng tối đa / đối tác', String(event.maxBoothsPerPartner)],
-              ['Số hoạt động tối đa / đối tác', String(event.maxActivitiesPerPartner)],
-            ].map(([label, value]) => <React.Fragment key={label}><dt style={{ fontWeight: 650, color: '#445752' }}>{label}</dt><dd style={{ margin: 0 }}>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN') : value || 'Chưa thiết lập'}</dd></React.Fragment>)}
+          <dl className="org-event-config-list">
+            {configurationRows.map(([label, value]) => <div className="org-event-config-row" key={label}><dt>{label}</dt><dd>{value && value.includes('T') ? new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : value || 'Chưa thiết lập'}</dd></div>)}
           </dl>
-        </div>
+        </section>
       )}
     </div>
   );

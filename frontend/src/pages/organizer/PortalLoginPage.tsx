@@ -126,7 +126,7 @@ export const PortalLoginPage: React.FC<PortalLoginPageProps> = ({
 
           {/* Error Message */}
           {errorMsg && (
-            <NotificationCallout variant="error" title={language === 'vi' ? 'KhÃ´ng thá»ƒ truy cáº­p' : 'Access denied'}>
+            <NotificationCallout variant="error" title={language === 'vi' ? 'Không thể truy cập' : 'Access denied'}>
               {errorMsg}
             </NotificationCallout>
           )}
