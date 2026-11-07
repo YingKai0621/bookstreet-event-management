@@ -55,7 +55,7 @@ Người dùng ─► ChatController (CSRF, 8 câu/phút/IP)
 | `search_booths` | `eventName`, `keyword`, `onlyAvailable` | `EventBoothService.listPublic` | Mọi người |
 | `get_platform_guide` | `topic` (enum) | `ChatGuide` | Mọi người |
 | `get_my_participation` | `fromDate`, `toDate` | Service Participant theo Session | `PARTICIPANT` |
-| `get_my_notifications` | `unreadOnly` | `ParticipantNotificationService` | `PARTICIPANT` |
+| `get_my_notifications` | `unreadOnly` | `NotificationInboxService` (vai trò `PARTICIPANT`) | `PARTICIPANT` |
 
 - Công cụ cá nhân trả `LOGIN_REQUIRED` khi người hỏi chưa đăng nhập và không gọi service dữ liệu.
   Service xác định User từ Session; mô hình không truyền được userId.

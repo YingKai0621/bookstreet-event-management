@@ -8,7 +8,8 @@ import com.swp391.bookstreet.booth.service.EventBoothService;
 import com.swp391.bookstreet.chat.dto.ChatSource;
 import com.swp391.bookstreet.event.dto.EventSummaryResponse;
 import com.swp391.bookstreet.event.service.EventService;
-import com.swp391.bookstreet.notification.service.ParticipantNotificationService;
+import com.swp391.bookstreet.notification.entity.NotificationRecipientRole;
+import com.swp391.bookstreet.notification.service.NotificationInboxService;
 import com.swp391.bookstreet.registration.service.ParticipantActivityRegistrationService;
 import com.swp391.bookstreet.registration.service.ParticipantEventRegistrationService;
 import java.text.Normalizer;
@@ -48,12 +49,12 @@ public class ChatTools {
     private final ParticipantEventRegistrationService myEvents;
     private final ParticipantActivityRegistrationService myActivities;
     private final EventBoothService booths;
-    private final ParticipantNotificationService myNotifications;
+    private final NotificationInboxService myNotifications;
 
     public ChatTools(EventService events, PublicActivityService activities,
             ParticipantEventRegistrationService myEvents,
             ParticipantActivityRegistrationService myActivities,
-            EventBoothService booths, ParticipantNotificationService myNotifications) {
+            EventBoothService booths, NotificationInboxService myNotifications) {
         this.events = events;
         this.activities = activities;
         this.myEvents = myEvents;
@@ -306,8 +307,8 @@ public class ChatTools {
         }
         boolean unreadOnly = args != null && args.path("unreadOnly").asBoolean(false);
         List<Map<String, Object>> found = new ArrayList<>();
-        for (var notification : myNotifications.list(0, 10, "createdAt,desc",
-                unreadOnly ? Boolean.FALSE : null, null).content()) {
+        for (var notification : myNotifications.list(NotificationRecipientRole.PARTICIPANT,
+                "0", "10", "createdAt,desc", unreadOnly ? "false" : null, null).content()) {
             found.add(Map.of("title", notification.title(),
                     "message", clip(notification.message()),
                     "createdAt", time(notification.createdAt()),

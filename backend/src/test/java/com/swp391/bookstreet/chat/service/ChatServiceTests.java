@@ -37,9 +37,9 @@ class ChatServiceTests {
             mock(ParticipantActivityRegistrationService.class);
     private final com.swp391.bookstreet.booth.service.EventBoothService booths =
             mock(com.swp391.bookstreet.booth.service.EventBoothService.class);
-    private final com.swp391.bookstreet.notification.service.ParticipantNotificationService
+    private final com.swp391.bookstreet.notification.service.NotificationInboxService
             notifications = mock(
-                    com.swp391.bookstreet.notification.service.ParticipantNotificationService.class);
+                    com.swp391.bookstreet.notification.service.NotificationInboxService.class);
     private final ChatTools tools = new ChatTools(events, activities, myEvents, myActivities,
             booths, notifications);
     private final GeminiChatClient ai = mock(GeminiChatClient.class);
@@ -112,7 +112,7 @@ class ChatServiceTests {
         when(events.listPublic(0, 30, "startAt,asc", null))
                 .thenReturn(new EventPageResponse<>(List.of(event), 0, 30, 1, 1));
         var booth = new com.swp391.bookstreet.booth.dto.BoothResponse(11L, "A01", "Gian truyện tranh",
-                "Gần cổng", 4, null, null, true, "COMIC", "ghi chú nội bộ");
+                "Gần cổng", 4, null, null, true, "COMIC", "ghi chú nội bộ", null);
         var config = new com.swp391.bookstreet.booth.dto.EventBoothResponse(99L, 5L, booth,
                 new java.math.BigDecimal("500000"), true,
                 com.swp391.bookstreet.booth.entity.BoothAvailability.AVAILABLE);
