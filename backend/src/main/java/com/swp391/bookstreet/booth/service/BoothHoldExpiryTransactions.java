@@ -6,6 +6,7 @@ import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.booth.repository.BoothHoldRepository;
 import com.swp391.bookstreet.booth.repository.BoothRequestRepository;
 import com.swp391.bookstreet.event.service.EventRootLockService;
+import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
@@ -74,6 +75,8 @@ public class BoothHoldExpiryTransactions {
         for (var hold : holds) {
             Instant reminderStart = hold.getExpiresAt().minus(window);
             if (hold.getStatus() == BoothHoldStatus.ACTIVE
+                    && hold.getBoothRequest().getApplication().getPartnerOrganization().getStatus()
+                            == PartnerOrganization.OrganizationStatus.ACTIVE
                     && hold.getBoothRequest().getStatus() == BoothRequestStatus.SELECTED
                     && hold.getExpiresAt().isAfter(now)
                     && !reminderStart.isAfter(now)

@@ -125,6 +125,14 @@ function isCancellationRequest(record: WorkspaceRecord): record is OrganizerActi
   return 'activityCancellationRequestId' in record;
 }
 
+function isOrganizationLocked(record: WorkspaceRecord): boolean {
+  if (isProposal(record)) return record.partnerOrganizationStatus === 'INACTIVE';
+  if (isChangeRequest(record) || isCancellationRequest(record)) {
+    return record.activity.partnerOrganizationStatus === 'INACTIVE';
+  }
+  return false;
+}
+
 function isActivity(record: WorkspaceRecord): record is OrganizerActivityResponse {
   return !isProposal(record) && !isChangeRequest(record) && !isCancellationRequest(record);
 }
@@ -578,7 +586,7 @@ export const OrganizerActivityWorkspace: React.FC<OrganizerActivityWorkspaceProp
               <div className="oaw-card-main">
                 <div className="oaw-card-title"><RecordTitle record={record} /></div>
                 <div className="oaw-card-meta">
-                  {partnerName && <span><Building2 size={16} />{partnerName}</span>}
+                  {partnerName && <span><Building2 size={16} />{partnerName}{isOrganizationLocked(record) && <b className="oaw-organization-locked">Tổ chức bị khóa</b>}</span>}
                   {startAt && endAt && <span><Clock3 size={16} />{formatRange(startAt, endAt)}</span>}
                   {locationName && <span><MapPin size={16} />{locationName}</span>}
                   {(isActivity(record) || isProposal(record)) && <span><Users size={16} />{record.capacity} người</span>}
@@ -1126,6 +1134,7 @@ function RecordDetailModal({
   onCompleted: (message: string) => void;
 }) {
   const [record, setRecord] = useState<WorkspaceRecord>(initialRecord);
+  const organizationLocked = isOrganizationLocked(record);
   const [revisions, setRevisions] = useState<OrganizerActivityRevisionResponse[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState('');
@@ -1202,6 +1211,7 @@ function RecordDetailModal({
 
   const submitReview = async () => {
     if (!reviewAction) return;
+    if (organizationLocked && (reviewAction === 'approve' || reviewAction === 'requestChanges')) return;
     const note = reviewNote.trim();
     if (needsNote && note.length < 10) {
       setActionError(`Vui lòng nhập lý do rõ ràng, từ 10 đến ${reviewAction === 'cancel' ? '500' : '1.000'} ký tự.`);
@@ -1287,7 +1297,7 @@ function RecordDetailModal({
             <div><dt>{isProposal(record) ? 'Thời gian đề xuất' : 'Lịch hiện tại'}</dt><dd>{formatRange(startAt, endAt)}</dd></div>
             <div><dt>{isProposal(record) ? 'Địa điểm đề xuất' : 'Địa điểm hiện tại'}</dt><dd>{location.code} · {location.name}</dd></div>
             {(isProposal(record) || isChangeRequest(record) || isCancellationRequest(record)) && (
-              <div><dt>Đối tác</dt><dd>{isProposal(record) ? record.partnerOrganizationName : record.activity.partnerOrganizationName}</dd></div>
+              <div><dt>Đối tác</dt><dd>{isProposal(record) ? record.partnerOrganizationName : record.activity.partnerOrganizationName}{organizationLocked && <span className="oaw-organization-locked">Tổ chức bị khóa</span>}</dd></div>
             )}
             {(isProposal(record) || isChangeRequest(record) || isCancellationRequest(record)) && (
               <div><dt>Gửi lúc</dt><dd>{formatDateTime(record.submittedAt)}</dd></div>
@@ -1387,7 +1397,7 @@ function RecordDetailModal({
               {actionError && <p className="oaw-action-error" role="alert">{actionError}</p>}
               <div className="oaw-review-buttons">
                 <button type="button" className="oaw-btn-secondary" onClick={() => setReviewAction(null)} disabled={submitting}>Quay lại</button>
-                <button type="button" className={reviewAction === 'approve' ? 'oaw-btn-approve' : 'oaw-btn-danger'} onClick={() => void submitReview()} disabled={submitting}>
+                <button type="button" className={reviewAction === 'approve' ? 'oaw-btn-approve' : 'oaw-btn-danger'} onClick={() => void submitReview()} disabled={submitting || (organizationLocked && (reviewAction === 'approve' || reviewAction === 'requestChanges'))}>
                   {submitting ? 'Đang xử lý...' : 'Xác nhận'}
                 </button>
               </div>
@@ -1397,9 +1407,9 @@ function RecordDetailModal({
               <button type="button" className="oaw-btn-secondary" onClick={onClose}>Đóng</button>
               {isReviewable && (
                 <div className="oaw-modal-actions">
-                  {isProposal(record) && <button type="button" className="oaw-btn-warning" onClick={() => startAction('requestChanges')}>Yêu cầu bổ sung</button>}
+                  {isProposal(record) && <button type="button" className="oaw-btn-warning" onClick={() => startAction('requestChanges')} disabled={organizationLocked}>Yêu cầu bổ sung</button>}
                   <button type="button" className="oaw-btn-danger" onClick={() => startAction('reject')}>{rejectActionLabel}</button>
-                  <button type="button" className="oaw-btn-approve" onClick={() => startAction('approve')}>{approveActionLabel}</button>
+                  <button type="button" className="oaw-btn-approve" onClick={() => startAction('approve')} disabled={organizationLocked}>{approveActionLabel}</button>
                 </div>
               )}
               {isActivity(record) && (canPublish || canCancel) && (

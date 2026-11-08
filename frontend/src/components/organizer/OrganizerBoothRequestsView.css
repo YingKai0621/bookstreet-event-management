@@ -881,6 +881,18 @@
 }
 
 /* Responsive */
+.obr-organization-locked {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid #F1C8C5;
+  border-radius: 999px;
+  background: #FFF1F0;
+  color: #9F2D25;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 @media (max-width: 1024px) {
   .obr-kpi-grid {
     grid-template-columns: repeat(2, 1fr);

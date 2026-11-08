@@ -18,6 +18,7 @@ import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/u
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { RoleSidebar } from '../../components/ui/RoleSidebar';
 import { Language, PartnerOrganization } from '../../types';
+import { PartnerOrganizationStatusProvider } from './PartnerOrganizationStatusContext';
 import { PARTNER_NOTIFICATIONS_CHANGED, notifyPartnerNotificationsChanged,
   partnerNotificationTarget, partnerNotificationsApi, type PartnerNotificationItem } from '../../services/partnerNotificationsApi';
 import './PartnerLayout.css';
@@ -191,7 +192,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const latestNotifications = notifications;
 
   return (
-    <div className="partner-app-shell">
+    <PartnerOrganizationStatusProvider value={organization.status}>
+      <div className="partner-app-shell">
       {/* 1. TOP HEADER (Dark Forest Teal bar matching sketch) */}
       <header className="partner-top-bar">
         <div className="top-bar-left">
@@ -374,10 +376,21 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 
         {/* Main Routed Page Content */}
         <main className="partner-main-viewport">
+          {organization.status === 'INACTIVE' && (
+            <div className="partner-organization-locked-banner" role="status">
+              <strong>{language === 'vi' ? 'Tổ chức đang bị khóa' : 'Organization is locked'}</strong>
+              <span>
+                {language === 'vi'
+                  ? 'Bạn vẫn có thể xem dữ liệu, chỉnh sửa hồ sơ và rút yêu cầu đang mở. Các yêu cầu hoặc giao dịch mới đang tạm dừng.'
+                  : 'You can still view records, edit your profile, and withdraw open requests. New requests and payments are paused.'}
+              </span>
+            </div>
+          )}
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </PartnerOrganizationStatusProvider>
   );
 };
 

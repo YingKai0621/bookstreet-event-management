@@ -25,7 +25,14 @@ public interface BoothHoldRepository extends JpaRepository<BoothHold, Long> {
             from {h-schema}booth_holds hold
             join {h-schema}event_booth_configs config
               on config.event_booth_config_id = hold.event_booth_config_id
+            join {h-schema}booth_requests request
+              on request.booth_request_id = hold.booth_request_id
+            join {h-schema}partner_event_applications application
+              on application.application_id = request.application_id
+            join {h-schema}partner_organizations organization
+              on organization.partner_organization_id = application.partner_organization_id
             where hold.status = 'ACTIVE'
+              and organization.status = 'ACTIVE'
               and hold.expires_at > :now
               and hold.expires_at <= :threshold
               and hold.created_at < hold.expires_at - (:windowMinutes * interval '1 minute')

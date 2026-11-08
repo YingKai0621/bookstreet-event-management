@@ -31,6 +31,8 @@ export function partnerApplicationErrorMessage(error: unknown): string {
   }
 
   switch (error.code) {
+    case 'PARTNER_ORGANIZATION_INACTIVE':
+      return 'Tổ chức đang bị khóa; hiện không thể gửi yêu cầu mới.';
     case 'PARTNER_ORGANIZATION_REQUIRED':
       return 'Bạn cần hoàn thiện một hồ sơ tổ chức đang hoạt động trước khi đăng ký.';
     case 'EVENT_NOT_ACCEPTING_APPLICATIONS':

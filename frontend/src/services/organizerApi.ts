@@ -106,6 +106,7 @@ export interface OrganizerPartnerApplication {
   eventId: string;
   partnerOrganizationId: string;
   orgName: string;
+  partnerOrganizationStatus: 'ACTIVE' | 'INACTIVE';
   categoryCode: string;
   date: string;
   applicationNote: string;
@@ -282,6 +283,7 @@ interface OrganizerPartnerApplicationResponse {
   eventId: number;
   partnerOrganizationId: number;
   partnerOrganizationName: string;
+  partnerOrganizationStatus: 'ACTIVE' | 'INACTIVE';
   partnerCategoryCode: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
   applicationNote: string | null;
@@ -326,6 +328,7 @@ function toOrganizerPartnerApplication(
     eventId: String(application.eventId),
     partnerOrganizationId: String(application.partnerOrganizationId),
     orgName: application.partnerOrganizationName,
+    partnerOrganizationStatus: application.partnerOrganizationStatus,
     categoryCode: application.partnerCategoryCode,
     date: formatDateTime(application.submittedAt),
     applicationNote: application.applicationNote || '',

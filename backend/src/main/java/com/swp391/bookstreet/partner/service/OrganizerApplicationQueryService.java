@@ -105,6 +105,7 @@ public class OrganizerApplicationQueryService {
                 row.getEventId(),
                 row.getPartnerOrganizationId(),
                 row.getPartnerOrganizationName(),
+                row.getPartnerOrganizationStatus(),
                 row.getPartnerCategoryCode(),
                 row.getStatus(),
                 row.getApplicationNote(),

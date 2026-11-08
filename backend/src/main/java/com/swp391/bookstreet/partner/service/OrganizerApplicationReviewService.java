@@ -131,6 +131,7 @@ public class OrganizerApplicationReviewService {
                 application.getEventId(),
                 application.getPartnerOrganization().getId(),
                 application.getPartnerOrganization().getName(),
+                application.getPartnerOrganization().getStatus().name(),
                 application.getPartnerOrganization().getCategoryCode(),
                 application.getStatus().name(),
                 application.getApplicationNote(),

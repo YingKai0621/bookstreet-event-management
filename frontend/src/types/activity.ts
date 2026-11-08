@@ -147,6 +147,7 @@ export interface OrganizerActivityProposalResponse {
   eventName: string;
   partnerOrganizationId: number;
   partnerOrganizationName: string;
+  partnerOrganizationStatus: 'ACTIVE' | 'INACTIVE';
   location: ActivityLocationResponse;
   title: string;
   description: string | null;
@@ -251,6 +252,7 @@ export interface OrganizerActivityRequestActivityResponse {
   eventName: string;
   partnerOrganizationId: number;
   partnerOrganizationName: string;
+  partnerOrganizationStatus: 'ACTIVE' | 'INACTIVE';
   location: ActivityLocationResponse;
   title: string;
   description: string | null;
