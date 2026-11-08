@@ -5,17 +5,14 @@ import { AdminAuditLogsView } from './AdminAuditLogsView';
 import { AdminBadgeRulesView } from './AdminBadgeRulesView';
 import { AdminDashboardView } from './AdminDashboardView';
 import { AdminNotificationsView } from './AdminNotificationsView';
+import { AdminPendingFeatureView } from './AdminPendingFeatureView';
 import { AdminProfileView } from './AdminProfileView';
-import { AdminRolesPermissionsView } from './AdminRolesPermissionsView';
 import {
   AdminSidebar,
   AdminTab
 } from './AdminSidebar';
-import { AdminSystemSettingsView } from './AdminSystemSettingsView';
 import { AdminTopBar } from './AdminTopBar';
 import { AdminUserManagementView } from './AdminUserManagementView';
-import { FacilityManagementView } from './FacilityManagementView';
-import { OrganizerBoothManagementView } from '../organizer/OrganizerBoothManagementView';
 import { ADMIN_ROOT, ADMIN_TAB_PATHS, resolveAdminTab } from '../../routing/adminRoutes';
 import { useAuth } from '../../auth/useAuth';
 import { ApiError } from '../../services/apiClient';
@@ -24,19 +21,11 @@ import {
   adminNotificationsApi,
 } from '../../services/adminNotificationsApi';
 
-import {
-  adminApi,
-  AdminDashboardStats,
-} from '../../services/adminApi';
-import {
-  AdminAuditLogItem,
-  AdminPermissionItem,
-  AdminProfile,
-  AdminRolePermissionConfig,
-  AdminRoleType,
-  AdminSystemSettings,
-  AdminUserAccount
-} from '../../types/admin';
+import { adminApi } from '../../services/adminApi';
+import { adminAuditApi, type AdminAuditLog } from '../../services/adminAuditApi';
+import { adminDashboardApi, type AdminDashboardStats } from '../../services/adminDashboardApi';
+import { adminUsersApi } from '../../services/adminUsersApi';
+import { AdminProfile, AdminUserAccount } from '../../types/admin';
 
 import './AdminPortal.css';
 import './AdminVisualRefresh.css';
@@ -65,14 +54,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Core Data States
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
-  const [roleConfigs, setRoleConfigs] = useState<Record<AdminRoleType, AdminRolePermissionConfig>>({} as Record<AdminRoleType, AdminRolePermissionConfig>);
-  const [permissions, setPermissions] = useState<AdminPermissionItem[]>([]);
-  const [systemSettings, setSystemSettings] = useState<AdminSystemSettings>({
-    general: { systemName: '', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
-    security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },
-    notifications: { sendWelcomeEmail: true, alertOnFailedLogins: true, notifyRoleChanges: true, dailyDigestEmail: false },
-  });
-  const [auditLogs, setAuditLogs] = useState<AdminAuditLogItem[]>([]);
+  const [recentAuditLogs, setRecentAuditLogs] = useState<AdminAuditLog[]>([]);
+  const [recentAuditFailed, setRecentAuditFailed] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState<number | null>(null);
   const [notificationLoading, setNotificationLoading] = useState(true);
   const [notificationError, setNotificationError] = useState('');
@@ -129,27 +112,24 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const refreshAdminData = useCallback(async () => {
     try {
       if (activeTab === 'dashboard') {
-        const [loadedStats, loadedAuditLogs, loadedUsers] = await Promise.all([
-          adminApi.getDashboard(),
-          adminApi.getAuditLogs(),
-          adminApi.getUsers(),
+        const [loadedStats, loadedUsers] = await Promise.all([
+          adminDashboardApi.get(),
+          adminUsersApi.getUsers(),
         ]);
         setDashboardStats(loadedStats);
-        setAuditLogs(loadedAuditLogs);
         setUsers(loadedUsers);
+        // A failure here must not hide the other figures, and must not read as no activity.
+        try {
+          const recent = await adminAuditApi.list({ size: 5 });
+          if (!Array.isArray(recent.content)) throw new Error('Invalid audit response');
+          setRecentAuditLogs(recent.content);
+          setRecentAuditFailed(false);
+        } catch {
+          setRecentAuditLogs([]);
+          setRecentAuditFailed(true);
+        }
       } else if (activeTab === 'users') {
-        setUsers(await adminApi.getUsers());
-      } else if (activeTab === 'roles') {
-        const [loadedRoles, loadedPermissions] = await Promise.all([
-          adminApi.getRoles(),
-          adminApi.getPermissions(),
-        ]);
-        setRoleConfigs(loadedRoles);
-        setPermissions(loadedPermissions);
-      } else if (activeTab === 'settings') {
-        setSystemSettings(await adminApi.getSettings());
-      } else if (activeTab === 'audit') {
-        setAuditLogs(await adminApi.getAuditLogs());
+        setUsers(await adminUsersApi.getUsers());
       }
       setLoadError('');
     } catch (error) {
@@ -179,7 +159,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const handleAddUser = async (newUserData: any) => {
     const rawUsername = newUserData.username || (newUserData.email ? newUserData.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') : `user${Date.now()}`);
     const username = (rawUsername.length >= 3 ? rawUsername : `user${rawUsername}`).slice(0, 20);
-    await adminApi.createUser({
+    await adminUsersApi.createUser({
       username,
       fullName: newUserData.fullName,
       email: newUserData.email,
@@ -192,40 +172,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   const handleUpdateUser = async (id: string, updates: Partial<AdminUserAccount>) => {
-    await adminApi.updateUser(id, { fullName: updates.fullName, phone: updates.phone, role: updates.role, status: updates.status });
+    await adminUsersApi.updateUser(id, { fullName: updates.fullName, phone: updates.phone, role: updates.role, status: updates.status });
     await refreshAdminData();
   };
 
   const handleToggleLock = async (id: string, reason?: string) => {
     const user = users.find(item => item.id === id);
     if (!user) return;
-    await adminApi.updateUserStatus(id, user.status === 'locked' ? 'active' : 'locked', reason);
+    await adminUsersApi.updateUserStatus(id, user.status === 'locked' ? 'active' : 'locked', reason);
     await refreshAdminData();
-  };
-
-  const handleResetPassword = async (user: AdminUserAccount) => {
-    await adminApi.resetPassword(user.id);
-    await refreshAdminData();
-  };
-
-  // --- Handlers: Roles & Permissions ---
-  const handleSaveRolePermissions = async (roleId: AdminRoleType, permissionCodes: string[]) => {
-    await adminApi.saveRolePermissions(roleId, permissionCodes);
-    await refreshAdminData();
-  };
-
-  const handleResetRoleDefaults = async (_roleId: AdminRoleType) => {
-    setRoleConfigs(await adminApi.getRoles());
-  };
-
-  // --- Handlers: System Settings ---
-  const handleSaveSettings = async (newSettings: AdminSystemSettings) => {
-    await adminApi.saveSettings(newSettings);
-    await refreshAdminData();
-  };
-
-  const handleResetSettings = async () => {
-    setSystemSettings(await adminApi.getSettings());
   };
 
   // --- Handlers: Profile ---
@@ -268,15 +223,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
         {/* Spacious Main Viewport */}
         <main className="admin-main-viewport">
-          {loadError && <p className="app-loading-state" role="status">Các chức năng quản trị khác đang chờ dữ liệu. Bạn vẫn có thể quản lý gian hàng, địa điểm và thiết bị.</p>}
-          {activeTab === 'venues' && <FacilityManagementView key="venues" kind="venues" />}
-          {activeTab === 'assets' && <FacilityManagementView key="assets" kind="assets" />}
-          {activeTab === 'booths' && <OrganizerBoothManagementView language={language} />}
+          {loadError && <p className="app-loading-state" role="status">Không tải được dữ liệu của trang này. Vui lòng thử lại sau.</p>}
           {activeTab === 'dashboard' && (
             <AdminDashboardView
               stats={dashboardStats}
               onNavigateTab={(tab) => navigateToTab(tab as AdminTab)}
-              auditLogs={auditLogs}
+              auditLogs={recentAuditLogs}
+              auditLogsFailed={recentAuditFailed}
               users={users}
               onOpenAddUser={() => {
                 navigateToTab('users');
@@ -290,16 +243,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               onAddUser={handleAddUser}
               onUpdateUser={handleUpdateUser}
               onToggleLock={handleToggleLock}
-              onResetPassword={handleResetPassword}
             />
           )}
 
           {activeTab === 'roles' && (
-            <AdminRolesPermissionsView
-              roleConfigs={roleConfigs}
-              permissions={permissions}
-              onSaveRolePermissions={handleSaveRolePermissions}
-              onResetDefaults={handleResetRoleDefaults}
+            <AdminPendingFeatureView
+              title="Vai trò"
+              description="Gán hoặc gỡ vai trò Đối tác, Ban tổ chức và Quản trị viên cho từng tài khoản."
+            />
+          )}
+
+          {activeTab === 'organizations' && (
+            <AdminPendingFeatureView
+              title="Tổ chức đối tác"
+              description="Xem tổ chức đối tác và khóa hoặc mở khóa khi cần."
             />
           )}
 
@@ -307,19 +264,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             <AdminBadgeRulesView />
           )}
 
-          {activeTab === 'settings' && (
-            <AdminSystemSettingsView
-              settings={systemSettings}
-              onSaveSettings={handleSaveSettings}
-              onResetSettings={handleResetSettings}
-            />
-          )}
-
-          {activeTab === 'audit' && (
-            <AdminAuditLogsView
-              logs={auditLogs}
-            />
-          )}
+          {activeTab === 'audit' && <AdminAuditLogsView />}
 
           {activeTab === 'notifications' && (
             <AdminNotificationsView

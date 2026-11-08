@@ -1,264 +1,312 @@
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Download,
-  Filter,
-  Search,
-  Shield,
-  X,
-  XCircle
-} from 'lucide-react';
-import React, { useMemo, useState } from 'react';
-import { AdminAuditLogItem } from '../../types/admin';
-import { useListPagination } from '../../hooks/useListPagination';
-import { CompactPagination } from '../ui/CompactPagination';
-import { SearchFieldLabel } from '../ui/SearchFieldLabel';
-import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
+import { Clock, Filter, RefreshCw, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import {
+  ADMIN_AUDIT_ACTION_LABELS,
+  ADMIN_AUDIT_TARGET_LABELS,
+  adminAuditApi,
+  formatAuditTime,
+  type AdminAuditAction,
+  type AdminAuditLog,
+  type AdminAuditTargetType,
+} from '../../services/adminAuditApi';
+import { ApiError } from '../../services/apiClient';
+import { CompactPagination } from '../ui/CompactPagination';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 
-interface AdminAuditLogsViewProps {
-  logs: AdminAuditLogItem[];
+interface Filters {
+  action: AdminAuditAction | '';
+  targetType: AdminAuditTargetType | '';
+  targetId: string;
+  actorUserId: string;
+  from: string;
+  to: string;
 }
 
-export const AdminAuditLogsView: React.FC<AdminAuditLogsViewProps> = ({ logs }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterAction, setFilterAction] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedLog, setSelectedLog] = useState<AdminAuditLogItem | null>(null);
-  useModalDismiss(selectedLog !== null, () => setSelectedLog(null));
+const NO_FILTERS: Filters = { action: '', targetType: '', targetId: '', actorUserId: '', from: '', to: '' };
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Hoạt động',
+  DISABLED: 'Đã khóa',
+  INACTIVE: 'Đã khóa',
+};
+const FIELD_LABELS: Record<string, string> = {
+  roles: 'Vai trò',
+  role: 'Vai trò',
+  changedFields: 'Trường đã đổi',
+};
 
-  const filteredLogs = useMemo(() => {
-    return logs.filter(item => {
-      const matchQuery = 
-        item.actorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.targetObject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.ipAddress.includes(searchTerm);
+function loadErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (error instanceof ApiError && error.status === 403) return 'Bạn không có quyền xem nhật ký hệ thống.';
+  if (error instanceof ApiError && error.status === 400) return 'Bộ lọc chưa hợp lệ. Vui lòng kiểm tra khoảng ngày và mã đã nhập.';
+  return 'Không tải được nhật ký hệ thống. Vui lòng thử lại.';
+}
 
-      const matchAction = filterAction === 'all' || item.actionType === filterAction;
-      const matchStatus = filterStatus === 'all' || item.status === filterStatus;
+function detailText(details: Record<string, unknown>): string {
+  if ('from' in details && 'to' in details) {
+    const label = (value: unknown) => STATUS_LABELS[String(value)] ?? String(value);
+    return `${label(details.from)} → ${label(details.to)}`;
+  }
+  const parts = Object.entries(details).map(([key, value]) => {
+    const text = Array.isArray(value) ? value.join(', ') : String(value);
+    return `${FIELD_LABELS[key] ?? key}: ${text}`;
+  });
+  return parts.join(' · ') || '—';
+}
 
-      return matchQuery && matchAction && matchStatus;
+export const AdminAuditLogsView: React.FC = () => {
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [page, setPage] = useState(0);
+  const [revision, setRevision] = useState(0);
+  const [items, setItems] = useState<AdminAuditLog[]>([]);
+  const [pages, setPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selected, setSelected] = useState<AdminAuditLog | null>(null);
+  useModalDismiss(selected !== null, () => setSelected(null));
+
+  useEffect(() => {
+    let active = true;
+    // oxlint-disable-next-line react/set-state-in-effect -- Filter and page changes intentionally start a server refresh.
+    setLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect -- A new request replaces any earlier failure.
+    setError('');
+    adminAuditApi.list({
+      page,
+      size: 20,
+      action: filters.action || undefined,
+      targetType: filters.targetType || undefined,
+      targetId: filters.targetType ? filters.targetId : undefined,
+      actorUserId: filters.actorUserId,
+      from: filters.from,
+      to: filters.to,
+    }).then(result => {
+      if (!active) return;
+      if (!Array.isArray(result.content)) throw new Error('Invalid audit response');
+      setItems(result.content);
+      setPages(result.totalPages);
+      setTotal(result.totalElements);
+    }).catch(cause => {
+      if (!active) return;
+      setItems([]);
+      setPages(0);
+      setTotal(0);
+      setError(loadErrorMessage(cause));
+    }).finally(() => {
+      if (active) setLoading(false);
     });
-  }, [logs, searchTerm, filterAction, filterStatus]);
-  const pagination = useListPagination(filteredLogs);
+    return () => { active = false; };
+  }, [filters, page, revision]);
 
-  const handleExportCSV = () => {
-    const headers = ['Mã log', 'Thời gian', 'Người thực hiện', 'Vai trò', 'Hành động', 'Đối tượng', 'Chi tiết', 'Trạng thái', 'IP'];
-    const rows = filteredLogs.map(l => [
-      l.id,
-      `"${l.timestamp}"`,
-      `"${l.actorName}"`,
-      `"${l.actorRole}"`,
-      `"${l.actionLabelVi}"`,
-      `"${l.targetObject}"`,
-      `"${l.details.replace(/"/g, '""')}"`,
-      `"${l.status}"`,
-      `"${l.ipAddress}"`
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Audit_Logs_DuongSach_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const changeFilter = (changes: Partial<Filters>) => {
+    setFilters(current => ({ ...current, ...changes }));
+    setPage(0);
   };
-
-  const getStatusBadge = (status: 'success' | 'warning' | 'failed') => {
-    switch (status) {
-      case 'success':
-        return (
-          <span className="adm-badge-status badge-status-active">
-            <CheckCircle size={12} />
-            <span>Thành công</span>
-          </span>
-        );
-      case 'warning':
-        return (
-          <span className="adm-badge-status badge-status-pending">
-            <AlertTriangle size={12} />
-            <span>Cảnh báo</span>
-          </span>
-        );
-      case 'failed':
-        return (
-          <span className="adm-badge-status badge-status-locked">
-            <XCircle size={12} />
-            <span>Thất bại</span>
-          </span>
-        );
-    }
-  };
+  const hasFilters = Object.values(filters).some(Boolean);
 
   return (
     <div className="adm-audit-view">
-      {/* Header */}
       <div className="adm-page-header">
         <div>
-
-          <h1 className="adm-page-title workspace-page-title">Nhật ký Hoạt động (Audit Logs)</h1>
+          <h1 className="adm-page-title workspace-page-title">Nhật ký hệ thống</h1>
           <p className="adm-page-subtitle workspace-page-subtitle">
-            Truy vết các thao tác quản trị, cấp quyền, cấu hình hệ thống và sự kiện an ninh.
+            Xem ai đã thay đổi gì, vào lúc nào và vì lý do gì. Nhật ký chỉ để đọc, không thể sửa hay xóa.
           </p>
         </div>
-        <div className="adm-page-header-actions">
-          <button className="adm-btn adm-btn-secondary" onClick={handleExportCSV}>
-            <Download size={16} />
-            <span>Xuất file CSV</span>
-          </button>
-        </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="admin-insight-strip" aria-label="Tổng quan nhật ký">
-        <div><span className="admin-insight-icon"><Clock size={20} /></span><div><span>Tổng số bản ghi</span><strong>{logs.length}</strong></div></div>
-        <div><span className="admin-insight-icon mint"><CheckCircle size={20} /></span><div><span>Thao tác thành công</span><strong>{logs.filter(log => log.status === 'success').length}</strong></div></div>
-        <div><span className="admin-insight-icon amber"><AlertTriangle size={20} /></span><div><span>Cần chú ý</span><strong>{logs.filter(log => log.status === 'warning' || log.status === 'failed').length}</strong></div></div>
-      </div>
       <div className="adm-card adm-filter-card">
         <div className="adm-filter-bar">
-          <SearchFieldLabel className="adm-search-group"><div className="adm-search-input-wrap">
-            <Search size={16} className="adm-search-icon" />
-            <input 
-              type="text"
-              placeholder="Tìm theo người thực hiện, đối tượng, chi tiết hoặc IP..."
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); pagination.reset(); }}
-              className="adm-filter-search"
-            />
-            {searchTerm && (
-              <button 
-                className="adm-search-clear"
-                onClick={() => setSearchTerm('')}
+          <WorkspaceFieldLabel className="adm-status-field" label="Hành động">
+            <div className="adm-select-wrap">
+              <Filter size={14} />
+              <select
+                aria-label="Lọc theo hành động"
+                className="adm-filter-select"
+                value={filters.action}
+                onChange={event => changeFilter({ action: event.target.value as Filters['action'] })}
               >
-                <X size={14} />
-              </button>
-            )}
-          </div></SearchFieldLabel>
-
-          <div className="adm-select-wrap">
-            <Filter size={14} />
-            <select 
-              value={filterAction}
-              onChange={(e) => { setFilterAction(e.target.value); pagination.reset(); }}
+                <option value="">Tất cả hành động</option>
+                {Object.entries(ADMIN_AUDIT_ACTION_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="adm-status-field" label="Đối tượng">
+            <div className="adm-select-wrap">
+              <select
+                aria-label="Lọc theo loại đối tượng"
+                className="adm-filter-select"
+                value={filters.targetType}
+                onChange={event => changeFilter({
+                  targetType: event.target.value as Filters['targetType'],
+                  targetId: event.target.value ? filters.targetId : '',
+                })}
+              >
+                <option value="">Tất cả đối tượng</option>
+                {Object.entries(ADMIN_AUDIT_TARGET_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="adm-status-field" label="Mã đối tượng">
+            <input
+              aria-label="Lọc theo mã đối tượng"
               className="adm-filter-select"
-            >
-              <option value="all">Tất cả hành động</option>
-              <option value="create">Tạo tài khoản</option>
-              <option value="update">Cập nhật thông tin</option>
-              <option value="permission">Phân quyền</option>
-              <option value="lock">Khóa tài khoản</option>
-              <option value="config">Cấu hình quy tắc</option>
-            </select>
-          </div>
-
-          <WorkspaceFieldLabel className="adm-status-field" label="Trạng thái"><div className="adm-select-wrap">
-            <Shield size={14} />
-            <select 
-              value={filterStatus}
-              onChange={(e) => { setFilterStatus(e.target.value); pagination.reset(); }}
+              inputMode="numeric"
+              placeholder={filters.targetType ? 'Ví dụ: 12' : 'Chọn đối tượng trước'}
+              disabled={!filters.targetType}
+              value={filters.targetId}
+              onChange={event => changeFilter({ targetId: event.target.value.replace(/\D/g, '') })}
+            />
+          </WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="adm-status-field" label="Mã người thực hiện">
+            <input
+              aria-label="Lọc theo mã người thực hiện"
               className="adm-filter-select"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="success">Thành công</option>
-              <option value="warning">Cảnh báo</option>
-              <option value="failed">Thất bại</option>
-            </select>
-          </div></WorkspaceFieldLabel>
+              inputMode="numeric"
+              placeholder="Ví dụ: 1"
+              value={filters.actorUserId}
+              onChange={event => changeFilter({ actorUserId: event.target.value.replace(/\D/g, '') })}
+            />
+          </WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="adm-status-field" label="Từ ngày">
+            <input
+              aria-label="Lọc từ ngày"
+              className="adm-filter-select"
+              type="date"
+              value={filters.from}
+              onChange={event => changeFilter({ from: event.target.value })}
+            />
+          </WorkspaceFieldLabel>
+          <WorkspaceFieldLabel className="adm-status-field" label="Đến ngày">
+            <input
+              aria-label="Lọc đến ngày"
+              className="adm-filter-select"
+              type="date"
+              value={filters.to}
+              onChange={event => changeFilter({ to: event.target.value })}
+            />
+          </WorkspaceFieldLabel>
+          {hasFilters && (
+            <button type="button" className="adm-btn adm-btn-secondary" onClick={() => changeFilter(NO_FILTERS)}>
+              Xóa bộ lọc
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="adm-card adm-table-card">
-        <div className="adm-table-summary">
-          <span>Hiển thị <strong>{filteredLogs.length}</strong> bản ghi nhật ký</span>
-        </div>
-
-        <div className="adm-table-responsive">
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>THỜI GIAN</th>
-                <th>NGƯỜI THỰC HIỆN</th>
-                <th>HÀNH ĐỘNG</th>
-                <th>ĐỐI TƯỢNG TÁC ĐỘNG</th>
-                <th>CHI TIẾT THAY ĐỔI</th>
-                <th>TRẠNG THÁI & IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.length === 0 ? (
+        {loading && <p className="app-loading-state" role="status">Đang tải nhật ký...</p>}
+        {!loading && error && (
+          <div className="adm-table-empty" role="alert">
+            <p>{error}</p>
+            <button type="button" className="adm-btn adm-btn-secondary" onClick={() => setRevision(value => value + 1)}>
+              <RefreshCw size={14} />
+              <span>Thử lại</span>
+            </button>
+          </div>
+        )}
+        {!loading && !error && items.length === 0 && (
+          <div className="adm-table-empty">
+            <Clock size={32} />
+            <p>{hasFilters ? 'Không có bản ghi nào khớp với bộ lọc.' : 'Chưa có thao tác quản trị nào được ghi lại.'}</p>
+          </div>
+        )}
+        {!loading && !error && items.length > 0 && (
+          <div className="adm-table-responsive">
+            <table className="adm-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} className="adm-table-empty">
-                    <Clock size={32} />
-                    <p>Không có bản ghi nhật ký nào khớp với tiêu chí tìm kiếm.</p>
-                  </td>
+                  <th>THỜI GIAN</th>
+                  <th>NGƯỜI THỰC HIỆN</th>
+                  <th>HÀNH ĐỘNG</th>
+                  <th>ĐỐI TƯỢNG</th>
+                  <th>LÝ DO</th>
+                  <th>CHI TIẾT</th>
                 </tr>
-              ) : (
-                pagination.items.map((log) => (
-                  <tr key={log.id}>
-                    {/* Timestamp */}
+              </thead>
+              <tbody>
+                {items.map(log => (
+                  <tr key={log.auditLogId}>
                     <td>
                       <div className="adm-time-cell">
                         <Clock size={13} />
-                        <span>{log.timestamp}</span>
+                        <span>{formatAuditTime(log.createdAt)}</span>
                       </div>
                     </td>
-
-                    {/* Actor */}
                     <td>
                       <div className="adm-log-actor">
-                        <span className="adm-actor-name">{log.actorName}</span>
-                        <span className="adm-actor-role">{log.actorRole}</span>
+                        <span className="adm-actor-name">{log.actor.fullName}</span>
+                        <span className="adm-actor-role">{log.actor.username}</span>
                       </div>
                     </td>
-
-                    {/* Action */}
                     <td>
-                      <span className="adm-badge-role badge-role-admin">
-                        {log.actionLabelVi}
-                      </span>
+                      <span className="adm-badge-role badge-role-admin">{ADMIN_AUDIT_ACTION_LABELS[log.action] ?? log.action}</span>
                     </td>
-
-                    {/* Target Object */}
                     <td>
-                      <span className="adm-log-target">{log.targetObject}</span>
+                      <span className="adm-log-target">{log.targetLabel}</span>
                     </td>
-
-                    {/* Details */}
                     <td>
-                      <button type="button" className="adm-log-detail-button" onClick={() => setSelectedLog(log)} aria-label={`Xem chi tiết nhật ký ${log.id}`}>
-                        <span className="adm-log-details">{log.details}</span><small>Xem chi tiết</small>
+                      <span className="adm-log-details">{log.reason || '—'}</span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="adm-log-detail-button"
+                        aria-label={`Xem chi tiết nhật ký ${log.auditLogId}`}
+                        onClick={() => setSelected(log)}
+                      >
+                        <span className="adm-log-details">{detailText(log.details)}</span>
+                        <small>Xem chi tiết</small>
                       </button>
                     </td>
-
-                    {/* Status & IP */}
-                    <td>
-                      <div className="adm-log-status-col">
-                        {getStatusBadge(log.status)}
-                        <span className="adm-ip-text">IP: {log.ipAddress}</span>
-                      </div>
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      <CompactPagination page={pagination.page} pages={pagination.pages} total={pagination.total} onPage={pagination.setPage} />
-      {selectedLog && <div className="adm-modal-overlay" onClick={() => setSelectedLog(null)}>
-        <section className="adm-modal-content" role="dialog" aria-modal="true" aria-labelledby="audit-log-detail-title" onClick={event => event.stopPropagation()}>
-          <div className="adm-modal-header"><h3 id="audit-log-detail-title">Chi tiết nhật ký #{selectedLog.id}</h3><button className="adm-modal-close" type="button" aria-label="Đóng chi tiết nhật ký" onClick={() => setSelectedLog(null)}><X size={20} /></button></div>
-          <div className="adm-modal-body"><dl className="audit-detail-fields"><dt>Thời gian</dt><dd>{selectedLog.timestamp}</dd><dt>Người thực hiện</dt><dd>{selectedLog.actorName} · {selectedLog.actorRole}</dd><dt>Hành động</dt><dd>{selectedLog.actionLabelVi}</dd><dt>Đối tượng</dt><dd>{selectedLog.targetObject}</dd><dt>IP</dt><dd>{selectedLog.ipAddress}</dd></dl><h4>Chi tiết thay đổi</h4><p className="audit-detail-text">{selectedLog.details}</p></div>
-          <div className="adm-modal-footer"><button className="adm-btn adm-btn-secondary" type="button" onClick={() => setSelectedLog(null)}>Đóng</button></div>
-        </section>
-      </div>}
+
+      {!loading && !error && pages > 1 && (
+        <CompactPagination page={page + 1} pages={pages} total={total} onPage={next => setPage(next - 1)} />
+      )}
+
+      {selected && (
+        <div className="adm-modal-overlay" onClick={() => setSelected(null)}>
+          <section
+            className="adm-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="audit-log-detail-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="adm-modal-header">
+              <h3 id="audit-log-detail-title">Chi tiết nhật ký #{selected.auditLogId}</h3>
+              <button className="adm-modal-close" type="button" aria-label="Đóng chi tiết nhật ký" onClick={() => setSelected(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="adm-modal-body">
+              <dl className="audit-detail-fields">
+                <dt>Thời gian</dt><dd>{formatAuditTime(selected.createdAt)}</dd>
+                <dt>Người thực hiện</dt><dd>{selected.actor.fullName} ({selected.actor.username})</dd>
+                <dt>Hành động</dt><dd>{ADMIN_AUDIT_ACTION_LABELS[selected.action] ?? selected.action}</dd>
+                <dt>Đối tượng</dt><dd>{ADMIN_AUDIT_TARGET_LABELS[selected.targetType] ?? selected.targetType}: {selected.targetLabel} (mã {selected.targetId})</dd>
+                <dt>Lý do</dt><dd>{selected.reason || '—'}</dd>
+                <dt>Chi tiết</dt><dd>{detailText(selected.details)}</dd>
+              </dl>
+            </div>
+            <div className="adm-modal-footer">
+              <button className="adm-btn adm-btn-secondary" type="button" onClick={() => setSelected(null)}>Đóng</button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };
-

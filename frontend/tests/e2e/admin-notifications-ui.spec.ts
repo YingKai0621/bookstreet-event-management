@@ -45,6 +45,12 @@ async function setup(page: Page, options: { listFailure?: boolean; listStatus?: 
         notifications: { sendWelcomeEmail: true, alertOnFailedLogins: true, notifyRoleChanges: true, dailyDigestEmail: false },
       } }]);
     }
+    if (path.endsWith('/admin/dashboard')) {
+      return json(route, {
+        userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0,
+        usersByRole: {}, auditByDay: [],
+      });
+    }
     if (path.endsWith('/admin/badges')) return json(route, notificationPage());
     if (path.endsWith('/admin/notifications/unread-count')) {
       countRequests += 1;
@@ -127,16 +133,15 @@ test('opening Badge management does not refresh or clear the Admin inbox', async
   await expect(page.getByRole('button', { name: 'Xem thông báo' })).toBeVisible();
 });
 
-test('Admin settings promise no unsupported notification or alert preferences', async ({ page }) => {
-  await setup(page);
-  await page.goto('/admin/settings');
+for (const removed of ['settings', 'venues', 'assets', 'booths']) {
+  test(`the removed /admin/${removed} screen leads to the dashboard`, async ({ page }) => {
+    await setup(page);
+    await page.goto(`/admin/${removed}`);
 
-  await expect(page.getByRole('heading', { name: 'Cài đặt Hệ thống' })).toBeVisible();
-  await expect(page.getByText('Cấu hình Thông báo Quản trị')).toHaveCount(0);
-  await expect(page.getByText('đăng nhập sai bất thường')).toHaveCount(0);
-  await expect(page.getByText('ma trận phân quyền')).toHaveCount(0);
-  await expect(page.getByText('cảnh báo nền tảng')).toHaveCount(0);
-});
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.getByRole('button', { name: 'Tổng quan', exact: true })).toHaveAttribute('aria-current', 'page');
+  });
+}
 
 test('opening the Admin notification popover performs one bounded refresh', async ({ page }) => {
   const requests = await setup(page);
