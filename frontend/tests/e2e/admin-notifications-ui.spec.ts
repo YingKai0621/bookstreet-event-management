@@ -51,7 +51,7 @@ async function setup(page: Page, options: { listFailure?: boolean; listStatus?: 
         usersByRole: {}, auditByDay: [],
       });
     }
-    if (path.endsWith('/admin/badges')) return json(route, notificationPage());
+    if (path.endsWith('/admin/badges') || path.endsWith('/admin/users')) return json(route, notificationPage());
     if (path.endsWith('/admin/notifications/unread-count')) {
       countRequests += 1;
       return json(route, { unreadCount: 0 });

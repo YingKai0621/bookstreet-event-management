@@ -6,7 +6,15 @@ async function setup(page: Page, _tab: string) {
     let body: unknown = [];
     if (path.endsWith('/auth/csrf')) body = { headerName: 'X-XSRF-TOKEN', token: 'test' };
     else if (path.endsWith('/auth/me')) body = { userId: 1, fullName: 'Admin Test', username: 'admin', roles: ['ADMIN'], email: 'admin@example.com', emailVerified: true, status: 'ACTIVE' };
-    else if (path.endsWith('/admin/profile')) body = { id: 1, fullName: 'Admin Test', email: 'admin@example.com', phone: '0901234567', department: 'Quản trị hệ thống', lastActiveAt: '2026-10-14T01:00:00Z' };
+    else if (path.endsWith('/auth/profile')) body = { id: 1, fullName: 'Admin Test', email: 'admin@example.com', phone: '0901234567', avatarUrl: null, emailVerified: true };
+    else if (path.endsWith('/admin/users')) body = {
+      content: Array.from({ length: 20 }, (_, i) => ({
+        userId: i + 1, username: `reader${i + 1}`, fullName: `Độc giả ${i + 1}`, email: `reader${i + 1}@example.com`,
+        emailVerified: i % 2 === 0, phone: null, roles: i === 0 ? ['PARTICIPANT', 'ADMIN'] : ['PARTICIPANT', 'PARTNER'],
+        status: i % 5 === 0 ? 'DISABLED' : 'ACTIVE', createdAt: '2026-10-14T01:00:00Z',
+      })),
+      page: 0, size: 20, totalElements: 20, totalPages: 1,
+    };
     else if (path.endsWith('/admin/notifications/unread-count')) body = { unreadCount: 0 };
     else if (path.endsWith('/admin/notifications')) body = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
     else if (path.endsWith('/events')) body = { content: [], totalPages: 0 };
@@ -45,7 +53,7 @@ async function setup(page: Page, _tab: string) {
   });
 }
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }]) {
-for (const tab of ['audit', 'badges', 'profile']) {
+for (const tab of ['audit', 'badges', 'profile', 'users', 'roles']) {
   test(`${tab} layout fits ${viewport.width}x${viewport.height} and uses Be Vietnam Pro`, async ({ page }) => {
     await setup(page, tab); await page.goto(`/admin/${tab}`);
     await page.setViewportSize(viewport);
@@ -68,7 +76,8 @@ for (const tab of ['audit', 'badges', 'profile']) {
       await page.getByRole('button', { name: 'Chỉnh sửa thông tin', exact: true }).click();
       expect(await page.locator('.admin-main-viewport').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
       await page.getByRole('button', { name: 'Hủy', exact: true }).first().click();
-      await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Đổi mật khẩu' })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Đăng xuất', exact: true }).last().click();
       await expect(page.locator('.adm-modal-overlay')).toBeVisible();
       expect(['hidden', 'clip']).toContain(await page.evaluate(() => document.body.style.overflow));
       await page.keyboard.press('Escape');

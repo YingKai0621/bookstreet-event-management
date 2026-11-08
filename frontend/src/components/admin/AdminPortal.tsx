@@ -7,6 +7,7 @@ import { AdminDashboardView } from './AdminDashboardView';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminPendingFeatureView } from './AdminPendingFeatureView';
 import { AdminProfileView } from './AdminProfileView';
+import { AdminRolesView } from './AdminRolesView';
 import {
   AdminSidebar,
   AdminTab
@@ -21,11 +22,11 @@ import {
   adminNotificationsApi,
 } from '../../services/adminNotificationsApi';
 
-import { adminApi } from '../../services/adminApi';
 import { adminAuditApi, type AdminAuditLog } from '../../services/adminAuditApi';
 import { adminDashboardApi, type AdminDashboardStats } from '../../services/adminDashboardApi';
-import { adminUsersApi } from '../../services/adminUsersApi';
-import { AdminProfile, AdminUserAccount } from '../../types/admin';
+import { adminProfileApi, type AdminProfileUpdate } from '../../services/adminProfileApi';
+import { adminUsersApi, type AdminUser } from '../../services/adminUsersApi';
+import { AdminProfile } from '../../types/admin';
 
 import './AdminPortal.css';
 import './AdminVisualRefresh.css';
@@ -53,34 +54,27 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const navigateToTab = (tab: AdminTab) => navigate(ADMIN_TAB_PATHS[tab]);
 
   // Core Data States
-  const [users, setUsers] = useState<AdminUserAccount[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [recentAuditLogs, setRecentAuditLogs] = useState<AdminAuditLog[]>([]);
   const [recentAuditFailed, setRecentAuditFailed] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState<number | null>(null);
   const [notificationLoading, setNotificationLoading] = useState(true);
   const [notificationError, setNotificationError] = useState('');
-  const [profile, setProfile] = useState<AdminProfile>({ id: '', name: '', role: '', department: '', email: '', phone: '', avatarInitials: '', lastLogin: '' });
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+  const [profileError, setProfileError] = useState('');
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
   const [loadError, setLoadError] = useState('');
 
   const refreshAdminProfile = useCallback(async () => {
+    setProfileError('');
     try {
-      setProfile(await adminApi.getProfile());
-    } catch {
-      if (user) {
-        setProfile({
-          id: String(user.userId),
-          name: user.fullName,
-          role: 'ADMIN',
-          department: '',
-          email: user.email || '',
-          phone: '',
-          avatarInitials: user.fullName.split(' ').map(part => part[0]).slice(-2).join(''),
-          lastLogin: '',
-        });
-      }
+      setProfile(await adminProfileApi.get());
+    } catch (error) {
+      setProfileError(error instanceof ApiError && error.status === 401
+        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+        : 'Không tải được hồ sơ. Vui lòng thử lại.');
     }
-  }, [user]);
+  }, []);
 
   const refreshNotifications = useCallback(async () => {
     setNotificationLoading(true);
@@ -114,10 +108,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       if (activeTab === 'dashboard') {
         const [loadedStats, loadedUsers] = await Promise.all([
           adminDashboardApi.get(),
-          adminUsersApi.getUsers(),
+          adminUsersApi.list({ size: 100 }),
         ]);
         setDashboardStats(loadedStats);
-        setUsers(loadedUsers);
+        // Transitional until the dashboard reads real figures (Developer C, AC-D-S11-01).
+        setUsers(Array.isArray(loadedUsers.content) ? loadedUsers.content : []);
         // A failure here must not hide the other figures, and must not read as no activity.
         try {
           const recent = await adminAuditApi.list({ size: 5 });
@@ -128,8 +123,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           setRecentAuditLogs([]);
           setRecentAuditFailed(true);
         }
-      } else if (activeTab === 'users') {
-        setUsers(await adminUsersApi.getUsers());
       }
       setLoadError('');
     } catch (error) {
@@ -155,38 +148,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     void refreshAdminData();
   }, [refreshAdminData]);
 
-  // --- Handlers: User Management ---
-  const handleAddUser = async (newUserData: any) => {
-    const rawUsername = newUserData.username || (newUserData.email ? newUserData.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') : `user${Date.now()}`);
-    const username = (rawUsername.length >= 3 ? rawUsername : `user${rawUsername}`).slice(0, 20);
-    await adminUsersApi.createUser({
-      username,
-      fullName: newUserData.fullName,
-      email: newUserData.email,
-      phone: newUserData.phone,
-      role: newUserData.role,
-      status: newUserData.status,
-      password: newUserData.password || 'BookStreet@123'
-    });
-    await refreshAdminData();
-  };
-
-  const handleUpdateUser = async (id: string, updates: Partial<AdminUserAccount>) => {
-    await adminUsersApi.updateUser(id, { fullName: updates.fullName, phone: updates.phone, role: updates.role, status: updates.status });
-    await refreshAdminData();
-  };
-
-  const handleToggleLock = async (id: string, reason?: string) => {
-    const user = users.find(item => item.id === id);
-    if (!user) return;
-    await adminUsersApi.updateUserStatus(id, user.status === 'locked' ? 'active' : 'locked', reason);
-    await refreshAdminData();
+  // The top bar shows the signed-in account until the profile has loaded.
+  const topBarProfile: AdminProfile = profile ?? {
+    id: String(user?.userId ?? ''),
+    name: user?.fullName ?? '',
+    email: user?.email ?? '',
+    emailVerified: user?.emailVerified ?? false,
+    phone: '',
+    avatarInitials: (user?.fullName ?? '').split(' ').filter(Boolean).map(part => part[0]).slice(-2).join('').toUpperCase(),
   };
 
   // --- Handlers: Profile ---
-  const handleUpdateProfile = async (updates: Partial<AdminProfile>) => {
-    await adminApi.updateProfile({ fullName: updates.name, email: updates.email, phone: updates.phone, avatarUrl: updates.avatarUrl, department: updates.department });
-    setProfile(await adminApi.getProfile());
+  const handleUpdateProfile = async (update: AdminProfileUpdate) => {
+    setProfile(await adminProfileApi.update(update));
   };
 
   return (
@@ -194,7 +168,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {/* 1. Full-Width 64px Top Header */}
       <AdminTopBar
         language={language}
-        profile={profile}
+        profile={topBarProfile}
         unreadCount={notificationUnreadCount}
         notificationLoading={notificationLoading}
         notificationError={notificationError}
@@ -238,20 +212,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           )}
 
           {activeTab === 'users' && (
-            <AdminUserManagementView
-              users={users}
-              onAddUser={handleAddUser}
-              onUpdateUser={handleUpdateUser}
-              onToggleLock={handleToggleLock}
-            />
+            <AdminUserManagementView />
           )}
 
-          {activeTab === 'roles' && (
-            <AdminPendingFeatureView
-              title="Vai trò"
-              description="Gán hoặc gỡ vai trò Đối tác, Ban tổ chức và Quản trị viên cho từng tài khoản."
-            />
-          )}
+          {activeTab === 'roles' && <AdminRolesView />}
 
           {activeTab === 'organizations' && (
             <AdminPendingFeatureView
@@ -275,8 +239,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           {activeTab === 'profile' && (
             <AdminProfileView
               profile={profile}
+              loadError={profileError}
+              onRetry={() => { void refreshAdminProfile(); }}
               onUpdateProfile={handleUpdateProfile}
-              onChangePassword={adminApi.changePassword}
               onLogout={onLogout}
             />
           )}

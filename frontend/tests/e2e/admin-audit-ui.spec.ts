@@ -43,7 +43,7 @@ async function setup(target: Page, options: { failuresBeforeSuccess?: number; st
         usersByRole: {}, auditByDay: [],
       });
     }
-    if (url.pathname.endsWith('/admin/users')) return json(route, []);
+    if (url.pathname.endsWith('/admin/users')) return json(route, page([]));
     if (url.pathname.endsWith('/admin/audit-logs')) {
       auditQueries.push(url.searchParams);
       if (options.status) return json(route, { code: 'DENIED', message: 'Denied' }, options.status);

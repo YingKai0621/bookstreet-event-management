@@ -25,7 +25,7 @@ async function signInAs(page: Page, roles: string[]) {
         usersByRole: {}, auditByDay: [],
       });
     }
-    if (path.endsWith('/admin/users')) return json(route, []);
+    if (path.endsWith('/admin/users')) return json(route, emptyPage);
     if (path.endsWith('/organizer/dashboard')) {
       return json(route, {
         activeEventCount: 0, pendingPartnerApplicationCount: 0, pendingBoothRequestCount: 0,
