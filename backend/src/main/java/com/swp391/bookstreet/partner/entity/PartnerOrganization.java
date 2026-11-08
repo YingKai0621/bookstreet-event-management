@@ -99,6 +99,11 @@ public class PartnerOrganization {
         this.updatedAt = now;
     }
 
+    public void changeStatus(OrganizationStatus status, Instant now) {
+        this.status = status;
+        this.updatedAt = now;
+    }
+
     public Long getId() {
         return id;
     }
