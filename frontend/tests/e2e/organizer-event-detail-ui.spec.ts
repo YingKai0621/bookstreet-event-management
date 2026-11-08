@@ -241,6 +241,26 @@ async function setupEventDetail(page: Page, scenario: DetailScenario = {}) {
 test.describe('Organizer event detail overview', () => {
   test.use({ viewport: { width: 1600, height: 900 } });
 
+  test('links a published event to its public page in a new tab, and staff to the public site', async ({ page }) => {
+    await setupEventDetail(page);
+    await page.goto(`${BASE_URL}/organizer/events/501`);
+
+    const eventLink = page.getByRole('link', { name: 'Xem trên trang công khai' });
+    await expect(eventLink).toHaveAttribute('href', '/su-kien/501?eventId=501');
+    await expect(eventLink).toHaveAttribute('target', '_blank');
+    const siteLink = page.locator('.organizer-topbar').getByRole('link', { name: 'Xem trang công khai' });
+    await expect(siteLink).toHaveAttribute('href', '/');
+    await expect(siteLink).toHaveAttribute('target', '_blank');
+  });
+
+  test('a draft event has no public page link', async ({ page }) => {
+    await setupEventDetail(page, { eventStatus: 'DRAFT' });
+    await page.goto(`${BASE_URL}/organizer/events/501`);
+
+    await expect(page.getByRole('heading', { name: event.name })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Xem trên trang công khai' })).toHaveCount(0);
+  });
+
   test('shows real event operations, schedule, rules and deadlines', async ({ page }) => {
     await setupEventDetail(page);
     await page.goto(`${BASE_URL}/organizer/events/501`);

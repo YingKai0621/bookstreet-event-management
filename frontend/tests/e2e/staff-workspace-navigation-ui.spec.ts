@@ -86,3 +86,17 @@ test('a reader-only account keeps the reader menu and workspace', async ({ page 
   await page.goto('/participant/rewards');
   await expect(page).toHaveURL(/\/participant\/rewards$/);
 });
+
+for (const [roles, path, bar] of [
+  [['PARTICIPANT', 'ADMIN'], '/admin', '.admin-topbar'],
+  [['PARTICIPANT', 'PARTNER'], '/partner', '.partner-top-bar'],
+] as const) {
+  test(`the ${path} workspace links to the public site in a new tab`, async ({ page }) => {
+    await signInAs(page, [...roles]);
+    await page.goto(path);
+
+    const link = page.locator(bar).getByRole('link', { name: 'Xem trang công khai' });
+    await expect(link).toHaveAttribute('href', '/');
+    await expect(link).toHaveAttribute('target', '_blank');
+  });
+}

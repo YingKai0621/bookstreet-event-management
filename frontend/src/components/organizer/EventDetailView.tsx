@@ -14,6 +14,7 @@ import {
   Trash2,
   Users
 } from 'lucide-react';
+import { PublicSiteLink } from '../ui/PublicSiteLink';
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { OrganizerPartnerApplication } from '../../services/organizerApi';
@@ -252,6 +253,15 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                 <Trash2 size={16} />
                 {language === 'vi' ? 'Xóa bản nháp' : 'Delete draft'}
               </button>
+            )}
+            {event.apiStatus !== 'DRAFT' && (
+              <PublicSiteLink
+                className="btn-org-secondary"
+                href={`/su-kien/${encodeURIComponent(event.id)}?eventId=${encodeURIComponent(event.id)}`}
+                label={language === 'vi' ? 'Xem trên trang công khai' : 'View on the public site'}
+              >
+                {language === 'vi' ? 'Xem trên trang công khai' : 'View on the public site'}
+              </PublicSiteLink>
             )}
             {event.apiStatus === 'PUBLISHED' && (
               <button type="button" className="btn-org-danger" onClick={() => onCancelEvent(event)}>

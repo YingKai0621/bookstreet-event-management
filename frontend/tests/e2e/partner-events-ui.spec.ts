@@ -237,6 +237,26 @@ test('registration submits notes through existing CSRF-protected API and display
   expect(state.unsupported).toEqual([]);
 });
 
+test('closing a linked registration modal keeps the event list without reloading it', async ({ page }) => {
+  await setup(page);
+  const listRequests: string[] = [];
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith('/events') || path.endsWith('/partner/applications')) listRequests.push(path);
+  });
+  await page.goto('/partner/events/apply?event=102');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  const loadedRequests = listRequests.length;
+
+  await page.getByRole('button', { name: 'Để sau', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/partner\/events\/apply$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Đang tải sự kiện công khai…')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Sự kiện chưa tham gia' }).first()).toBeVisible();
+  expect(listRequests).toHaveLength(loadedRequests);
+});
+
 test('event discovery is independent from application management and exposes event-only filters', async ({ page }) => {
   await setup(page, { empty: true });
   await page.goto('/partner/events/apply');

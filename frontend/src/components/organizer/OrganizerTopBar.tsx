@@ -10,6 +10,7 @@ import {
   User,
   Users
 } from 'lucide-react';
+import { PublicSiteLink } from '../ui/PublicSiteLink';
 import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
 import { OrganizerProfile } from '../../types/organizer';
@@ -110,6 +111,7 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
 
       {/* 2. Right: Bell and user capsule */}
       <div className="organizer-topbar-right">
+        <PublicSiteLink className="organizer-icon-button" />
         {/* Notifications Bell & Dropdown Popup */}
         <div style={{ position: 'relative' }} ref={notifRef}>
           <button
