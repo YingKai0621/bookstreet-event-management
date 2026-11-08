@@ -14,13 +14,13 @@ import {
 import React from 'react';
 import { ADMIN_AUDIT_ACTION_LABELS, formatAuditTime, type AdminAuditLog } from '../../services/adminAuditApi';
 import type { AdminDashboardStats } from '../../services/adminDashboardApi';
-import { AdminUserAccount } from '../../types/admin';
+import type { AdminUser } from '../../services/adminUsersApi';
 
 interface AdminDashboardViewProps {
   onNavigateTab: (tab: string) => void;
   auditLogs: AdminAuditLog[];
   auditLogsFailed: boolean;
-  users: AdminUserAccount[];
+  users: AdminUser[];
   stats: AdminDashboardStats;
   onOpenAddUser: () => void;
 }
@@ -47,8 +47,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   stats, 
   onOpenAddUser 
 }) => {
-  const lockedUsersCount = users.filter(user => user.status === 'locked').length;
-  const pendingUsersCount = users.filter(user => user.status === 'pending_verification').length;
+  const lockedUsersCount = users.filter(user => user.status === 'DISABLED').length;
+  const pendingUsersCount = users.filter(user => user.email && !user.emailVerified).length;
 
   const totalAuditsLast7Days = stats.auditByDay.reduce((acc, curr) => acc + curr.count, 0);
   const maxAudit = Math.max(1, ...stats.auditByDay.map(item => item.count));

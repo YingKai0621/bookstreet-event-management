@@ -196,4 +196,16 @@ public class User {
         userRoles.add(userRole);
         return userRole;
     }
+
+    /** Detaches the role link so the caller can delete it; returns null when the User does not hold it. */
+    public UserRole removeRole(RoleCode code) {
+        UserRole removed = userRoles.stream()
+                .filter(userRole -> userRole.getRole().getCode() == code)
+                .findFirst()
+                .orElse(null);
+        if (removed != null) {
+            userRoles.remove(removed);
+        }
+        return removed;
+    }
 }

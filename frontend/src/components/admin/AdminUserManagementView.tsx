@@ -1,620 +1,764 @@
-import { PaginatedList } from '../ui/PaginatedList';
-import { SearchFieldLabel } from '../ui/SearchFieldLabel';
-import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   AlertCircle,
+  CheckCircle2,
   Clock,
   Edit3,
   Filter,
   Lock,
   Mail,
+  MailWarning,
   Phone,
+  RefreshCw,
   Search,
   Unlock,
   UserPlus,
-  X
+  X,
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../auth/useAuth';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { ApiError } from '../../services/apiClient';
 import {
-  AdminAccountStatus,
-  AdminRoleType,
-  AdminUserAccount
-} from '../../types/admin';
+  ADMIN_ACCOUNT_STATUS_LABELS,
+  ADMIN_ROLE_CODES,
+  ADMIN_ROLE_LABELS,
+  adminUserErrorMessage,
+  adminUserInitials,
+  adminUsersApi,
+  isValidAdminReason,
+  normalizeAdminReason,
+  type AdminAccountStatus,
+  type AdminRoleCode,
+  type AdminUser,
+  type AdminUserSort,
+} from '../../services/adminUsersApi';
+import { CompactPagination } from '../ui/CompactPagination';
+import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
+import './AdminAccounts.css';
 
-interface AdminUserManagementViewProps {
-  users: AdminUserAccount[];
-  onAddUser: (user: Omit<AdminUserAccount, 'id' | 'code' | 'createdDate' | 'avatarInitials' | 'lastActive'>) => void | Promise<void>;
-  onUpdateUser: (id: string, updates: Partial<AdminUserAccount>) => void | Promise<void>;
-  onToggleLock: (id: string, reason?: string) => void | Promise<void>;
+const PAGE_SIZE = 20;
+const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9]{2,19}$/;
+const SORT_LABELS: Record<AdminUserSort, string> = {
+  'createdAt,desc': 'Mới tạo trước',
+  'createdAt,asc': 'Cũ nhất trước',
+  'username,asc': 'Tên đăng nhập A → Z',
+  'username,desc': 'Tên đăng nhập Z → A',
+};
+
+const ROLE_BADGE_CLASS: Record<AdminRoleCode, string> = {
+  PARTICIPANT: 'badge-role-participant',
+  PARTNER: 'badge-role-partner',
+  ORGANIZER: 'badge-role-organizer',
+  ADMIN: 'badge-role-admin',
+};
+
+interface Filters {
+  search: string;
+  role: AdminRoleCode | '';
+  status: AdminAccountStatus | '';
+  sort: AdminUserSort;
 }
 
-export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = ({
-  users,
-  onAddUser,
-  onUpdateUser,
-  onToggleLock
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+const NO_FILTERS: Filters = { search: '', role: '', status: '', sort: 'createdAt,desc' };
 
-  // Modal states
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AdminUserAccount | null>(null);
-  const [lockTargetUser, setLockTargetUser] = useState<AdminUserAccount | null>(null);
-  const [lockReason, setLockReason] = useState('');
-  useModalDismiss(isAddModalOpen, () => setIsAddModalOpen(false));
-  useModalDismiss(Boolean(editingUser), () => setEditingUser(null));
-  useModalDismiss(Boolean(lockTargetUser), () => setLockTargetUser(null));
+function loadErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (error instanceof ApiError && error.status === 403) return 'Bạn không có quyền xem danh sách tài khoản.';
+  if (error instanceof ApiError && error.status === 400) return 'Bộ lọc chưa hợp lệ. Vui lòng kiểm tra lại.';
+  return 'Không tải được danh sách tài khoản. Vui lòng thử lại.';
+}
 
-  // New user form state
-  const [newFullName, setNewFullName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newRole, setNewRole] = useState<AdminRoleType>('participant');
-  const [newStatus, setNewStatus] = useState<AdminAccountStatus>('active');
+function utf8Length(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
 
-  // Edit user form state
-  const [editFullName, setEditFullName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState<AdminRoleType>('participant');
-  const [editStatus, setEditStatus] = useState<AdminAccountStatus>('active');
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => {
-      const matchesSearch = 
-        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.phone.includes(searchTerm) ||
-        u.code.toLowerCase().includes(searchTerm.toLowerCase());
+interface CreateForm {
+  username: string;
+  fullName: string;
+  password: string;
+  confirmPassword: string;
+  email: string;
+  phone: string;
+}
 
-      const matchesRole = selectedRole === 'all' || u.role === selectedRole;
-      const matchesStatus = selectedStatus === 'all' || u.status === selectedStatus;
+const EMPTY_CREATE: CreateForm = { username: '', fullName: '', password: '', confirmPassword: '', email: '', phone: '' };
 
-      return matchesSearch && matchesRole && matchesStatus;
+function createFormError(form: CreateForm): string {
+  if (!USERNAME_PATTERN.test(form.username.trim())) {
+    return 'Tên đăng nhập dài 3–20 ký tự, bắt đầu bằng chữ cái và chỉ gồm chữ cái, chữ số.';
+  }
+  const fullName = form.fullName.trim().replace(/\s+/g, ' ');
+  if (fullName.length < 2 || fullName.length > 50) return 'Họ và tên dài 2–50 ký tự.';
+  if (form.password.length < 8 || form.password.length > 64 || utf8Length(form.password) > 72) {
+    return 'Mật khẩu dài 8–64 ký tự và không vượt quá 72 byte.';
+  }
+  if (form.password !== form.confirmPassword) return 'Mật khẩu xác nhận không khớp.';
+  if (form.phone.trim().length > 20) return 'Số điện thoại tối đa 20 ký tự.';
+  return '';
+}
+
+export const AdminUserManagementView: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.userId;
+
+  const [searchInput, setSearchInput] = useState('');
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [page, setPage] = useState(0);
+  const [revision, setRevision] = useState(0);
+  const [items, setItems] = useState<AdminUser[]>([]);
+  const [pages, setPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
+  const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
+  const [editForm, setEditForm] = useState({ fullName: '', phone: '', email: '' });
+  const [statusTarget, setStatusTarget] = useState<AdminUser | null>(null);
+  const [reason, setReason] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const closeDialogs = () => {
+    if (submitting) return;
+    setCreateOpen(false);
+    setEditTarget(null);
+    setStatusTarget(null);
+    setActionError('');
+  };
+  useModalDismiss(createOpen || editTarget !== null || statusTarget !== null, closeDialogs);
+
+  // Search is sent to the server after a short pause so that each keystroke does not start a request.
+  useEffect(() => {
+    const next = searchInput.trim();
+    if (next === filters.search) return undefined;
+    const timer = window.setTimeout(() => {
+      setFilters(current => ({ ...current, search: next }));
+      setPage(0);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, filters.search]);
+
+  useEffect(() => {
+    let active = true;
+    // oxlint-disable-next-line react/set-state-in-effect -- Filter and page changes intentionally start a server refresh.
+    setLoading(true);
+    // oxlint-disable-next-line react/set-state-in-effect -- A new request replaces any earlier failure.
+    setError('');
+    adminUsersApi.list({
+      page,
+      size: PAGE_SIZE,
+      search: filters.search || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined,
+      sort: filters.sort,
+    }).then(result => {
+      if (!active) return;
+      if (!Array.isArray(result.content)) throw new Error('Invalid account response');
+      setItems(result.content);
+      setPages(result.totalPages);
+      setTotal(result.totalElements);
+    }).catch(cause => {
+      if (!active) return;
+      setItems([]);
+      setPages(0);
+      setTotal(0);
+      setError(loadErrorMessage(cause));
+    }).finally(() => {
+      if (active) setLoading(false);
     });
-  }, [users, searchTerm, selectedRole, selectedStatus]);
+    return () => { active = false; };
+  }, [filters, page, revision]);
 
-  const handleOpenEdit = (user: AdminUserAccount) => {
-    setEditingUser(user);
-    setEditFullName(user.fullName);
-    setEditPhone(user.phone);
-    setEditRole(user.role);
-    setEditStatus(user.status);
+  const changeFilter = (changes: Partial<Filters>) => {
+    setFilters(current => ({ ...current, ...changes }));
+    setPage(0);
+  };
+  const hasFilters = Boolean(filters.search || filters.role || filters.status);
+
+  const replaceRow = (updated: AdminUser) => {
+    setItems(current => current.map(item => (item.userId === updated.userId ? updated : item)));
   };
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
-
-    const roleMap: Record<AdminRoleType, string> = {
-      participant: 'Participant',
-      partner: 'Partner',
-      organizer: 'Organizer',
-      admin: 'Admin'
-    };
-
-    const statusMap: Record<AdminAccountStatus, string> = {
-      active: 'Hoạt động',
-      locked: 'Bị khóa',
-      pending_verification: 'Chờ xác thực'
-    };
-
-    await onUpdateUser(editingUser.id, {
-      fullName: editFullName.trim(),
-      phone: editPhone.trim(),
-      role: editRole,
-      roleLabelVi: roleMap[editRole],
-      status: editStatus,
-      statusLabelVi: statusMap[editStatus]
-    });
-
-    setEditingUser(null);
+  const openCreate = () => {
+    setCreateForm(EMPTY_CREATE);
+    setActionError('');
+    setNotice('');
+    setCreateOpen(true);
   };
 
-  const handleOpenAdd = () => {
-    setNewFullName('');
-    setNewEmail('');
-    setNewPhone('');
-    setNewRole('participant');
-    setNewStatus('active');
-    setIsAddModalOpen(true);
-  };
-
-  const handleSaveNewUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newFullName.trim() || !newEmail.trim()) return;
-
-    const roleMap: Record<AdminRoleType, string> = {
-      participant: 'Participant',
-      partner: 'Partner',
-      organizer: 'Organizer',
-      admin: 'Admin'
-    };
-
-    const statusMap: Record<AdminAccountStatus, string> = {
-      active: 'Hoạt động',
-      locked: 'Bị khóa',
-      pending_verification: 'Chờ xác thực'
-    };
-
-    await onAddUser({
-      fullName: newFullName.trim(),
-      email: newEmail.trim(),
-      phone: newPhone.trim(),
-      role: newRole,
-      roleLabelVi: roleMap[newRole],
-      status: newStatus,
-      statusLabelVi: statusMap[newStatus]
-    });
-
-    setIsAddModalOpen(false);
-  };
-
-  const handleConfirmLockToggle = async () => {
-    if (!lockTargetUser) return;
-    await onToggleLock(lockTargetUser.id, lockReason);
-    setLockTargetUser(null);
-    setLockReason('');
-  };
-
-  const getRoleBadgeClass = (role: AdminRoleType) => {
-    switch (role) {
-      case 'admin': return 'badge-role-admin';
-      case 'organizer': return 'badge-role-organizer';
-      case 'partner': return 'badge-role-partner';
-      default: return 'badge-role-participant';
+  const submitCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const invalid = createFormError(createForm);
+    if (invalid) {
+      setActionError(invalid);
+      return;
+    }
+    setSubmitting(true);
+    setActionError('');
+    try {
+      const created = await adminUsersApi.create({
+        username: createForm.username.trim(),
+        fullName: createForm.fullName,
+        password: createForm.password,
+        confirmPassword: createForm.confirmPassword,
+        email: createForm.email.trim() || undefined,
+        phone: createForm.phone.trim() || undefined,
+      });
+      setCreateOpen(false);
+      setCreateForm(EMPTY_CREATE);
+      setNotice(created.email
+        ? `Đã tạo tài khoản ${created.username}. Email xác minh đã được gửi tới ${created.email}. Hãy trao mật khẩu ban đầu cho người dùng qua kênh riêng.`
+        : `Đã tạo tài khoản ${created.username}. Hãy trao mật khẩu ban đầu cho người dùng qua kênh riêng.`);
+      setRevision(value => value + 1);
+    } catch (cause) {
+      setActionError(adminUserErrorMessage(cause, 'Không tạo được tài khoản. Vui lòng thử lại.'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const getStatusBadgeClass = (status: AdminAccountStatus) => {
-    switch (status) {
-      case 'active': return 'badge-status-active';
-      case 'locked': return 'badge-status-locked';
-      default: return 'badge-status-pending';
+  const openEdit = (target: AdminUser) => {
+    setEditTarget(target);
+    setEditForm({ fullName: target.fullName, phone: target.phone ?? '', email: target.email ?? '' });
+    setActionError('');
+    setNotice('');
+  };
+
+  const submitEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editTarget) return;
+    const fullName = editForm.fullName.trim().replace(/\s+/g, ' ');
+    if (fullName.length < 2 || fullName.length > 50) {
+      setActionError('Họ và tên dài 2–50 ký tự.');
+      return;
     }
+    if (editForm.phone.trim().length > 20) {
+      setActionError('Số điện thoại tối đa 20 ký tự.');
+      return;
+    }
+    const changes: { fullName?: string; phone?: string; email?: string } = {};
+    if (fullName !== editTarget.fullName) changes.fullName = fullName;
+    if (editForm.phone.trim() !== (editTarget.phone ?? '')) changes.phone = editForm.phone.trim();
+    if (!editTarget.emailVerified && editForm.email.trim() && editForm.email.trim() !== (editTarget.email ?? '')) {
+      changes.email = editForm.email.trim();
+    }
+    if (Object.keys(changes).length === 0) {
+      setEditTarget(null);
+      return;
+    }
+    setSubmitting(true);
+    setActionError('');
+    try {
+      const updated = await adminUsersApi.update(editTarget.userId, changes);
+      replaceRow(updated);
+      setEditTarget(null);
+      setNotice(changes.email
+        ? `Đã cập nhật tài khoản ${updated.username}. Email xác minh mới sẽ được gửi tới ${updated.email}.`
+        : `Đã cập nhật tài khoản ${updated.username}.`);
+    } catch (cause) {
+      setActionError(adminUserErrorMessage(cause, 'Không lưu được thay đổi. Vui lòng thử lại.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openStatus = (target: AdminUser) => {
+    setStatusTarget(target);
+    setReason('');
+    setActionError('');
+    setNotice('');
+  };
+
+  const submitStatus = async () => {
+    if (!statusTarget) return;
+    if (!isValidAdminReason(reason)) {
+      setActionError('Lý do cần dài từ 10 đến 500 ký tự.');
+      return;
+    }
+    const nextStatus: AdminAccountStatus = statusTarget.status === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
+    setSubmitting(true);
+    setActionError('');
+    try {
+      const updated = await adminUsersApi.updateStatus(statusTarget.userId, nextStatus, normalizeAdminReason(reason));
+      replaceRow(updated);
+      if (filters.status && filters.status !== updated.status) setRevision(value => value + 1);
+      setStatusTarget(null);
+      setNotice(updated.status === 'DISABLED'
+        ? `Đã khóa tài khoản ${updated.username}. Các phiên đăng nhập hiện có không còn sử dụng được.`
+        : `Đã mở khóa tài khoản ${updated.username}. Người dùng cần đăng nhập lại.`);
+    } catch (cause) {
+      setActionError(adminUserErrorMessage(cause, 'Không đổi được trạng thái tài khoản. Vui lòng thử lại.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const lockBlockedReason = (target: AdminUser): string => {
+    if (target.status === 'ACTIVE' && target.userId === currentUserId) return 'Bạn không thể tự khóa tài khoản của mình.';
+    return '';
   };
 
   return (
     <div className="adm-users-view">
-      {/* Header */}
       <div className="adm-page-header">
         <div>
           <h1 className="adm-page-title workspace-page-title">Quản lý Tài khoản</h1>
           <p className="adm-page-subtitle workspace-page-subtitle">
-            Tra cứu, cấp quyền, khóa/mở khóa và thiết lập tài khoản người dùng trên toàn hệ thống.
+            Tra cứu, tạo, cập nhật và khóa hoặc mở khóa tài khoản người dùng. Vai trò được quản lý ở trang Vai trò.
           </p>
         </div>
         <div className="adm-page-header-actions">
-          <button 
-            className="adm-btn adm-btn-primary"
-            onClick={handleOpenAdd}
-          >
+          <button type="button" className="adm-btn adm-btn-primary" onClick={openCreate}>
             <UserPlus size={16} />
             <span>Thêm tài khoản</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {notice && (
+        <div className="adm-card adm-notice-card" role="status">
+          <CheckCircle2 size={16} />
+          <span>{notice}</span>
+        </div>
+      )}
+
       <div className="adm-card adm-filter-card">
         <div className="adm-filter-bar">
-          {/* Search Box */}
-          <SearchFieldLabel className="adm-search-group"><div className="adm-search-input-wrap">
-            <Search size={16} className="adm-search-icon" />
-            <input 
-              type="text"
-              placeholder="Tìm theo tên, email, số điện thoại hoặc mã..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="adm-filter-search"
-            />
-            {searchTerm && (
-              <button 
-                className="adm-search-clear"
-                onClick={() => setSearchTerm('')}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div></SearchFieldLabel>
-
-          {/* Role Filter Tabs */}
-          <div className="adm-role-tabs">
-            {[
-              { id: 'all', label: 'Tất cả vai trò' },
-              { id: 'participant', label: 'Participant' },
-              { id: 'partner', label: 'Partner' },
-              { id: 'organizer', label: 'Organizer' },
-              { id: 'admin', label: 'Admin' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                className={`adm-tab-pill ${selectedRole === tab.id ? 'active' : ''}`}
-                onClick={() => setSelectedRole(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Status Dropdown */}
-          <WorkspaceFieldLabel className="adm-status-field" label="Trạng thái"><div className="adm-select-wrap">
-            <Filter size={14} />
-            <select 
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="adm-filter-select"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="locked">Bị khóa</option>
-              <option value="pending_verification">Chờ xác thực</option>
-            </select>
-          </div></WorkspaceFieldLabel>
-        </div>
-      </div>
-
-      {/* Table Card */}
-      <div className="adm-card adm-table-card">
-        <div className="adm-table-summary">
-          <span>Tìm thấy <strong>{filteredUsers.length}</strong> tài khoản phù hợp</span>
-        </div>
-
-        <PaginatedList items={filteredUsers}>{pageItems => (<div className="adm-table-responsive">
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>MÃ & HỌ TÊN</th>
-                <th>LIÊN HỆ</th>
-                <th>VAI TRÒ</th>
-                <th>TRẠNG THÁI</th>
-                <th>HOẠT ĐỘNG GẦN NHẤT</th>
-                <th className="adm-th-actions">THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="adm-table-empty">
-                    <AlertCircle size={32} />
-                    <p>Không tìm thấy tài khoản nào phù hợp với bộ lọc hiện tại.</p>
-                  </td>
-                </tr>
-              ) : (
-                pageItems.map((user) => (
-                  <tr key={user.id} className={user.status === 'locked' ? 'adm-row-locked' : ''}>
-                    {/* Name & Code */}
-                    <td>
-                      <div className="adm-user-cell">
-                        <div className="adm-user-avatar-sm">
-                          {user.avatarInitials}
-                        </div>
-                        <div>
-                          <div className="adm-user-name">{user.fullName}</div>
-                          <div className="adm-user-code">ID: {user.code}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Contact */}
-                    <td>
-                      <div className="adm-contact-cell">
-                        <div className="adm-contact-item">
-                          <Mail size={13} />
-                          <span title={user.email}>{user.email || 'Chưa có email'}</span>
-                        </div>
-                        {user.phone && <div className="adm-contact-item">
-                          <Phone size={13} />
-                          <span>{user.phone}</span>
-                        </div>}
-                      </div>
-                    </td>
-
-                    {/* Role */}
-                    <td>
-                      <span className={`adm-badge-role ${getRoleBadgeClass(user.role)}`}>
-                        {user.roleLabelVi}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td>
-                      <span className={`adm-badge-status ${getStatusBadgeClass(user.status)}`}>
-                        <span className="adm-status-dot"></span>
-                        {user.statusLabelVi}
-                      </span>
-                      {user.status === 'locked' && user.lockReason && (
-                        <div className="adm-lock-hint" title={user.lockReason}>
-                          Lý do: {user.lockReason}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Last active */}
-                    <td>
-                      <div className="adm-time-cell">
-                        <Clock size={13} />
-                        <span>{user.lastActive}</span>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="adm-td-actions">
-                      <div className="adm-action-buttons">
-                        {/* Edit button */}
-                        <button
-                          className="adm-icon-btn"
-                          title="Chỉnh sửa thông tin"
-                          onClick={() => handleOpenEdit(user)}
-                        >
-                          <Edit3 size={15} />
-                        </button>
-
-                        {/* Lock / Unlock button */}
-                        <button
-                          className={`adm-icon-btn ${user.status === 'locked' ? 'btn-unlock' : 'btn-lock'}`}
-                          title={user.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                          onClick={() => setLockTargetUser(user)}
-                        >
-                          {user.status === 'locked' ? <Unlock size={15} /> : <Lock size={15} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+          <SearchFieldLabel className="adm-search-group">
+            <div className="adm-search-input-wrap">
+              <Search size={16} className="adm-search-icon" />
+              <input
+                type="text"
+                aria-label="Tìm tài khoản"
+                placeholder="Tìm theo tên đăng nhập, họ tên hoặc email..."
+                maxLength={100}
+                value={searchInput}
+                onChange={event => setSearchInput(event.target.value)}
+                className="adm-filter-search"
+              />
+              {searchInput && (
+                <button type="button" className="adm-search-clear" aria-label="Xóa từ khóa" onClick={() => setSearchInput('')}>
+                  <X size={14} />
+                </button>
               )}
-            </tbody>
-          </table>
-        </div>)}</PaginatedList>
+            </div>
+          </SearchFieldLabel>
+
+          <WorkspaceFieldLabel className="adm-status-field" label="Vai trò">
+            <div className="adm-select-wrap">
+              <Filter size={14} />
+              <select
+                aria-label="Lọc theo vai trò"
+                className="adm-filter-select"
+                value={filters.role}
+                onChange={event => changeFilter({ role: event.target.value as Filters['role'] })}
+              >
+                <option value="">Tất cả vai trò</option>
+                {ADMIN_ROLE_CODES.map(role => <option key={role} value={role}>{ADMIN_ROLE_LABELS[role]}</option>)}
+              </select>
+            </div>
+          </WorkspaceFieldLabel>
+
+          <WorkspaceFieldLabel className="adm-status-field" label="Trạng thái">
+            <div className="adm-select-wrap">
+              <select
+                aria-label="Lọc theo trạng thái"
+                className="adm-filter-select"
+                value={filters.status}
+                onChange={event => changeFilter({ status: event.target.value as Filters['status'] })}
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="ACTIVE">{ADMIN_ACCOUNT_STATUS_LABELS.ACTIVE}</option>
+                <option value="DISABLED">{ADMIN_ACCOUNT_STATUS_LABELS.DISABLED}</option>
+              </select>
+            </div>
+          </WorkspaceFieldLabel>
+
+          <WorkspaceFieldLabel className="adm-status-field" label="Sắp xếp">
+            <div className="adm-select-wrap">
+              <select
+                aria-label="Sắp xếp tài khoản"
+                className="adm-filter-select"
+                value={filters.sort}
+                onChange={event => changeFilter({ sort: event.target.value as AdminUserSort })}
+              >
+                {Object.entries(SORT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </div>
+          </WorkspaceFieldLabel>
+
+          {hasFilters && (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary"
+              onClick={() => {
+                setSearchInput('');
+                changeFilter({ search: '', role: '', status: '' });
+              }}
+            >
+              Xóa bộ lọc
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Modal: Add New User */}
-      {isAddModalOpen && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Thêm tài khoản người dùng mới</h3>
-              <button className="adm-modal-close" onClick={() => setIsAddModalOpen(false)}>
-                <X size={18} />
-              </button>
+      <div className="adm-card adm-table-card">
+        {loading && <p className="app-loading-state" role="status">Đang tải danh sách tài khoản...</p>}
+        {!loading && error && (
+          <div className="adm-table-empty" role="alert">
+            <p>{error}</p>
+            <button type="button" className="adm-btn adm-btn-secondary" onClick={() => setRevision(value => value + 1)}>
+              <RefreshCw size={14} />
+              <span>Thử lại</span>
+            </button>
+          </div>
+        )}
+        {!loading && !error && items.length === 0 && (
+          <div className="adm-table-empty">
+            <AlertCircle size={32} />
+            <p>{hasFilters ? 'Không có tài khoản nào khớp với bộ lọc.' : 'Chưa có tài khoản nào.'}</p>
+          </div>
+        )}
+        {!loading && !error && items.length > 0 && (
+          <>
+            <div className="adm-table-summary">
+              <span>Có <strong>{total}</strong> tài khoản phù hợp</span>
             </div>
-            <form onSubmit={handleSaveNewUser}>
+            <div className="adm-table-responsive">
+              <table className="adm-table">
+                <thead>
+                  <tr>
+                    <th>TÀI KHOẢN</th>
+                    <th>LIÊN HỆ</th>
+                    <th>VAI TRÒ</th>
+                    <th>TRẠNG THÁI</th>
+                    <th>NGÀY TẠO</th>
+                    <th className="adm-th-actions">THAO TÁC</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(account => {
+                    const isSelf = account.userId === currentUserId;
+                    const lockBlocked = lockBlockedReason(account);
+                    return (
+                      <tr key={account.userId} className={account.status === 'DISABLED' ? 'adm-row-locked' : ''}>
+                        <td>
+                          <div className="adm-user-cell">
+                            <div className="adm-user-avatar-sm">{adminUserInitials(account.fullName)}</div>
+                            <div>
+                              <div className="adm-user-name">{account.fullName}</div>
+                              <div className="adm-user-code">@{account.username} · ID {account.userId}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="adm-contact-cell">
+                            <div className="adm-contact-item">
+                              {account.email && !account.emailVerified ? <MailWarning size={13} /> : <Mail size={13} />}
+                              <span title={account.email ?? undefined}>{account.email || 'Chưa có email'}</span>
+                            </div>
+                            {account.email && (
+                              <div className="adm-contact-item">
+                                <span className={`adm-badge-status ${account.emailVerified ? 'badge-status-active' : 'badge-status-pending'}`}>
+                                  {account.emailVerified ? 'Đã xác minh' : 'Chưa xác minh'}
+                                </span>
+                              </div>
+                            )}
+                            {account.phone && (
+                              <div className="adm-contact-item">
+                                <Phone size={13} />
+                                <span>{account.phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="adm-role-list">
+                            {account.roles.map(role => (
+                              <span key={role} className={`adm-badge-role ${ROLE_BADGE_CLASS[role]}`}>{ADMIN_ROLE_LABELS[role]}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`adm-badge-status ${account.status === 'DISABLED' ? 'badge-status-locked' : 'badge-status-active'}`}>
+                            <span className="adm-status-dot"></span>
+                            {ADMIN_ACCOUNT_STATUS_LABELS[account.status]}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="adm-time-cell">
+                            <Clock size={13} />
+                            <span>{formatDate(account.createdAt)}</span>
+                          </div>
+                        </td>
+                        <td className="adm-td-actions">
+                          <div className="adm-action-buttons">
+                            <button
+                              type="button"
+                              className="adm-icon-btn"
+                              aria-label={`Chỉnh sửa ${account.username}`}
+                              title={isSelf ? 'Hãy cập nhật thông tin của bạn ở trang Hồ sơ.' : 'Chỉnh sửa thông tin'}
+                              disabled={isSelf}
+                              onClick={() => openEdit(account)}
+                            >
+                              <Edit3 size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={`adm-icon-btn ${account.status === 'DISABLED' ? 'btn-unlock' : 'btn-lock'}`}
+                              aria-label={`${account.status === 'DISABLED' ? 'Mở khóa' : 'Khóa'} ${account.username}`}
+                              title={lockBlocked || (account.status === 'DISABLED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản')}
+                              disabled={Boolean(lockBlocked)}
+                              onClick={() => openStatus(account)}
+                            >
+                              {account.status === 'DISABLED' ? <Unlock size={15} /> : <Lock size={15} />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {!loading && !error && pages > 1 && (
+        <CompactPagination page={page + 1} pages={pages} total={total} onPage={next => setPage(next - 1)} />
+      )}
+
+      {createOpen && (
+        <div className="adm-modal-overlay" onClick={closeDialogs}>
+          <section
+            className="adm-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-create-user-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="adm-modal-header">
+              <h3 id="admin-create-user-title" className="adm-modal-title">Thêm tài khoản</h3>
+              <button type="button" className="adm-modal-close" aria-label="Đóng" onClick={closeDialogs}><X size={18} /></button>
+            </div>
+            <form onSubmit={submitCreate} noValidate>
               <div className="adm-modal-body">
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Họ và tên *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Ví dụ: Nguyễn Văn An"
-                    className="adm-form-input"
-                    value={newFullName}
-                    onChange={(e) => setNewFullName(e.target.value)}
-                  />
-                </div>
-
+                <p className="adm-confirm-text">
+                  Tài khoản mới chỉ có vai trò Người tham gia và email chưa xác minh. Bạn cần trao mật khẩu ban đầu cho người dùng qua kênh riêng.
+                </p>
                 <div className="adm-form-row">
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Địa chỉ Email *</label>
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="email@domain.com"
+                    <label className="adm-form-label" htmlFor="admin-create-username">Tên đăng nhập *</label>
+                    <input
+                      id="admin-create-username"
                       className="adm-form-input"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
+                      autoComplete="off"
+                      maxLength={20}
+                      value={createForm.username}
+                      onChange={event => setCreateForm({ ...createForm, username: event.target.value })}
                     />
                   </div>
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Số điện thoại</label>
-                    <input 
-                      type="tel" 
-                      placeholder="0912 345 678"
+                    <label className="adm-form-label" htmlFor="admin-create-fullname">Họ và tên *</label>
+                    <input
+                      id="admin-create-fullname"
                       className="adm-form-input"
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
+                      maxLength={50}
+                      value={createForm.fullName}
+                      onChange={event => setCreateForm({ ...createForm, fullName: event.target.value })}
                     />
                   </div>
                 </div>
-
                 <div className="adm-form-row">
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Vai trò trong hệ thống</label>
-                    <select 
-                      className="adm-form-select"
-                      value={newRole}
-                      onChange={(e) => setNewRole(e.target.value as AdminRoleType)}
-                    >
-                      <option value="participant">Participant (Độc giả)</option>
-                      <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
-                      <option value="organizer">Organizer (Ban tổ chức)</option>
-                      <option value="admin">System Admin (Quản trị viên)</option>
-                    </select>
+                    <label className="adm-form-label" htmlFor="admin-create-password">Mật khẩu ban đầu *</label>
+                    <input
+                      id="admin-create-password"
+                      type="password"
+                      className="adm-form-input"
+                      autoComplete="new-password"
+                      maxLength={64}
+                      value={createForm.password}
+                      onChange={event => setCreateForm({ ...createForm, password: event.target.value })}
+                    />
                   </div>
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Trạng thái khởi tạo</label>
-                    <select 
-                      className="adm-form-select"
-                      value={newStatus}
-                      onChange={(e) => setNewStatus(e.target.value as AdminAccountStatus)}
-                    >
-                      <option value="active">Hoạt động ngay</option>
-                      <option value="pending_verification">Chờ xác thực hồ sơ</option>
-                      <option value="locked">Tạm khóa</option>
-                    </select>
+                    <label className="adm-form-label" htmlFor="admin-create-confirm">Xác nhận mật khẩu *</label>
+                    <input
+                      id="admin-create-confirm"
+                      type="password"
+                      className="adm-form-input"
+                      autoComplete="new-password"
+                      maxLength={64}
+                      value={createForm.confirmPassword}
+                      onChange={event => setCreateForm({ ...createForm, confirmPassword: event.target.value })}
+                    />
                   </div>
                 </div>
-
-                <div className="adm-form-hint">
-                  * Mật khẩu tạm thời sẽ được tạo ngẫu nhiên và gửi tới hòm thư của người dùng sau khi khởi tạo thành công.
+                <div className="adm-form-row">
+                  <div className="adm-form-group">
+                    <label className="adm-form-label" htmlFor="admin-create-email">Email</label>
+                    <input
+                      id="admin-create-email"
+                      type="email"
+                      className="adm-form-input"
+                      maxLength={255}
+                      value={createForm.email}
+                      onChange={event => setCreateForm({ ...createForm, email: event.target.value })}
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-form-label" htmlFor="admin-create-phone">Số điện thoại</label>
+                    <input
+                      id="admin-create-phone"
+                      type="tel"
+                      className="adm-form-input"
+                      maxLength={20}
+                      value={createForm.phone}
+                      onChange={event => setCreateForm({ ...createForm, phone: event.target.value })}
+                    />
+                  </div>
                 </div>
+                {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
               </div>
-
               <div className="adm-modal-footer">
-                <button 
-                  type="button" 
-                  className="adm-btn adm-btn-secondary"
-                  onClick={() => setIsAddModalOpen(false)}
-                >
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="adm-btn adm-btn-primary">
-                  Tạo tài khoản
+                <button type="button" className="adm-btn adm-btn-secondary" onClick={closeDialogs} disabled={submitting}>Hủy</button>
+                <button type="submit" className="adm-btn adm-btn-primary" disabled={submitting}>
+                  {submitting ? 'Đang tạo...' : 'Tạo tài khoản'}
                 </button>
               </div>
             </form>
-          </div>
+          </section>
         </div>
       )}
 
-      {/* Modal: Edit User */}
-      {editingUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content">
+      {editTarget && (
+        <div className="adm-modal-overlay" onClick={closeDialogs}>
+          <section
+            className="adm-modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-edit-user-title"
+            onClick={event => event.stopPropagation()}
+          >
             <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Chỉnh sửa tài khoản: {editingUser.code}</h3>
-              <button className="adm-modal-close" onClick={() => setEditingUser(null)}>
-                <X size={18} />
-              </button>
+              <h3 id="admin-edit-user-title" className="adm-modal-title">Cập nhật tài khoản @{editTarget.username}</h3>
+              <button type="button" className="adm-modal-close" aria-label="Đóng" onClick={closeDialogs}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSaveEdit}>
+            <form onSubmit={submitEdit} noValidate>
               <div className="adm-modal-body">
                 <div className="adm-form-group">
-                  <label className="adm-form-label">Họ và tên</label>
-                  <input 
-                    type="text" 
-                    required
+                  <label className="adm-form-label" htmlFor="admin-edit-fullname">Họ và tên *</label>
+                  <input
+                    id="admin-edit-fullname"
                     className="adm-form-input"
-                    value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
+                    maxLength={50}
+                    value={editForm.fullName}
+                    onChange={event => setEditForm({ ...editForm, fullName: event.target.value })}
                   />
                 </div>
-
                 <div className="adm-form-row">
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Email (Không thể sửa)</label>
-                    <input 
-                      type="text" 
-                      disabled
-                      className="adm-form-input adm-input-disabled"
-                      value={editingUser.email}
-                    />
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Số điện thoại</label>
-                    <input 
-                      type="tel" 
+                    <label className="adm-form-label" htmlFor="admin-edit-phone">Số điện thoại</label>
+                    <input
+                      id="admin-edit-phone"
+                      type="tel"
                       className="adm-form-input"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
+                      maxLength={20}
+                      placeholder="Để trống để xóa số điện thoại"
+                      value={editForm.phone}
+                      onChange={event => setEditForm({ ...editForm, phone: event.target.value })}
                     />
                   </div>
-                </div>
-
-                <div className="adm-form-row">
                   <div className="adm-form-group">
-                    <label className="adm-form-label">Vai trò</label>
-                    <select 
-                      className="adm-form-select"
-                      value={editRole}
-                      onChange={(e) => setEditRole(e.target.value as AdminRoleType)}
-                    >
-                      <option value="participant">Participant (Độc giả)</option>
-                      <option value="partner">Partner (Nhà xuất bản / Đối tác)</option>
-                      <option value="organizer">Organizer (Ban tổ chức)</option>
-                      <option value="admin">System Admin (Quản trị viên)</option>
-                    </select>
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Trạng thái</label>
-                    <select 
-                      className="adm-form-select"
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as AdminAccountStatus)}
-                    >
-                      <option value="active">Hoạt động</option>
-                      <option value="locked">Bị khóa</option>
-                      <option value="pending_verification">Chờ xác thực</option>
-                    </select>
+                    <label className="adm-form-label" htmlFor="admin-edit-email">Email</label>
+                    <input
+                      id="admin-edit-email"
+                      type="email"
+                      className="adm-form-input"
+                      maxLength={255}
+                      disabled={editTarget.emailVerified}
+                      value={editForm.email}
+                      onChange={event => setEditForm({ ...editForm, email: event.target.value })}
+                    />
+                    <small className="adm-form-hint">
+                      {editTarget.emailVerified
+                        ? 'Email đã xác minh nên không thể thay đổi.'
+                        : 'Đổi email chưa xác minh sẽ hủy liên kết xác minh cũ và gửi liên kết mới.'}
+                    </small>
                   </div>
                 </div>
+                {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
               </div>
-
               <div className="adm-modal-footer">
-                <button 
-                  type="button" 
-                  className="adm-btn adm-btn-secondary"
-                  onClick={() => setEditingUser(null)}
-                >
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn adm-btn-primary">
-                  Lưu thay đổi
+                <button type="button" className="adm-btn adm-btn-secondary" onClick={closeDialogs} disabled={submitting}>Hủy</button>
+                <button type="submit" className="adm-btn adm-btn-primary" disabled={submitting}>
+                  {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
-          </div>
+          </section>
         </div>
       )}
 
-      {/* Dialog: Lock / Unlock User */}
-      {lockTargetUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content adm-dialog-content">
+      {statusTarget && (
+        <div className="adm-modal-overlay" onClick={closeDialogs}>
+          <section
+            className="adm-modal-content adm-dialog-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-status-title"
+            onClick={event => event.stopPropagation()}
+          >
             <div className="adm-modal-header">
-              <h3 className="adm-modal-title">
-                {lockTargetUser.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản người dùng'}
+              <h3 id="admin-status-title" className="adm-modal-title">
+                {statusTarget.status === 'DISABLED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
               </h3>
-              <button className="adm-modal-close" onClick={() => setLockTargetUser(null)}>
-                <X size={18} />
-              </button>
+              <button type="button" className="adm-modal-close" aria-label="Đóng" onClick={closeDialogs}><X size={18} /></button>
             </div>
             <div className="adm-modal-body">
-              {lockTargetUser.status === 'locked' ? (
-                <p className="adm-confirm-text">
-                  Bạn có chắc chắn muốn mở khóa cho tài khoản <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email})? 
-                  Người dùng sẽ có thể đăng nhập lại bình thường.
-                </p>
-              ) : (
-                <>
-                  <p className="adm-confirm-text">
-                    Xác nhận khóa truy cập tài khoản của <strong>{lockTargetUser.fullName}</strong> ({lockTargetUser.email}).
-                    Phiên đăng nhập hiện tại sẽ bị hủy hiệu lực ngay lập tức.
-                  </p>
-                  <div className="adm-form-group" style={{ marginTop: '1rem' }}>
-                    <label className="adm-form-label">Lý do khóa tài khoản (Ghi vào Audit log) *</label>
-                    <input 
-                      type="text"
-                      className="adm-form-input"
-                      placeholder="Ví dụ: Vi phạm quy định nội dung, nghi ngờ bị chiếm quyền..."
-                      value={lockReason}
-                      onChange={(e) => setLockReason(e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
+              <p className="adm-confirm-text">
+                {statusTarget.status === 'DISABLED'
+                  ? <>Mở khóa tài khoản <strong>{statusTarget.fullName}</strong> (@{statusTarget.username}). Người dùng sẽ cần đăng nhập lại; các phiên cũ không được khôi phục.</>
+                  : <>Khóa tài khoản <strong>{statusTarget.fullName}</strong> (@{statusTarget.username}). Các phiên đăng nhập hiện có sẽ ngừng hoạt động từ yêu cầu tiếp theo. Dữ liệu nghiệp vụ của tài khoản được giữ nguyên.</>}
+              </p>
+              <div className="adm-form-group">
+                <label className="adm-form-label" htmlFor="admin-status-reason">Lý do (10–500 ký tự) *</label>
+                <textarea
+                  id="admin-status-reason"
+                  className="adm-form-input"
+                  rows={3}
+                  maxLength={500}
+                  value={reason}
+                  onChange={event => setReason(event.target.value)}
+                />
+                <small className="adm-form-hint">Lý do được ghi vào nhật ký hệ thống.</small>
+              </div>
+              {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
             </div>
             <div className="adm-modal-footer">
-              <button 
-                type="button" 
-                className="adm-btn adm-btn-secondary"
-                onClick={() => setLockTargetUser(null)}
+              <button type="button" className="adm-btn adm-btn-secondary" onClick={closeDialogs} disabled={submitting}>Hủy</button>
+              <button
+                type="button"
+                className={`adm-btn ${statusTarget.status === 'DISABLED' ? 'adm-btn-primary' : 'adm-btn-danger'}`}
+                disabled={submitting || !isValidAdminReason(reason)}
+                onClick={submitStatus}
               >
-                Hủy
-              </button>
-              <button 
-                type="button" 
-                className={`adm-btn ${lockTargetUser.status === 'locked' ? 'adm-btn-primary' : 'adm-btn-danger'}`}
-                onClick={handleConfirmLockToggle}
-              >
-                {lockTargetUser.status === 'locked' ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
+                {submitting ? 'Đang xử lý...' : statusTarget.status === 'DISABLED' ? 'Xác nhận mở khóa' : 'Xác nhận khóa'}
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
     </div>
   );
 };
-
