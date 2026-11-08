@@ -183,8 +183,10 @@ public class PartnerActivityProposalService {
         var locks = lockService.lockProposalRoot(proposalId, List.of());
         ActivityProposal proposal = locks.proposal();
         requireSameApplication(proposal, ownedRoute.getApplicationId());
-        PartnerEventApplication application = approvedApplicationById(proposal.getApplicationId(),
+        PartnerEventApplication application = applicationById(proposal.getApplicationId(),
                 representativeUserId);
+        organizationGuard.requireActive(application.getPartnerOrganization());
+        requireApproved(application);
         if (proposal.getStatus() != ActivityProposalStatus.NEED_CHANGES
                 || (locks.event().getStatus() != EventStatus.PUBLISHED
                     && locks.event().getStatus() != EventStatus.ONGOING)) {

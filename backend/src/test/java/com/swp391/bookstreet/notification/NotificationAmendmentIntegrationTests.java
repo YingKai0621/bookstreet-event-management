@@ -162,6 +162,20 @@ class NotificationAmendmentIntegrationTests {
     }
 
     @Test
+    void holdReminderSkipsAnInactivePartnerOrganization() {
+        SelectedBooth booth = insertSelectedBooth("A2");
+        Instant now = Instant.now();
+        setHoldTimes(booth, now.minus(Duration.ofHours(10)), now.plus(Duration.ofHours(1)));
+        jdbc.update("update partner_organizations set status = 'INACTIVE' where partner_organization_id = ?",
+                organizationId);
+
+        holds.remindExpiringHolds(now);
+
+        assertThat(rows(partner, "PARTNER", "PARTNER_BOOTH_HOLD_EXPIRING", "booth_request_id",
+                booth.requestId())).isZero();
+    }
+
+    @Test
     void holdReminderSkipsFarShortAndBlockedHolds() {
         Instant now = Instant.now();
         SelectedBooth far = insertSelectedBooth("B1");

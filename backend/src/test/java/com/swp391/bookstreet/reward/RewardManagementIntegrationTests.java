@@ -22,6 +22,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -195,6 +196,33 @@ class RewardManagementIntegrationTests {
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("BADGE_NOT_FOUND"));
         mvc.perform(delete(ADMIN + "/" + created.badge().badgeId()).with(authentication(auth(adminId, "ADMIN"))).with(csrf()))
                 .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void badgeCommandsWriteAuditDetailsAndAuditFailureRollsBackTheMutation() {
+        var created = admin.create(input("Audit badge", 10, false));
+        long badgeId = created.badge().badgeId();
+        assertThat(jdbc.queryForObject("""
+                select count(*) from admin_audit_logs
+                where action = 'BADGE_CREATED' and target_type = 'BADGE' and target_id = ?
+                """, Long.class, badgeId)).isOne();
+        assertThat(jdbc.queryForObject("select details::text from admin_audit_logs where action = 'BADGE_CREATED' and target_id = ?",
+                String.class, badgeId)).contains("requiredPoints", "isActive");
+
+        admin.update(badgeId, new AdminBadgeRequest("Audit badge updated", "Mô tả", 20, null, true));
+        assertThat(jdbc.queryForObject("select details::text from admin_audit_logs where action = 'BADGE_UPDATED' and target_id = ?",
+                String.class, badgeId)).contains("name", "description", "requiredPoints", "isActive");
+
+        var synchronizedAwards = synchronization.synchronize(badgeId);
+        assertThat(jdbc.queryForObject("select details::text from admin_audit_logs where action = 'BADGE_AWARDS_SYNCHRONIZED' and target_id = ?",
+                String.class, badgeId)).contains(
+                        "processedCount", "awardedCount", "remainingEligibleCount", "completed");
+        assertThat(synchronizedAwards.remainingEligibleCount()).isZero();
+
+        authenticate(Long.MAX_VALUE, "ADMIN");
+        assertThatThrownBy(() -> admin.create(input("Rolled back badge", 99, false)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("select count(*) from badges where name = 'Rolled back badge'", Long.class)).isZero();
     }
 
     @Test

@@ -160,6 +160,77 @@ class PartnerActivityProposalIntegrationTests {
     }
 
     @Test
+    void inactiveOrganizationBlocksNewActivityWorkButKeepsWithdrawalsAvailable()
+            throws Exception {
+        Instant eventStart = future(5);
+        long eventId = insertEvent("PUBLISHED", eventStart,
+                eventStart.plus(Duration.ofDays(1)), future(2), 5);
+        long applicationId = insertApplication(eventId,
+                partnerOneOrganizationId, "APPROVED");
+        long stageId = insertLocation("INACTIVE-GUARD", "STAGE", 100, true);
+        Instant start = eventStart.plus(Duration.ofHours(2));
+
+        long resubmitId = submitProposal(eventId, stageId, "Proposal to revise", start,
+                start.plusSeconds(1800), 20);
+        jdbc.update("""
+                update activity_proposals
+                set status = 'NEED_CHANGES', review_note = 'Please revise this proposal.',
+                    reviewed_at = current_timestamp
+                where activity_proposal_id = ?
+                """, resubmitId);
+        long withdrawProposalId = submitProposal(eventId, stageId, "Proposal to withdraw",
+                start.plus(Duration.ofHours(1)), start.plus(Duration.ofHours(1)).plusSeconds(1800),
+                20);
+
+        long changeActivityId = insertOfficialActivity(eventId, stageId, resubmitId,
+                "Change target", "DRAFT", start, start.plusSeconds(1800), false);
+        long cancellationProposalId = insertApprovedProposal(applicationId, stageId,
+                "Cancellation proposal", start.plus(Duration.ofHours(2)),
+                start.plus(Duration.ofHours(2)).plusSeconds(1800));
+        long cancellationActivityId = insertOfficialActivity(eventId, stageId, cancellationProposalId,
+                "Cancellation target", "DRAFT", start.plus(Duration.ofHours(2)),
+                start.plus(Duration.ofHours(2)).plusSeconds(1800), false);
+        long pendingChangeId = insertPendingChangeRequest(changeActivityId, "Pending title");
+        long pendingCancellationId = insertPendingCancellationRequest(cancellationActivityId);
+
+        jdbc.update("update partner_organizations set status = 'INACTIVE' where partner_organization_id = ?",
+                partnerOneOrganizationId);
+
+        submitExpecting(eventId, stageId, start.plus(Duration.ofHours(3)), 20,
+                "PARTNER_ORGANIZATION_INACTIVE");
+        mvc.perform(post(PROPOSALS + "/" + resubmitId + "/resubmit")
+                        .with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post("/api/v1/partner/activities/" + changeActivityId
+                        + "/change-requests").with(partner(partnerOneUserId)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"Một lý do thay đổi hợp lệ.\",\"requestedTitle\":\"Blocked title\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post("/api/v1/partner/activities/" + cancellationActivityId
+                        + "/cancellation-requests").with(partner(partnerOneUserId)).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reason\":\"Một lý do hủy hợp lệ.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+
+        mvc.perform(post(PROPOSALS + "/" + withdrawProposalId + "/withdraw")
+                        .with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WITHDRAWN"));
+        mvc.perform(post("/api/v1/partner/activity-change-requests/" + pendingChangeId
+                        + "/withdraw").with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WITHDRAWN"));
+        mvc.perform(post("/api/v1/partner/activity-cancellation-requests/"
+                        + pendingCancellationId + "/withdraw")
+                        .with(partner(partnerOneUserId)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WITHDRAWN"));
+    }
+
+    @Test
     void approvedPartnerSubmitsSharedLocationProposalAndReadsOnlyOwnedData() throws Exception {
         Instant eventStart = future(5);
         long eventId = insertEvent("PUBLISHED", eventStart,

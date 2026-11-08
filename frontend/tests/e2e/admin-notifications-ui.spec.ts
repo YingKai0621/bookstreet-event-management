@@ -46,10 +46,7 @@ async function setup(page: Page, options: { listFailure?: boolean; listStatus?: 
       } }]);
     }
     if (path.endsWith('/admin/dashboard')) {
-      return json(route, {
-        userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0,
-        usersByRole: {}, auditByDay: [],
-      });
+      return json(route, { accounts: { total: 0, byRole: { PARTICIPANT: 0, PARTNER: 0, ORGANIZER: 0, ADMIN: 0 }, byStatus: { ACTIVE: 0, DISABLED: 0 } }, events: { total: 0, byStatus: { DRAFT: 0, PUBLISHED: 0, ONGOING: 0, COMPLETED: 0, CANCELLED: 0 } }, activeBoothAssignments: 0, boothRevenue: 0, auditByDay: Array.from({ length: 7 }, (_, index) => ({ date: `2026-11-0${index + 1}`, count: 0 })) });
     }
     if (path.endsWith('/admin/badges') || path.endsWith('/admin/users')) return json(route, notificationPage());
     if (path.endsWith('/admin/notifications/unread-count')) {

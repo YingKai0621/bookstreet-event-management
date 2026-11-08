@@ -243,6 +243,25 @@ class PaymentSprint03IntegrationTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("PAYMENT_ATTEMPT_ALREADY_PENDING"));
 
+        jdbc.update("""
+                update partner_organizations set status = 'INACTIVE'
+                where partner_organization_id = (
+                    select application.partner_organization_id
+                    from booth_requests request
+                    join partner_event_applications application on application.application_id = request.application_id
+                    where request.booth_request_id = ?)
+                """, fixture.requestId());
+        mvc.perform(post("/api/v1/partner/booth-requests/{requestId}/payments",
+                        fixture.requestId()).header("Idempotency-Key", key.toString())
+                        .with(identity(partner, "PARTNER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.payment.boothPaymentId").value(paymentId));
+        mvc.perform(post("/api/v1/partner/booth-requests/{requestId}/payments",
+                        fixture.requestId()).header("Idempotency-Key", UUID.randomUUID().toString())
+                        .with(identity(partner, "PARTNER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+
         assertThat(jdbc.queryForObject("select count(*) from booth_payments where booth_hold_id = "
                 + "(select booth_hold_id from booth_holds where booth_request_id = ?)",
                 Integer.class, fixture.requestId())).isOne();

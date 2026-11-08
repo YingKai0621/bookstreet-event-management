@@ -38,10 +38,7 @@ async function setup(target: Page, options: { failuresBeforeSuccess?: number; st
     if (url.pathname.endsWith('/admin/notifications/unread-count')) return json(route, { unreadCount: 0 });
     if (url.pathname.endsWith('/admin/notifications')) return json(route, page([]));
     if (url.pathname.endsWith('/admin/dashboard')) {
-      return json(route, {
-        userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0,
-        usersByRole: {}, auditByDay: [],
-      });
+      return json(route, dashboard());
     }
     if (url.pathname.endsWith('/admin/users')) return json(route, page([]));
     if (url.pathname.endsWith('/admin/audit-logs')) {
@@ -58,6 +55,10 @@ async function setup(target: Page, options: { failuresBeforeSuccess?: number; st
     return json(route, page([]));
   });
   return { auditQueries, paths };
+}
+
+function dashboard() {
+  return { accounts: { total: 0, byRole: { PARTICIPANT: 0, PARTNER: 0, ORGANIZER: 0, ADMIN: 0 }, byStatus: { ACTIVE: 0, DISABLED: 0 } }, events: { total: 0, byStatus: { DRAFT: 0, PUBLISHED: 0, ONGOING: 0, COMPLETED: 0, CANCELLED: 0 } }, activeBoothAssignments: 0, boothRevenue: 0, auditByDay: Array.from({ length: 7 }, (_, index) => ({ date: `2026-11-0${index + 1}`, count: 0 })) };
 }
 
 test('the audit screen shows real rows with a readable action, reason and detail', async ({ page: browser }) => {

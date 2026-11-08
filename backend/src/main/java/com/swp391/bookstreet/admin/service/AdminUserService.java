@@ -1,7 +1,6 @@
 package com.swp391.bookstreet.admin.service;
 
 import com.swp391.bookstreet.admin.dto.AdminCreateUserRequest;
-import com.swp391.bookstreet.admin.dto.AdminDashboardStatsDto;
 import com.swp391.bookstreet.admin.dto.AdminPageResponse;
 import com.swp391.bookstreet.admin.dto.AdminStatusUpdateRequest;
 import com.swp391.bookstreet.admin.dto.AdminUpdateUserRequest;
@@ -32,7 +31,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -41,12 +39,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -433,57 +428,4 @@ public class AdminUserService {
         throw exception;
     }
 
-    // ---- Dashboard: owned by Developer C in Sprint 11 (AC-D-S11-01), kept unchanged here --------------
-
-    @Transactional(readOnly = true)
-    public AdminDashboardStatsDto getDashboardStats() {
-        List<User> allUsers = userRepository.findAllWithRoles();
-        long userCount = allUsers.size();
-
-        Map<String, Long> usersByRole = new HashMap<>();
-        usersByRole.put("participant", 0L);
-        usersByRole.put("partner", 0L);
-        usersByRole.put("organizer", 0L);
-        usersByRole.put("admin", 0L);
-
-        for (User u : allUsers) {
-            String primaryRole = resolvePrimaryRole(u);
-            usersByRole.put(primaryRole, usersByRole.getOrDefault(primaryRole, 0L) + 1);
-        }
-
-        long eventCount = eventRepository.count();
-        long openEventCount = eventRepository.findByStatus(EventStatus.ONGOING, PageRequest.of(0, 100)).getTotalElements()
-                + eventRepository.findByStatus(EventStatus.PUBLISHED, PageRequest.of(0, 100)).getTotalElements();
-
-        List<AdminDashboardStatsDto.AuditDayDto> auditByDay = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        for (int i = 6; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
-            auditByDay.add(new AdminDashboardStatsDto.AuditDayDto(day.format(formatter), 0L));
-        }
-
-        return new AdminDashboardStatsDto(
-                userCount,
-                eventCount,
-                openEventCount,
-                0L,
-                0L,
-                0L,
-                usersByRole,
-                auditByDay
-        );
-    }
-
-    private String resolvePrimaryRole(User user) {
-        List<RoleCode> roles = user.getUserRoles().stream()
-                .map(ur -> ur.getRole().getCode())
-                .collect(Collectors.toList());
-
-        if (roles.contains(RoleCode.ADMIN)) return "admin";
-        if (roles.contains(RoleCode.ORGANIZER)) return "organizer";
-        if (roles.contains(RoleCode.PARTNER)) return "partner";
-        return "participant";
-    }
 }

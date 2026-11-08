@@ -2,13 +2,11 @@ import { Activity, ArrowRight, Calendar, Clock, FileText, Store, UserPlus, Users
 import React from 'react';
 import { ADMIN_AUDIT_ACTION_LABELS, formatAuditTime, type AdminAuditLog } from '../../services/adminAuditApi';
 import type { AdminDashboardStats } from '../../services/adminDashboardApi';
-import type { AdminUser } from '../../services/adminUsersApi';
 
 interface AdminDashboardViewProps {
   onNavigateTab: (tab: string) => void;
   auditLogs: AdminAuditLog[];
   auditLogsFailed: boolean;
-  users: AdminUser[];
   stats: AdminDashboardStats;
   onOpenAddUser: () => void;
 }

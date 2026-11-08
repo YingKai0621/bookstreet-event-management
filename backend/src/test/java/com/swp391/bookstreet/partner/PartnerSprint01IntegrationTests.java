@@ -12,6 +12,7 @@ import com.swp391.bookstreet.partner.service.PartnerApplicationService;
 import com.swp391.bookstreet.partner.service.PartnerOrganizationService;
 import com.swp391.bookstreet.security.authentication.AuthenticatedUser;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,6 +47,7 @@ class PartnerSprint01IntegrationTests {
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired UserRoleRepository userRoles;
+    @Autowired EntityManager entityManager;
     @Autowired PartnerOrganizationService organizations;
     @Autowired PartnerApplicationService applications;
 
@@ -143,6 +145,41 @@ class PartnerSprint01IntegrationTests {
     }
 
     @Test
+    void inactiveOrganizationCannotSubmitOrBeApprovedButCanStillBeRejected() throws Exception {
+        User organizer = user(RoleCode.ORGANIZER);
+        User partner = user(RoleCode.PARTNER);
+        organization(partner);
+        long eventId = event(organizer, "PUBLISHED", Instant.now().plusSeconds(86400));
+        long organizationId = jdbc.queryForObject(
+                "select partner_organization_id from partner_organizations where representative_user_id = ?",
+                Long.class, partner.getId());
+        jdbc.update("update partner_organizations set status = 'INACTIVE' where partner_organization_id = ?",
+                organizationId);
+        entityManager.clear();
+
+        mvc.perform(post("/api/v1/events/{eventId}/applications", eventId)
+                        .with(as(partner)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        assertThat(jdbc.queryForObject("select count(*) from partner_event_applications where event_id = ?",
+                Long.class, eventId)).isZero();
+
+        long pendingId = jdbc.queryForObject("""
+                insert into partner_event_applications(partner_organization_id, event_id, status, submitted_at)
+                values (?, ?, 'PENDING', current_timestamp) returning application_id
+                """, Long.class, organizationId, eventId);
+        mvc.perform(post("/api/v1/organizer/applications/{id}/approve", pendingId)
+                        .with(as(organizer)).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post("/api/v1/organizer/applications/{id}/reject", pendingId)
+                        .with(as(organizer)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reviewNote\":\"Tổ chức chưa đáp ứng yêu cầu.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+    }
+
+    @Test
     void submissionRechecksTimedLifecycleUnderRootLock() throws Exception {
         User partner = user(RoleCode.PARTNER);
         User organizer = user(RoleCode.ORGANIZER);
@@ -189,7 +226,8 @@ class PartnerSprint01IntegrationTests {
 
         mvc.perform(get("/api/v1/organizer/events/{id}/applications", eventId).with(as(organizer)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(2));
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].partnerOrganizationStatus").value("ACTIVE"));
         mvc.perform(get("/api/v1/organizer/events/{id}/applications?status=PENDING&page=0&size=1", eventId)
                         .with(as(organizer)))
                 .andExpect(status().isOk())
@@ -200,7 +238,8 @@ class PartnerSprint01IntegrationTests {
                 .andExpect(jsonPath("$.code").value("EVENT_ACCESS_DENIED"));
         mvc.perform(get("/api/v1/organizer/applications/{id}", firstId).with(as(organizer)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.partnerOrganizationStatus").value("ACTIVE"));
         mvc.perform(post("/api/v1/organizer/applications/{id}/approve", firstId)
                         .with(as(otherOrganizer)).with(csrf()))
                 .andExpect(status().isForbidden())
