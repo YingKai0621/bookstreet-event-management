@@ -160,6 +160,8 @@ public class SecurityConfiguration {
                         "/api/v1/auth/login",
                         "/api/v1/auth/csrf",
                         "/api/v1/auth/email-verification/confirm",
+                        "/api/v1/auth/password-reset/request",
+                        "/api/v1/auth/password-reset/confirm",
                         "/error",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",

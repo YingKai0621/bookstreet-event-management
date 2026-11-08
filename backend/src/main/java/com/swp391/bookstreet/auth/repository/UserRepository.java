@@ -27,6 +27,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    Optional<User> findByEmailIgnoreCase(String email);
+
     @Query(value = """
             select u.user_id from users u
             join user_roles ur on ur.user_id = u.user_id
