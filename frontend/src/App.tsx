@@ -77,6 +77,9 @@ const LoginPage = lazy(() => import('./pages/public/LoginPage').then(module => (
 const RegisterPage = lazy(() => import('./pages/public/RegisterPage').then(module => ({
   default: module.RegisterPage,
 })));
+const PasswordResetPage = lazy(() => import('./pages/public/PasswordResetPage').then(module => ({
+  default: module.PasswordResetPage,
+})));
 const VerifyEmailPage = lazy(() => import('./pages/public/VerifyEmailPage').then(module => ({
   default: module.VerifyEmailPage,
 })));
@@ -270,6 +273,7 @@ export function App() {
   const isEvents = /^\/su-kien(?:\/|$)/.test(location.pathname);
   const isLoginRoute = location.pathname === '/login';
   const isRegisterRoute = location.pathname === '/register';
+  const isPasswordResetRoute = location.pathname === '/forgot-password' || location.pathname === '/reset-password';
   const isParticipantRoute = location.pathname.startsWith('/participant');
   const isParticipantAttendanceScanRoute = location.pathname === PARTICIPANT_ATTENDANCE_SCAN_PATH;
   const isParticipantBoothScanRoute = location.pathname === PARTICIPANT_BOOTH_SCAN_PATH;
@@ -286,7 +290,8 @@ export function App() {
     && !isAdminRoute
     && !isLoginRoute
     && !isRegisterRoute
-    && location.pathname !== '/verify-email';
+    && location.pathname !== '/verify-email'
+    && !isPasswordResetRoute;
   const isAuthenticated = authenticationStatus === 'authenticated';
   const isPortalAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ORGANIZER'));
   const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
@@ -894,6 +899,14 @@ export function App() {
   }
 
   // NẾU ĐANG TRUY CẬP ROUTE /login (TRANG ĐĂNG NHẬP ĐỘC GIẢ)
+  if (isPasswordResetRoute) {
+    return (
+      <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang đặt lại mật khẩu..." />}>
+        <PasswordResetPage language={language} key={location.pathname} />
+      </AsyncContent>
+    );
+  }
+
   if (location.pathname === '/verify-email') {
     return (
       <AsyncContent fallback={<RouteChunkFallback message="Đang tải trang xác minh email..." />}>
