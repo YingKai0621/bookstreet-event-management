@@ -27,6 +27,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    @Query(value = """
+            select u.user_id from users u
+            join user_roles ur on ur.user_id = u.user_id
+            join roles r on r.role_id = ur.role_id
+            where r.code = 'ADMIN' and u.status = 'ACTIVE' and u.email_verified_at is not null
+            order by u.user_id
+            for update of u
+            """, nativeQuery = true)
+    java.util.List<Long> lockActiveAdminIds();
+
     @EntityGraph(attributePaths = {"userRoles", "userRoles.role"})
     @Query("select distinct u from User u order by u.id asc")
     java.util.List<User> findAllWithRoles();
