@@ -74,22 +74,26 @@ export const PartnerEventDiscoveryPage: React.FC<PartnerEventDiscoveryPageProps>
       setEvents(publishedEvents);
       setApplications(ownApplications);
       setEventPage(1);
-
-      const requestedEventId = new URLSearchParams(location.search).get('event');
-      if (requestedEventId) {
-        const existingApplication = ownApplications.find(application => application.eventId === requestedEventId);
-        if (existingApplication) {
-          navigate(`/partner/events?application=${encodeURIComponent(existingApplication.id)}`, { replace: true });
-          return;
-        }
-        setApplicationEvent(publishedEvents.find(event => event.id === requestedEventId) || null);
-      }
     } catch (error) {
       setErrorMessage(partnerApplicationErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
-  }, [location.search, navigate]);
+  }, []);
+
+  // Opening an event from a link only reads data already loaded. Clearing the link when the modal
+  // closes must not reload the whole list, so this stays separate from loadDiscovery.
+  const requestedEventId = new URLSearchParams(location.search).get('event');
+  useEffect(() => {
+    if (isLoading || !requestedEventId) return;
+    const existingApplication = applications.find(application => application.eventId === requestedEventId);
+    if (existingApplication) {
+      navigate(`/partner/events?application=${encodeURIComponent(existingApplication.id)}`, { replace: true });
+      return;
+    }
+    // oxlint-disable-next-line react/set-state-in-effect -- The requested link selects which loaded event to show.
+    setApplicationEvent(events.find(event => event.id === requestedEventId) || null);
+  }, [applications, events, isLoading, navigate, requestedEventId]);
 
   useEffect(() => {
     // Loading route-owned data is the external synchronization performed by this page.

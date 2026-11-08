@@ -15,6 +15,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { StaffAccountDrawer, StaffAccountMenu, type StaffAccount } from './HeaderStaffAccount';
 import { Language, ParticipantProfile } from '../../types';
 import {
   IconBookmark,
@@ -36,6 +37,7 @@ interface HeaderProps {
   onToggleHeritage?: () => void;
   isParticipantAuthenticated?: boolean;
   participantProfile?: ParticipantProfile;
+  staffAccount?: StaffAccount;
   onParticipantLogout?: () => void;
   selectedPublicEventId?: string;
 }
@@ -50,6 +52,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   onToggleHeritage: _onToggleHeritage,
   isParticipantAuthenticated = false,
   participantProfile,
+  staffAccount,
   onParticipantLogout,
   selectedPublicEventId = '',
 }) => {
@@ -273,7 +276,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           {/* Ticket Right Section: Account + Language Switcher + Mobile Menu Toggle */}
           <div className="ticket-actions-section">
             <div className="ticket-account-menu-wrapper" ref={accountDropdownRef}>
-              {isParticipantAuthenticated ? (
+              {staffAccount ? (
+                <StaffAccountMenu
+                  account={staffAccount}
+                  language={language}
+                  open={accountDropdownOpen}
+                  onToggle={() => setAccountDropdownOpen((open) => !open)}
+                  onClose={() => setAccountDropdownOpen(false)}
+                  onLogout={onParticipantLogout}
+                />
+              ) : isParticipantAuthenticated ? (
                 <>
                   <button
                     type="button"
@@ -436,7 +448,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             </div>
 
             {/* Mobile Auth Actions */}
-            {isParticipantAuthenticated ? (
+            {staffAccount ? (
+              <StaffAccountDrawer
+                account={staffAccount}
+                language={language}
+                onClose={() => setMobileMenuOpen(false)}
+                onLogout={onParticipantLogout}
+              />
+            ) : isParticipantAuthenticated ? (
               <div className="mobile-drawer-participant-auth">
                 <div className="mobile-user-card">
                   <div className="ticket-user-avatar">

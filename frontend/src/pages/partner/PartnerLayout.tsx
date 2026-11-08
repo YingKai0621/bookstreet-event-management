@@ -12,6 +12,7 @@ import {
   User,
   X
 } from 'lucide-react';
+import { PublicSiteLink } from '../../components/ui/PublicSiteLink';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNotificationLiveRefresh, useNotificationStream } from '../../hooks/useNotificationLiveUpdates';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -217,6 +218,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         </div>
 
         <div className="top-bar-right">
+          <PublicSiteLink className="partner-icon-btn" />
           {/* Notifications Bell Dropdown */}
           <div className="partner-notif-menu">
             <button 

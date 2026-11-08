@@ -5,6 +5,7 @@ import {
   Menu,
   User
 } from 'lucide-react';
+import { PublicSiteLink } from '../ui/PublicSiteLink';
 import React, { useEffect, useRef, useState } from 'react';
 import { Language } from '../../types';
 import { AdminProfile } from '../../types/admin';
@@ -88,6 +89,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
 
       {/* 2. Right: Bell and user capsule */}
       <div className="admin-topbar-right">
+        <PublicSiteLink className="admin-icon-button" />
         {/* Notifications Bell Dropdown */}
         <div style={{ position: 'relative' }} ref={notifDropdownRef}>
           <button

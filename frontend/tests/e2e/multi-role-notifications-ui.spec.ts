@@ -25,7 +25,7 @@ async function json(route: Route, body: unknown): Promise<void> {
   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function setup(page: Page) {
+async function setup(page: Page, roles: string[]) {
   const inboxRequests: string[] = [];
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname;
@@ -33,7 +33,7 @@ async function setup(page: Page) {
     if (path.endsWith('/auth/me')) {
       return json(route, {
         userId: 7, username: 'allroles', fullName: 'Tài khoản đa vai trò', email: 'all@example.test',
-        emailVerified: true, status: 'ACTIVE', roles: ['PARTICIPANT', 'PARTNER', 'ORGANIZER', 'ADMIN'],
+        emailVerified: true, status: 'ACTIVE', roles,
       });
     }
     if (path.endsWith('/notifications/stream')) return route.abort();
@@ -82,7 +82,10 @@ const expectations: Array<{ role: Role; visible: string | null; empty: string | 
 
 for (const { role, visible, empty } of expectations) {
   test(`multi-role account sees only the ${role} audience in the ${role} workspace`, async ({ page }) => {
-    const inboxRequests = await setup(page);
+    // A staff account no longer opens the reader workspace, so the reader case uses a reader-only account.
+    const inboxRequests = await setup(page, role === 'participant'
+      ? ['PARTICIPANT']
+      : ['PARTICIPANT', 'PARTNER', 'ORGANIZER', 'ADMIN']);
     await page.goto(`/${role}/notifications`);
 
     if (visible) await expect(page.getByText(visible).first()).toBeVisible();
