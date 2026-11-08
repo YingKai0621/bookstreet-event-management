@@ -24,8 +24,8 @@ import com.swp391.bookstreet.payment.entity.BoothPayment;
 import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
-import com.swp391.bookstreet.partner.entity.PartnerOrganization;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -50,6 +50,7 @@ public class PartnerBoothRequestService {
     private final BoothHoldRepository holdRepository;
     private final BoothPaymentRepository paymentRepository;
     private final PartnerEventApplicationRepository applicationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final EventBoothConfigRepository configRepository;
     private final BoothRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
@@ -65,6 +66,7 @@ public class PartnerBoothRequestService {
             BoothHoldRepository holdRepository,
             BoothPaymentRepository paymentRepository,
             PartnerEventApplicationRepository applicationRepository,
+            PartnerOrganizationGuard organizationGuard,
             EventBoothConfigRepository configRepository,
             BoothRequestRepository requestRepository,
             BoothAssignmentRepository assignmentRepository,
@@ -79,6 +81,7 @@ public class PartnerBoothRequestService {
         this.holdRepository = holdRepository;
         this.paymentRepository = paymentRepository;
         this.applicationRepository = applicationRepository;
+        this.organizationGuard = organizationGuard;
         this.configRepository = configRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
@@ -100,8 +103,11 @@ public class PartnerBoothRequestService {
         PartnerEventApplication application = applicationRepository
                 .findByEventIdAndPartnerOrganization_RepresentativeUserId(
                         eventId, partnerUserId)
-                .filter(this::isEligible)
                 .orElseThrow(PartnerBoothRequestService::applicationNotApproved);
+        organizationGuard.requireActive(application.getPartnerOrganization());
+        if (application.getStatus() != PartnerEventApplication.ApplicationStatus.APPROVED) {
+            throw applicationNotApproved();
+        }
 
         Instant now = clock.instant();
         if (event.getBoothRequestDeadlineAt() == null
@@ -232,12 +238,6 @@ public class PartnerBoothRequestService {
 
     private static BoothApiException conflict(String code, String message) {
         return new BoothApiException(HttpStatus.CONFLICT, code, message);
-    }
-
-    private boolean isEligible(PartnerEventApplication application) {
-        return application.getStatus() == PartnerEventApplication.ApplicationStatus.APPROVED
-                && application.getPartnerOrganization().getStatus()
-                == PartnerOrganization.OrganizationStatus.ACTIVE;
     }
 
     private void rejectDuplicateOrRejected(Long applicationId, Long boothId) {

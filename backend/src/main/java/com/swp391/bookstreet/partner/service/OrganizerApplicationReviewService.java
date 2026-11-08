@@ -18,17 +18,20 @@ public class OrganizerApplicationReviewService {
 
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventRootLockService eventRootLockService;
+    private final PartnerOrganizationGuard organizationGuard;
     private final PartnerOutcomeNotificationService outcomeNotifications;
     private final Clock clock;
 
     public OrganizerApplicationReviewService(
             PartnerEventApplicationRepository applicationRepository,
             EventRootLockService eventRootLockService,
+            PartnerOrganizationGuard organizationGuard,
             PartnerOutcomeNotificationService outcomeNotifications,
             Clock clock
     ) {
         this.applicationRepository = applicationRepository;
         this.eventRootLockService = eventRootLockService;
+        this.organizationGuard = organizationGuard;
         this.outcomeNotifications = outcomeNotifications;
         this.clock = clock;
     }
@@ -87,14 +90,6 @@ public class OrganizerApplicationReviewService {
                     "You do not have access to this Event."
             );
         }
-        if (event.getStatus() == EventStatus.CANCELLED) {
-            throw new PartnerApiException(
-                    HttpStatus.CONFLICT,
-                    "EVENT_NOT_ACCEPTING_APPLICATIONS",
-                    "Applications for a Cancelled Event can no longer be reviewed."
-            );
-        }
-
         PartnerEventApplication application = applicationRepository
                 .findWithLockById(applicationId)
                 .filter(candidate -> candidate.getEventId().equals(eventId))
@@ -103,6 +98,17 @@ public class OrganizerApplicationReviewService {
                         "APPLICATION_NOT_FOUND",
                         "Application was not found."
                 ));
+
+        if (decision == PartnerEventApplication.ApplicationStatus.APPROVED) {
+            organizationGuard.requireActive(application.getPartnerOrganization());
+        }
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new PartnerApiException(
+                    HttpStatus.CONFLICT,
+                    "EVENT_NOT_ACCEPTING_APPLICATIONS",
+                    "Applications for a Cancelled Event can no longer be reviewed."
+            );
+        }
 
         if (application.getStatus() != PartnerEventApplication.ApplicationStatus.PENDING) {
             throw new PartnerApiException(

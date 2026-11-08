@@ -18,6 +18,7 @@ import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +33,7 @@ public class PartnerActivityProposalService {
     private final ActivityProposalRepository proposalRepository;
     private final ActivityRepository activityRepository;
     private final PartnerEventApplicationRepository applicationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final BoothAssignmentRepository assignmentRepository;
     private final ActivityCurrentUser currentUser;
     private final ActivityLockService lockService;
@@ -44,6 +46,7 @@ public class PartnerActivityProposalService {
     public PartnerActivityProposalService(ActivityProposalRepository proposalRepository,
             ActivityRepository activityRepository,
             PartnerEventApplicationRepository applicationRepository,
+            PartnerOrganizationGuard organizationGuard,
             BoothAssignmentRepository assignmentRepository,
             ActivityCurrentUser currentUser, ActivityLockService lockService,
             ActivityValidationService validation,
@@ -54,6 +57,7 @@ public class PartnerActivityProposalService {
         this.proposalRepository = proposalRepository;
         this.activityRepository = activityRepository;
         this.applicationRepository = applicationRepository;
+        this.organizationGuard = organizationGuard;
         this.assignmentRepository = assignmentRepository;
         this.currentUser = currentUser;
         this.lockService = lockService;
@@ -75,8 +79,10 @@ public class PartnerActivityProposalService {
         var locks = lockService.lockRoot(eventId, List.of(locationId));
         Event event = locks.event();
         Location location = locks.locations().getFirst();
-        PartnerEventApplication application = approvedApplicationForEvent(eventId,
+        PartnerEventApplication application = applicationForEvent(eventId,
                 representativeUserId);
+        organizationGuard.requireActive(application.getPartnerOrganization());
+        requireApproved(application);
         Instant now = now();
 
         requireInitialSubmissionWindow(event, now);
@@ -136,8 +142,10 @@ public class PartnerActivityProposalService {
         var locks = lockService.lockProposalRoot(proposalId, additionalLocations);
         ActivityProposal proposal = locks.proposal();
         requireSameApplication(proposal, ownedRoute.getApplicationId());
-        PartnerEventApplication application = approvedApplicationById(proposal.getApplicationId(),
+        PartnerEventApplication application = applicationById(proposal.getApplicationId(),
                 representativeUserId);
+        organizationGuard.requireActive(application.getPartnerOrganization());
+        requireApproved(application);
         Instant now = now();
         requireEditableWindow(proposal, locks.event(), now);
 
@@ -217,11 +225,14 @@ public class PartnerActivityProposalService {
 
     private PartnerEventApplication approvedApplicationForEvent(Long eventId,
             Long representativeUserId) {
+        return requireApproved(applicationForEvent(eventId, representativeUserId));
+    }
+
+    private PartnerEventApplication applicationForEvent(Long eventId,
+            Long representativeUserId) {
         return applicationRepository
                 .findByEventIdAndPartnerOrganization_RepresentativeUserId(
                         eventId, representativeUserId)
-                .filter(value -> value.getStatus()
-                        == PartnerEventApplication.ApplicationStatus.APPROVED)
                 .orElseThrow(() -> new ActivityApiException(HttpStatus.CONFLICT,
                         "PARTNER_APPLICATION_NOT_APPROVED",
                         "Partner application must be approved for this Event."));
@@ -229,14 +240,27 @@ public class PartnerActivityProposalService {
 
     private PartnerEventApplication approvedApplicationById(Long applicationId,
             Long representativeUserId) {
+        return requireApproved(applicationById(applicationId, representativeUserId));
+    }
+
+    private PartnerEventApplication applicationById(Long applicationId,
+            Long representativeUserId) {
         return applicationRepository
                 .findByIdAndPartnerOrganization_RepresentativeUserId(
                         applicationId, representativeUserId)
-                .filter(value -> value.getStatus()
-                        == PartnerEventApplication.ApplicationStatus.APPROVED)
                 .orElseThrow(() -> new ActivityApiException(HttpStatus.CONFLICT,
                         "PARTNER_APPLICATION_NOT_APPROVED",
                         "Partner application must be approved for this Event."));
+    }
+
+    private static PartnerEventApplication requireApproved(
+            PartnerEventApplication application) {
+        if (application.getStatus() != PartnerEventApplication.ApplicationStatus.APPROVED) {
+            throw new ActivityApiException(HttpStatus.CONFLICT,
+                    "PARTNER_APPLICATION_NOT_APPROVED",
+                    "Partner application must be approved for this Event.");
+        }
+        return application;
     }
 
     private void requireQuota(Event event, Long partnerOrganizationId) {

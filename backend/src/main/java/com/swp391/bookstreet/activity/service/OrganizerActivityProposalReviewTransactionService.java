@@ -17,6 +17,7 @@ import com.swp391.bookstreet.event.entity.Event;
 import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.partner.entity.PartnerEventApplication;
 import com.swp391.bookstreet.partner.repository.PartnerEventApplicationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -31,6 +32,7 @@ public class OrganizerActivityProposalReviewTransactionService {
     private final ActivityProposalRepository proposalRepository;
     private final ActivityRepository activityRepository;
     private final PartnerEventApplicationRepository applicationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final BoothAssignmentRepository assignmentRepository;
     private final ActivityLockService lockService;
     private final ActivityValidationService validation;
@@ -43,6 +45,7 @@ public class OrganizerActivityProposalReviewTransactionService {
             ActivityProposalRepository proposalRepository,
             ActivityRepository activityRepository,
             PartnerEventApplicationRepository applicationRepository,
+            PartnerOrganizationGuard organizationGuard,
             BoothAssignmentRepository assignmentRepository,
             ActivityLockService lockService, ActivityValidationService validation,
             ActivityScheduleGuard scheduleGuard,
@@ -51,6 +54,7 @@ public class OrganizerActivityProposalReviewTransactionService {
         this.proposalRepository = proposalRepository;
         this.activityRepository = activityRepository;
         this.applicationRepository = applicationRepository;
+        this.organizationGuard = organizationGuard;
         this.assignmentRepository = assignmentRepository;
         this.lockService = lockService;
         this.validation = validation;
@@ -64,6 +68,7 @@ public class OrganizerActivityProposalReviewTransactionService {
     public ActivityProposalResponse requestChanges(Long proposalId, Long organizerUserId,
             ReviewActivityProposalRequest request) {
         var locks = lockService.lockOwnedProposalRoot(proposalId, organizerUserId, List.of());
+        requireActiveOrganization(locks.proposal());
         requireReviewable(locks.proposal().getStatus());
         String note = validation.reviewNote(request == null ? null : request.reviewNote());
         Instant now = now();
@@ -98,6 +103,7 @@ public class OrganizerActivityProposalReviewTransactionService {
             return approvalResponse(proposalId, organizerUserId, existing,
                     locks.location(existing.getLocationId()), partnerOrganizationId(proposal));
         }
+        requireActiveOrganization(proposal);
         requireReviewable(proposal.getStatus());
 
         Event event = locks.event();
@@ -162,6 +168,13 @@ public class OrganizerActivityProposalReviewTransactionService {
         return applicationRepository.findById(proposal.getApplicationId())
                 .map(value -> value.getPartnerOrganization().getId())
                 .orElseThrow(OrganizerActivityProposalReviewTransactionService::notFound);
+    }
+
+    private void requireActiveOrganization(ActivityProposal proposal) {
+        PartnerEventApplication application = applicationRepository
+                .findById(proposal.getApplicationId())
+                .orElseThrow(OrganizerActivityProposalReviewTransactionService::notFound);
+        organizationGuard.requireActive(application.getPartnerOrganization());
     }
 
     private void requireQuota(Event event, Long partnerOrganizationId) {

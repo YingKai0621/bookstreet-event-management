@@ -19,6 +19,8 @@ import com.swp391.bookstreet.activity.repository.ActivityRevisionRepository;
 import com.swp391.bookstreet.booth.entity.Location;
 import com.swp391.bookstreet.booth.entity.LocationType;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
+import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
@@ -38,6 +40,8 @@ public class OrganizerActivityRequestReviewTransactionService {
     private final ActivityRepository activityRepository;
     private final ActivityRevisionRepository revisionRepository;
     private final BoothAssignmentRepository assignmentRepository;
+    private final PartnerOrganizationRepository organizationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final ActivityLockService lockService;
     private final ActivityLifecycleCoordinator lifecycleCoordinator;
     private final ActivityValidationService validation;
@@ -52,6 +56,8 @@ public class OrganizerActivityRequestReviewTransactionService {
             ActivityRepository activityRepository,
             ActivityRevisionRepository revisionRepository,
             BoothAssignmentRepository assignmentRepository,
+            PartnerOrganizationRepository organizationRepository,
+            PartnerOrganizationGuard organizationGuard,
             ActivityLockService lockService,
             ActivityLifecycleCoordinator lifecycleCoordinator,
             ActivityValidationService validation,
@@ -63,6 +69,8 @@ public class OrganizerActivityRequestReviewTransactionService {
         this.activityRepository = activityRepository;
         this.revisionRepository = revisionRepository;
         this.assignmentRepository = assignmentRepository;
+        this.organizationRepository = organizationRepository;
+        this.organizationGuard = organizationGuard;
         this.lockService = lockService;
         this.lifecycleCoordinator = lifecycleCoordinator;
         this.validation = validation;
@@ -81,6 +89,7 @@ public class OrganizerActivityRequestReviewTransactionService {
                 ? List.of() : List.of(route.getRequestedLocationId());
         var locks = lockService.lockOwnedActivity(route.getActivityId(), organizerUserId,
                 additionalLocations);
+        Long partnerOrganizationId = requireActiveOrganization(locks.activity().getActivityId());
         Instant now = now();
         lifecycleCoordinator.advanceLocked(locks.activity(), now);
         ActivityRequest request = lockRequest(route, ActivityRequestType.CHANGE);
@@ -110,7 +119,6 @@ public class OrganizerActivityRequestReviewTransactionService {
         validation.validateRegistrationUpdate(activity.isRegistrationRequired(),
                 activity.getRegistrationDeadlineAt(), activity.isCertificateEnabled(),
                 fields.startAt(), activity.getStatus() == ActivityStatus.PUBLISHED);
-        Long partnerOrganizationId = partnerOrganizationId(activity.getActivityId());
         requireEligibleLocation(activity.getEventId(), location, partnerOrganizationId);
         scheduleGuard.requireAvailable(locationId, fields.startAt(), fields.endAt(),
                 activity.getActivityId());
@@ -171,6 +179,7 @@ public class OrganizerActivityRequestReviewTransactionService {
         var route = cancellationRoute(requestId, organizerUserId);
         var locks = lockService.lockOwnedActivity(route.getActivityId(), organizerUserId,
                 List.of());
+        requireActiveOrganization(locks.activity().getActivityId());
         Instant now = now();
         lifecycleCoordinator.advanceLocked(locks.activity(), now);
         ActivityRequest request = lockRequest(route, ActivityRequestType.CANCELLATION);
@@ -243,6 +252,15 @@ public class OrganizerActivityRequestReviewTransactionService {
                 .orElseThrow(() -> new ActivityApiException(HttpStatus.CONFLICT,
                         "ACTIVITY_PARTNER_OWNERSHIP_REQUIRED",
                         "Activity is no longer linked to a Partner organization."));
+    }
+
+    private Long requireActiveOrganization(Long activityId) {
+        Long organizationId = partnerOrganizationId(activityId);
+        organizationGuard.requireActive(organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ActivityApiException(HttpStatus.CONFLICT,
+                        "ACTIVITY_PARTNER_OWNERSHIP_REQUIRED",
+                        "Activity is no longer linked to a Partner organization.")));
+        return organizationId;
     }
 
     private void requireEligibleLocation(Long eventId, Location location,
