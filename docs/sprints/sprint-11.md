@@ -270,6 +270,7 @@ These read-only criteria are outside the 51 and enter only under section 5, unit
 | Password reset | Included as the last deferrable unit, using the existing token table |
 | Changing a password while signed in | Next Sprint; if password reset is deferred, both move together so a User always gains a way to change a password in the same delivery |
 | Admin access to `/organizer` | Removed; a person who needs both gets both roles |
+| Staff accounts and the reader workspace | An account with `ADMIN`, `ORGANIZER` or `PARTNER` works only in its staff workspaces. The frontend hides the reader menu, sends reader URLs to the staff workspace and explains that staff accounts do not join events as readers. `PARTICIPANT` stays in the database, so no rule, API or data changes; this is a navigation fix outside the 51 criteria |
 | Admin password reset | Removed because it sets a fixed known password |
 | Facilities, Assets, Booth catalog on Admin | Removed; Organizer manages Locations and Booths |
 | Audit log | Kept as a real feature; requires a new migration |
