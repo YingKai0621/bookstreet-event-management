@@ -38,8 +38,9 @@ instructions each teammate and their AI follow.
 - Foundation for Developer B: `AdminGuard` for locking active Admin rows and checking the last active Admin, a reason normalizer
   with its validation, and a shared Admin paging response.
 - Foundation for Developer C: `PartnerOrganizationGuard` that raises `PARTNER_ORGANIZATION_INACTIVE`, with no call sites yet.
-- Frontend structure: split `adminApi.ts` into `adminUsersApi.ts`, `adminAuditApi.ts`, `adminOrganizationsApi.ts` and
-  `adminDashboardApi.ts`, and add the `organizations` route with an empty page for Developer C.
+- Frontend structure: split `adminApi.ts` into `adminUsersApi.ts`, `adminAuditApi.ts` and `adminDashboardApi.ts`, and add the
+  `roles` and `organizations` routes with a temporary page that Developers B and C replace. `adminApi.ts` keeps only the
+  profile calls until Developer B removes them.
 
 ### PR A2: password reset, last and deferrable
 
@@ -56,7 +57,8 @@ Developer A runs final cross-role checks, the closure report and the documentati
 `AC-A01-S11-07`, `AC-A01-S11-09`, `AC-A02-S11-03`, `AC-A04-S11-01` through `AC-A04-S11-05`, `AC-ADM-S11-01`, `AC-ADM-S11-02`,
 `AC-G03-S11-01` through `AC-G03-S11-06`, `AC-S11-REG-01` through `AC-S11-REG-04`, and `AC-S11-REG-06`.
 
-`AC-A01-S11-09` is complete only after Developer B removes the create default. `AC-A04-S11-01` and `AC-S11-REG-04` are complete only
+`AC-A01-S11-09` is complete only after Developer B removes the create default. `AC-ADM-S11-02` is complete only after
+Developer B moves the profile off `/admin/profile`. `AC-A04-S11-01` and `AC-S11-REG-04` are complete only
 after Developers B and C merge, because they connect each action and keep existing flows working in their own packages.
 
 ## 3. Developer B — accounts and roles owner
@@ -120,7 +122,7 @@ after Developers B and C merge, because they connect each action and keep existi
 | `AdminAuditWriter`, `AdminGuard`, `PartnerOrganizationGuard` | A | Call them; report any change they need |
 | `AdminPortal.tsx`, `AdminSidebar.tsx`, `adminRoutes.ts` | A in PR A1 | B and C change only their own tab content |
 | `adminUsersApi.ts` | B | |
-| `adminOrganizationsApi.ts`, `adminDashboardApi.ts` | C | |
+| `adminOrganizationsApi.ts`, created by C, and `adminDashboardApi.ts` | C | |
 | Partner, Booth, Payment and Activity services | C, for the guard call only | Do not change other logic |
 
 ## 6. Merge order

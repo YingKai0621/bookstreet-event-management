@@ -1,5 +1,7 @@
 package com.swp391.bookstreet.security.config;
 
+import com.swp391.bookstreet.auth.repository.UserRepository;
+import com.swp391.bookstreet.security.authentication.SessionEnforcementFilter;
 import com.swp391.bookstreet.security.handler.RestAccessDeniedHandler;
 import com.swp391.bookstreet.security.handler.RestAuthenticationEntryPoint;
 import jakarta.servlet.DispatcherType;
@@ -16,6 +18,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
@@ -127,7 +130,8 @@ public class SecurityConfiguration {
             CsrfTokenRepository csrfTokenRepository,
             CorsConfigurationSource corsConfigurationSource,
             RestAuthenticationEntryPoint authenticationEntryPoint,
-            RestAccessDeniedHandler accessDeniedHandler
+            RestAccessDeniedHandler accessDeniedHandler,
+            UserRepository userRepository
     ) throws Exception {
         http.securityContext(securityContext -> securityContext
                 .securityContextRepository(securityContextRepository)
@@ -144,6 +148,9 @@ public class SecurityConfiguration {
         );
 
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
+
+        // Before the anonymous filter, so that an ended Session continues as an anonymous request.
+        http.addFilterBefore(new SessionEnforcementFilter(userRepository), AnonymousAuthenticationFilter.class);
 
         http.authorizeHttpRequests(authorize -> authorize
                 // The original request was authorized; this only finishes an open notification stream.
@@ -183,7 +190,7 @@ public class SecurityConfiguration {
                 .hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/organizer/heritage-images", "/api/v1/organizer/heritage-images/**")
                 .hasRole("ORGANIZER")
-                .requestMatchers("/api/v1/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers("/api/v1/organizer/**").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/partner/**").hasRole("PARTNER")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

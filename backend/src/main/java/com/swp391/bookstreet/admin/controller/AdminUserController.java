@@ -50,14 +50,4 @@ public class AdminUserController {
         adminUserService.updateUserStatus(userId, request);
         return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái người dùng thành công"));
     }
-
-    @PostMapping("/{userId}/reset-password")
-    public ResponseEntity<Map<String, Object>> resetPassword(@PathVariable Long userId) {
-        adminUserService.resetPassword(userId);
-        return ResponseEntity.ok(Map.of(
-                "message", "Mật khẩu đã được đặt lại thành công về mặc định (BookStreet@123)",
-                "resetToken", "dummy-token",
-                "expiresInMinutes", 60
-        ));
-    }
 }

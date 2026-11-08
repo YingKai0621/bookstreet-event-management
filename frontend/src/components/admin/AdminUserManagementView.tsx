@@ -3,11 +3,9 @@ import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import {
   AlertCircle,
-  CheckCircle2,
   Clock,
   Edit3,
   Filter,
-  KeyRound,
   Lock,
   Mail,
   Phone,
@@ -29,15 +27,13 @@ interface AdminUserManagementViewProps {
   onAddUser: (user: Omit<AdminUserAccount, 'id' | 'code' | 'createdDate' | 'avatarInitials' | 'lastActive'>) => void | Promise<void>;
   onUpdateUser: (id: string, updates: Partial<AdminUserAccount>) => void | Promise<void>;
   onToggleLock: (id: string, reason?: string) => void | Promise<void>;
-  onResetPassword: (user: AdminUserAccount) => void | Promise<void>;
 }
 
 export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = ({
   users,
   onAddUser,
   onUpdateUser,
-  onToggleLock,
-  onResetPassword
+  onToggleLock
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -48,11 +44,9 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
   const [editingUser, setEditingUser] = useState<AdminUserAccount | null>(null);
   const [lockTargetUser, setLockTargetUser] = useState<AdminUserAccount | null>(null);
   const [lockReason, setLockReason] = useState('');
-  const [resetTargetUser, setResetTargetUser] = useState<AdminUserAccount | null>(null);
   useModalDismiss(isAddModalOpen, () => setIsAddModalOpen(false));
   useModalDismiss(Boolean(editingUser), () => setEditingUser(null));
   useModalDismiss(Boolean(lockTargetUser), () => setLockTargetUser(null));
-  useModalDismiss(Boolean(resetTargetUser), () => setResetTargetUser(null));
 
   // New user form state
   const [newFullName, setNewFullName] = useState('');
@@ -163,12 +157,6 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
     await onToggleLock(lockTargetUser.id, lockReason);
     setLockTargetUser(null);
     setLockReason('');
-  };
-
-  const handleConfirmReset = async () => {
-    if (!resetTargetUser) return;
-    await onResetPassword(resetTargetUser);
-    setResetTargetUser(null);
   };
 
   const getRoleBadgeClass = (role: AdminRoleType) => {
@@ -371,15 +359,6 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                           onClick={() => setLockTargetUser(user)}
                         >
                           {user.status === 'locked' ? <Unlock size={15} /> : <Lock size={15} />}
-                        </button>
-
-                        {/* Reset password button */}
-                        <button
-                          className="adm-icon-btn"
-                          title="Đặt lại mật khẩu"
-                          onClick={() => setResetTargetUser(user)}
-                        >
-                          <KeyRound size={15} />
                         </button>
                       </div>
                     </td>
@@ -630,45 +609,6 @@ export const AdminUserManagementView: React.FC<AdminUserManagementViewProps> = (
                 onClick={handleConfirmLockToggle}
               >
                 {lockTargetUser.status === 'locked' ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dialog: Reset Password */}
-      {resetTargetUser && (
-        <div className="adm-modal-overlay">
-          <div className="adm-modal-content adm-dialog-content">
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">Đặt lại mật khẩu</h3>
-              <button className="adm-modal-close" onClick={() => setResetTargetUser(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="adm-modal-body">
-              <p className="adm-confirm-text">
-                Hệ thống sẽ tạo yêu cầu đặt lại mật khẩu cho tài khoản <strong>{resetTargetUser.fullName}</strong> và ghi thông báo bảo mật vào cơ sở dữ liệu.
-              </p>
-              <div className="adm-callout-info">
-                <CheckCircle2 size={16} />
-                <span>Yêu cầu đặt lại mật khẩu có hiệu lực trong vòng 30 phút.</span>
-              </div>
-            </div>
-            <div className="adm-modal-footer">
-              <button 
-                type="button" 
-                className="adm-btn adm-btn-secondary"
-                onClick={() => setResetTargetUser(null)}
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                type="button" 
-                className="adm-btn adm-btn-primary"
-                onClick={handleConfirmReset}
-              >
-                Tạo yêu cầu đặt lại
               </button>
             </div>
           </div>

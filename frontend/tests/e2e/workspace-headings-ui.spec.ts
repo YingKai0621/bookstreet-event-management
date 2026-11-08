@@ -41,7 +41,7 @@ async function mockWorkspace(page: Page, role: Role) {
 
 const workspaces: Array<{ role: Role; routes: string[] }> = [
   { role: 'ORGANIZER', routes: ['/organizer', '/organizer/events', '/organizer/booths', '/organizer/venues', '/organizer/activities', '/organizer/booth-requests', '/organizer/participants', '/organizer/profile'] },
-  { role: 'ADMIN', routes: ['/admin', '/admin/users', '/admin/badges', '/admin/assets', '/admin/booths', '/admin/venues', '/admin/roles', '/admin/settings', '/admin/audit', '/admin/notifications', '/admin/profile'] },
+  { role: 'ADMIN', routes: ['/admin', '/admin/users', '/admin/badges', '/admin/roles', '/admin/organizations', '/admin/audit', '/admin/notifications', '/admin/profile'] },
   { role: 'PARTNER', routes: ['/partner', '/partner/events', '/partner/events/apply', '/partner/profile', '/partner/booths', '/partner/booth-requests', '/partner/activities'] },
   { role: 'PARTICIPANT', routes: ['/participant', '/participant/certificates', '/participant/profile', '/participant/events', '/participant/rewards'] },
 ];

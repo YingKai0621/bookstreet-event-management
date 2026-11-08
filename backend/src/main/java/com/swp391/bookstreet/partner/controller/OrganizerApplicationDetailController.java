@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/organizer/applications")
-@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
+@PreAuthorize("hasRole('ORGANIZER')")
 public class OrganizerApplicationDetailController {
 
     private final OrganizerApplicationQueryService queryService;

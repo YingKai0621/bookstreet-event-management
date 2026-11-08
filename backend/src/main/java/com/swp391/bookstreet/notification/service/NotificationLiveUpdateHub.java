@@ -59,6 +59,18 @@ public class NotificationLiveUpdateHub {
         }
     }
 
+    /** Ends open streams once access is revoked. A null role closes every role of that User. */
+    public void close(Long userId, NotificationRecipientRole role) {
+        connections.forEach((audience, emitters) -> {
+            if (audience.userId().equals(userId) && (role == null || audience.role() == role)) {
+                emitters.forEach(emitter -> {
+                    remove(audience, emitter);
+                    emitter.complete();
+                });
+            }
+        });
+    }
+
     @Scheduled(initialDelay = HEARTBEAT_MS, fixedDelay = HEARTBEAT_MS)
     void heartbeat() {
         connections.forEach((audience, emitters) -> emitters.forEach(

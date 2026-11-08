@@ -164,21 +164,44 @@ class AuthAuthorizationIntegrationTests {
     }
 
     @Test
-    void adminKeepsExistingOrganizerAccessButCannotAccessOrganizerFeedback() throws Exception {
+    void adminWithoutOrganizerRoleCannotUseOrganizerOperations() throws Exception {
         String username = "admin" + uniqueSuffix();
         register(username, username + "@example.com");
         assignVerifiedRole(username, RoleCode.ADMIN);
 
         Cookie sessionCookie = login(username);
 
-        mockMvc.perform(get("/api/v1/organizer/dashboard")
-                        .cookie(sessionCookie))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/v1/organizer/feedbacks")
-                        .cookie(sessionCookie))
+        for (String path : List.of(
+                "/api/v1/organizer/dashboard",
+                "/api/v1/organizer/feedbacks",
+                "/api/v1/organizer/applications",
+                "/api/v1/organizer/events",
+                "/api/v1/organizer/booths",
+                "/api/v1/organizer/activities")) {
+            mockMvc.perform(get(path).cookie(sessionCookie))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        }
+        mockMvc.perform(post("/api/v1/organizer/applications/1/approve").with(csrf()).cookie(sessionCookie))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        deleteSession(sessionCookie);
+    }
+
+    @Test
+    void organizerRoleKeepsOrganizerOperations() throws Exception {
+        String username = "orgkeep" + uniqueSuffix();
+        register(username, username + "@example.com");
+        assignVerifiedRole(username, RoleCode.ORGANIZER);
+
+        Cookie sessionCookie = login(username);
+
+        for (String path : List.of(
+                "/api/v1/organizer/dashboard",
+                "/api/v1/organizer/events")) {
+            mockMvc.perform(get(path).cookie(sessionCookie)).andExpect(status().isOk());
+        }
 
         deleteSession(sessionCookie);
     }
@@ -298,14 +321,14 @@ class AuthAuthorizationIntegrationTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_ACTIVE"));
         mockMvc.perform(get("/api/v1/participant/notifications").cookie(sessionCookie))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/api/v1/participant/notifications/unread-count").cookie(sessionCookie))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/v1/participant/notifications/read-all").with(csrf()).cookie(sessionCookie))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/v1/participant/notifications/1/read").with(csrf()).cookie(sessionCookie))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         deleteSession(sessionCookie);
     }

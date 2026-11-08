@@ -55,6 +55,9 @@ public class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    @Column(name = "sessions_valid_from")
+    private Instant sessionsValidFrom;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -166,6 +169,14 @@ public class User {
 
     public void setLastLoginAt(Instant lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public Instant getSessionsValidFrom() {
+        return sessionsValidFrom;
+    }
+
+    public void setSessionsValidFrom(Instant sessionsValidFrom) {
+        this.sessionsValidFrom = sessionsValidFrom;
     }
 
     public Instant getCreatedAt() {

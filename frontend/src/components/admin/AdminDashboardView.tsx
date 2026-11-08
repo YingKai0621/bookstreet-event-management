@@ -12,12 +12,14 @@ import {
   UserX
 } from 'lucide-react';
 import React from 'react';
-import type { AdminDashboardStats } from '../../services/adminApi';
-import { AdminAuditLogItem, AdminUserAccount } from '../../types/admin';
+import { ADMIN_AUDIT_ACTION_LABELS, formatAuditTime, type AdminAuditLog } from '../../services/adminAuditApi';
+import type { AdminDashboardStats } from '../../services/adminDashboardApi';
+import { AdminUserAccount } from '../../types/admin';
 
 interface AdminDashboardViewProps {
   onNavigateTab: (tab: string) => void;
-  auditLogs: AdminAuditLogItem[];
+  auditLogs: AdminAuditLog[];
+  auditLogsFailed: boolean;
   users: AdminUserAccount[];
   stats: AdminDashboardStats;
   onOpenAddUser: () => void;
@@ -40,6 +42,7 @@ const ROLES_LIST: RoleConfig[] = [
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ 
   onNavigateTab, 
   auditLogs, 
+  auditLogsFailed,
   users, 
   stats, 
   onOpenAddUser 
@@ -313,24 +316,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
           <div className="adm-activity-list">
             {auditLogs.slice(0, 4).map((log) => (
-              <div className="adm-activity-item" key={log.id}>
+              <div className="adm-activity-item" key={log.auditLogId}>
                 <div className="adm-activity-left">
                   <div className="adm-activity-icon">
                     <Activity size={16} />
                   </div>
                   <div className="adm-activity-content">
-                    <strong>{log.actionLabelVi}</strong>
-                    <p>{log.actorName} · <span style={{ color: '#14241F', fontWeight: 600 }}>{log.targetObject}</span></p>
+                    <strong>{ADMIN_AUDIT_ACTION_LABELS[log.action] ?? log.action}</strong>
+                    <p>{log.actor.fullName} · <span style={{ color: '#14241F', fontWeight: 600 }}>{log.targetLabel}</span></p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#8C9E98', fontSize: '0.75rem' }}>
                   <Clock size={13} />
-                  <span>{log.timestamp}</span>
+                  <span>{formatAuditTime(log.createdAt)}</span>
                 </div>
               </div>
             ))}
 
-            {auditLogs.length === 0 && (
+            {auditLogsFailed && (
+              <div className="adm-empty-state" role="alert">
+                <p className="adm-empty-state-text">Không tải được hoạt động gần đây.</p>
+              </div>
+            )}
+
+            {!auditLogsFailed && auditLogs.length === 0 && (
               <div className="adm-empty-state">
                 <div className="adm-empty-state-icon">
                   <FileText size={22} />

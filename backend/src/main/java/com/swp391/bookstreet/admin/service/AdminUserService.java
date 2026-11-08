@@ -168,15 +168,6 @@ public class AdminUserService {
         userRepository.save(user);
     }
 
-    @Transactional
-    public void resetPassword(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + userId));
-
-        user.setPasswordHash(passwordEncoder.encode("BookStreet@123"));
-        userRepository.save(user);
-    }
-
     @Transactional(readOnly = true)
     public AdminDashboardStatsDto getDashboardStats() {
         List<User> allUsers = userRepository.findAllWithRoles();
