@@ -29,6 +29,7 @@ import { BoothMapCanvas } from '../../components/booth-map/BoothMapCanvas';
 import { eventBoothToMarker } from '../../components/booth-map/boothMapModel';
 import { BoothPaymentCheckoutCard } from '../../components/partner/BoothPaymentCheckoutCard';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import { usePartnerOrganizationLocked } from './PartnerOrganizationStatusContext';
 import './PartnerPages.css';
 
 interface Props {
@@ -75,6 +76,9 @@ const requestStatusLabel: Record<BoothRequest['status'], string> = {
 
 function apiMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === 'PARTNER_ORGANIZATION_INACTIVE') {
+      return 'Tổ chức đang bị khóa; hiện không thể gửi yêu cầu mới.';
+    }
     if (error.code === 'BOOTH_REQUEST_DEADLINE_PASSED') {
       return 'Đã hết hạn gửi yêu cầu thuê gian hàng cho sự kiện này.';
     }
@@ -252,6 +256,7 @@ function holdStatusLabel(status: NonNullable<BoothRequest['hold']>['status']): s
 }
 
 export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allRequests, onRefreshData }) => {
+  const organizationLocked = usePartnerOrganizationLocked();
   const [searchParams, setSearchParams] = useSearchParams();
   const approvedApplications = useMemo(
     () => applications.filter(application => application.status === 'approved'),
@@ -428,6 +433,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
   }, [requests]);
 
   const requestBlockedReason = (row: EventBooth): string | null => {
+    if (organizationLocked) return 'Tổ chức đang bị khóa; hiện không thể gửi yêu cầu gian hàng mới.';
     const history = requestByBooth.get(row.booth.boothId) || [];
     if (history.some(request => request.status === 'COMPLETED')) {
       return 'Đây là gian hàng đã được cấp cho bạn trong sự kiện này.';
@@ -460,6 +466,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
 
   const submitRequest = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
+    if (organizationLocked) return;
     if (!selectedBooth || !eventId || requestBlockedReason(selectedBooth)) return;
     const requestedEventId = eventId;
     setBusy('submit');
@@ -1102,7 +1109,7 @@ export const Sprint2PartnerBoothsPage: React.FC<Props> = ({ applications, allReq
                   <button
                     type="submit"
                     className="btn-part-primary"
-                    disabled={busy === 'submit'}
+                    disabled={busy === 'submit' || organizationLocked}
                   >
                     {busy === 'submit' ? (
                       <>

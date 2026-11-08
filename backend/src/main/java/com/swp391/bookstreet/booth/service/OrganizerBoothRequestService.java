@@ -22,6 +22,7 @@ import com.swp391.bookstreet.event.entity.EventStatus;
 import com.swp391.bookstreet.event.repository.EventRepository;
 import com.swp391.bookstreet.event.service.EventRootLockService;
 import com.swp391.bookstreet.partner.service.PartnerOutcomeNotificationService;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -46,6 +47,7 @@ public class OrganizerBoothRequestService {
     private final BoothCurrentUser currentUser;
     private final BoothHoldExpiryService expiryService;
     private final BoothSelectionEligibilityService selectionEligibility;
+    private final PartnerOrganizationGuard organizationGuard;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final PartnerOutcomeNotificationService outcomeNotifications;
@@ -61,6 +63,7 @@ public class OrganizerBoothRequestService {
             BoothCurrentUser currentUser,
             BoothHoldExpiryService expiryService,
             BoothSelectionEligibilityService selectionEligibility,
+            PartnerOrganizationGuard organizationGuard,
             ApplicationEventPublisher eventPublisher,
             PartnerOutcomeNotificationService outcomeNotifications,
             Clock clock) {
@@ -75,6 +78,7 @@ public class OrganizerBoothRequestService {
         this.currentUser = currentUser;
         this.expiryService = expiryService;
         this.selectionEligibility = selectionEligibility;
+        this.organizationGuard = organizationGuard;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.outcomeNotifications = outcomeNotifications;
@@ -119,6 +123,8 @@ public class OrganizerBoothRequestService {
 
         BoothRequest candidate = requestRepository.findForOrganizerById(requestId, eventId)
                 .orElseThrow(OrganizerBoothRequestService::requestNotFound);
+        organizationGuard.requireActive(
+                candidate.getApplication().getPartnerOrganization());
         Long boothId = candidate.getBooth().getBoothId();
 
         boothRepository.findByBoothIdForUpdate(boothId)

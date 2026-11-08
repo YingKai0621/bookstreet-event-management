@@ -183,6 +183,7 @@ class OrganizerActivityRequestIntegrationTests {
                         .value(partnerOrganizationId))
                 .andExpect(jsonPath("$.content[0].activity.partnerOrganizationName")
                         .value(prefix + " Partner"))
+                .andExpect(jsonPath("$.content[0].activity.partnerOrganizationStatus").value("ACTIVE"))
                 .andExpect(jsonPath("$.content[0].activity.location.locationId")
                         .value(changeLocationId))
                 .andExpect(jsonPath("$.content[0].activity.title").value("Change target"))
@@ -211,7 +212,8 @@ class OrganizerActivityRequestIntegrationTests {
                 .andExpect(jsonPath("$.content[0].activity.title")
                         .value("Cancellation target"))
                 .andExpect(jsonPath("$.content[0].activity.partnerOrganizationName")
-                        .value(prefix + " Partner"));
+                        .value(prefix + " Partner"))
+                .andExpect(jsonPath("$.content[0].activity.partnerOrganizationStatus").value("ACTIVE"));
         mvc.perform(get(CANCELLATIONS + "/" + changeId)
                         .with(actor(organizerId, "ORGANIZER")))
                 .andExpect(status().isNotFound())
@@ -502,6 +504,62 @@ class OrganizerActivityRequestIntegrationTests {
     }
 
     @Test
+    void inactiveOrganizationBlocksRequestApprovalsButStillAllowsRejections()
+            throws Exception {
+        Instant eventStart = future(4);
+        long eventId = insertEvent(organizerId, eventStart,
+                eventStart.plus(Duration.ofDays(1)), "PUBLISHED");
+        long applicationId = insertApplication(eventId);
+        long locationId = insertLocation("INACTIVE-REQUEST", "Inactive Request Stage");
+        long changeApproveActivity = insertPartnerActivity(applicationId, eventId, locationId,
+                "Blocked change", eventStart.plus(Duration.ofHours(1)), "DRAFT");
+        long changeRejectActivity = insertPartnerActivity(applicationId, eventId, locationId,
+                "Rejected change", eventStart.plus(Duration.ofHours(3)), "DRAFT");
+        long cancellationApproveActivity = insertPartnerActivity(applicationId, eventId,
+                locationId, "Blocked cancellation", eventStart.plus(Duration.ofHours(5)),
+                "DRAFT");
+        long cancellationRejectActivity = insertPartnerActivity(applicationId, eventId,
+                locationId, "Rejected cancellation", eventStart.plus(Duration.ofHours(7)),
+                "DRAFT");
+        long changeApproveId = insertChangeRequest(changeApproveActivity,
+                "Must remain pending", "PENDING");
+        long changeRejectId = insertChangeRequest(changeRejectActivity,
+                "Must be rejected", "PENDING");
+        long cancellationApproveId = insertCancellationRequest(cancellationApproveActivity,
+                "A valid cancellation reason for approval.", false, "PENDING");
+        long cancellationRejectId = insertCancellationRequest(cancellationRejectActivity,
+                "A valid cancellation reason for rejection.", false, "PENDING");
+        jdbc.update("update partner_organizations set status = 'INACTIVE' where partner_organization_id = ?",
+                partnerOrganizationId);
+
+        mvc.perform(post(CHANGES + "/" + changeApproveId + "/approve")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post(CANCELLATIONS + "/" + cancellationApproveId + "/approve")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post(CHANGES + "/" + changeRejectId + "/reject")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"reviewNote\":\"The requested change cannot be accepted.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+        mvc.perform(post(CANCELLATIONS + "/" + cancellationRejectId + "/reject")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"reviewNote\":\"The activity should continue as scheduled.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+        assertThat(requestStatus(changeApproveId)).isEqualTo("PENDING");
+        assertThat(requestStatus(cancellationApproveId)).isEqualTo("PENDING");
+        assertThat(requestStatus(changeRejectId)).isEqualTo("REJECTED");
+        assertThat(requestStatus(cancellationRejectId)).isEqualTo("REJECTED");
+    }
+
+    @Test
     void partnerChangeApprovalFreezesScheduleAfterValidAttendance() throws Exception {
         Instant start = future(4);
         long eventId = insertEvent(organizerId, start, start.plus(Duration.ofDays(1)), "PUBLISHED");
@@ -652,6 +710,12 @@ class OrganizerActivityRequestIntegrationTests {
     private String activityStatus(long activityId) {
         return jdbc.queryForObject("select status from activities where activity_id = ?",
                 String.class, activityId);
+    }
+
+    private String requestStatus(long requestId) {
+        return jdbc.queryForObject(
+                "select status from activity_requests where activity_request_id = ?",
+                String.class, requestId);
     }
 
     private long insertOrganization(long representativeId) {

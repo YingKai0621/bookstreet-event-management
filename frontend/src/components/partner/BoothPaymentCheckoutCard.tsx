@@ -16,6 +16,7 @@ import {
 import { paymentApi } from '../../services/paymentApi';
 import type { BoothRequest } from '../../types/booth';
 import type { BoothPayment } from '../../types/payment';
+import { usePartnerOrganizationLocked } from '../../pages/partner/PartnerOrganizationStatusContext';
 import './BoothPaymentCheckoutCard.css';
 
 interface Props {
@@ -57,6 +58,8 @@ function formatRemainingTime(expiresAt: string, now: number): string {
 function mapErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
+      case 'PARTNER_ORGANIZATION_INACTIVE':
+        return 'Tổ chức đang bị khóa; không thể khởi tạo khoản thanh toán mới.';
       case 'BOOTH_HOLD_EXPIRING_SOON':
         return 'Thời gian giữ chỗ còn dưới 5 phút, không thể tạo phiên thanh toán mới.';
       case 'BOOTH_HOLD_EXPIRED':
@@ -85,6 +88,7 @@ function mapErrorMessage(error: unknown): string {
 }
 
 export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothName, onPaymentCreated, compact = false }) => {
+  const organizationLocked = usePartnerOrganizationLocked();
   const [latestPayment, setLatestPayment] = useState<BoothPayment | null>(null);
   const [isLoadingPayments, setIsLoadingPayments] = useState(true);
   const [historyError, setHistoryError] = useState(false);
@@ -141,6 +145,7 @@ export const BoothPaymentCheckoutCard: React.FC<Props> = ({ request, now, boothN
     latestPayment?.status === 'FAILED' || latestPayment?.status === 'TIMEOUT';
   const blocked = historyBlocked || latestPayment?.reconciliationRequired || latestPayment?.status === 'SUCCESS';
   const cannotStart = isLoadingPayments || historyError || blocked || isExpired
+    || (organizationLocked && latestPayment?.status !== 'PENDING')
     || (isExpiringSoon && latestPayment?.status !== 'PENDING');
 
   const handleCheckout = async () => {

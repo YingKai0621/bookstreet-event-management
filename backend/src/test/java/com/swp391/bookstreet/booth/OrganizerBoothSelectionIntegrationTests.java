@@ -179,7 +179,8 @@ class OrganizerBoothSelectionIntegrationTests {
                         .with(organizer(organizer)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].boothRequestId").value(requestId));
+                .andExpect(jsonPath("$.content[0].boothRequestId").value(requestId))
+                .andExpect(jsonPath("$.content[0].partnerOrganizationStatus").value("ACTIVE"));
         mvc.perform(get("/api/v1/organizer/events/{eventId}/booth-requests/{requestId}",
                         eventId, requestId).with(organizer(otherOrganizer)))
                 .andExpect(status().isNotFound())

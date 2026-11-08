@@ -7,6 +7,7 @@ public interface OrganizerApplicationRow {
     Long getEventId();
     Long getPartnerOrganizationId();
     String getPartnerOrganizationName();
+    String getPartnerOrganizationStatus();
     String getPartnerCategoryCode();
     String getStatus();
     String getApplicationNote();

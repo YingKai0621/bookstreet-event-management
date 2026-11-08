@@ -323,7 +323,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         if (active) setProfile(current => ({
           ...current,
           ...loadedProfile,
-          notificationPreferences: current.notificationPreferences,
         }));
       })
       .catch(error => {
@@ -373,7 +372,6 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
     setProfile(current => ({
       ...current,
       ...updatedProfile,
-      notificationPreferences: current.notificationPreferences,
     }));
   };
 

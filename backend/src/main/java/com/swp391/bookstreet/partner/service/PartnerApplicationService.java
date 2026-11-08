@@ -23,6 +23,7 @@ import java.time.Instant;
 public class PartnerApplicationService {
 
     private final PartnerOrganizationRepository organizationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final PartnerEventApplicationRepository applicationRepository;
     private final EventRootLockService eventRootLockService;
     private final OrganizerWorkItemNotificationService organizerNotifications;
@@ -30,12 +31,14 @@ public class PartnerApplicationService {
 
     public PartnerApplicationService(
             PartnerOrganizationRepository organizationRepository,
+            PartnerOrganizationGuard organizationGuard,
             PartnerEventApplicationRepository applicationRepository,
             EventRootLockService eventRootLockService,
             OrganizerWorkItemNotificationService organizerNotifications,
             Clock clock
     ) {
         this.organizationRepository = organizationRepository;
+        this.organizationGuard = organizationGuard;
         this.applicationRepository = applicationRepository;
         this.eventRootLockService = eventRootLockService;
         this.organizerNotifications = organizerNotifications;
@@ -50,13 +53,12 @@ public class PartnerApplicationService {
     ) {
         PartnerOrganization organization = organizationRepository
                 .findByRepresentativeUserId(representativeUserId)
-                .filter(candidate -> candidate.getStatus()
-                        == PartnerOrganization.OrganizationStatus.ACTIVE)
                 .orElseThrow(() -> new PartnerApiException(
                         HttpStatus.CONFLICT,
                         "PARTNER_ORGANIZATION_REQUIRED",
-                        "An active Partner Organization is required to apply."
+                        "A Partner Organization is required to apply."
                 ));
+        organizationGuard.requireActive(organization);
 
         Event event = eventRootLockService.lock(eventId)
                 .orElseThrow(() -> new PartnerApiException(

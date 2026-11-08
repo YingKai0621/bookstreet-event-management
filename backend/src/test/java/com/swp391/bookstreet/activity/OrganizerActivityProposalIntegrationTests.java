@@ -152,11 +152,13 @@ class OrganizerActivityProposalIntegrationTests {
                 .andExpect(jsonPath("$.content[0].eventId").value(eventId))
                 .andExpect(jsonPath("$.content[0].partnerOrganizationName")
                         .value(prefix + " Partner"))
+                .andExpect(jsonPath("$.content[0].partnerOrganizationStatus").value("ACTIVE"))
                 .andExpect(jsonPath("$.content[0].location.locationId").value(stageId));
         mvc.perform(get(PROPOSALS + "/" + firstId)
                         .with(actor(organizerId, "ORGANIZER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Author Meeting"));
+                .andExpect(jsonPath("$.title").value("Author Meeting"))
+                .andExpect(jsonPath("$.partnerOrganizationStatus").value("ACTIVE"));
         mvc.perform(get(PROPOSALS + "/" + foreignId)
                         .with(actor(organizerId, "ORGANIZER")))
                 .andExpect(status().isNotFound())
@@ -263,6 +265,45 @@ class OrganizerActivityProposalIntegrationTests {
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_NEEDS_CHANGES));
         verify(partnerMailService, timeout(5000).times(1)).sendMessage(anyString(), argThat(event ->
                 event.messageType() == ActivityPartnerMessageType.PROPOSAL_REJECTED));
+    }
+
+    @Test
+    void inactiveOrganizationBlocksPositiveProposalReviewsButStillAllowsRejection()
+            throws Exception {
+        Instant eventStart = future(5);
+        long eventId = insertEvent(organizerId, eventStart,
+                eventStart.plus(Duration.ofDays(1)));
+        long applicationId = insertApplication(eventId);
+        long stageId = insertLocation("INACTIVE-REVIEW", "Inactive Review Stage");
+        long approveId = insertProposal(applicationId, stageId, "Blocked approval", "PENDING",
+                eventStart.plus(Duration.ofHours(1)), eventStart.plus(Duration.ofHours(2)), 1);
+        long changesId = insertProposal(applicationId, stageId, "Blocked changes", "PENDING",
+                eventStart.plus(Duration.ofHours(3)), eventStart.plus(Duration.ofHours(4)), 2);
+        long rejectId = insertProposal(applicationId, stageId, "Allowed rejection", "PENDING",
+                eventStart.plus(Duration.ofHours(5)), eventStart.plus(Duration.ofHours(6)), 3);
+        jdbc.update("update partner_organizations set status = 'INACTIVE' where partner_organization_id = ?",
+                partnerOrganizationId);
+
+        mvc.perform(post(PROPOSALS + "/" + approveId + "/approve")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post(PROPOSALS + "/" + changesId + "/request-changes")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reviewNote\":\"Please provide sufficient clarification.\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PARTNER_ORGANIZATION_INACTIVE"));
+        mvc.perform(post(PROPOSALS + "/" + rejectId + "/reject")
+                        .with(actor(organizerId, "ORGANIZER")).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"reviewNote\":\"The proposal cannot be accepted now.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+        assertThat(proposalStatus(approveId)).isEqualTo("PENDING");
+        assertThat(proposalStatus(changesId)).isEqualTo("PENDING");
+        assertThat(proposalStatus(rejectId)).isEqualTo("REJECTED");
     }
 
     @Test

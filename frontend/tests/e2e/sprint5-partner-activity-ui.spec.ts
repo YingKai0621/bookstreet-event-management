@@ -45,6 +45,7 @@ const proposal: PartnerActivityProposalResponse = {
   eventName: event.name,
   partnerOrganizationId: 9,
   partnerOrganizationName: 'NXB Demo',
+  partnerOrganizationStatus: 'ACTIVE',
   location,
   title: 'Workshop làm sách thủ công',
   description: 'Cùng độc giả tự làm một cuốn sách nhỏ.',

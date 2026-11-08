@@ -23,11 +23,6 @@ export interface OrganizerProfile {
   phone: string;
   avatarInitials: string;
   avatarUrl?: string;
-  notificationPreferences?: {
-    newBooth: boolean;
-    newActivity: boolean;
-    dailyEmail: boolean;
-  };
 }
 
 export type OrganizerEventStatus =

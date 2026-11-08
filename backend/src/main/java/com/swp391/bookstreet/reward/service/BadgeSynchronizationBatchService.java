@@ -8,7 +8,6 @@ import com.swp391.bookstreet.reward.repository.PointTransactionRepository;
 import java.time.Clock;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -28,7 +27,7 @@ public class BadgeSynchronizationBatchService {
         this.clock = clock;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public BatchResult process(Long badgeId) {
         Badge badge = badges.findByBadgeIdForUpdate(badgeId).orElseThrow(AdminBadgeService::notFound);
         if (!badge.isActive()) throw new ApiException(HttpStatus.CONFLICT, "BADGE_NOT_ACTIVE",
@@ -42,8 +41,7 @@ public class BadgeSynchronizationBatchService {
         return new BatchResult(candidates.size(), awarded);
     }
 
-    /** Read only after process() returned through its transaction proxy and committed. */
-    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    @Transactional(readOnly = true)
     public long remaining(Long badgeId) {
         return queries.remaining(badges.findById(badgeId).orElseThrow(AdminBadgeService::notFound));
     }

@@ -17,7 +17,7 @@ async function mockWorkspace(page: Page, role: Role) {
     else if (path === '/api/v1/events' || path === '/api/v1/organizer/events') body = { ...emptyPage, content: [sampleEvent], totalElements: 1, totalPages: 1 };
     else if (/^\/api\/v1\/admin\/(venues|assets|booths)$/.test(path)) body = { data: [], campuses: [] };
     else if (path === '/api/v1/admin/badges' || path === '/api/v1/admin/users') body = emptyPage;
-    else if (path === '/api/v1/admin/dashboard') body = { userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] };
+    else if (path === '/api/v1/admin/dashboard') body = { accounts: { total: 0, byRole: { PARTICIPANT: 0, PARTNER: 0, ORGANIZER: 0, ADMIN: 0 }, byStatus: { ACTIVE: 0, DISABLED: 0 } }, events: { total: 0, byStatus: { DRAFT: 0, PUBLISHED: 0, ONGOING: 0, COMPLETED: 0, CANCELLED: 0 } }, activeBoothAssignments: 0, boothRevenue: 0, auditByDay: Array.from({ length: 7 }, (_, index) => ({ date: `2026-11-0${index + 1}`, count: 0 })) };
     else if (path === '/api/v1/admin/settings') body = [{ key: 'admin.system', value: {
       general: { systemName: 'Book Street', slogan: '', logoUrl: '', supportEmail: '', supportPhone: '', physicalAddress: '', primaryColor: '#059669' },
       security: { minPasswordLength: 8, requireSpecialChar: true, maxFailedAttempts: 5, sessionTimeoutMinutes: 60, twoFactorEnabled: false },

@@ -164,7 +164,7 @@ class PartnerBoothRequestIntegrationTests {
         jdbc.update("update partner_organizations set status = 'INACTIVE' "
                 + "where representative_user_id = ?", partnerOne);
         submitExpecting(partnerOne, eventId, boothId,
-                403, "PARTNER_APPLICATION_NOT_APPROVED");
+                409, "PARTNER_ORGANIZATION_INACTIVE");
 
         jdbc.update("update partner_organizations set status = 'ACTIVE' "
                 + "where representative_user_id = ?", partnerOne);

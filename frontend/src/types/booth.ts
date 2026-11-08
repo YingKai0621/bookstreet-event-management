@@ -59,6 +59,7 @@ export interface BoothRequest {
   boothCode: string;
   partnerOrganizationId: number;
   partnerOrganizationName: string;
+  partnerOrganizationStatus: 'ACTIVE' | 'INACTIVE';
   status: BoothRequestStatus;
   requestNote: string | null;
   reviewNote: string | null;

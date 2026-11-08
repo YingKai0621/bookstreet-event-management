@@ -5,7 +5,7 @@ import { AdminAuditLogsView } from './AdminAuditLogsView';
 import { AdminBadgeRulesView } from './AdminBadgeRulesView';
 import { AdminDashboardView } from './AdminDashboardView';
 import { AdminNotificationsView } from './AdminNotificationsView';
-import { AdminPendingFeatureView } from './AdminPendingFeatureView';
+import { AdminOrganizationsView } from './AdminOrganizationsView';
 import { AdminProfileView } from './AdminProfileView';
 import { AdminRolesView } from './AdminRolesView';
 import {
@@ -25,7 +25,6 @@ import {
 import { adminAuditApi, type AdminAuditLog } from '../../services/adminAuditApi';
 import { adminDashboardApi, type AdminDashboardStats } from '../../services/adminDashboardApi';
 import { adminProfileApi, type AdminProfileUpdate } from '../../services/adminProfileApi';
-import { adminUsersApi, type AdminUser } from '../../services/adminUsersApi';
 import { AdminProfile } from '../../types/admin';
 
 import './AdminPortal.css';
@@ -54,7 +53,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const navigateToTab = (tab: AdminTab) => navigate(ADMIN_TAB_PATHS[tab]);
 
   // Core Data States
-  const [users, setUsers] = useState<AdminUser[]>([]);
   const [recentAuditLogs, setRecentAuditLogs] = useState<AdminAuditLog[]>([]);
   const [recentAuditFailed, setRecentAuditFailed] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState<number | null>(null);
@@ -62,7 +60,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [notificationError, setNotificationError] = useState('');
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [profileError, setProfileError] = useState('');
-  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ userCount: 0, eventCount: 0, openEventCount: 0, boothCount: 0, activityCount: 0, todayActivityCount: 0, usersByRole: {}, auditByDay: [] });
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ requestState: 'loading' });
   const [loadError, setLoadError] = useState('');
 
   const refreshAdminProfile = useCallback(async () => {
@@ -106,13 +104,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const refreshAdminData = useCallback(async () => {
     try {
       if (activeTab === 'dashboard') {
-        const [loadedStats, loadedUsers] = await Promise.all([
-          adminDashboardApi.get(),
-          adminUsersApi.list({ size: 100 }),
-        ]);
+        const loadedStats = await adminDashboardApi.get();
         setDashboardStats(loadedStats);
-        // Transitional until the dashboard reads real figures (Developer C, AC-D-S11-01).
-        setUsers(Array.isArray(loadedUsers.content) ? loadedUsers.content : []);
         // A failure here must not hide the other figures, and must not read as no activity.
         try {
           const recent = await adminAuditApi.list({ size: 5 });
@@ -204,7 +197,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               onNavigateTab={(tab) => navigateToTab(tab as AdminTab)}
               auditLogs={recentAuditLogs}
               auditLogsFailed={recentAuditFailed}
-              users={users}
               onOpenAddUser={() => {
                 navigateToTab('users');
               }}
@@ -217,12 +209,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
           {activeTab === 'roles' && <AdminRolesView />}
 
-          {activeTab === 'organizations' && (
-            <AdminPendingFeatureView
-              title="Tổ chức đối tác"
-              description="Xem tổ chức đối tác và khóa hoặc mở khóa khi cần."
-            />
-          )}
+          {activeTab === 'organizations' && <AdminOrganizationsView />}
 
           {activeTab === 'badges' && (
             <AdminBadgeRulesView />

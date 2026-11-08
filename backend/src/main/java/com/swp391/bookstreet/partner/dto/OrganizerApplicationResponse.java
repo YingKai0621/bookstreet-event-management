@@ -7,6 +7,7 @@ public record OrganizerApplicationResponse(
         Long eventId,
         Long partnerOrganizationId,
         String partnerOrganizationName,
+        String partnerOrganizationStatus,
         String partnerCategoryCode,
         String status,
         String applicationNote,

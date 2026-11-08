@@ -34,6 +34,7 @@ public interface ActivityRequestRepository extends JpaRepository<ActivityRequest
         String getEventName();
         Long getPartnerOrganizationId();
         String getPartnerOrganizationName();
+        String getPartnerOrganizationStatus();
         Long getLocationId();
         String getLocationCode();
         String getLocationName();
@@ -121,6 +122,7 @@ public interface ActivityRequestRepository extends JpaRepository<ActivityRequest
                    event.name as eventName,
                    organization.partner_organization_id as partnerOrganizationId,
                    organization.name as partnerOrganizationName,
+                   organization.status as partnerOrganizationStatus,
                    current_location.location_id as locationId,
                    current_location.code as locationCode,
                    current_location.name as locationName,

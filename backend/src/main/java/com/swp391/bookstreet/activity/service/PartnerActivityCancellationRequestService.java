@@ -13,6 +13,8 @@ import com.swp391.bookstreet.activity.repository.ActivityRepository;
 import com.swp391.bookstreet.activity.repository.ActivityRequestRepository;
 import com.swp391.bookstreet.activity.security.ActivityCurrentUser;
 import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
+import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PartnerActivityCancellationRequestService {
     private final ActivityRepository activityRepository;
     private final ActivityRequestRepository requestRepository;
+    private final PartnerOrganizationRepository organizationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final ActivityCurrentUser currentUser;
     private final ActivityLockService lockService;
     private final ActivityLifecycleCoordinator lifecycleCoordinator;
@@ -36,7 +40,9 @@ public class PartnerActivityCancellationRequestService {
     private final Clock clock;
 
     public PartnerActivityCancellationRequestService(ActivityRepository activityRepository,
-            ActivityRequestRepository requestRepository, ActivityCurrentUser currentUser,
+            ActivityRequestRepository requestRepository,
+            PartnerOrganizationRepository organizationRepository,
+            PartnerOrganizationGuard organizationGuard, ActivityCurrentUser currentUser,
             ActivityLockService lockService,
             ActivityLifecycleCoordinator lifecycleCoordinator,
             ActivityLifecycleService lifecycleService, ActivityValidationService validation,
@@ -44,6 +50,8 @@ public class PartnerActivityCancellationRequestService {
             OrganizerWorkItemNotificationService organizerNotifications, Clock clock) {
         this.activityRepository = activityRepository;
         this.requestRepository = requestRepository;
+        this.organizationRepository = organizationRepository;
+        this.organizationGuard = organizationGuard;
         this.currentUser = currentUser;
         this.lockService = lockService;
         this.lifecycleCoordinator = lifecycleCoordinator;
@@ -58,8 +66,11 @@ public class PartnerActivityCancellationRequestService {
     public ActivityCancellationRequestResponse submit(Long activityId,
             CreateActivityCancellationRequest request) {
         Long representativeUserId = currentUser.requirePartnerId();
-        activityRepository.findPartnerRoute(activityId, representativeUserId)
+        var ownedRoute = activityRepository.findPartnerRoute(activityId, representativeUserId)
                 .orElseThrow(PartnerActivityCancellationRequestService::activityNotFound);
+        organizationGuard.requireActive(organizationRepository
+                .findById(ownedRoute.getPartnerOrganizationId())
+                .orElseThrow(PartnerActivityCancellationRequestService::activityNotFound));
         var locks = lockService.lockActivityRoot(activityId);
         Activity activity = locks.activity();
         Instant now = now();

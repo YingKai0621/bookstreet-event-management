@@ -16,6 +16,8 @@ import com.swp391.bookstreet.booth.entity.Location;
 import com.swp391.bookstreet.booth.entity.LocationType;
 import com.swp391.bookstreet.booth.repository.BoothAssignmentRepository;
 import com.swp391.bookstreet.notification.service.OrganizerWorkItemNotificationService;
+import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +34,8 @@ public class PartnerActivityChangeRequestService {
     private final ActivityRepository activityRepository;
     private final ActivityRequestRepository requestRepository;
     private final BoothAssignmentRepository assignmentRepository;
+    private final PartnerOrganizationRepository organizationRepository;
+    private final PartnerOrganizationGuard organizationGuard;
     private final ActivityCurrentUser currentUser;
     private final ActivityLockService lockService;
     private final ActivityLifecycleCoordinator lifecycleCoordinator;
@@ -45,6 +49,8 @@ public class PartnerActivityChangeRequestService {
     public PartnerActivityChangeRequestService(ActivityRepository activityRepository,
             ActivityRequestRepository requestRepository,
             BoothAssignmentRepository assignmentRepository,
+            PartnerOrganizationRepository organizationRepository,
+            PartnerOrganizationGuard organizationGuard,
             ActivityCurrentUser currentUser, ActivityLockService lockService,
             ActivityLifecycleCoordinator lifecycleCoordinator,
             ActivityLifecycleService lifecycleService, ActivityValidationService validation,
@@ -54,6 +60,8 @@ public class PartnerActivityChangeRequestService {
         this.activityRepository = activityRepository;
         this.requestRepository = requestRepository;
         this.assignmentRepository = assignmentRepository;
+        this.organizationRepository = organizationRepository;
+        this.organizationGuard = organizationGuard;
         this.currentUser = currentUser;
         this.lockService = lockService;
         this.lifecycleCoordinator = lifecycleCoordinator;
@@ -72,9 +80,12 @@ public class PartnerActivityChangeRequestService {
         if (request == null) {
             throw validation("Activity Change Request body is required.", null);
         }
-        validateTimePair(request);
         var ownedRoute = activityRepository.findPartnerRoute(activityId, representativeUserId)
                 .orElseThrow(PartnerActivityChangeRequestService::activityNotFound);
+        organizationGuard.requireActive(organizationRepository
+                .findById(ownedRoute.getPartnerOrganizationId())
+                .orElseThrow(PartnerActivityChangeRequestService::activityNotFound));
+        validateTimePair(request);
         List<Long> additionalLocations = request.contains("requestedLocationId")
                 ? List.of(requiredId(request.getRequestedLocationId(),
                         "requestedLocationId"))

@@ -660,3 +660,16 @@
   }
 }
 
+.partner-organization-locked-banner {
+  margin: 1rem 1.5rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #F0C36D;
+  border-radius: 10px;
+  background: #FFF8E7;
+  color: #744D00;
+}
+
+.partner-organization-locked-banner span {
+  display: block;
+  margin-top: 0.25rem;
+}

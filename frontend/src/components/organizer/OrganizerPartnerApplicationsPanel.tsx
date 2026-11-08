@@ -76,6 +76,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
   const lastTriggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   const selectedApplication = applications.find(application => application.id === selectedApplicationId) || null;
+  const selectedOrganizationLocked = selectedApplication?.partnerOrganizationStatus === 'INACTIVE';
   const pendingCount = applications.filter(application => application.status === 'pending').length;
   const normalizedQuery = query.trim().toLocaleLowerCase(language === 'vi' ? 'vi-VN' : 'en-US');
   const filteredApplications = React.useMemo(() => applications.filter(application => {
@@ -161,6 +162,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
 
   const submitReview = async () => {
     if (!selectedApplication || !reviewMode || isSubmitting) return;
+    if (reviewMode === 'approve' && selectedApplication.partnerOrganizationStatus === 'INACTIVE') return;
     const note = reviewNote.trim();
     if (reviewMode === 'reject' && !note) {
       setReviewError(language === 'vi' ? 'Vui lòng nhập lý do từ chối.' : 'A rejection reason is required.');
@@ -211,6 +213,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
               <span>{language === 'vi' ? 'Hồ sơ đối tác' : 'Partner application'}</span>
               <h2 id="partner-application-title">{selectedApplication.orgName}</h2>
               <p>{categoryLabel(selectedApplication.categoryCode, language)}</p>
+              {selectedOrganizationLocked && <p role="status" className="org-partner-review-message is-error">{language === 'vi' ? 'Tổ chức đang bị khóa; không thể duyệt hồ sơ.' : 'Organization is locked; this application cannot be approved.'}</p>}
             </div>
             <button
               ref={closeButtonRef}
@@ -230,7 +233,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
               <dl className="org-partner-detail-list">
                 <div>
                   <dt>{language === 'vi' ? 'Tổ chức' : 'Organization'}</dt>
-                  <dd>{selectedApplication.orgName}</dd>
+                  <dd>{selectedApplication.orgName}{selectedOrganizationLocked && <span className="org-partner-status is-rejected" style={{ marginLeft: '.5rem' }}>{language === 'vi' ? 'Tổ chức bị khóa' : 'Organization locked'}</span>}</dd>
                 </div>
                 <div>
                   <dt>{language === 'vi' ? 'Loại hình' : 'Category'}</dt>
@@ -326,7 +329,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
                     type="button"
                     className={reviewMode === 'approve' ? 'btn-org-primary' : 'org-partner-reject-confirm'}
                     onClick={() => void submitReview()}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (reviewMode === 'approve' && selectedOrganizationLocked)}
                   >
                     {isSubmitting
                       ? (language === 'vi' ? 'Đang xử lý…' : 'Submitting…')
@@ -344,7 +347,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
               <button type="button" className="org-partner-reject-action" onClick={() => beginReview('reject')}>
                 {language === 'vi' ? 'Từ chối' : 'Reject'}
               </button>
-              <button type="button" className="btn-org-primary" onClick={() => beginReview('approve')}>
+              <button type="button" className="btn-org-primary" onClick={() => beginReview('approve')} disabled={selectedOrganizationLocked}>
                 <Check size={16} aria-hidden="true" />
                 {language === 'vi' ? 'Duyệt hồ sơ' : 'Approve'}
               </button>
@@ -452,6 +455,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
                   <tr key={application.id}>
                     <td>
                       <strong>{application.orgName}</strong>
+                      {application.partnerOrganizationStatus === 'INACTIVE' && <span className="org-partner-status is-rejected" style={{ marginLeft: '.5rem' }}>{language === 'vi' ? 'Tổ chức bị khóa' : 'Organization locked'}</span>}
                       <span>{categoryLabel(application.categoryCode, language)}</span>
                     </td>
                     <td><span className="org-partner-date">{application.date}</span></td>

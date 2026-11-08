@@ -198,7 +198,8 @@ test('Partner sees assigned Booths by Event phase, opens QR and locates own Boot
   await page.getByRole('button', { name: /Sắp diễn ra/ }).click();
   await expect(page.locator('.my-booth-card')).toHaveCount(1);
   await expect(page.locator('.my-booth-card')).toContainText('Ngày hội sách trẻ');
-  await page.getByRole('combobox', { name: 'Lọc theo thời gian sự kiện' }).selectOption('all');
+  await page.getByRole('button', { name: 'Lọc theo thời gian sự kiện' }).click();
+  await page.getByRole('option', { name: 'Tất cả thời gian' }).click();
 
   const search = page.getByRole('searchbox', { name: 'Tìm gian hàng đã được cấp' });
   await search.fill('C03');
@@ -251,7 +252,7 @@ test('Assigned Booth management stays usable at the target responsive widths', a
     await page.setViewportSize({ width, height: width <= 768 ? 900 : 850 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
     await expect(page.getByRole('searchbox', { name: 'Tìm gian hàng đã được cấp' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Lọc theo thời gian sự kiện' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Lọc theo thời gian sự kiện' })).toBeVisible();
     await expect(page.locator('.my-booth-card').first()).toBeVisible();
   }
 

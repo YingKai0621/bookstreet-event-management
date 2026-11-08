@@ -11,6 +11,7 @@ public record ActivityProposalResponse(
         String eventName,
         Long partnerOrganizationId,
         String partnerOrganizationName,
+        String partnerOrganizationStatus,
         ActivityLocationResponse location,
         String title,
         String description,
@@ -30,7 +31,7 @@ public record ActivityProposalResponse(
     public static ActivityProposalResponse from(PartnerProposalView value) {
         return new ActivityProposalResponse(value.getActivityProposalId(), value.getEventId(),
                 value.getEventName(), value.getPartnerOrganizationId(),
-                value.getPartnerOrganizationName(),
+                value.getPartnerOrganizationName(), value.getPartnerOrganizationStatus(),
                 new ActivityLocationResponse(value.getLocationId(), value.getLocationCode(),
                         value.getLocationName(), LocationType.valueOf(value.getLocationType()),
                         value.getLocationMaxCapacity(), value.getLocationActive()),

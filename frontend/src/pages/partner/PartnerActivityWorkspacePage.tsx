@@ -19,6 +19,7 @@ import {
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PartnerDialog } from '../../components/partner/PartnerDialog';
+import { usePartnerOrganizationLocked } from './PartnerOrganizationStatusContext';
 import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import { WorkspaceFieldLabel } from '../../components/ui/WorkspaceFieldLabel';
 import { partnerApi } from '../../services/partnerApi';
@@ -212,6 +213,7 @@ function ActivityCancellationNotice({ activity }: { activity: PartnerActivityRes
 }
 
 export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) => {
+  const organizationLocked = usePartnerOrganizationLocked();
   const navigate = useNavigate();
   const { activityId: routeActivityId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -404,7 +406,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
         <div><h1 className="workspace-page-title">Quản lý hoạt động</h1><p className="workspace-page-subtitle">Đề xuất chương trình và theo dõi toàn bộ quá trình xét duyệt theo từng sự kiện.</p></div>
         <div className="paw-header-actions">
           <button type="button" className="paw-button paw-button--secondary" onClick={() => setReload(value => value + 1)} disabled={loading}><RefreshCw size={18} /> Làm mới</button>
-          <button type="button" className="paw-button paw-button--primary" onClick={() => setProposalForm('create')} disabled={!selectedApplication}><Plus size={18} /> Đề xuất hoạt động</button>
+          <button type="button" className="paw-button paw-button--primary" onClick={() => setProposalForm('create')} disabled={!selectedApplication || organizationLocked}><Plus size={18} /> Đề xuất hoạt động</button>
         </div>
       </header>
 
@@ -483,6 +485,7 @@ export const PartnerActivityWorkspacePage: React.FC<Props> = ({ applications }) 
 interface ProposalFormState { title: string; activityType: string; description: string; startAt: string; endAt: string; locationId: string; capacity: string }
 
 function ProposalDialog({ application, proposal, onClose, onSaved }: { application: PartnerEventApplication; proposal: PartnerActivityProposalResponse | null; onClose: () => void; onSaved: (message: string) => void }) {
+  const organizationLocked = usePartnerOrganizationLocked();
   const [minimumFutureAt] = useState(nextLocalMinuteInput);
   const [form, setForm] = useState<ProposalFormState>({
     title: proposal?.title || '', activityType: proposal?.activityType || '', description: proposal?.description || '',
@@ -512,6 +515,7 @@ function ProposalDialog({ application, proposal, onClose, onSaved }: { applicati
   const setField = (field: keyof ProposalFormState, value: string) => setForm(current => ({ ...current, [field]: value }));
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (organizationLocked && !proposal) return;
     const title = form.title.trim().replace(/\s+/g, ' ');
     const activityType = form.activityType.trim().replace(/\s+/g, ' ');
     const capacity = Number(form.capacity);
@@ -533,10 +537,32 @@ function ProposalDialog({ application, proposal, onClose, onSaved }: { applicati
     finally { setSubmitting(false); }
   };
 
-  return <PartnerDialog title={proposal ? 'Chỉnh sửa đề xuất hoạt động' : 'Đề xuất hoạt động mới'} onClose={onClose}><form className="paw-dialog-form" onSubmit={submit}><div className="paw-dialog-context"><CalendarDays size={18} /><span><small>Sự kiện</small><strong>{application.eventTitle}</strong></span></div><div className="paw-form-grid"><label className="is-wide"><span>Tên hoạt động *</span><input value={form.title} maxLength={200} onChange={event => setField('title', event.target.value)} /></label><label><span>Loại hoạt động *</span><input value={form.activityType} maxLength={50} placeholder="Workshop, tọa đàm..." onChange={event => setField('activityType', event.target.value)} /></label><label><span>Địa điểm *</span><select value={form.locationId} onChange={event => setField('locationId', event.target.value)} disabled={loadingLocations}><option value="">{loadingLocations ? 'Đang tải địa điểm...' : 'Chọn địa điểm'}</option>{locations.map(location => <option key={location.locationId} value={location.locationId} disabled={!location.eligible}>{location.code} · {location.name} · tối đa {location.maxCapacity}{location.eligible ? '' : ` — ${location.ineligibleReason || 'Không khả dụng'}`}</option>)}</select></label><label><span>Bắt đầu *</span><input type="datetime-local" value={form.startAt} min={laterLocalInput(toLocalInput(application.startAt), minimumFutureAt)} max={toLocalInput(application.endAt)} onChange={event => setField('startAt', event.target.value)} /></label><label><span>Kết thúc *</span><input type="datetime-local" value={form.endAt} min={laterLocalInput(form.startAt || toLocalInput(application.startAt), minimumFutureAt)} max={toLocalInput(application.endAt)} onChange={event => setField('endAt', event.target.value)} /></label><label><span>Sức chứa *</span><input type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={event => setField('capacity', event.target.value)} /></label><label className="is-wide"><span>Mô tả</span><textarea rows={4} maxLength={5000} value={form.description} onChange={event => setField('description', event.target.value)} /><small>{form.description.length}/5000</small></label></div>{locations.length === 0 && !loadingLocations && !error && <p className="paw-form-hint">Ban quản lý chưa cấu hình địa điểm phù hợp cho sự kiện này.</p>}{error && <p className="paw-form-error" role="alert">{error}</p>}<footer><button type="button" className="paw-button paw-button--secondary" onClick={onClose} disabled={submitting}>Đóng</button><button type="submit" className="paw-button paw-button--primary" disabled={submitting || loadingLocations}>{submitting ? 'Đang lưu...' : proposal ? 'Lưu thay đổi' : 'Gửi đề xuất'}</button></footer></form></PartnerDialog>;
+  return (
+    <PartnerDialog title={proposal ? 'Chỉnh sửa đề xuất hoạt động' : 'Đề xuất hoạt động mới'} onClose={onClose}>
+      <form className="paw-dialog-form" onSubmit={submit}>
+        <div className="paw-dialog-context"><CalendarDays size={18} /><span><small>Sự kiện</small><strong>{application.eventTitle}</strong></span></div>
+        <div className="paw-form-grid">
+          <label className="is-wide"><span>Tên hoạt động *</span><input value={form.title} maxLength={200} onChange={event => setField('title', event.target.value)} /></label>
+          <label><span>Loại hoạt động *</span><input value={form.activityType} maxLength={50} placeholder="Workshop, tọa đàm..." onChange={event => setField('activityType', event.target.value)} /></label>
+          <label><span>Địa điểm *</span><select value={form.locationId} onChange={event => setField('locationId', event.target.value)} disabled={loadingLocations}><option value="">{loadingLocations ? 'Đang tải địa điểm...' : 'Chọn địa điểm'}</option>{locations.map(location => <option key={location.locationId} value={location.locationId} disabled={!location.eligible}>{location.code} · {location.name} · tối đa {location.maxCapacity}{location.eligible ? '' : ` — ${location.ineligibleReason || 'Không khả dụng'}`}</option>)}</select></label>
+          <label><span>Bắt đầu *</span><input type="datetime-local" value={form.startAt} min={laterLocalInput(toLocalInput(application.startAt), minimumFutureAt)} max={toLocalInput(application.endAt)} onChange={event => setField('startAt', event.target.value)} /></label>
+          <label><span>Kết thúc *</span><input type="datetime-local" value={form.endAt} min={laterLocalInput(form.startAt || toLocalInput(application.startAt), minimumFutureAt)} max={toLocalInput(application.endAt)} onChange={event => setField('endAt', event.target.value)} /></label>
+          <label><span>Sức chứa *</span><input type="number" min="1" max={selectedLocation?.maxCapacity} value={form.capacity} onChange={event => setField('capacity', event.target.value)} /></label>
+          <label className="is-wide"><span>Mô tả</span><textarea rows={4} maxLength={5000} value={form.description} onChange={event => setField('description', event.target.value)} /><small>{form.description.length}/5000</small></label>
+        </div>
+        {locations.length === 0 && !loadingLocations && !error && <p className="paw-form-hint">Ban quản lý chưa cấu hình địa điểm phù hợp cho sự kiện này.</p>}
+        {error && <p className="paw-form-error" role="alert">{error}</p>}
+        <footer>
+          <button type="button" className="paw-button paw-button--secondary" onClick={onClose} disabled={submitting}>Đóng</button>
+          <button type="submit" className="paw-button paw-button--primary" disabled={submitting || loadingLocations || (organizationLocked && !proposal)}>{submitting ? 'Đang lưu...' : proposal ? 'Lưu thay đổi' : 'Gửi đề xuất'}</button>
+        </footer>
+      </form>
+    </PartnerDialog>
+  );
 }
 
 function RecordDialog({ record, activity, sourceProposal, onClose, onEditProposal, onOpenLinkedActivity, onOpenSourceProposal, onCompleted }: { record: WorkspaceRecord; activity: PartnerActivityResponse | null; sourceProposal: PartnerActivityProposalResponse | null; onClose: () => void; onEditProposal: (proposal: PartnerActivityProposalResponse) => void; onOpenLinkedActivity?: () => void; onOpenSourceProposal?: () => void; onCompleted: (message: string) => void }) {
+  const organizationLocked = usePartnerOrganizationLocked();
   const [minimumFutureAt] = useState(nextLocalMinuteInput);
   const [action, setAction] = useState<'change' | 'cancel' | null>(null);
   const [reason, setReason] = useState('');
@@ -584,14 +610,14 @@ function RecordDialog({ record, activity, sourceProposal, onClose, onEditProposa
     finally { setSubmitting(false); }
   };
   const resubmit = async () => {
-    if (!isProposal(record)) return;
+    if (!isProposal(record) || organizationLocked) return;
     setSubmitting(true); setError('');
     try { await partnerApi.resubmitActivityProposal(record.activityProposalId); onCompleted('Đã gửi lại đề xuất để Ban quản lý xét duyệt.'); }
     catch (cause) { setError(friendlyError(cause, 'Không thể gửi lại đề xuất.')); }
     finally { setSubmitting(false); }
   };
   const submitRequest = async () => {
-    if (!currentActivity || !action) return;
+    if (!currentActivity || !action || organizationLocked) return;
     const normalizedReason = reason.trim().replace(/\s+/g, ' ');
     if (normalizedReason.length < 10 || normalizedReason.length > 500) return setError('Lý do phải từ 10 đến 500 ký tự.');
     setSubmitting(true); setError('');
@@ -630,7 +656,7 @@ function RecordDialog({ record, activity, sourceProposal, onClose, onEditProposa
   return <PartnerDialog title={dialogTitle} onClose={onClose}><div className="paw-detail"><StatusBadge kind={recordKind(record)} status={record.status} />{(isProposal(record) || isActivity(record)) && <dl><div><dt>{isProposal(record) ? 'Thời gian đề xuất' : 'Lịch chính thức hiện tại'}</dt><dd>{formatRange(isProposal(record) ? record.proposedStartAt : record.startAt, isProposal(record) ? record.proposedEndAt : record.endAt)}</dd></div><div><dt>{isProposal(record) ? 'Địa điểm đề xuất' : 'Địa điểm hiện tại'}</dt><dd>{record.location.code} · {record.location.name}</dd></div><div><dt>Sức chứa</dt><dd>{record.capacity} người</dd></div><div><dt>Loại hoạt động</dt><dd>{record.activityType}</dd></div></dl>}{isProposal(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.reviewNote && <div className="paw-review-note"><strong>Phản hồi Ban quản lý</strong><p>{record.reviewNote}</p></div>}{record.status === 'APPROVED' && record.activityId && onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}{isActivity(record) && <><p>{record.description || 'Không có mô tả.'}</p>{record.sourceProposalId && onOpenSourceProposal && <SourceProposalNotice proposalId={record.sourceProposalId} proposal={sourceProposal || undefined} onOpen={onOpenSourceProposal} />}<ActivityCancellationNotice activity={record} /><PaginatedList items={revisions}>{pageItems => (<div className="paw-revisions"><h3><History size={17} /> Lịch sử điều chỉnh</h3>{revisions.length === 0 ? <p>Chưa có lần điều chỉnh nào.</p> : pageItems.map(revision => <div key={revision.activityRevisionId}><strong>{formatDateTime(revision.changedAt)}</strong><span>{revision.changeReason || REVISION_SOURCE_LABELS[revision.revisionSource] || revision.revisionSource}</span></div>)}</div>)}</PaginatedList></>}{!isProposal(record) && !isActivity(record) && <><div className="paw-review-note"><strong>Lý do yêu cầu</strong><p>{record.reason}</p>{record.reviewNote && <p><b>Phản hồi Ban quản lý:</b> {record.reviewNote}</p>}</div>{isChange(record) && <ChangeRequestSummary request={record} activity={currentActivity} />}{'late' in record && record.late && <p className="paw-late-note">Yêu cầu này được gửi sau mốc hủy thông thường.</p>}{onOpenLinkedActivity && <LinkedActivityNotice activityId={record.activityId} activity={activity || undefined} onOpen={onOpenLinkedActivity} />}</>}
     {action && <div className="paw-request-panel"><h3>{action === 'change' ? 'Yêu cầu thay đổi hoạt động' : 'Yêu cầu hủy hoạt động'}</h3>{action === 'change' && <><label><span>Trường cần đổi</span><select value={changeField} onChange={event => { setChangeField(event.target.value as typeof changeField); setChangeValue(''); setChangeEndValue(''); }}><option value="title">Tên hoạt động</option><option value="description">Mô tả</option><option value="type">Loại hoạt động</option><option value="location">Địa điểm</option><option value="schedule">Thời gian bắt đầu và kết thúc</option><option value="capacity">Sức chứa</option><option value="image">URL hình ảnh</option></select></label>{changeField === 'schedule' ? <div className="paw-request-range"><label><span>Bắt đầu mới</span><input aria-label="Bắt đầu mới" type="datetime-local" value={changeValue} min={minimumFutureAt} onChange={event => setChangeValue(event.target.value)} /></label><label><span>Kết thúc mới</span><input aria-label="Kết thúc mới" type="datetime-local" value={changeEndValue} min={laterLocalInput(changeValue || minimumFutureAt, minimumFutureAt)} onChange={event => setChangeEndValue(event.target.value)} /></label></div> : <label><span>Nội dung mới</span>{changeField === 'description' ? <textarea rows={3} value={changeValue} onChange={event => setChangeValue(event.target.value)} /> : changeField === 'location' ? <select value={changeValue} onChange={event => setChangeValue(event.target.value)}><option value="">Chọn địa điểm mới</option>{requestLocations.map(location => <option key={location.locationId} value={location.locationId} disabled={!location.eligible}>{location.code} · {location.name}{location.eligible ? '' : ` — ${location.ineligibleReason || 'Không khả dụng'}`}</option>)}</select> : <input type={changeField === 'capacity' ? 'number' : changeField === 'image' ? 'url' : 'text'} value={changeValue} onChange={event => setChangeValue(event.target.value)} placeholder={changeField === 'image' ? 'Để trống nếu muốn gỡ ảnh' : undefined} />}</label>}</>}<label><span>Lý do *</span><textarea rows={3} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} /></label></div>}
     {error && <p className="paw-form-error" role="alert">{error}</p>}
-    <footer><button type="button" className="paw-button paw-button--secondary" onClick={onClose}>Đóng</button><div>{isProposal(record) && ['PENDING', 'NEED_CHANGES'].includes(record.status) && <><button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút đề xuất</button><button type="button" className="paw-button paw-button--secondary" onClick={() => onEditProposal(record)}>Chỉnh sửa</button>{record.status === 'NEED_CHANGES' && <button type="button" className="paw-button paw-button--primary" disabled={submitting} onClick={() => void resubmit()}>Gửi lại xét duyệt</button>}</>}{isActivity(record) && !action && <>{['DRAFT', 'PUBLISHED'].includes(record.status) && <button type="button" className="paw-button paw-button--secondary" onClick={() => setAction('change')}>Yêu cầu thay đổi</button>}{['DRAFT', 'PUBLISHED', 'ONGOING'].includes(record.status) && <button type="button" className="paw-button paw-button--danger" onClick={() => setAction('cancel')}>Yêu cầu hủy</button>}</>}{!isProposal(record) && !isActivity(record) && record.status === 'PENDING' && <button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút yêu cầu</button>}{action && <><button type="button" className="paw-button paw-button--secondary" onClick={() => { setAction(null); setError(''); }}>Quay lại</button><button type="button" className="paw-button paw-button--primary" disabled={submitting} onClick={() => void submitRequest()}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button></>}</div></footer></div></PartnerDialog>;
+    <footer><button type="button" className="paw-button paw-button--secondary" onClick={onClose}>Đóng</button><div>{isProposal(record) && ['PENDING', 'NEED_CHANGES'].includes(record.status) && <><button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút đề xuất</button><button type="button" className="paw-button paw-button--secondary" onClick={() => onEditProposal(record)}>Chỉnh sửa</button>{record.status === 'NEED_CHANGES' && <button type="button" className="paw-button paw-button--primary" disabled={submitting || organizationLocked} onClick={() => void resubmit()}>Gửi lại xét duyệt</button>}</>}{isActivity(record) && !action && <>{['DRAFT', 'PUBLISHED'].includes(record.status) && <button type="button" className="paw-button paw-button--secondary" onClick={() => setAction('change')} disabled={organizationLocked}>Yêu cầu thay đổi</button>}{['DRAFT', 'PUBLISHED', 'ONGOING'].includes(record.status) && <button type="button" className="paw-button paw-button--danger" onClick={() => setAction('cancel')} disabled={organizationLocked}>Yêu cầu hủy</button>}</>}{!isProposal(record) && !isActivity(record) && record.status === 'PENDING' && <button type="button" className="paw-button paw-button--danger" disabled={submitting} onClick={() => void withdraw()}>Rút yêu cầu</button>}{action && <><button type="button" className="paw-button paw-button--secondary" onClick={() => { setAction(null); setError(''); }}>Quay lại</button><button type="button" className="paw-button paw-button--primary" disabled={submitting || organizationLocked} onClick={() => void submitRequest()}>{submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</button></>}</div></footer></div></PartnerDialog>;
 }
 
 function ChangeRequestSummary({ request, activity }: { request: PartnerActivityChangeRequestResponse; activity: PartnerActivityResponse | null }) {

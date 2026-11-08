@@ -27,6 +27,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
         String getEventName();
         Long getPartnerOrganizationId();
         String getPartnerOrganizationName();
+        String getPartnerOrganizationStatus();
         Long getLocationId();
         String getLocationCode();
         String getLocationName();
@@ -87,6 +88,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
                    organization.name as partnerOrganizationName,
+                   organization.status as partnerOrganizationStatus,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -157,6 +159,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
                    organization.name as partnerOrganizationName,
+                   organization.status as partnerOrganizationStatus,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -228,6 +231,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
                    organization.name as partnerOrganizationName,
+                   organization.status as partnerOrganizationStatus,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,
@@ -270,6 +274,7 @@ public interface ActivityProposalRepository extends JpaRepository<ActivityPropos
                    event.name as eventName,
                    application.partner_organization_id as partnerOrganizationId,
                    organization.name as partnerOrganizationName,
+                   organization.status as partnerOrganizationStatus,
                    location.location_id as locationId,
                    location.code as locationCode,
                    location.name as locationName,

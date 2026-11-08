@@ -1,0 +1,59 @@
+.adm-organizations-view .adm-search-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.adm-organizations-view .adm-search-group > svg {
+  position: absolute;
+  left: 0.8rem;
+  color: #718079;
+  pointer-events: none;
+}
+
+.adm-organizations-view .adm-filter-search {
+  width: 100%;
+  padding-left: 2.4rem;
+}
+
+.adm-org-detail {
+  width: min(680px, calc(100vw - 2rem));
+}
+
+.adm-org-detail-grid {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.adm-org-detail-grid dt {
+  color: #66736f;
+  font-weight: 650;
+}
+
+.adm-org-detail-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .adm-organizations-view .adm-filter-bar {
+    align-items: stretch;
+  }
+
+  .adm-organizations-view .adm-search-group,
+  .adm-organizations-view .adm-status-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adm-org-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .adm-org-detail-grid dd {
+    margin-bottom: 0.75rem;
+  }
+}

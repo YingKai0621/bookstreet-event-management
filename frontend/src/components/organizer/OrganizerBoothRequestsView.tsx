@@ -197,6 +197,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
   }, [boothFilter, completedRequests, otherRequests, pendingRequests, requestFilter, requests, searchTerm, selectedRequests]);
 
   const handleSelectRequest = async (request: BoothRequest) => {
+    if (request.partnerOrganizationStatus === 'INACTIVE') return;
     if (!eventId) return;
     const requestedEventId = eventId;
     setBusyKey(`request-${request.boothRequestId}`);
@@ -492,6 +493,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                         <Store size={14} />
                         Gian {request.boothCode}
                       </span>
+                      {request.partnerOrganizationStatus === 'INACTIVE' && <span className="obr-organization-locked">Tổ chức bị khóa</span>}
                     </div>
                     <div className="obr-submitted-time">
                       <Clock3 size={13} />
@@ -613,7 +615,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                       type="button"
                       className="obr-btn-approve btn-request-approve"
                       onClick={() => setApprovingRequest(request)}
-                      disabled={busyKey === `request-${request.boothRequestId}`}
+                      disabled={busyKey === `request-${request.boothRequestId}` || request.partnerOrganizationStatus === 'INACTIVE'}
                     >
                       {busyKey === `request-${request.boothRequestId}` ? (
                         <Loader2 size={15} className="s2-spin" />
@@ -688,6 +690,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                 <strong>{approvingRequest.partnerOrganizationName}</strong> tại gian{' '}
                 <strong>{approvingRequest.boothCode}</strong>.
               </p>
+              {approvingRequest.partnerOrganizationStatus === 'INACTIVE' && <p role="status">Tổ chức đang bị khóa; không thể duyệt yêu cầu này.</p>}
               <p className="s2-modal-supporting-copy">
                 Giá thuê hiện tại của gian hàng sẽ được khóa cho yêu cầu này. Với gian hàng miễn phí,
                 hệ thống sẽ cấp gian ngay sau khi xác nhận.
@@ -704,7 +707,7 @@ export const OrganizerBoothRequestsView: React.FC<Props> = ({ events, selectedEv
                 <button
                   type="button"
                   className="btn-org-primary"
-                  disabled={Boolean(busyKey)}
+                  disabled={Boolean(busyKey) || approvingRequest.partnerOrganizationStatus === 'INACTIVE'}
                   onClick={() => void handleSelectRequest(approvingRequest)}
                 >
                   {busyKey === `request-${approvingRequest.boothRequestId}` && (

@@ -14,6 +14,7 @@ import com.swp391.bookstreet.payment.entity.BoothPaymentStatus;
 import com.swp391.bookstreet.payment.gateway.VnPayGateway;
 import com.swp391.bookstreet.payment.gateway.VnPayGatewayException;
 import com.swp391.bookstreet.payment.repository.BoothPaymentRepository;
+import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -28,17 +29,20 @@ public class PaymentAttemptTransactions {
     private final BoothHoldRepository holdRepository;
     private final BoothRequestRepository requestRepository;
     private final EventRootLockService eventRootLockService;
+    private final PartnerOrganizationGuard organizationGuard;
     private final VnPayProperties properties;
     private final VnPayGateway gateway;
 
     public PaymentAttemptTransactions(BoothPaymentRepository paymentRepository,
             BoothHoldRepository holdRepository, BoothRequestRepository requestRepository,
-            EventRootLockService eventRootLockService, VnPayProperties properties,
+            EventRootLockService eventRootLockService,
+            PartnerOrganizationGuard organizationGuard, VnPayProperties properties,
             VnPayGateway gateway) {
         this.paymentRepository = paymentRepository;
         this.holdRepository = holdRepository;
         this.requestRepository = requestRepository;
         this.eventRootLockService = eventRootLockService;
+        this.organizationGuard = organizationGuard;
         this.properties = properties;
         this.gateway = gateway;
     }
@@ -71,6 +75,16 @@ public class PaymentAttemptTransactions {
             throw conflict("BOOTH_REQUEST_NOT_SELECTED",
                     "The Booth request has not been selected for payment.");
         }
+
+        // A concurrent same-key request can miss the first lookup while waiting for this Hold
+        // lock. Re-check before the organization guard so an existing attempt stays replayable.
+        replay = paymentRepository.findByIdempotencyKey(key).orElse(null);
+        if (replay != null) {
+            return replay(replay, requestId, userId);
+        }
+        organizationGuard.requireActive(hold.getBoothRequest().getApplication()
+                .getPartnerOrganization());
+
         if (hold.getBoothRequest().getStatus() == BoothRequestStatus.COMPLETED
                 || paymentRepository.existsByBoothHoldBoothHoldIdAndStatus(
                         hold.getBoothHoldId(), BoothPaymentStatus.SUCCESS)) {
@@ -88,13 +102,6 @@ public class PaymentAttemptTransactions {
         }
         if (!now.isBefore(hold.getExpiresAt())) {
             throw conflict("BOOTH_HOLD_EXPIRED", "The Booth Hold has expired.");
-        }
-
-        // A concurrent same-key request can miss the first lookup while waiting for this Hold
-        // lock. Re-check after acquiring the serialization lock before examining Pending attempts.
-        replay = paymentRepository.findByIdempotencyKey(key).orElse(null);
-        if (replay != null) {
-            return replay(replay, requestId, userId);
         }
 
         if (hold.getLockedRentalPrice().signum() == 0) {
