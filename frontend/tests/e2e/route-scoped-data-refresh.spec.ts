@@ -54,12 +54,9 @@ async function mockRoleApi(page: Page, role: Role) {
     if (path === '/api/v1/organizer/activity-cancellation-requests') return json(route, pageResponse([]));
     if (path === '/api/v1/organizer/notifications') return json(route, pageResponse([]));
     if (path === '/api/v1/organizer/notifications/unread-count') return json(route, { unreadCount: 0 });
-    if (path === '/api/v1/admin/profile') {
-      return json(route, { id: 7, fullName: 'ADMIN Test', email: 'admin@example.test', phone: '', department: '', lastActiveAt: null });
-    }
     if (path === '/api/v1/admin/notifications') return json(route, pageResponse([]));
     if (path === '/api/v1/admin/notifications/unread-count') return json(route, { unreadCount: 0 });
-    if (path === '/api/v1/admin/users') return json(route, []);
+    if (path === '/api/v1/admin/users') return json(route, pageResponse([]));
     if (path === '/api/v1/partner/organization') {
       return json(route, {
         partnerOrganizationId: 9,
@@ -145,7 +142,8 @@ test('Admin user management does not preload unrelated tabs or poll in the backg
   expect(requests.count('/api/v1/admin/roles')).toBe(0);
   expect(requests.count('/api/v1/events')).toBe(0);
   expect(requests.count('/api/v1/participant/event-registrations')).toBe(0);
-  expect(requests.count('/api/v1/admin/profile')).toBe(1);
+  expect(requests.count('/api/v1/admin/profile')).toBe(0);
+  expect(requests.count('/api/v1/auth/profile')).toBe(1);
   expect(requests.count('/api/v1/admin/notifications')).toBe(1);
   expect(requests.count('/api/v1/admin/notifications/unread-count')).toBe(1);
   expect(requests.count('/api/v1/admin/users')).toBe(1);

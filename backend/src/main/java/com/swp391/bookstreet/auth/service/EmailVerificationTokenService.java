@@ -77,6 +77,47 @@ public class EmailVerificationTokenService {
         return Optional.of(messageRequested);
     }
 
+    /**
+     * Used when an Admin replaces an unverified email: every pending token for the old address is revoked,
+     * and a new one is issued only when the existing issue limits allow it, so the change itself never
+     * fails on a limit. The User can request another message later through the existing resend flow.
+     */
+    @Transactional
+    public Optional<EmailVerificationMessageRequested> reissueAfterEmailChange(User user) {
+        Instant currentTime = clock.instant();
+        revokePreviousActiveTokens(user.getId(), currentTime);
+
+        if (user.getEmail() == null || user.getEmailVerifiedAt() != null
+                || !withinIssueLimits(user.getId(), currentTime)) {
+            return Optional.empty();
+        }
+
+        IssuedEmailVerificationToken issuedToken = createToken(user);
+        return Optional.of(new EmailVerificationMessageRequested(
+                user.getId(),
+                issuedToken.getTokenId(),
+                user.getEmail(),
+                issuedToken.getRawToken()
+        ));
+    }
+
+    private boolean withinIssueLimits(Long userId, Instant currentTime) {
+        Optional<UserToken> latestToken =
+                userTokenRepository.findFirstByUserIdAndTokenTypeOrderByCreatedAtDesc(
+                        userId,
+                        UserTokenType.EMAIL_VERIFICATION
+                );
+        if (latestToken.isPresent()
+                && currentTime.isBefore(latestToken.get().getCreatedAt().plus(ISSUANCE_COOLDOWN))) {
+            return false;
+        }
+        return userTokenRepository.countByUserIdAndTokenTypeAndCreatedAtAfter(
+                userId,
+                UserTokenType.EMAIL_VERIFICATION,
+                currentTime.minus(HOURLY_LIMIT_WINDOW)
+        ) < MAXIMUM_ISSUANCES_PER_HOUR;
+    }
+
     private IssuedEmailVerificationToken createToken(User user) {
         Instant currentTime = clock.instant();
 
