@@ -18,4 +18,8 @@ export const authApi = {
   logout: () => apiClient.post<void>('/auth/logout'),
   resendEmailVerification: () => apiClient.post<void>('/auth/email-verification/resend'),
   confirmEmailVerification: (token: string) => apiClient.post<void>('/auth/email-verification/confirm', { token }),
+  requestPasswordReset: (email: string) =>
+    apiClient.post<{ message: string }>('/auth/password-reset/request', { email }),
+  confirmPasswordReset: (token: string, newPassword: string, confirmPassword: string) =>
+    apiClient.post<void>('/auth/password-reset/confirm', { token, newPassword, confirmPassword }),
 };

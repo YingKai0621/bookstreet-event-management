@@ -208,6 +208,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ language, onLoginSuccess }
                 <label htmlFor="login-password">
                   {language === 'vi' ? 'Mật khẩu' : 'Password'}
                 </label>
+                <Link to="/forgot-password" className="auth-link-btn">
+                  {language === 'vi' ? 'Quên mật khẩu?' : 'Forgot password?'}
+                </Link>
               </div>
 
               <div className="auth-input-wrap">
