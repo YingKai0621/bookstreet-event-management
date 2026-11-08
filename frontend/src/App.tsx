@@ -10,6 +10,7 @@ import { EventsSection } from './components/landing/EventsSection';
 import { FeedbackSection } from './components/landing/FeedbackSection';
 import { Footer } from './components/landing/Footer';
 import { Header } from './components/landing/Header';
+import type { StaffAccount, StaffWorkspace } from './components/landing/HeaderStaffAccount';
 import { Hero } from './components/landing/Hero';
 import { InteractiveMap } from './components/landing/InteractiveMap';
 import { migrateLegacyOrganizerUrl } from './routing/organizerRoutes';
@@ -288,9 +289,20 @@ export function App() {
     && location.pathname !== '/verify-email';
   const isAuthenticated = authenticationStatus === 'authenticated';
   const isPortalAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ORGANIZER'));
-  const isParticipantAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
   const isPartnerAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('PARTNER'));
   const isAdminAuthenticated = isAuthenticated && Boolean(authenticatedUser?.roles.includes('ADMIN'));
+  // A staff account keeps its PARTICIPANT role in the database, but works only in its staff workspaces.
+  const staffWorkspaces: StaffWorkspace[] = [
+    ...(isAdminAuthenticated ? [{ role: 'ADMIN' as const, path: '/admin' }] : []),
+    ...(isPortalAuthenticated ? [{ role: 'ORGANIZER' as const, path: '/organizer' }] : []),
+    ...(isPartnerAuthenticated ? [{ role: 'PARTNER' as const, path: '/partner' }] : []),
+  ];
+  const isStaffAccount = staffWorkspaces.length > 0;
+  const staffAccount: StaffAccount | undefined = isStaffAccount && authenticatedUser
+    ? { name: authenticatedUser.fullName, email: authenticatedUser.email || '', workspaces: staffWorkspaces }
+    : undefined;
+  const isParticipantAuthenticated = isAuthenticated && !isStaffAccount
+    && Boolean(authenticatedUser?.roles.includes('PARTICIPANT'));
   const currentParticipantId = useRef<number | undefined>(undefined);
   const participantActivityMutations = useRef(new Map<string, Promise<void>>());
   const participantUserId = isParticipantAuthenticated ? authenticatedUser?.userId : undefined;
@@ -921,6 +933,10 @@ export function App() {
       return <p className="app-loading-state">Đang kiểm tra phiên đăng nhập...</p>;
     }
 
+    if (isStaffAccount) {
+      return <Navigate to={staffWorkspaces[0].path} replace />;
+    }
+
     if (!isParticipantAuthenticated) {
       return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
     }
@@ -1225,6 +1241,7 @@ export function App() {
         isManagementPortal={false}
         isParticipantAuthenticated={isParticipantAuthenticated}
         participantProfile={participantProfile}
+        staffAccount={staffAccount}
         onParticipantLogout={handleParticipantLogout}
         selectedPublicEventId={publicEventId}
       />
@@ -1271,6 +1288,7 @@ export function App() {
             events={publicContextEvents}
             isLoading={isPublicDataLoading}
             isParticipantAuthenticated={isParticipantAuthenticated}
+            isStaffAccount={isStaffAccount}
             participantProfile={participantProfile}
             onRegisterActivity={handleRegisterActivity}
             onJoinEvent={handleJoinParticipantEvent}
@@ -1343,6 +1361,7 @@ export function App() {
           events={events}
           isLoading={isPublicDataLoading}
           isParticipantAuthenticated={isParticipantAuthenticated}
+          isStaffAccount={isStaffAccount}
           participantProfile={participantProfile}
           registeredEventIds={new Set(landingRegistrations?.userId === participantUserId ? landingRegistrations?.eventIds : [])}
           onJoinEvent={handleJoinParticipantEvent}

@@ -29,6 +29,7 @@ interface EventsExperienceProps {
   isLoading?: boolean;
   onOpenRegisterModal?: (event: EventItem) => void;
   isParticipantAuthenticated?: boolean;
+  isStaffAccount?: boolean;
   participantProfile?: ParticipantProfile;
   registeredEventIds?: ReadonlySet<string>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
@@ -60,6 +61,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
   events,
   isLoading = false,
   isParticipantAuthenticated = false,
+  isStaffAccount = false,
   participantProfile: _participantProfile,
   registeredEventIds = new Set<string>(),
   onJoinEvent,
@@ -135,6 +137,12 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
     if (registeredEvent?.registrationDeadlineAt &&
         Date.now() > new Date(registeredEvent.registrationDeadlineAt).getTime()) {
       setDeadlinePassed(true);
+      return;
+    }
+    if (isStaffAccount) {
+      setRegistrationError(vi
+        ? 'Tài khoản nhân sự không dùng chức năng độc giả. Vui lòng dùng tài khoản cá nhân để tham gia sự kiện.'
+        : 'Staff accounts do not use reader features. Please use a personal account to join events.');
       return;
     }
     if (!isParticipantAuthenticated) {

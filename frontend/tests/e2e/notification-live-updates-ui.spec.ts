@@ -35,7 +35,9 @@ async function setup(page: Page, role: Role | 'admin') {
     if (path.endsWith('/auth/me')) {
       return json(route, {
         userId: 7, username: 'live', fullName: 'Người dùng', email: 'live@example.test', emailVerified: true,
-        status: 'ACTIVE', roles: ['PARTICIPANT', 'PARTNER', 'ORGANIZER', 'ADMIN'],
+        status: 'ACTIVE',
+        // A staff account no longer opens the reader workspace.
+        roles: role === 'participant' ? ['PARTICIPANT'] : ['PARTICIPANT', 'PARTNER', 'ORGANIZER', 'ADMIN'],
       });
     }
     if (path.endsWith('/auth/profile')) {

@@ -34,6 +34,7 @@ interface EventsSectionProps {
   events?: EventItem[];
   isLoading?: boolean;
   isParticipantAuthenticated?: boolean;
+  isStaffAccount?: boolean;
   participantProfile?: ParticipantProfile;
   onRegisterActivity?: (activityId: string) => void | Promise<void>;
   onJoinEvent?: (eventId: string) => void | Promise<void>;
@@ -48,6 +49,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
   events = [],
   isLoading = false,
   isParticipantAuthenticated = false,
+  isStaffAccount = false,
   participantProfile: _participantProfile,
   onRegisterActivity: _onRegisterActivity,
   onJoinEvent,
@@ -385,7 +387,15 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                   </div>
                 </div>
 
-                {!isParticipantAuthenticated && (
+                {isStaffAccount && (
+                  <p role="note" style={{ padding: '0.75rem 1rem', background: '#FAF8F3', border: '1px solid #E9BC63', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', color: '#8C6519' }}>
+                    {language === 'vi'
+                      ? 'Tài khoản nhân sự không dùng chức năng độc giả. Vui lòng dùng tài khoản cá nhân để tham gia sự kiện.'
+                      : 'Staff accounts do not use reader features. Please use a personal account to join events.'}
+                  </p>
+                )}
+
+                {!isParticipantAuthenticated && !isStaffAccount && (
                   <div style={{
                     padding: '0.75rem 1rem',
                     background: '#FAF8F3',
