@@ -1,5 +1,5 @@
-import { AlertCircle, CheckCircle2, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, ChevronDown, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
@@ -30,8 +30,8 @@ const ROLE_BADGE_CLASS: Record<AdminRoleCode, string> = {
 
 interface PendingChange {
   account: AdminUser;
-  role: AdminManageableRole;
-  action: 'assign' | 'remove';
+  changes: { role: AdminManageableRole; action: 'assign' | 'remove' }[];
+  completed: number;
 }
 
 function loadErrorMessage(error: unknown): string {
@@ -53,6 +53,69 @@ function unavailableReason(account: AdminUser, role: AdminManageableRole, curren
   if (!account.email) return 'Tài khoản chưa có email. Cần email đã xác minh để gán vai trò.';
   if (!account.emailVerified) return 'Email chưa được xác minh. Cần email đã xác minh để gán vai trò.';
   return '';
+}
+
+function RoleDropdown({ account, currentUserId, disabled, onApply }: {
+  account: AdminUser;
+  currentUserId?: number;
+  disabled: boolean;
+  onApply: (roles: AdminManageableRole[]) => void;
+}) {
+  const id = useId();
+  const panel = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<AdminManageableRole[]>([]);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const changed = ADMIN_MANAGEABLE_ROLES.some(role => selected.includes(role) !== account.roles.includes(role));
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: Event) => {
+      if (event.target instanceof Node && panel.current?.contains(event.target)) return;
+      panel.current?.hidePopover();
+    };
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  return <div className="adm-role-dropdown">
+    <button type="button" className="adm-role-dropdown-trigger" popoverTarget={id} aria-haspopup="dialog" aria-expanded={open}
+      aria-label={`Chọn vai trò cho ${account.username}`} disabled={disabled}
+      onClick={event => {
+        if (open) return;
+        setSelected(ADMIN_MANAGEABLE_ROLES.filter(role => account.roles.includes(role)));
+        const rect = event.currentTarget.getBoundingClientRect();
+        const width = Math.min(320, window.innerWidth - 24);
+        setPosition({ left: Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12)), top: rect.bottom + 8 });
+      }}>
+      <ShieldCheck size={16} aria-hidden="true" />Chọn vai trò<ChevronDown size={16} aria-hidden="true" />
+    </button>
+    <div id={id} ref={panel} popover="auto" role="dialog" aria-label={`Vai trò của ${account.username}`}
+      className="adm-role-dropdown-panel" style={{ top: position.top, left: position.left }}
+      onToggle={event => {
+        const visible = event.newState === 'open';
+        setOpen(visible);
+        if (visible && panel.current) {
+          const rect = panel.current.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight - 12) setPosition(current => ({ ...current, top: Math.max(12, current.top - rect.height - 52) }));
+        }
+      }}>
+      <div className="adm-role-dropdown-heading">Vai trò tài khoản<small>@{account.username}</small></div>
+      <label className="adm-role-dropdown-option is-fixed"><input type="checkbox" checked disabled readOnly /><span>Người tham gia<small>Vai trò mặc định, luôn được giữ</small></span></label>
+      {ADMIN_MANAGEABLE_ROLES.map(role => {
+        const blocked = unavailableReason(account, role, currentUserId);
+        return <label key={role} className={`adm-role-dropdown-option${blocked ? ' is-fixed' : ''}`}>
+          <input type="checkbox" checked={selected.includes(role)} disabled={Boolean(blocked)} onChange={event => setSelected(current => event.target.checked ? [...current, role] : current.filter(item => item !== role))} />
+          <span>{ADMIN_ROLE_LABELS[role]}{blocked && <small>{blocked}</small>}</span>
+        </label>;
+      })}
+      <div className="adm-role-dropdown-footer"><button type="button" className="adm-btn adm-btn-secondary" onClick={() => panel.current?.hidePopover()}>Hủy</button><button type="button" className="adm-btn adm-btn-primary" disabled={!changed} onClick={() => { panel.current?.hidePopover(); onApply(selected); }}>Áp dụng</button></div>
+    </div>
+  </div>;
 }
 
 export const AdminRolesView: React.FC = () => {
@@ -124,28 +187,36 @@ export const AdminRolesView: React.FC = () => {
 
   const hasFilters = Boolean(search || roleFilter);
 
-  const request = (account: AdminUser, role: AdminManageableRole) => {
+  const request = (account: AdminUser, selected: AdminManageableRole[]) => {
     setNotice('');
     setActionError('');
-    setPending({ account, role, action: account.roles.includes(role) ? 'remove' : 'assign' });
+    const changes = ADMIN_MANAGEABLE_ROLES.filter(role => selected.includes(role) !== account.roles.includes(role))
+      .map(role => ({ role, action: selected.includes(role) ? 'assign' as const : 'remove' as const }));
+    if (changes.length) setPending({ account, changes, completed: 0 });
   };
 
   const confirm = async () => {
     if (!pending) return;
     setSubmitting(true);
     setActionError('');
+    let processed = 0;
+    let updated = pending.account;
     try {
-      const updated = pending.action === 'assign'
-        ? await adminUsersApi.assignRole(pending.account.userId, pending.role)
-        : await adminUsersApi.removeRole(pending.account.userId, pending.role);
-      setItems(current => current.map(item => (item.userId === updated.userId ? updated : item)));
-      if (roleFilter && !updated.roles.includes(roleFilter)) setRevision(value => value + 1);
-      setNotice(pending.action === 'assign'
-        ? `Đã gán vai trò ${ADMIN_ROLE_LABELS[pending.role]} cho ${updated.username}. Vai trò có hiệu lực sau khi người dùng đăng nhập lại.`
-        : `Đã gỡ vai trò ${ADMIN_ROLE_LABELS[pending.role]} khỏi ${updated.username}. Quyền này ngừng hiệu lực ngay từ yêu cầu tiếp theo.`);
+      for (const change of pending.changes) {
+        updated = change.action === 'assign'
+          ? await adminUsersApi.assignRole(updated.userId, change.role)
+          : await adminUsersApi.removeRole(updated.userId, change.role);
+        const result = updated;
+        setItems(current => current.map(item => item.userId === result.userId ? result : item));
+        processed += 1;
+      }
+      if (roleFilter) setRevision(value => value + 1);
+      setNotice(`Đã cập nhật ${pending.completed + processed} thay đổi vai trò cho ${updated.username}. Vai trò được gán có hiệu lực sau khi đăng nhập lại; vai trò bị gỡ ngừng hiệu lực ngay từ yêu cầu tiếp theo.`);
       setPending(null);
     } catch (cause) {
-      setActionError(adminUserErrorMessage(cause, 'Không cập nhật được vai trò. Vui lòng thử lại.'));
+      const completed = pending.completed + processed;
+      setPending({ account: updated, changes: pending.changes.slice(processed), completed });
+      setActionError(`${completed ? `Đã lưu ${completed} thay đổi. Các thay đổi còn lại chưa được lưu. ` : ''}${adminUserErrorMessage(cause, 'Không cập nhật được vai trò. Vui lòng thử lại.')}`);
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +227,7 @@ export const AdminRolesView: React.FC = () => {
       <div className="adm-page-header">
         <div>
           <h1 className="adm-page-title workspace-page-title">Vai trò</h1>
-          <p className="adm-page-subtitle workspace-page-subtitle">
+          <p className="adm-page-subtitle workspace-page-subtitle adm-roles-description">
             Gán hoặc gỡ vai trò Đối tác, Ban tổ chức và Quản trị viên cho từng tài khoản. Vai trò Người tham gia luôn được giữ.
           </p>
         </div>
@@ -228,7 +299,7 @@ export const AdminRolesView: React.FC = () => {
         )}
         {!loading && !error && items.length > 0 && (
           <div className="adm-table-responsive">
-            <table className="adm-table">
+            <table className="adm-table adm-roles-table">
               <thead>
                 <tr>
                   <th>TÀI KHOẢN</th>
@@ -267,27 +338,7 @@ export const AdminRolesView: React.FC = () => {
                       </div>
                     </td>
                     <td>
-                      <div className="adm-role-actions">
-                        {ADMIN_MANAGEABLE_ROLES.map(role => {
-                          const holds = account.roles.includes(role);
-                          const blocked = unavailableReason(account, role, currentUserId);
-                          return (
-                            <div key={role} className="adm-role-action">
-                              <button
-                                type="button"
-                                className={`adm-btn ${holds ? 'adm-btn-secondary' : 'adm-btn-primary'}`}
-                                aria-label={`${holds ? 'Gỡ' : 'Gán'} vai trò ${ADMIN_ROLE_LABELS[role]} cho ${account.username}`}
-                                disabled={Boolean(blocked)}
-                                title={blocked || undefined}
-                                onClick={() => request(account, role)}
-                              >
-                                {holds ? `Gỡ ${ADMIN_ROLE_LABELS[role]}` : `Gán ${ADMIN_ROLE_LABELS[role]}`}
-                              </button>
-                              {blocked && <small>{blocked}</small>}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <RoleDropdown account={account} currentUserId={currentUserId} disabled={submitting} onApply={roles => request(account, roles)} />
                     </td>
                   </tr>
                 ))}
@@ -312,27 +363,27 @@ export const AdminRolesView: React.FC = () => {
           >
             <div className="adm-modal-header">
               <h3 id="admin-role-change-title" className="adm-modal-title">
-                <ShieldCheck size={18} /> {pending.action === 'assign' ? 'Gán vai trò' : 'Gỡ vai trò'}
+                <ShieldCheck size={18} /> Xác nhận cập nhật vai trò
               </h3>
               <button type="button" className="adm-modal-close" aria-label="Đóng" onClick={closeDialog}><X size={18} /></button>
             </div>
             <div className="adm-modal-body">
               <p className="adm-confirm-text">
-                {pending.action === 'assign'
-                  ? <>Gán vai trò <strong>{ADMIN_ROLE_LABELS[pending.role]}</strong> cho <strong>{pending.account.fullName}</strong> (@{pending.account.username}). Vai trò có hiệu lực sau khi người dùng đăng nhập lại.</>
-                  : <>Gỡ vai trò <strong>{ADMIN_ROLE_LABELS[pending.role]}</strong> khỏi <strong>{pending.account.fullName}</strong> (@{pending.account.username}). Quyền này ngừng hiệu lực ngay từ yêu cầu tiếp theo; dữ liệu đã có được giữ nguyên.</>}
+                Cập nhật vai trò cho <strong>{pending.account.fullName}</strong> (@{pending.account.username}):
               </p>
+              <ul className="adm-role-change-summary">{pending.changes.map(change => <li key={change.role}><span className={change.action === 'assign' ? 'is-assign' : 'is-remove'}>{change.action === 'assign' ? 'Gán' : 'Gỡ'}</span><strong>{ADMIN_ROLE_LABELS[change.role]}</strong></li>)}</ul>
+              <p className="adm-form-hint">Vai trò được gán có hiệu lực sau khi đăng nhập lại. Vai trò bị gỡ ngừng hiệu lực ngay từ yêu cầu tiếp theo. Vai trò Người tham gia và dữ liệu đã có được giữ nguyên.</p>
               {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
             </div>
             <div className="adm-modal-footer">
               <button type="button" className="adm-btn adm-btn-secondary" onClick={closeDialog} disabled={submitting}>Hủy</button>
               <button
                 type="button"
-                className={`adm-btn ${pending.action === 'assign' ? 'adm-btn-primary' : 'adm-btn-danger'}`}
+                className="adm-btn adm-btn-primary"
                 disabled={submitting}
                 onClick={confirm}
               >
-                {submitting ? 'Đang xử lý...' : pending.action === 'assign' ? 'Xác nhận gán' : 'Xác nhận gỡ'}
+                {submitting ? 'Đang xử lý...' : 'Xác nhận cập nhật'}
               </button>
             </div>
           </section>

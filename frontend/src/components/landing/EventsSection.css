@@ -1226,9 +1226,9 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.55rem 1.15rem;
-  border-radius: 9999px;
-  background: rgba(23, 56, 46, 0.05);
-  border: 1px solid rgba(23, 56, 46, 0.12);
+  border-radius: 0;
+  background: transparent;
+  border: 0;
   color: #17382e;
   font-family: var(--font-sans);
   font-size: 0.88rem;
@@ -1240,9 +1240,35 @@
 }
 
 .btn-section-see-more-borderless:hover {
-  background: rgba(23, 56, 46, 0.1);
+  background: transparent;
   color: #c84c32;
-  border-color: rgba(200, 76, 50, 0.3);
+}
+
+.btn-section-see-more-borderless {
+  position: relative;
+}
+
+.btn-section-see-more-borderless::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 1.15rem;
+  right: 1.15rem;
+  height: 1px;
+  background: #b4863c;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 200ms ease;
+}
+
+.btn-section-see-more-borderless:hover::after,
+.btn-section-see-more-borderless:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.btn-section-see-more-borderless:focus-visible {
+  outline: 2px solid #294c37;
+  outline-offset: 3px;
 }
 
 .btn-section-see-more-borderless .see-more-arrow-icon {

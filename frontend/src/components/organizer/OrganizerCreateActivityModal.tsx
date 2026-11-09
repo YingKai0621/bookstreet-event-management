@@ -1,5 +1,7 @@
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
+import { ImageUrlField } from '../ui/ImageUrlField';
+import { contentImageApi } from '../../services/contentImageApi';
 import {
   AlertCircle,
   Building2,
@@ -8,7 +10,6 @@ import {
   MapPin,
   Mic,
   Tag,
-  Upload,
   Users,
   X
 } from 'lucide-react';
@@ -45,6 +46,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [thumbnail, setThumbnail] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const selectedEventId = events[0]?.id || '';
 
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (imageUploading) return;
     if (!title.trim()) {
       setError(language === 'vi' ? 'Vui lòng nhập tên hoạt động' : 'Please enter activity title');
       return;
@@ -380,78 +383,8 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
               </div>
             </div>
 
-            {/* 5. Image & Thumbnail Selection */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 650, color: '#1F2937', margin: 0 }}>
-                  {language === 'vi' ? 'Hình ảnh đại diện hoạt động' : 'Activity Thumbnail'}
-                </label>
-                <label 
-                  className="btn-org-secondary" 
-                  style={{ 
-                    padding: '0.25rem 0.65rem', 
-                    fontSize: '0.75rem', 
-                    cursor: 'pointer', 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '0.35rem',
-                    background: '#FFFFFF',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    color: '#17382E',
-                    fontWeight: 650
-                  }}
-                  title={language === 'vi' ? 'Tải ảnh từ máy tính' : 'Upload from device'}
-                >
-                  <Upload size={12} />
-                  <span>{language === 'vi' ? 'Tải ảnh lên' : 'Upload'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => {
-                          if (typeof evt.target?.result === 'string') {
-                            setThumbnail(evt.target.result);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <input 
-                  type="text"
-                  value={thumbnail}
-                  onChange={e => setThumbnail(e.target.value)}
-                  placeholder="https://... hoặc dán liên kết ảnh"
-                  style={{
-                    flex: 1,
-                    height: '38px',
-                    padding: '0 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid #D1D5DB',
-                    background: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    color: '#1F2937',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                {thumbnail && (
-                  <img
-                    src={thumbnail}
-                    alt="Thumbnail preview"
-                    style={{ width: 44, height: 38, borderRadius: '6px', objectFit: 'cover', border: '1px solid #E5E7EB', flexShrink: 0 }}
-                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
-                  />
-                )}
-              </div>
+              <ImageUrlField language={language} value={thumbnail} onChange={setThumbnail} uploadFile={file => contentImageApi.uploadOrganizerActivity(selectedEventId, file)} disabled={!selectedEventId} onBusyChange={setImageUploading} />
             </div>
 
             {/* 6. Description */}
@@ -504,7 +437,8 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
               {language === 'vi' ? 'Hủy bỏ' : 'Cancel'}
             </button>
             <button 
-              type="submit" 
+              type="submit"
+              disabled={imageUploading}
               className="btn-org-primary"
               style={{ 
                 padding: '0.5rem 1.4rem', 

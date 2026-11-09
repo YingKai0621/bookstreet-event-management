@@ -6,13 +6,13 @@ import { useListPagination } from '../../hooks/useListPagination';
 import { CompactPagination } from '../ui/CompactPagination';
 import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
+import { ImageUrlField } from '../ui/ImageUrlField';
 import {
   AlertCircle,
   Check,
   Edit3,
   Eye,
   Grid,
-  ImagePlus,
   List,
   Loader2,
   MapPin,
@@ -22,7 +22,6 @@ import {
   ShieldAlert,
   Store,
   Trash2,
-  Upload,
   X,
 } from 'lucide-react';
 import { ApiError } from '../../services/apiClient';
@@ -321,40 +320,17 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
     setIsFormModalOpen(true);
   };
 
-  const handleBoothImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setErrorMessage('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Ảnh gian hàng không được vượt quá 5 MB.');
-      return;
-    }
-
+  const handleBoothImageUpload = async (file: File): Promise<string> => {
     setErrorMessage('');
-    setImageUploading(true);
-    try {
-      const imageUrl = await boothApi.uploadBoothImage(file);
-      if (!mountedRef.current) {
-        void deleteUploadedImageQuietly(imageUrl);
-        return;
-      }
-      const previousTemporaryImageUrl = temporaryImageUrlRef.current;
-      temporaryImageUrlRef.current = imageUrl;
-      setFormData(current => ({ ...current, imageUrl }));
-      void deleteUploadedImageQuietly(previousTemporaryImageUrl);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setErrorMessage(err.fieldErrors.map(field => field.message).join(' ') || err.message);
-      } else {
-        setErrorMessage(err instanceof Error ? err.message : 'Không thể tải ảnh gian hàng.');
-      }
-    } finally {
-      if (mountedRef.current) setImageUploading(false);
+    const imageUrl = await boothApi.uploadBoothImage(file);
+    if (!mountedRef.current) {
+      void deleteUploadedImageQuietly(imageUrl);
+      return imageUrl;
     }
+    const previousTemporaryImageUrl = temporaryImageUrlRef.current;
+    temporaryImageUrlRef.current = imageUrl;
+    void deleteUploadedImageQuietly(previousTemporaryImageUrl);
+    return imageUrl;
   };
 
   const handleRemoveBoothImage = () => {
@@ -367,6 +343,7 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
   // Submit Create or Edit Form
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formSubmitting || imageUploading) return;
     setErrorMessage('');
 
     const trimmedCode = formData.code.trim().toUpperCase();
@@ -1050,43 +1027,17 @@ export const OrganizerBoothManagementView: React.FC<Props> = ({
                 />
               </div>
 
-              <div className="booth-form-group full-width booth-image-upload-field">
-                <label>{language === 'vi' ? 'Ảnh gian hàng' : 'Booth Image'}</label>
-                <div className="booth-image-upload-layout">
-                  <div className={`booth-image-preview ${formData.imageUrl ? 'has-image' : ''}`}>
-                    {formData.imageUrl ? (
-                      <img src={formData.imageUrl} alt={language === 'vi' ? 'Ảnh xem trước gian hàng' : 'Booth preview'} />
-                    ) : (
-                      <span><ImagePlus size={28} />{language === 'vi' ? 'Chưa chọn ảnh' : 'No image selected'}</span>
-                    )}
-                  </div>
-                  <div className="booth-image-upload-actions">
-                    <label className="btn-org-secondary booth-image-file-button">
-                      {imageUploading ? <Loader2 size={16} className="s2-spin" /> : <Upload size={16} />}
-                      <span>{imageUploading
-                        ? (language === 'vi' ? 'Đang tải ảnh...' : 'Uploading...')
-                        : (language === 'vi' ? 'Chọn ảnh từ máy' : 'Choose from device')}</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleBoothImageUpload}
-                        disabled={formSubmitting || imageUploading}
-                      />
-                    </label>
-                    {formData.imageUrl && (
-                      <button
-                        type="button"
-                        className="btn-org-secondary booth-image-remove-button"
-                        onClick={handleRemoveBoothImage}
-                        disabled={formSubmitting || imageUploading}
-                      >
-                        <Trash2 size={15} />
-                        {language === 'vi' ? 'Gỡ ảnh' : 'Remove'}
-                      </button>
-                    )}
-                    <small>{language === 'vi' ? 'JPG, PNG hoặc WebP · tối đa 5 MB' : 'JPG, PNG or WebP · up to 5 MB'}</small>
-                  </div>
-                </div>
+              <div className="booth-form-group full-width">
+                <ImageUrlField
+                  label={language === 'vi' ? 'Ảnh gian hàng' : 'Booth image'}
+                  language={language}
+                  value={formData.imageUrl}
+                  onChange={imageUrl => setFormData(current => ({ ...current, imageUrl }))}
+                  uploadFile={handleBoothImageUpload}
+                  onBusyChange={setImageUploading}
+                  disabled={formSubmitting}
+                />
+                {formData.imageUrl && <button type="button" className="btn-org-secondary booth-image-remove-button" onClick={handleRemoveBoothImage} disabled={formSubmitting || imageUploading}><Trash2 size={15} />{language === 'vi' ? 'Gỡ ảnh' : 'Remove'}</button>}
               </div>
 
               {/* Status Switch (Edit only) */}

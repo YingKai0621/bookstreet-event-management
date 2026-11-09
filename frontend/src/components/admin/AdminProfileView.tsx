@@ -1,5 +1,4 @@
 import {
-  Camera,
   Check,
   Edit3,
   LogOut,
@@ -7,8 +6,9 @@ import {
   Phone,
   RefreshCw,
   Save,
-  Shield,
-  UserRound,
+  ShieldCheck,
+  Upload,
+  User,
   X,
 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
@@ -156,79 +156,82 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
         )}
 
         <div className="adm-card adm-profile-card">
-          <div className="adm-profile-header-band">
-            <span className="admin-profile-card-label"><Shield size={15} /> Thông tin tài khoản</span>
-          </div>
           <div className="adm-profile-body">
-            <div className="adm-profile-top-bar">
-              <div className="adm-profile-avatar-wrapper">
-                <div className="adm-profile-avatar-large">
-                  {profile.avatarUrl ? (
-                    <img
-                      src={profile.avatarUrl}
-                      alt={profile.name}
-                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    profile.avatarInitials
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="adm-avatar-upload-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Tải lên ảnh đại diện mới"
-                  aria-label="Tải lên ảnh đại diện"
-                  disabled={saving}
-                >
-                  <Camera size={15} />
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleAvatarFileChange}
-                  accept="image/png, image/jpeg, image/webp"
-                  style={{ display: 'none' }}
-                />
-              </div>
-              <div className="adm-profile-actions">
-                {!isEditing ? (
-                  <button type="button" className="adm-btn adm-btn-edit-profile" onClick={startEditing}>
-                    <Edit3 size={15} className="btn-icon" />
-                    <span>Chỉnh sửa thông tin</span>
-                  </button>
-                ) : (
+            <div className="adm-profile-identity">
+              <div className="adm-profile-top-bar">
+                <div className="adm-profile-avatar-wrapper">
+                  <div className="adm-profile-avatar-large">
+                    {profile.avatarUrl ? (
+                      <img
+                        src={profile.avatarUrl}
+                        alt={profile.name}
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      profile.avatarInitials
+                    )}
+                  </div>
                   <button
                     type="button"
-                    className="adm-btn adm-btn-cancel-profile"
+                    className="adm-avatar-upload-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Tải lên ảnh đại diện mới"
+                    aria-label="Tải lên ảnh đại diện"
                     disabled={saving}
-                    onClick={() => { setIsEditing(false); setSaveError(''); }}
                   >
-                    <X size={15} className="btn-icon" />
-                    <span>Hủy bỏ</span>
+                    <Upload size={12} />
                   </button>
-                )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarFileChange}
+                    accept="image/png, image/jpeg, image/webp"
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              </div>
+              <div className="adm-profile-info-block">
+                <div className="adm-profile-name-group">
+                  <h2 className="adm-profile-name">{profile.name}</h2>
+                </div>
+                <p className="adm-profile-dept">{profile.email || 'Chưa có email'}</p>
+                <div className="adm-profile-role-pill">
+                  <ShieldCheck size={13} color="#B48A3C" />
+                  <span>Admin / Quản trị hệ thống</span>
+                </div>
+                <div className="adm-profile-status-row">
+                  <span>Trạng thái:</span>
+                  <span className="adm-profile-status-badge">
+                    <span className="adm-profile-status-dot" />
+                    Đang hoạt động
+                  </span>
+                </div>
               </div>
             </div>
-
-            <div className="adm-profile-info-block">
-              <div className="adm-profile-name-group">
-                <h2 className="adm-profile-name">{profile.name}</h2>
-                <span className="adm-badge-role badge-role-admin">
-                  <Shield size={13} />
-                  <span>Quản trị viên</span>
-                </span>
-              </div>
-              <p className="adm-profile-dept">{profile.email || 'Chưa có email'}</p>
-            </div>
-
-            <div className="adm-profile-divider"></div>
 
             <div className="adm-profile-information-heading">
-              <UserRound size={20} aria-hidden="true" />
+              <User size={18} color="#13241F" aria-hidden="true" />
               <div>
                 <h3>Thông tin cá nhân</h3>
-                <p>Email đã xác minh không thể thay đổi tại đây.</p>
+              </div>
+              <div className="adm-profile-actions">
+                <button
+                  type="button"
+                  className="adm-btn adm-btn-edit-profile"
+                  disabled={saving}
+                  aria-label={isEditing ? 'Hủy bỏ' : 'Chỉnh sửa thông tin'}
+                  onClick={() => {
+                    if (isEditing) {
+                      setIsEditing(false);
+                      setSaveError('');
+                    } else {
+                      startEditing();
+                    }
+                  }}
+                >
+                  {isEditing ? <X size={13} /> : <Edit3 size={13} />}
+                  <span>{isEditing ? 'Hủy bỏ' : 'Chỉnh sửa'}</span>
+                </button>
               </div>
             </div>
 
@@ -237,20 +240,35 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
             {!isEditing ? (
               <div className="adm-profile-details-grid">
                 <div className="adm-profile-field-box">
-                  <div className="adm-profile-field-icon"><Mail size={16} /></div>
                   <div className="adm-profile-field-content">
-                    <span className="adm-field-label">Email tài khoản</span>
-                    <span className="adm-field-val">
+                    <span className="adm-field-label">Họ và tên</span>
+                    <span className="adm-field-val">{profile.name}</span>
+                  </div>
+                </div>
+                <div className="adm-profile-field-box">
+                  <div className="adm-profile-field-content">
+                    <span className="adm-field-label">Chức vụ</span>
+                    <span className="adm-field-val">Quản trị viên</span>
+                  </div>
+                </div>
+                <div className="adm-profile-field-box">
+                  <div className="adm-profile-field-icon"><Mail size={15} /></div>
+                  <div className="adm-profile-field-content">
+                    <span className="adm-field-label">Email công vụ</span>
+                    <span className="adm-field-val adm-profile-contact-value">
+                      <Mail size={15} aria-hidden="true" />
                       {profile.email || 'Chưa có email'}
-                      {profile.email && ` · ${profile.emailVerified ? 'Đã xác minh' : 'Chưa xác minh'}`}
                     </span>
                   </div>
                 </div>
                 <div className="adm-profile-field-box">
-                  <div className="adm-profile-field-icon"><Phone size={16} /></div>
+                  <div className="adm-profile-field-icon"><Phone size={15} /></div>
                   <div className="adm-profile-field-content">
-                    <span className="adm-field-label">Số điện thoại</span>
-                    <span className="adm-field-val">{profile.phone || 'Chưa cập nhật'}</span>
+                    <span className="adm-field-label">Số điện thoại liên hệ</span>
+                    <span className="adm-field-val adm-profile-contact-value">
+                      <Phone size={15} aria-hidden="true" />
+                      {profile.phone || ''}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -266,6 +284,26 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                       maxLength={50}
                       value={formName}
                       onChange={event => setFormName(event.target.value)}
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-form-label" htmlFor="admin-profile-role">Chức vụ</label>
+                    <input
+                      id="admin-profile-role"
+                      type="text"
+                      className="adm-form-input"
+                      value="Quản trị viên"
+                      disabled
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-form-label" htmlFor="admin-profile-email">Email công vụ</label>
+                    <input
+                      id="admin-profile-email"
+                      type="email"
+                      className="adm-form-input"
+                      value={profile.email || ''}
+                      disabled
                     />
                   </div>
                   <div className="adm-form-group">
@@ -287,11 +325,11 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                     disabled={saving}
                     onClick={() => { setIsEditing(false); setSaveError(''); }}
                   >
-                    <X size={15} className="btn-icon" />
+                    <X size={14} className="btn-icon" />
                     <span>Hủy</span>
                   </button>
                   <button type="submit" className="adm-btn adm-btn-save-profile" disabled={saving}>
-                    <Save size={15} className="btn-icon" />
+                    <Save size={14} className="btn-icon" />
                     <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                   </button>
                 </div>
@@ -301,20 +339,18 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
         </div>
 
         <div className="adm-card adm-profile-sec-card">
-          <div className="adm-card-header">
-            <div>
-              <h3 className="adm-card-title">Phiên làm việc & Đăng xuất</h3>
-              <p className="adm-card-subtitle">Kết thúc phiên quản trị hiện tại trên thiết bị này</p>
-            </div>
-          </div>
           <div className="adm-profile-sec-body">
             <div className="adm-sec-item">
               <div className="adm-sec-item-info">
-                <div className="adm-sec-title">Đăng xuất</div>
-                <div className="adm-sec-desc">Bạn sẽ cần đăng nhập lại để tiếp tục quản trị.</div>
+                <div className="adm-sec-title">Phiên làm việc</div>
+                <div className="adm-sec-desc">Đăng xuất khỏi tài khoản trên thiết bị này.</div>
               </div>
-              <button type="button" className="adm-btn adm-btn-danger" onClick={() => setIsLogoutConfirmOpen(true)}>
-                <LogOut size={15} />
+              <button
+                type="button"
+                className="adm-btn adm-btn-logout-outline"
+                onClick={() => setIsLogoutConfirmOpen(true)}
+              >
+                <LogOut size={14} />
                 <span>Đăng xuất</span>
               </button>
             </div>

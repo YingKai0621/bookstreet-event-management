@@ -379,6 +379,13 @@ test('Organizer manages a physical Booth, Event price, and candidate selection',
   await expect(page.getByRole('heading', { name: 'Quản lý Gian hàng' })).toBeVisible();
   await expect(page.getByText('A05', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Thêm gian hàng mới' }).click();
+  const imageUrl = page.getByRole('textbox', { name: 'Ảnh gian hàng', exact: true });
+  await imageUrl.scrollIntoViewIfNeeded();
+  const urlBounds = await imageUrl.boundingBox();
+  const uploadBounds = await page.getByRole('button', { name: 'Chọn ảnh từ máy', exact: true }).boundingBox();
+  const previewBounds = await page.locator('.image-url-field-preview').boundingBox();
+  expect(uploadBounds!.y).toBeGreaterThanOrEqual(urlBounds!.y + urlBounds!.height);
+  expect(previewBounds!.x).toBeGreaterThan(urlBounds!.x + urlBounds!.width);
   await page.getByPlaceholder('Ví dụ: A01, B02, C10').fill('B01');
   await page.getByPlaceholder(/Ví dụ: Gian Hàng A01/).fill('Gian văn học');
   await page.getByRole('button', { name: 'Thêm gian hàng', exact: true }).click();

@@ -1,4 +1,54 @@
 import { test, expect, type Page } from '@playwright/test';
+
+test('badge image upload keeps upload below the URL and preview on the right', async ({ page }) => {
+  await setup(page, 'badges');
+  const imagePath = '/api/v1/media/badge-images/12345678-1234-1234-1234-123456789abc.png';
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1cAAAAASUVORK5CYII=', 'base64');
+  await page.route('**/admin/badge-images', async route => {
+    expect(route.request().headers()['content-type']).toContain('multipart/form-data');
+    await route.fulfill({ status: 201, json: { url: imagePath } });
+  });
+  await page.route(`**${imagePath}`, route => route.fulfill({ contentType: 'image/png', body: png }));
+  await page.goto('/admin/badges');
+  await page.getByRole('button', { name: 'Thêm huy hiệu' }).click();
+  const dialog = page.getByRole('dialog');
+  const url = dialog.getByRole('textbox', { name: 'Đường dẫn ảnh', exact: true });
+  const upload = dialog.getByRole('button', { name: 'Chọn ảnh từ máy', exact: true });
+  const urlBounds = await url.boundingBox();
+  const uploadBounds = await upload.boundingBox();
+  expect(uploadBounds!.y).toBeGreaterThanOrEqual(urlBounds!.y + urlBounds!.height);
+  const previewBounds = await dialog.locator('.image-url-field-preview').boundingBox();
+  expect(previewBounds!.x).toBeGreaterThan(urlBounds!.x + urlBounds!.width);
+  expect(Math.abs(previewBounds!.y - urlBounds!.y)).toBeLessThanOrEqual(2);
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'badge.png', mimeType: 'image/png', buffer: png });
+  await expect(url).toHaveValue(new RegExp(imagePath));
+  await expect(dialog.getByAltText('Ảnh xem trước')).toBeVisible();
+  await expect(dialog.getByAltText('Ảnh xem trước')).toHaveJSProperty('naturalWidth', 1);
+  await page.screenshot({ path: test.info().outputPath('badge-upload-preview.png') });
+  await dialog.getByRole('textbox', { name: 'Tên huy hiệu', exact: true }).fill('Huy hiệu ảnh');
+  const saved = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/admin/badges'));
+  await page.route('**/admin/badges', async route => {
+    if (route.request().method() === 'POST') await route.fulfill({ json: { badge: { name: 'Huy hiệu ảnh' }, synchronizationTriggered: false } });
+    else await route.fallback();
+  });
+  await dialog.getByRole('button', { name: 'Lưu huy hiệu' }).click();
+  expect((await saved).postDataJSON().iconUrl).toMatch(new RegExp(imagePath));
+});
+
+test('badge upload rejects unsupported files and allows retry after server failure', async ({ page }) => {
+  await setup(page, 'badges');
+  await page.route('**/admin/badge-images', route => route.fulfill({ status: 500, json: { code: 'IMAGE_STORAGE_FAILED', message: 'failed' } }));
+  await page.goto('/admin/badges');
+  await page.getByRole('button', { name: 'Thêm huy hiệu' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'file.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') });
+  await expect(dialog.getByRole('alert')).toContainText('Chọn ảnh JPG');
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'image.png', mimeType: 'image/png', buffer: Buffer.from('test') });
+  await expect(dialog.getByRole('alert')).toContainText('Không tải được ảnh');
+  await expect(dialog.getByRole('button', { name: 'Chọn ảnh từ máy' })).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});
 async function setup(page: Page, _tab: string) {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.route('**/api/v1/**', async route => {

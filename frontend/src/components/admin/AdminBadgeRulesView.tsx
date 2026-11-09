@@ -6,6 +6,8 @@ import { ApiError } from '../../services/apiError';
 import type { AdminBadge, AdminBadgeInput, RewardManagementPage } from '../../types/rewardManagement';
 import { ListPagination } from '../ui/ListPagination';
 import { SearchFieldLabel } from '../ui/SearchFieldLabel';
+import { ImageUrlField } from '../ui/ImageUrlField';
+import { contentImageApi } from '../../services/contentImageApi';
 import './AdminBadgeRulesView.css';
 
 function message(error: unknown): string {
@@ -37,10 +39,11 @@ export function AdminBadgeRulesView() {
   const [editing, setEditing] = useState<number | null>(null);
   const [form, setForm] = useState<AdminBadgeInput>({ name: '', description: null, iconUrl: null, requiredPoints: 10, isActive: false });
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalDismiss(modalOpen, () => { if (!saving) setModalOpen(false); });
+  useModalDismiss(modalOpen, () => { if (!saving && !imageUploading) setModalOpen(false); });
   const requestKey = `${page}|${search}|${active}|${sort}|${reload}`;
   const loading = catalog?.key !== requestKey;
   const data = loading ? null : catalog.data;
@@ -76,7 +79,9 @@ export function AdminBadgeRulesView() {
   }
 
   async function save(event: FormEvent) {
-    event.preventDefault(); setSaving(true); setFormError(''); setFieldErrors({});
+    event.preventDefault();
+    if (imageUploading) return;
+    setSaving(true); setFormError(''); setFieldErrors({});
     try {
       const result = editing === null ? await badgeAdminApi.create(form) : await badgeAdminApi.update(editing, form);
       setModalOpen(false); setReload(value => value + 1);
@@ -117,7 +122,7 @@ export function AdminBadgeRulesView() {
     {notice && <div className="badge-notice" role="status">{notice}</div>}
     {actionError && <div className="badge-error" role="alert">{actionError}</div>}
     <div className="badge-catalog-filters">
-      <SearchFieldLabel className="badge-search-group"><form onSubmit={submitSearch}><Search size={18} /><input aria-label="Tìm huy hiệu" placeholder="Tìm theo tên huy hiệu" maxLength={100} value={searchInput} onChange={event => setSearchInput(event.target.value)} /><button type="submit" className="adm-btn adm-btn-secondary">Tìm kiếm</button></form></SearchFieldLabel>
+      <SearchFieldLabel className="badge-search-group"><form onSubmit={submitSearch}><div className="badge-search-control"><Search size={18} aria-hidden="true" /><input type="search" aria-label="Tìm huy hiệu" placeholder="Tìm theo tên huy hiệu" maxLength={100} value={searchInput} onChange={event => setSearchInput(event.target.value)} /></div><button type="submit" className="adm-btn adm-btn-secondary">Tìm kiếm</button></form></SearchFieldLabel>
       <label>Trạng thái<select value={active} onChange={event => { setActive(event.target.value); setPage(0); }}><option value="all">Tất cả</option><option value="true">Đang áp dụng</option><option value="false">Tạm dừng</option></select></label>
       <label>Sắp xếp<select value={sort} onChange={event => { setSort(event.target.value); setPage(0); }}><option value="">Mới tạo nhất</option><option value="name,asc">Tên A–Z</option><option value="requiredPoints,asc">Ngưỡng điểm tăng dần</option><option value="requiredPoints,desc">Ngưỡng điểm giảm dần</option><option value="updatedAt,desc">Mới cập nhật</option></select></label>
     </div>
@@ -136,7 +141,7 @@ export function AdminBadgeRulesView() {
       </article>)}</div>}
       <ListPagination page={page + 1} pages={data.totalPages} onPage={value => setPage(value - 1)} disabled={loading} />
     </>}
-    {modalOpen && <div className="adm-modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModalOpen(false); }}>
+    {modalOpen && <div className="adm-modal-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving && !imageUploading) setModalOpen(false); }}>
       <div className="adm-modal-content badge-editor" role="dialog" aria-modal="true" aria-labelledby="badge-editor-title" ref={dialogRef} onKeyDown={event => {
         if (event.key !== 'Tab') return;
         const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)');
@@ -144,13 +149,14 @@ export function AdminBadgeRulesView() {
         const first = focusable[0]; const last = focusable[focusable.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      }}><div className="adm-modal-header"><h2 className="adm-modal-title" id="badge-editor-title">{editing === null ? 'Thêm huy hiệu' : 'Chỉnh sửa huy hiệu'}</h2><button type="button" className="adm-modal-close" aria-label="Đóng" disabled={saving} onClick={() => setModalOpen(false)}><X size={22} /></button></div>
-        <form onSubmit={event => void save(event)}><fieldset disabled={saving}><div className="adm-modal-body">
+      }}><div className="adm-modal-header"><h2 className="adm-modal-title" id="badge-editor-title">{editing === null ? 'Thêm huy hiệu' : 'Chỉnh sửa huy hiệu'}</h2><button type="button" className="adm-modal-close" aria-label="Đóng" disabled={saving || imageUploading} onClick={() => setModalOpen(false)}><X size={22} /></button></div>
+        <form onSubmit={event => void save(event)}><fieldset disabled={saving || imageUploading}><div className="adm-modal-body">
           <label className="adm-form-group">Tên huy hiệu<input className="adm-form-input" required maxLength={100} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'badge-error-name' : undefined} />{fieldError('name')}</label>
           <div className="adm-form-row"><label className="adm-form-group">Ngưỡng điểm<input className="adm-form-input" type="number" min={1} max={2147483647} step={1} required value={Number.isNaN(form.requiredPoints) ? '' : form.requiredPoints} onChange={event => setForm({ ...form, requiredPoints: event.target.valueAsNumber })} />{fieldError('requiredPoints')}</label>
             <label className="adm-form-group">Trạng thái áp dụng<select className="adm-form-select" value={String(form.isActive)} onChange={event => setForm({ ...form, isActive: event.target.value === 'true' })}><option value="false">Tạm dừng</option><option value="true">Đang áp dụng</option></select>{fieldError('isActive')}</label></div>
           <label className="adm-form-group">Mô tả<textarea className="adm-form-textarea" rows={3} maxLength={1000} value={form.description || ''} onChange={event => setForm({ ...form, description: event.target.value || null })} />{fieldError('description')}</label>
-          <label className="adm-form-group">Đường dẫn ảnh<input className="adm-form-input" type="url" maxLength={2048} placeholder="https://..." value={form.iconUrl || ''} onChange={event => setForm({ ...form, iconUrl: event.target.value || null })} />{fieldError('iconUrl')}</label>
+          <ImageUrlField value={form.iconUrl || ''} onChange={iconUrl => setForm(current => ({ ...current, iconUrl: iconUrl || null }))} uploadFile={contentImageApi.uploadBadge} disabled={saving || imageUploading} onBusyChange={setImageUploading} />
+          {fieldError('iconUrl')}
           <p className="adm-form-hint">Kích hoạt hoặc giảm ngưỡng điểm đang áp dụng sẽ tự đồng bộ cho người đủ điều kiện. Tăng ngưỡng hoặc tạm dừng vẫn giữ các huy hiệu đã đạt.</p>
           {formError && <div className="badge-error" role="alert">{formError}</div>}
         </div><div className="adm-modal-footer"><button type="button" className="adm-btn adm-btn-secondary" onClick={() => setModalOpen(false)}>Hủy</button><button type="submit" className="adm-btn adm-btn-primary">{saving ? 'Đang lưu...' : 'Lưu huy hiệu'}</button></div></fieldset></form>

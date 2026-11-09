@@ -1,4 +1,6 @@
 import { PaginatedList } from '../ui/PaginatedList';
+import { ImageUrlField } from '../ui/ImageUrlField';
+import { contentImageApi } from '../../services/contentImageApi';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
 import {
@@ -11,7 +13,6 @@ import {
   Search,
   Send,
   Trash2,
-  Upload,
   X
 } from 'lucide-react';
 import React, { useState } from 'react';
@@ -45,6 +46,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedActivity, setSelectedActivity] = useState<OrganizerActivityItem | null>(null);
   const [formData, setFormData] = useState<OrganizerActivityItem | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   useModalDismiss(Boolean(selectedActivity), () => { setSelectedActivity(null); setFormData(null); setShowDeleteConfirm(false); });
 
@@ -63,7 +65,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData) return;
+    if (!formData || imageUploading) return;
     if (!formData.title.trim()) {
       alert(language === 'vi' ? 'Vui lòng nhập tên hoạt động!' : 'Please enter activity title!');
       return;
@@ -514,81 +516,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                   </div>
                 )}
 
-                {/* Thumbnail Preview & Link Input & Upload */}
-                <div style={{
-                  display: 'flex',
-                  gap: '1.25rem',
-                  alignItems: 'center',
-                  background: '#F8FAF9',
-                  padding: '1rem',
-                  borderRadius: '10px',
-                  border: '1px solid #E2EAE5',
-                  marginBottom: '1.25rem'
-                }}>
-                  {formData.thumbnail ? <img
-                    src={formData.thumbnail}
-                    alt={formData.title}
-                    style={{ width: '110px', height: '80px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #D6E0DB', flexShrink: 0 }}
-                  /> : <div style={{ width: 110, height: 80, borderRadius: 8, border: '1px solid #D6E0DB', display: 'grid', placeItems: 'center', color: '#94A3B8', flexShrink: 0 }}>Chưa có ảnh</div>}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 650, color: '#2C423B', margin: 0 }}>
-                        {language === 'vi' ? 'Đường dẫn ảnh bìa (Thumbnail URL)' : 'Thumbnail URL'}
-                      </label>
-                      <label 
-                        className="btn-org-secondary" 
-                        style={{ 
-                          padding: '0.28rem 0.65rem', 
-                          fontSize: '0.76rem', 
-                          cursor: 'pointer', 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: '0.35rem',
-                          background: '#FFFFFF',
-                          border: '1px solid #CFDAD5',
-                          borderRadius: '6px',
-                          color: '#17382E',
-                          fontWeight: 650
-                        }}
-                        title={language === 'vi' ? 'Chọn ảnh từ thiết bị' : 'Upload image from device'}
-                      >
-                        <Upload size={13} />
-                        <span>{language === 'vi' ? 'Tải ảnh lên' : 'Upload'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (evt) => {
-                                if (typeof evt.target?.result === 'string') {
-                                  setFormData({ ...formData, thumbnail: evt.target.result });
-                                }
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
-                    </div>
-                    <input
-                      type="text"
-                      value={formData.thumbnail}
-                      onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.82rem',
-                        border: '1px solid #CFDAD5',
-                        borderRadius: '6px',
-                        background: '#FFFFFF'
-                      }}
-                      placeholder="https://... hoặc dán liên kết ảnh"
-                    />
-                  </div>
-                </div>
+                <ImageUrlField language={language} value={formData.thumbnail || ''} onChange={thumbnail => setFormData(current => current ? { ...current, thumbnail } : current)} uploadFile={file => contentImageApi.uploadOrganizerActivity(formData.eventId || '', file)} disabled={!formData.eventId} onBusyChange={setImageUploading} />
 
                 {/* Form Fields Grid */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -883,6 +811,7 @@ export const ActivityManagementView: React.FC<ActivityManagementViewProps> = ({
                   <button
                     type="submit"
                     className="btn-org-primary"
+                    disabled={imageUploading}
                   >
                     <Save size={14} />
                     <span>{language === 'vi' ? 'Lưu thay đổi' : 'Save Changes'}</span>

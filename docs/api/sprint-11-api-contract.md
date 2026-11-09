@@ -7,6 +7,9 @@
 - Use Case Specifications: `docs/use-cases/sprint-11-use-case-specifications.md`
 - Business Rules: `BR-112` through `BR-120`
 
+- Editor upload amendment (2026-11-09): `content-image-upload-api-contract.md` specifies the
+  additional ADMIN-only Badge illustration upload. Existing Badge mutation/audit behavior remains unchanged.
+
 ## 1. Scope and conventions
 
 - Base path: `/api/v1`. Every path below is relative to it.

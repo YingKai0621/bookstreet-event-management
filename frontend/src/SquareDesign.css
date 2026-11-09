@@ -36,7 +36,7 @@
   :is(.obr-kpi-card, .org-dashboard-kpi, .kpi-card, .adm-kpi-card,
       .booth-kpi-card, .summary-stat-card, .partner-stat-card,
       .partner-workspace-stat, .org-metric-card, .org-booth-stat-card,
-      .facility-stat, .my-booths-summary-card) {
+      .facility-stat, .my-booths-summary-card, .org-dashboard-event-row) {
     border-radius: 0 !important;
   }
 
@@ -60,6 +60,17 @@
       .adm-notif-tabs button, .booth-visit-modes button,
       .s2-request-scope-toggle button) {
     border-radius: var(--workspace-control-radius) !important;
+  }
+
+  /* Activity workspace tabs form one segmented control, so each segment
+     meets its neighbour with square corners. */
+  .oaw-tabs button {
+    border-radius: 0 !important;
+  }
+
+  .admin-app-shell :is(button[role="tab"], [role="tablist"] button,
+      .adm-tab-pill, .adm-role-tab-btn, .adm-notif-tabs button) {
+    border-radius: 0 !important;
   }
 
   /* Underlined tabs need straight bottom corners so their selection line

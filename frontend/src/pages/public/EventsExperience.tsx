@@ -365,10 +365,6 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 {activeModalEvent.image.url && (
                   <img src={activeModalEvent.image.url} alt={activeModalEvent.image.alt} className="modal-top-img" />
                 )}
-                <div className="modal-img-caption">
-                  <span className="kiosk-number-badge">{activeModalEvent.dayOfWeek}</span>
-                  <span className="photo-source-cite">{activeModalEvent.dateStr}</span>
-                </div>
               </div>
               <h3 className="modal-heading-title">
                 {vi ? activeModalEvent.title : activeModalEvent.titleEn}

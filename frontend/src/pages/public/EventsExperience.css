@@ -47,13 +47,13 @@
 
 /* Event Card Item Styling */
 .event-card-item {
-  background: #ffffff;
+  background: #fffdf8;
   border: 1px solid #dce0d3;
-  border-radius: 12px;
+  border-radius: 5px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 18px rgba(36, 61, 50, 0.06);
+  box-shadow: none;
   transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 260ms ease,
               border-color 260ms ease;
@@ -67,7 +67,8 @@
 }
 
 .event-card-image {
-  height: 210px;
+  aspect-ratio: 4 / 3;
+  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: #dce2d5;
@@ -102,7 +103,9 @@
 }
 
 .event-card-body {
-  padding: 22px 22px 18px;
+  padding: 28px 30px 24px;
+  min-height: 280px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -130,12 +133,12 @@
 }
 
 .event-card-title {
-  font-family: var(--font-serif);
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #203e30;
-  line-height: 1.35;
-  margin: 0 0 8px 0;
+  font-family: var(--font-sans, sans-serif);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 500;
+  color: #294432;
+  line-height: 1.25;
+  margin: 0 0 18px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -157,10 +160,10 @@
 }
 
 .heritage-card-summary {
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: #647366;
-  margin: 0 0 16px 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #73806b;
+  margin: 0 0 32px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -169,11 +172,26 @@
 
 .event-card-footer {
   margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid #edf0ea;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7dd;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.event-card-footer > svg {
+  flex-shrink: 0;
+  color: #526a43;
+}
+
+.event-badge-row .heritage-card-cat {
+  color: #829078;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 0;
 }
 
 .event-card-footer .heritage-card-arrow-text {

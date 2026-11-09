@@ -941,6 +941,7 @@ export const OrganizerCreateEventModal: React.FC<OrganizerCreateEventModalProps>
                       />
                     )}
                     {(bannerObjectUrl || form.bannerUrl) && bannerPreviewFailed && <div className="org-event-banner-error"><ImageIcon size={18} />Không tải được ảnh</div>}
+                    {!bannerObjectUrl && !form.bannerUrl && <div className="org-event-banner-error"><ImageIcon size={24} />Xem trước ảnh</div>}
                   </div>
                   {renderFieldError('bannerUrl')}
                 </div>

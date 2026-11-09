@@ -6,40 +6,6 @@
   min-width: min(100%, 320px);
 }
 
-/* Nút trở về không khung viền đặt trên đầu hàng Kicker */
-.exp-btn-return-frameless {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  outline: none;
-  box-shadow: none;
-  color: #294c37;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0 0 14px 0;
-  margin-bottom: 8px;
-  transition: color 180ms ease, transform 180ms ease;
-  user-select: none;
-  width: fit-content;
-}
-
-.exp-btn-return-frameless:hover {
-  color: #a34332;
-  transform: translateX(-4px);
-}
-
-.exp-btn-return-frameless svg {
-  transition: transform 180ms ease;
-}
-
-.exp-btn-return-frameless:hover svg {
-  transform: translateX(-2px);
-}
-
 .heritage-card-code {
   position: absolute;
   top: 12px;
@@ -74,7 +40,7 @@
 /* Booths Directory Grid & Card Refinement */
 #booths-collection .heritage-collection-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px 24px;
   width: 100%;
 }
@@ -102,10 +68,10 @@
 
 #booths-collection .heritage-collection-card {
   flex: initial;
-  background: #ffffff;
-  border: 1px solid #dfe5dc;
-  border-radius: 14px;
-  box-shadow: 0 4px 18px rgba(24, 41, 36, 0.045);
+  background: #fffdf8;
+  border: 1px solid #dce0d3;
+  border-radius: 5px;
+  box-shadow: none;
   transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
 }
 
@@ -118,7 +84,50 @@
 }
 
 #booths-collection .heritage-card-image {
-  height: 204px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  flex-shrink: 0;
+}
+
+#booths-collection .heritage-card-body {
+  min-height: 280px;
+  box-sizing: border-box;
+  padding: 28px 30px 24px;
+}
+
+#booths-collection .heritage-card-cat {
+  color: #829078;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 14px;
+}
+
+#booths-collection .heritage-card-body h3 {
+  font-family: var(--font-sans, sans-serif);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 500;
+  line-height: 1.25;
+  color: #294432;
+  margin-bottom: 18px;
+  text-wrap: initial;
+}
+
+#booths-collection .heritage-card-body > p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #73806b;
+  margin-bottom: 32px;
+}
+
+#booths-collection .heritage-card-footer {
+  border-top-color: #e5e7dd;
+  padding-top: 20px;
+}
+
+#booths-collection .heritage-card-arrow-icon {
+  color: #526a43;
 }
 
 .heritage-card-body {
