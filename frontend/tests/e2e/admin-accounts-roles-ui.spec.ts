@@ -151,7 +151,8 @@ test('creating an account sends no role, status or default password', async ({ p
   await dialog.getByLabel('Tên đăng nhập *').fill('docgia01');
   await dialog.getByLabel('Họ và tên *').fill('Phạm Văn D');
   await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('Mật khẩu');
+  await expect(dialog.getByText('Vui lòng nhập mật khẩu.')).toBeVisible();
+  await expect(dialog.getByText('Vui lòng nhập lại mật khẩu.')).toBeVisible();
   expect(calls.some(call => call.method === 'POST')).toBe(false);
 
   await dialog.getByLabel('Mật khẩu ban đầu *').fill('Secret123!');
@@ -164,6 +165,83 @@ test('creating an account sends no role, status or default password', async ({ p
   expect(created?.body).toEqual({
     username: 'docgia01', fullName: 'Phạm Văn D', password: 'Secret123!', confirmPassword: 'Secret123!', email: 'd@example.test',
   });
+});
+
+test('account form fields explain each invalid value next to the field', async ({ page }) => {
+  const calls = await setup(page, { 'POST /admin/users': { status: 409, code: 'USERNAME_ALREADY_EXISTS' } });
+  await page.goto('/admin/users');
+  await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+  const dialog = page.getByRole('dialog');
+  const username = dialog.getByLabel('Tên đăng nhập *');
+
+  await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
+  await expect(dialog.getByText('Vui lòng nhập tên đăng nhập.')).toBeVisible();
+  await expect(dialog.getByText('Vui lòng nhập họ và tên.')).toBeVisible();
+  await expect(username).toHaveAttribute('aria-invalid', 'true');
+
+  for (const [value, message] of [
+    ['1docgia', 'Tên đăng nhập phải bắt đầu bằng một chữ cái.'],
+    ['doc gia', 'Tên đăng nhập không được chứa khoảng trắng.'],
+    ['đọcgiả', 'chỉ gồm chữ cái không dấu'],
+    ['docgiả', 'chỉ gồm chữ cái không dấu'],
+    ['ab', 'Tên đăng nhập cần có từ 3 đến 20 ký tự.'],
+  ]) {
+    await username.fill(value);
+    await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
+    await expect(dialog.locator('#admin-create-username-error')).toContainText(message);
+  }
+
+  await username.fill('docgia01');
+  await expect(username).not.toHaveAttribute('aria-invalid', 'true');
+  await dialog.getByLabel('Họ và tên *').fill('A');
+  await dialog.getByLabel('Mật khẩu ban đầu *').fill('ngan');
+  await dialog.getByLabel('Xác nhận mật khẩu *').fill('khac1234');
+  await dialog.getByLabel('Email').fill('khong-phai-email');
+  await dialog.getByLabel('Số điện thoại').fill('09abc');
+  await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
+  await expect(dialog.getByText('Họ và tên cần có ít nhất 2 ký tự.')).toBeVisible();
+  await expect(dialog.getByText('Mật khẩu cần có ít nhất 8 ký tự.')).toBeVisible();
+  await expect(dialog.getByText('Mật khẩu xác nhận không khớp.')).toBeVisible();
+  await expect(dialog.getByText('Email chưa đúng định dạng, ví dụ: ten@example.com.')).toBeVisible();
+  await expect(dialog.getByText('Số điện thoại chỉ gồm chữ số, có thể có dấu + ở đầu.')).toBeVisible();
+  await expect(dialog).not.toContainText('byte');
+  expect(calls.some(call => call.method === 'POST')).toBe(false);
+
+  // A long password of accented letters passes the character limit but not the BCrypt limit of BR-64.
+  await dialog.getByLabel('Mật khẩu ban đầu *').fill('ạ'.repeat(30));
+  await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
+  await expect(dialog.getByText('Mật khẩu có quá nhiều ký tự có dấu', { exact: false })).toBeVisible();
+  await expect(dialog).not.toContainText('byte');
+
+  await dialog.getByLabel('Họ và tên *').fill('Phạm Văn D');
+  await dialog.getByLabel('Mật khẩu ban đầu *').fill('Secret123!');
+  await dialog.getByLabel('Xác nhận mật khẩu *').fill('Secret123!');
+  await dialog.getByLabel('Email').fill('d@example.test');
+  await dialog.getByLabel('Số điện thoại').fill('+84 912 345 678');
+  await dialog.getByRole('button', { name: 'Tạo tài khoản' }).click();
+  // The server's rejection lands on the field it concerns.
+  await expect(dialog.locator('#admin-create-username-error')).toHaveText('Tên đăng nhập đã được sử dụng.');
+});
+
+test('editing keeps an existing email and the lock reason counts characters', async ({ page }) => {
+  await setup(page);
+  await page.goto('/admin/users');
+
+  await page.getByRole('button', { name: 'Chỉnh sửa chuaxacminh' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Email').fill('');
+  await dialog.getByLabel('Họ và tên *').fill(' ');
+  await dialog.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(dialog.getByText('Vui lòng nhập email.')).toBeVisible();
+  await expect(dialog.getByText('Vui lòng nhập họ và tên.')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Khóa mocmien01' }).click();
+  const lock = page.getByRole('dialog');
+  await lock.getByLabel('Lý do (10–500 ký tự) *').fill('   ngắn   quá  ');
+  await expect(lock.getByText('Cần thêm ít nhất 2 ký tự (8/500)', { exact: false })).toBeVisible();
+  await lock.getByLabel('Lý do (10–500 ký tự) *').fill('Tài khoản có dấu hiệu bị lạm dụng.');
+  await expect(lock.getByText('34/500 ký tự', { exact: false })).toBeVisible();
 });
 
 test('the role dropdown explains unavailable choices and reports guard rejections', async ({ page }) => {

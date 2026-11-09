@@ -18,6 +18,7 @@ import type { AdminProfileUpdate } from '../../services/adminProfileApi';
 import { AdminProfile } from '../../types/admin';
 import '../ui/RoleProfileDesign.css';
 import './AdminAccounts.css';
+import { fullNameError, normalizeFullName, phoneError } from './adminAccountValidation';
 
 interface AdminProfileViewProps {
   profile: AdminProfile | null;
@@ -28,6 +29,7 @@ interface AdminProfileViewProps {
 }
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 function saveErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
@@ -51,6 +53,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
   const [formPhone, setFormPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; phone?: string }>({});
   const [saveToast, setSaveToast] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,8 +106,12 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    if (!AVATAR_TYPES.includes(file.type)) {
+      setSaveError('Ảnh đại diện phải là tệp PNG, JPG hoặc WEBP.');
+      return;
+    }
     if (file.size > MAX_AVATAR_BYTES) {
-      setSaveError('Dung lượng ảnh tối đa là 5MB.');
+      setSaveError('Ảnh đại diện tối đa 5 MB. Vui lòng chọn ảnh nhỏ hơn.');
       return;
     }
     const reader = new FileReader();
@@ -119,20 +126,17 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
     setFormName(profile.name);
     setFormPhone(profile.phone);
     setSaveError('');
+    setFieldErrors({});
     setIsEditing(true);
   };
 
   const handleSaveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
-    const fullName = formName.trim().replace(/\s+/g, ' ');
-    if (fullName.length < 2 || fullName.length > 50) {
-      setSaveError('Họ và tên dài 2–50 ký tự.');
-      return;
-    }
-    if (formPhone.trim().length > 20) {
-      setSaveError('Số điện thoại tối đa 20 ký tự.');
-      return;
-    }
+    const fullName = normalizeFullName(formName);
+    const errors = { fullName: fullNameError(formName) || undefined, phone: phoneError(formPhone) || undefined };
+    setFieldErrors(errors);
+    setSaveError('');
+    if (errors.fullName || errors.phone) return;
     await save({ ...currentUpdate(), fullName, phone: formPhone.trim() || null });
   };
 
@@ -283,8 +287,14 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                       className="adm-form-input"
                       maxLength={50}
                       value={formName}
-                      onChange={event => setFormName(event.target.value)}
+                      aria-invalid={fieldErrors.fullName ? true : undefined}
+                      aria-describedby={fieldErrors.fullName ? 'admin-profile-name-error' : undefined}
+                      onChange={event => {
+                        setFormName(event.target.value);
+                        setFieldErrors(current => ({ ...current, fullName: undefined }));
+                      }}
                     />
+                    {fieldErrors.fullName && <small id="admin-profile-name-error" className="adm-field-error">{fieldErrors.fullName}</small>}
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-profile-role">Chức vụ</label>
@@ -305,6 +315,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                       value={profile.email || ''}
                       disabled
                     />
+                    <small className="adm-form-hint">Email không thể thay đổi tại đây.</small>
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-profile-phone">Số điện thoại</label>
@@ -314,8 +325,14 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({
                       className="adm-form-input"
                       maxLength={20}
                       value={formPhone}
-                      onChange={event => setFormPhone(event.target.value)}
+                      aria-invalid={fieldErrors.phone ? true : undefined}
+                      aria-describedby={fieldErrors.phone ? 'admin-profile-phone-error' : undefined}
+                      onChange={event => {
+                        setFormPhone(event.target.value);
+                        setFieldErrors(current => ({ ...current, phone: undefined }));
+                      }}
                     />
+                    {fieldErrors.phone && <small id="admin-profile-phone-error" className="adm-field-error">{fieldErrors.phone}</small>}
                   </div>
                 </div>
                 <div className="adm-form-actions-right">
