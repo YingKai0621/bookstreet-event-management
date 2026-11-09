@@ -27,6 +27,7 @@ import { OrganizerLocationManagementView } from './OrganizerLocationManagementVi
 import { OrganizerProfileView } from './OrganizerProfileView';
 import { OrganizerPublicContentView } from './OrganizerPublicContentView';
 import { OrganizerReportsView } from './OrganizerReportsView';
+import { OrganizerPaymentsView } from './OrganizerPaymentsView';
 import { ParticipantManagementView } from './ParticipantManagementView';
 import {
   ORGANIZER_ROOT,
@@ -694,6 +695,8 @@ export const ManagementPortal: React.FC<ManagementPortalProps> = ({
         )}
 
         {activeTab === 'feedback' && <OrganizerFeedbackView language={language} />}
+
+        {activeTab === 'payments' && <OrganizerPaymentsView />}
 
         {activeTab === 'public_content' && (
           <OrganizerPublicContentView language={language} />

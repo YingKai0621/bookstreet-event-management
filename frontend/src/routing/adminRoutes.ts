@@ -8,6 +8,7 @@ export const ADMIN_TAB_PATHS: Record<AdminTab, string> = {
   roles: `${ADMIN_ROOT}/roles`,
   badges: `${ADMIN_ROOT}/badges`,
   organizations: `${ADMIN_ROOT}/organizations`,
+  payments: `${ADMIN_ROOT}/payments`,
   audit: `${ADMIN_ROOT}/audit`,
   notifications: `${ADMIN_ROOT}/notifications`,
   profile: `${ADMIN_ROOT}/profile`,

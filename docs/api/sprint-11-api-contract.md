@@ -413,7 +413,8 @@ input, a missing account or a conflict.
 
 Sprint 11 adds no Permission or settings API, no Admin password operation, no Admin Notification producer, no refund or Payment
 change, no organization edit or delete, and no audit update or delete. Optional `AC-OPT-S11` operations get a contract only if
-unit `S11-7` is scheduled.
+unit `S11-7` is scheduled. On 2026-11-10 it was scheduled for Booth Payments only; section 16 holds that contract.
+No operation in section 16 changes a Payment.
 
 ## 15. Required verification
 
@@ -422,3 +423,74 @@ unit `S11-7` is scheduled.
 - Tests through the running server for Session enforcement and stream closure.
 - Tests for each blocked command in section 8, and for each allowed command that must keep working.
 - Focused browser tests for the Admin, Partner and Organizer states.
+
+## 16. Booth Payment history (`S11-7`, scheduled 2026-11-10)
+
+Two read-only operations over existing tables, governed by `BR-121`. They add no migration and change no Payment. Both share one query, so
+filters, sorting and paging behave the same.
+
+| Method | Path | Purpose | Criteria |
+| --- | --- | --- | --- |
+| `GET` | `/admin/booth-payments` | Every Booth Payment across Events | `AC-OPT-S11-01` |
+| `GET` | `/organizer/booth-payments` | Booth Payments of the Events the Organizer owns | `AC-ORG-PAY-S11-01` to `03` |
+
+### 16.1 Query
+
+`page`, `size` and the paged response follow section 1.1.
+
+| Parameter | Values | Admin | Organizer |
+| --- | --- | --- | --- |
+| `status` | `PENDING`, `SUCCESS`, `FAILED`, `TIMEOUT` | Yes | Yes |
+| `eventId` | Positive ID | Any Event | An Event the Organizer does not own matches nothing |
+| `reconciliationRequired` | `true`, `false` | Yes | Ignored |
+| `search` | At most 100 characters, ignoring case | Organization name, Booth code, Event name, gateway reference | Organization name, Booth code, Event name |
+| `from`, `to` | Inclusive `yyyy-MM-dd` in `Asia/Ho_Chi_Minh`, on `createdAt` | Yes | Yes |
+| `sort` | `createdAt,desc` (default), `createdAt,asc`, `amount,desc`, `amount,asc`, each with the Payment ID as tie-breaker | Yes | Yes |
+
+An unsupported value, or `from` later than `to`, returns `400 INVALID_FILTER`; an unsupported sort returns
+`400 INVALID_SORT`. `TIMEOUT` is set by the reconciliation worker after the checkout expires and two trusted gateway
+queries still report the payment incomplete; a late trusted success may still settle it under `BR-58`.
+
+### 16.2 `AdminBoothPaymentResponse`
+
+```json
+{
+  "boothPaymentId": 77,
+  "event": { "eventId": 501, "name": "Hội sách mùa thu" },
+  "partnerOrganization": { "partnerOrganizationId": 9, "name": "Nhà sách Mộc Miên" },
+  "booth": { "boothId": 31, "code": "A01", "name": "Gian A01" },
+  "transactionType": "PAYMENT",
+  "amount": 1500000.00,
+  "status": "PENDING",
+  "reconciliationRequired": true,
+  "gatewayProvider": "VNPAY",
+  "gatewayTransactionRef": "BS77",
+  "failureCode": null,
+  "createdAt": "2026-11-08T03:00:00Z",
+  "completedAt": null
+}
+```
+
+### 16.3 `GET /organizer/booth-payments`
+
+Each row is `AdminBoothPaymentResponse` without `reconciliationRequired`, `gatewayProvider`, `gatewayTransactionRef` and
+`failureCode`. The page adds `collectedAmount`: the sum of `SUCCESS` Payments of type `PAYMENT` under the same filters except
+`status`, with `0` when nothing matches.
+
+```json
+{ "content": [], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0, "collectedAmount": 1500000.00 }
+```
+
+### 16.4 Never returned
+
+Neither response contains `checkoutUrl`, `idempotencyKey`, `providerResponseCode`, `providerTransactionStatus`,
+`reconciliationDetail` or `failureMessage`.
+
+### 16.5 Access
+
+| Status | Code | When |
+| --- | --- | --- |
+| `401` | `AUTHENTICATION_REQUIRED` | No valid Session |
+| `403` | `ACCESS_DENIED` | `/admin/booth-payments` without `ADMIN`, or `/organizer/booth-payments` without a verified `ORGANIZER` |
+
+Reading writes no audit row (`BR-118`). There is no `POST`, `PUT`, `PATCH` or `DELETE` on either path.

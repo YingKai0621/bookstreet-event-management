@@ -2,6 +2,7 @@ import {
   Award,
   Bell,
   Building2,
+  CreditCard,
   History,
   LayoutDashboard,
   ShieldCheck,
@@ -17,6 +18,7 @@ export type AdminTab =
   | 'roles'
   | 'badges'
   | 'organizations'
+  | 'payments'
   | 'audit'
   | 'notifications'
   | 'profile';
@@ -46,6 +48,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: 'roles', icon: <ShieldCheck size={18} />, labelVi: 'Vai trò', labelEn: 'Roles' },
     { id: 'badges', icon: <Award size={18} />, labelVi: 'Quy tắc huy hiệu', labelEn: 'Badge Rules' },
     { id: 'organizations', icon: <Building2 size={18} />, labelVi: 'Tổ chức đối tác', labelEn: 'Partner Organizations' },
+    { id: 'payments', icon: <CreditCard size={18} />, labelVi: 'Lịch sử thanh toán', labelEn: 'Payment History' },
     { id: 'audit', icon: <History size={18} />, labelVi: 'Nhật ký hệ thống', labelEn: 'Audit Logs' },
     { id: 'notifications', icon: <Bell size={18} />, labelVi: 'Thông báo', labelEn: 'Notifications', badge: unreadNotificationsCount },
     { id: 'profile', icon: <User size={18} />, labelVi: 'Hồ sơ Admin', labelEn: 'Profile' }

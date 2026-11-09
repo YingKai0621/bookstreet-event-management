@@ -317,3 +317,48 @@ Admin action.
 `AC-S11-REG-01` through `AC-S11-REG-06` apply across all sections. For `ACTIVE` organizations and accounts, existing
 behavior keeps its statuses, guards and response meaning. An Admin without `ORGANIZER` cannot use `/organizer`
 operations.
+
+## 12. Booth Payment history (`S11-7`, scheduled 2026-11-10)
+
+### Goal
+
+Admin oversees every Booth Payment in the system, and each Organizer follows the Payments of their own Events. Neither
+changes a Payment: the gateway flow and the reconciliation worker remain the only writers.
+
+### Main flow A: Admin oversight
+
+1. Admin opens Payment history.
+2. System shows a paged list, newest first, of every Booth Payment with its Event, Partner organization, Booth, amount,
+   status and whether it needs reconciliation, including `PENDING` ones.
+3. Admin may search, filter by status, Event, reconciliation or date, and sort by time or amount.
+4. Admin opens one Payment to read its gateway, gateway reference, failure code and times.
+
+### Main flow B: Organizer follow-up
+
+1. The Organizer opens Payment history in their workspace.
+2. System shows only the Booth Payments of the Events this Organizer owns, with the money collected under the current
+   filters.
+3. The Organizer may choose one of their Events, search, filter by status or date, and sort by time or amount. The
+   collected total ignores the status filter.
+
+### Exception flows
+
+- An unsupported filter or sort, or a start date after the end date: rejected; the screen explains a reversed date
+  range before sending it.
+- An Event the Organizer does not own: matches nothing.
+- A load failure: shown as an error, never as an empty history or zero collected.
+- Any attempt to change a Payment: no such operation exists.
+
+### Postconditions
+
+Nothing changes and no audit row is written. The Organizer view never shows gateway details.
+
+### Source note
+
+Both views follow `BR-121`. Admin oversight also answers the optional criterion `AC-OPT-S11-01` and, like the dashboard of
+`BR-119`, is part of the Admin workspace rather than a separate Use Case. The Organizer view belongs to
+`UC-O08 View Event Reports`.
+
+### Acceptance Criteria
+
+`AC-OPT-S11-01` and `AC-ORG-PAY-S11-01` through `AC-ORG-PAY-S11-03`.

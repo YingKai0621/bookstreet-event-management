@@ -19,6 +19,20 @@ business boundaries. The feature-scoped extension is specified in
 fields, keeps the 51 original criteria and schema unchanged, and adds separate upload verification
 criteria in that contract. It does not activate Admin asset management or general media CRUD.
 
+### Booth Payment history extension — 2026-11-10
+
+The user scheduled unit `S11-7` for Booth Payments only: `AC-OPT-S11-01` gives Admin a read-only, system-wide
+Payment history. The same request added a read-only history for each Organizer, limited to the Events they own,
+as `AC-ORG-PAY-S11-01` through `AC-ORG-PAY-S11-03` in section 7. Both views read existing tables through one
+shared query, add no migration, table, column, status or Notification type, and change no Payment.
+`AC-OPT-S11-02` (the read-only Event list) stays unscheduled. The operations are specified in section 16 of
+`docs/api/sprint-11-api-contract.md` and the flows in section 12 of
+`docs/use-cases/sprint-11-use-case-specifications.md`.
+
+The rule is recorded as `BR-121` in `05_Business_Rules.md`, approved by the user on 2026-11-10. In
+`06_Use_Case_List.md` the Organizer view belongs to `UC-O08 View Event Reports`, and the Admin view is read-only
+oversight in the Admin workspace like the dashboard, so the active Use Case total stays 28.
+
 ## 1. Goal
 
 Turn the Admin workspace into a real administration area:
@@ -107,7 +121,8 @@ Units are delivered in this order. Each needs a focused review with evidence map
 6. `S11-6` Password reset. It may move to the next Sprint without affecting units 1 to 5; if it does, its six
    criteria leave this baseline by a recorded amendment.
 7. `S11-7` Optional read-only oversight. It is outside the baseline count and enters only by a recorded decision
-   after units 1 to 5 are merged.
+   after units 1 to 5 are merged. Scheduled on 2026-11-10 for Booth Payments only, together with the Organizer
+   Payment history; see section 7.
 
 ## 6. Acceptance Criteria
 
@@ -265,9 +280,24 @@ organization effects, 3 dashboard, 3 workspace, 6 password reset, and 6 regressi
 
 These read-only criteria are outside the 51 and enter only under section 5, unit `S11-7`.
 
-- `AC-OPT-S11-01`: Admin lists Booth Payments across Events with status and date filters, including `PENDING` ones,
-  and cannot change them. Responses contain no gateway secret or raw callback data.
-- `AC-OPT-S11-02`: Admin lists all Events with their status and responsible Organizer, and cannot change them.
+- `AC-OPT-S11-01` (scheduled 2026-11-10): Admin lists Booth Payments across Events with status and date filters,
+  including `PENDING` ones, and cannot change them. Responses contain no gateway secret or raw callback data.
+- `AC-OPT-S11-02` (not scheduled): Admin lists all Events with their status and responsible Organizer, and cannot
+  change them.
+
+### 7.1 Organizer Payment history
+
+Added with `S11-7` on 2026-11-10, also outside the 51:
+
+- `AC-ORG-PAY-S11-01`: an Organizer lists the Booth Payments of the Events they own, through server-side paging with
+  status, Event, date and search filters and a stable sort. A Payment of another Organizer's Event never appears,
+  and naming such an Event matches nothing rather than revealing that it exists. The Organizer cannot change a Payment.
+- `AC-ORG-PAY-S11-02`: the response includes the money collected, the sum of `SUCCESS` Payments of type `PAYMENT` under
+  the same filters except status, so looking at failed or pending attempts does not change the total. It uses the
+  same definition as the Admin dashboard revenue in `BR-119`.
+- `AC-ORG-PAY-S11-03`: the Organizer view leaves gateway details to Admin oversight. It contains no reconciliation
+  flag, gateway reference, provider, failure code, checkout URL, idempotency key or failure text. The screen
+  distinguishes loading, empty, filtered-empty and failure states, and a failure is never shown as zero collected.
 
 ## 8. Decisions recorded
 
@@ -282,3 +312,6 @@ These read-only criteria are outside the 51 and enter only under section 5, unit
 | Admin password reset | Removed because it sets a fixed known password |
 | Facilities, Assets, Booth catalog on Admin | Removed; Organizer manages Locations and Booths |
 | Audit log | Kept as a real feature; requires a new migration |
+| `S11-7` scope (2026-11-10) | Booth Payment history scheduled at the user's request; the read-only Event list (`AC-OPT-S11-02`) is not |
+| Organizer Payment history (2026-11-10) | Added beside the Admin view, limited to owned Events and without gateway details; recorded as `BR-121` and within `UC-O08` |
+| `TIMEOUT` Payment label | Shown as "Hết hạn". It is a real status: the reconciliation worker sets it after the checkout expires and two trusted gateway queries still report the payment incomplete (`BR-58`, `BR-60`) |

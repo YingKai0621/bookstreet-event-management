@@ -1,0 +1,112 @@
+/* Admin payment history (AC-OPT-S11-01). Builds on AdminPortal.css. */
+
+.adm-payments-table td {
+  vertical-align: middle;
+}
+
+.adm-payments-table .adm-payment-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.adm-payment-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #216147;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.adm-payment-link:hover {
+  text-decoration: underline;
+}
+
+.adm-payment-booth {
+  display: block;
+  font-weight: 600;
+}
+
+.adm-payment-subtle {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.adm-payment-status-muted {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
+.adm-payment-reconcile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #92400e;
+  background: #fef3c7;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.adm-payment-reconcile-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  font-size: 0.85rem;
+}
+
+.adm-payment-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-end;
+  min-height: 42px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.adm-payment-filter-error {
+  margin: 10px 0 0;
+  color: #b42318;
+  font-size: 0.8rem;
+}
+
+.adm-payment-event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #24543e;
+  background: #eaf2e9;
+  font-size: 0.82rem;
+}
+
+.adm-payment-event-chip button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.adm-btn.adm-btn-sm {
+  padding: 4px 12px;
+  min-height: 0;
+  font-size: 0.8rem;
+}

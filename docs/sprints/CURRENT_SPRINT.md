@@ -45,7 +45,9 @@ The active baseline is `BR-112` through `BR-120`, `UC-A01` through `UC-A05`, the
 - 6 password-reset criteria: `AC-G03-S11-01` through `AC-G03-S11-06`
 - 6 regression criteria: `AC-S11-REG-01` through `AC-S11-REG-06`
 
-Read-only Payment and Event views under `AC-OPT-S11` stay outside the baseline unless recorded as scheduled.
+Read-only Payment and Event views under `AC-OPT-S11` stay outside the baseline unless recorded as scheduled. On
+2026-11-10 the Booth Payment history (`AC-OPT-S11-01`) was scheduled, with an Organizer Payment history
+(`AC-ORG-PAY-S11-01` to `03`); the Event view (`AC-OPT-S11-02`) was not. See `docs/sprints/sprint-11.md` section 7.
 
 ## Ownership
 
