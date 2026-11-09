@@ -11,6 +11,14 @@
 
 This document is the active Sprint 11 baseline. It authorizes only the reviewed delivery units below.
 
+### Editor image upload extension — 2026-11-09
+
+The user requested retaining local image selection and preview while correcting the new upload API's
+business boundaries. The feature-scoped extension is specified in
+`docs/api/content-image-upload-api-contract.md`. It supports existing UC-A03/UC-O06/UC-E05 image URL
+fields, keeps the 51 original criteria and schema unchanged, and adds separate upload verification
+criteria in that contract. It does not activate Admin asset management or general media CRUD.
+
 ## 1. Goal
 
 Turn the Admin workspace into a real administration area:

@@ -1,16 +1,23 @@
 .badge-management { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
 .badge-management .adm-page-header { margin-bottom: 0; }
-.badge-catalog-filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; padding: 20px; background: #fff; border: 1px solid #e1e8e3; border-radius: 14px; }
+.badge-catalog-filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; padding: 20px 24px; background: #fff; border: 1px solid #d7e2dc; border-radius: 0; }
 .badge-catalog-filters form { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 220px; }
 .badge-catalog-filters .badge-search-group { flex: 1; min-width: 220px; }
 .badge-catalog-filters .badge-search-group form { width: 100%; }
+.badge-search-group { gap: 8px; }
+.badge-search-group > span, .badge-catalog-filters > label { color: #526b60; font-size: .8125rem; font-weight: 650; line-height: 1.5; white-space: nowrap; }
+.badge-search-control { display: flex; align-items: center; flex: 1; min-width: 0; gap: 10px; min-height: 44px; box-sizing: border-box; padding: 0 14px; border: 1px solid #bfd1c7; border-radius: 10px; background: #fff; color: #718079; }
+.badge-search-control > svg { flex-shrink: 0; }
+.admin-app-shell .badge-search-control input[type="search"] { width: 100%; min-width: 0; min-height: 42px; padding: 0; border: 0 !important; border-radius: 0 !important; background: transparent !important; outline: none !important; box-shadow: none; font-size: .875rem; }
+.badge-search-control:focus-within { border-color: #216147; box-shadow: 0 0 0 3px rgb(33 97 71 / 12%); }
+.badge-catalog-filters form > button { min-height: 44px; flex-shrink: 0; white-space: nowrap; }
 .badge-catalog-filters input { min-width: 0; flex: 1; }
 .badge-catalog-filters label { display: grid; gap: 6px; font-size: 12px; color: #5a6e62; }
 .badge-catalog-filters input, .badge-catalog-filters select { border: 1px solid #d6e0d9; border-radius: 8px; padding: 10px; font: inherit; background: #fff; }
 .badge-catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 20px; min-width: 0; }
 .badge-management .badge-catalog-card { display: flex; flex-direction: column; min-width: 0; box-sizing: border-box; padding: 22px; border-radius: 12px; border: 1px solid #dce5df; background: #fff; box-shadow: 0 2px 8px #193c2405; }
 .badge-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.badge-card-heading img, .badge-card-icon { width: 60px; height: 60px; object-fit: contain; border-radius: 14px; }
+.badge-card-heading img, .badge-card-icon { width: 60px; height: 60px; object-fit: cover; border-radius: 14px; }
 .badge-card-icon { display: grid; place-items: center; color: #967428; background: #fcf5df; }
 .badge-state { font-size: 12px; font-weight: 600; border-radius: 16px; padding: 6px 10px; background: #edf0ee; color: #647269; }
 .badge-state.active { background: #e6f4ea; color: #276940; }
@@ -24,7 +31,7 @@
 .badge-sync-state.pending { background: #fff6dc; color: #806320; }
 .badge-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; padding-top: 18px; }
 .badge-card-actions .adm-btn-primary { grid-column: 1 / -1; }
-.badge-card-heading img { padding: 5px; box-sizing: border-box; background: #f5f7f4; border: 1px solid #e5ebe6; }
+.badge-card-heading img { padding: 0; box-sizing: border-box; background: #f5f7f4; border: 1px solid #e5ebe6; }
 .badge-card-heading .badge-state { white-space: nowrap; }
 .badge-card-actions .adm-btn { padding: 9px 12px; font-size: 12px; }
 .badge-notice, .badge-error { border-radius: 10px; padding: 14px 18px; line-height: 1.6; }

@@ -3,7 +3,6 @@ import {
   Check,
   ExternalLink,
   FilePenLine,
-  Upload,
   Image as ImageIcon,
   Plus,
   RefreshCw,
@@ -18,6 +17,7 @@ import { LIST_PAGE_SIZE, getPageCount, getPageOffset, toPageIndex } from '../../
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { ApiError } from '../../services/apiClient';
 import { organizerApi } from '../../services/organizerApi';
+import { ImageUrlField } from '../ui/ImageUrlField';
 import type { Language } from '../../types';
 import type {
   CreateHeritageRequest,
@@ -251,32 +251,15 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
     discardEditor();
   };
 
-  const uploadImage = async (file: File | undefined) => {
-    if (!file || imageUploading) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setFormError('Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setFormError('Ảnh di sản không được vượt quá 5 MB.');
-      return;
-    }
-
-    setImageUploading(true);
+  const uploadImage = async (file: File): Promise<string> => {
     setFormError('');
     const previousTemporary = temporaryImageUrl;
-    try {
-      const uploaded = await organizerApi.uploadHeritageImage(file);
-      setTemporaryImageUrl(uploaded.imageUrl);
-      setField('imageUrl', uploaded.imageUrl);
-      if (previousTemporary && previousTemporary !== uploaded.imageUrl) {
-        void deleteUploadedImageQuietly(previousTemporary);
-      }
-    } catch (cause) {
-      setFormError(friendlyError(cause, 'Không thể tải ảnh lên. Vui lòng thử lại.'));
-    } finally {
-      setImageUploading(false);
+    const uploaded = await organizerApi.uploadHeritageImage(file);
+    setTemporaryImageUrl(uploaded.imageUrl);
+    if (previousTemporary && previousTemporary !== uploaded.imageUrl) {
+      void deleteUploadedImageQuietly(previousTemporary);
     }
+    return uploaded.imageUrl;
   };
 
   const removeImage = () => {
@@ -467,11 +450,9 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
               <label className="heritage-management-wide">Tiêu đề <span>*</span><input autoFocus={editor?.kind === 'new'} required minLength={2} maxLength={200} value={form.title} onChange={event => setField('title', event.target.value)} /></label>
               <label className="heritage-management-wide">Tóm tắt<textarea maxLength={1000} rows={3} value={form.summary} onChange={event => setField('summary', event.target.value)} /><small>{form.summary.length}/1000</small></label>
               <label className="heritage-management-wide">Nội dung <span>*</span><textarea required minLength={20} maxLength={20000} rows={10} value={form.content} onChange={event => setField('content', event.target.value)} placeholder="Viết câu chuyện di sản bằng văn bản thuần…" /><small>{form.content.length}/20000</small></label>
-              <div className="heritage-management-wide heritage-image-upload">
-                <span>Ảnh minh họa (không bắt buộc)</span>
-                {form.imageUrl ? <img src={form.imageUrl} alt="Xem trước ảnh di sản" /> : <div className="heritage-image-placeholder"><ImageIcon size={32} /><span>Chưa có ảnh</span></div>}
-                <div><label className="btn-org-secondary"><Upload size={16} />{imageUploading ? 'Đang tải ảnh…' : form.imageUrl ? 'Thay ảnh' : 'Chọn ảnh từ máy'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={imageUploading || saving} onChange={event => { void uploadImage(event.target.files?.[0]); event.currentTarget.value = ''; }} /></label>{form.imageUrl && <button type="button" className="org-dashboard-text-action is-danger" disabled={imageUploading || saving} onClick={removeImage}><Trash2 size={15} />Bỏ ảnh</button>}</div>
-                <small>JPG, PNG hoặc WebP; tối đa 5 MB.</small>
+              <div className="heritage-management-wide">
+                <ImageUrlField label="Ảnh minh họa (không bắt buộc)" value={form.imageUrl} onChange={value => setField('imageUrl', value)} uploadFile={uploadImage} onBusyChange={setImageUploading} disabled={saving} />
+                {form.imageUrl && <button type="button" className="org-dashboard-text-action is-danger" disabled={imageUploading || saving} onClick={removeImage}><Trash2 size={15} />Bỏ ảnh</button>}
               </div>
             </div>
           )}

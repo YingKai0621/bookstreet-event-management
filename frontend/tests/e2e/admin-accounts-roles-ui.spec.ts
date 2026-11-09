@@ -166,29 +166,82 @@ test('creating an account sends no role, status or default password', async ({ p
   });
 });
 
-test('the role screen explains unavailable actions and reports guard rejections', async ({ page }) => {
-  const calls = await setup(page, { 'DELETE /admin/users/12/roles/ORGANIZER': { status: 409, code: 'ORGANIZER_OWNS_OPEN_EVENTS' } });
+test('the role dropdown explains unavailable choices and reports guard rejections', async ({ page }) => {
+  await setup(page, { 'DELETE /admin/users/12/roles/ORGANIZER': { status: 409, code: 'ORGANIZER_OWNS_OPEN_EVENTS' } });
   await page.goto('/admin/roles');
+  await page.getByRole('button', { name: 'Chọn vai trò cho admin', exact: true }).click();
+  let dropdown = page.getByRole('dialog', { name: 'Vai trò của admin', exact: true });
+  await expect(dropdown.getByRole('checkbox', { name: /Quản trị viên/ })).toBeDisabled();
+  await expect(dropdown.getByRole('checkbox', { name: /Người tham gia/ })).toBeChecked();
+  await expect(dropdown.getByRole('checkbox', { name: /Người tham gia/ })).toBeDisabled();
+  await expect(dropdown).toContainText('tự gỡ vai trò Quản trị viên');
+  await page.keyboard.press('Escape');
 
-  const rows = page.locator('.adm-table tbody tr');
-  await expect(rows).toHaveCount(4);
-  await expect(page.getByRole('button', { name: 'Gỡ vai trò Quản trị viên cho admin' })).toBeDisabled();
-  await expect(rows.filter({ hasText: '@admin ·' })).toContainText('tự gỡ vai trò Quản trị viên');
-  await expect(page.getByRole('button', { name: 'Gán vai trò Đối tác cho khoa01' })).toBeDisabled();
-  await expect(rows.filter({ hasText: 'khoa01' })).toContainText('đang bị khóa');
-  await expect(page.getByRole('button', { name: 'Gán vai trò Đối tác cho chuaxacminh' })).toBeDisabled();
-  await expect(rows.filter({ hasText: 'chuaxacminh' })).toContainText('chưa được xác minh');
-
-  await page.getByRole('button', { name: 'Gỡ vai trò Ban tổ chức cho mocmien01' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận gỡ' }).click();
+  for (const [username, reason] of [['khoa01', 'đang bị khóa'], ['chuaxacminh', 'chưa được xác minh']]) {
+    await page.getByRole('button', { name: `Chọn vai trò cho ${username}`, exact: true }).click();
+    dropdown = page.getByRole('dialog', { name: `Vai trò của ${username}`, exact: true });
+    await expect(dropdown.getByRole('checkbox', { name: /Đối tác/ })).toBeDisabled();
+    await expect(dropdown).toContainText(reason);
+    await page.keyboard.press('Escape');
+  }
+  await page.getByRole('button', { name: 'Chọn vai trò cho mocmien01' }).click();
+  dropdown = page.getByRole('dialog', { name: 'Vai trò của mocmien01' });
+  await dropdown.getByRole('checkbox', { name: 'Ban tổ chức', exact: true }).uncheck();
+  await dropdown.getByRole('button', { name: 'Áp dụng' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận cập nhật' }).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('vẫn sở hữu sự kiện');
   await page.keyboard.press('Escape');
-  await expect(rows.filter({ hasText: 'mocmien01' })).toContainText('Ban tổ chức');
+  await expect(page.locator('.adm-table tbody tr').filter({ hasText: 'mocmien01' })).toContainText('Ban tổ chức');
+});
 
-  await page.getByRole('button', { name: 'Gán vai trò Quản trị viên cho mocmien01' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận gán' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'đăng nhập lại' })).toBeVisible();
-  expect(calls.some(call => call.method === 'PUT' && call.path === '/admin/users/12/roles/ADMIN')).toBe(true);
+test('role dropdown selects multiple changes and waits for confirmation', async ({ page }) => {
+  const calls = await setup(page);
+  await page.goto('/admin/roles');
+  await page.getByRole('button', { name: 'Chọn vai trò cho mocmien01' }).click();
+  const dropdown = page.getByRole('dialog', { name: 'Vai trò của mocmien01' });
+  await expect(dropdown.getByRole('button', { name: 'Áp dụng' })).toBeDisabled();
+  await dropdown.getByRole('checkbox', { name: 'Ban tổ chức', exact: true }).uncheck();
+  await dropdown.getByRole('checkbox', { name: 'Quản trị viên', exact: true }).check();
+  await expect(dropdown).toBeVisible();
+  expect(await page.locator('.adm-table-responsive').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('role-dropdown.png') });
+  await dropdown.getByRole('button', { name: 'Áp dụng' }).click();
+  expect(calls.filter(call => call.path.includes('/roles/'))).toHaveLength(0);
+  const confirmation = page.getByRole('dialog');
+  await expect(confirmation).toContainText('Gỡ');
+  await expect(confirmation).toContainText('Gán');
+  await confirmation.getByRole('button', { name: 'Xác nhận cập nhật' }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'Đã cập nhật 2 thay đổi' })).toBeVisible();
+  const roles = page.locator('.adm-table tbody tr').filter({ hasText: 'mocmien01' }).locator('.adm-role-list');
+  await expect(roles).toContainText('Quản trị viên');
+  await expect(roles).toContainText('Người tham gia');
+  await expect(roles).not.toContainText('Ban tổ chức');
+  expect(calls.filter(call => call.path.includes('/roles/')).map(call => [call.method, call.path])).toEqual([
+    ['DELETE', '/admin/users/12/roles/ORGANIZER'], ['PUT', '/admin/users/12/roles/ADMIN'],
+  ]);
+});
+
+test('partial role update retries only the remaining changes', async ({ page }) => {
+  const failures: Record<string, { status: number; code: string }> = {
+    'DELETE /admin/users/12/roles/ORGANIZER': { status: 409, code: 'ORGANIZER_OWNS_OPEN_EVENTS' },
+  };
+  const calls = await setup(page, failures);
+  await page.goto('/admin/roles');
+  await page.getByRole('button', { name: 'Chọn vai trò cho mocmien01' }).click();
+  const dropdown = page.getByRole('dialog', { name: 'Vai trò của mocmien01' });
+  await dropdown.getByRole('checkbox', { name: 'Đối tác', exact: true }).uncheck();
+  await dropdown.getByRole('checkbox', { name: 'Ban tổ chức', exact: true }).uncheck();
+  await dropdown.getByRole('button', { name: 'Áp dụng' }).click();
+  const confirmation = page.getByRole('dialog');
+  await confirmation.getByRole('button', { name: 'Xác nhận cập nhật' }).click();
+  await expect(confirmation.getByRole('alert')).toContainText('Đã lưu 1 thay đổi');
+  await expect(confirmation.locator('.adm-role-change-summary')).not.toContainText('Đối tác');
+  delete failures['DELETE /admin/users/12/roles/ORGANIZER'];
+  await confirmation.getByRole('button', { name: 'Xác nhận cập nhật' }).click();
+  await expect(confirmation).toHaveCount(0);
+  expect(calls.filter(call => call.path === '/admin/users/12/roles/PARTNER')).toHaveLength(1);
+  expect(calls.filter(call => call.path === '/admin/users/12/roles/ORGANIZER')).toHaveLength(2);
 });
 
 test('the Admin profile uses /auth/profile and offers no password action', async ({ page }) => {

@@ -57,6 +57,10 @@ async function mockOrganizerShell(page: Page, handler: (route: Route) => Promise
 
 test('Organizer creates a draft then publishes it with the raw concurrency token', async ({ page }) => {
   await page.clock.install();
+  await page.route('**/assets/heritage/uploads/*.png', route => route.fulfill({
+    contentType: 'image/png',
+    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1cAAAAASUVORK5CYII=', 'base64'),
+  }));
   let rows: ReturnType<typeof heritageItem>[] = [];
   let createPayload: Record<string, unknown> | null = null;
   let publishPayload: Record<string, unknown> | null = null;
@@ -102,7 +106,14 @@ test('Organizer creates a draft then publishes it with the raw concurrency token
     mimeType: 'image/png',
     buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   });
-  await expect(page.getByAltText('Xem trước ảnh di sản')).toBeVisible();
+  await expect(page.getByAltText('Ảnh xem trước')).toBeVisible();
+  const imageUrl = page.getByRole('textbox', { name: 'Ảnh minh họa (không bắt buộc)', exact: true });
+  await imageUrl.scrollIntoViewIfNeeded();
+  const urlBounds = await imageUrl.boundingBox();
+  const uploadBounds = await page.getByRole('button', { name: 'Chọn ảnh từ máy', exact: true }).boundingBox();
+  const previewBounds = await page.locator('.image-url-field-preview').boundingBox();
+  expect(uploadBounds!.y).toBeGreaterThanOrEqual(urlBounds!.y + urlBounds!.height);
+  expect(previewBounds!.x).toBeGreaterThan(urlBounds!.x + urlBounds!.width);
   await page.getByRole('button', { name: 'Tạo bản nháp' }).click();
 
   const createNotice = page.getByText('Đã tạo nội dung di sản ở trạng thái bản nháp.');
@@ -124,7 +135,7 @@ test('Organizer creates a draft then publishes it with the raw concurrency token
   await page.getByRole('button', { name: 'Đóng thông báo' }).click();
   await expect(page.getByText('Đã công bố nội dung di sản.')).not.toBeVisible();
   expect(publishPayload).toEqual({ expectedUpdatedAt: '2026-11-01T03:00:00.0000021Z' });
-  await expect(page.getByRole('link', { name: 'Trang công khai' })).toHaveAttribute('href', '/di-san/DI-SAN-21');
+  await expect(page.getByRole('link', { name: 'Trang công khai', exact: true })).toHaveAttribute('href', '/di-san/DI-SAN-21');
 });
 
 test('Organizer lifecycle actions use only legal actions for each status', async ({ page }) => {

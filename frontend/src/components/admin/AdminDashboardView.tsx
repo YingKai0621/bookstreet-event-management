@@ -127,6 +127,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
             <div className="admin-card adm-donut-card">
               <div className="adm-card-header"><div><h3 className="adm-card-title">Tài khoản theo vai trò</h3><p className="adm-card-subtitle">Một tài khoản có thể có nhiều vai trò</p></div></div>
+              <div className="adm-dashboard-distribution-body">
               <div className="adm-role-legend-list">
                 {Object.entries(ROLE_LABELS).map(([role, label]) => {
                   const count = accounts.byRole[role as keyof typeof accounts.byRole] ?? 0;
@@ -137,10 +138,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </div>;
                 })}
               </div>
-              <div className="adm-event-status-list" style={{ display: 'grid', gap: '0.6rem', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #E2E8F0' }}>
+              <div className="adm-event-status-list">
                 {Object.entries(EVENT_STATUS_LABELS).map(([status, label]) => <div className="adm-role-legend-row" key={status}>
                   <span>{label}</span><strong>{formatNumber(events.byStatus[status as keyof typeof events.byStatus] ?? 0)}</strong>
                 </div>)}
+              </div>
               </div>
             </div>
           </div>

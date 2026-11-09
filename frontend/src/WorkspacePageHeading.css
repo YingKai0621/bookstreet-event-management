@@ -106,6 +106,13 @@ body::-webkit-scrollbar,
   text-wrap: pretty;
 }
 
+.admin-app-shell p.workspace-page-subtitle.adm-roles-description {
+  max-width: 100% !important;
+  white-space: nowrap;
+  text-wrap: nowrap;
+  overflow-x: auto;
+}
+
 :is(.organizer-app-shell, .admin-app-shell, .partner-app-shell, .participant-app-shell) .participant-page-header:not(.participant-notifications-header) {
   display: flex;
   flex-direction: column;

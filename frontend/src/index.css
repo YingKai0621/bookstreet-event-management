@@ -390,6 +390,27 @@ button {
   color: var(--figma-text-dark);
 }
 
+/* Reserve a separate close-control row above detail cover images. */
+.modal-content:has(> .modal-booth-header-img, > .modal-event-photo-header) {
+  padding-top: 64px;
+}
+
+.modal-content:has(> .modal-booth-header-img, > .modal-event-photo-header) > .modal-close {
+  top: 12px;
+  right: 12px;
+  background-color: #f0f4f1;
+  color: #294c37;
+}
+
+.modal-content:has(> .modal-booth-header-img, > .modal-event-photo-header) > .modal-close:hover {
+  background-color: #e0e9e2;
+}
+
+.modal-content:has(> .modal-booth-header-img, > .modal-event-photo-header) > .modal-close:focus-visible {
+  outline: 2px solid #294c37;
+  outline-offset: 3px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

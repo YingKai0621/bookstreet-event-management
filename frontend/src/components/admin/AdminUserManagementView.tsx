@@ -433,7 +433,7 @@ export const AdminUserManagementView: React.FC = () => {
               <span>Có <strong>{total}</strong> tài khoản phù hợp</span>
             </div>
             <div className="adm-table-responsive">
-              <table className="adm-table">
+              <table className="adm-table adm-accounts-table">
                 <thead>
                   <tr>
                     <th>TÀI KHOẢN</th>

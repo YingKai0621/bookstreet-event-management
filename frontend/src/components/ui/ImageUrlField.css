@@ -1,0 +1,17 @@
+.image-url-field { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 10px 16px; min-width: 0; width: 100%; align-items: start; }
+.image-url-field > label { grid-column: 1 / -1; font-size: 14px; font-weight: 600; color: #243d32; }
+.image-url-field-controls { grid-column: 1; grid-row: 2; display: grid; gap: 12px; min-width: 0; }
+.image-url-field .image-url-field-controls > :is(input, button) { margin: 0; }
+.image-url-field .image-url-field-controls > button { justify-self: start; }
+.image-url-field .image-url-field-controls > input:not([type="file"]) { flex: 1; min-width: 0; width: 100%; min-height: 44px; border: 1px solid #cfdbd3; border-radius: 8px; padding: 10px 12px; background: #fff; color: #243d32; font: inherit; box-sizing: border-box; }
+.image-url-field .image-url-field-controls > button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid #c8d7cd; border-radius: 8px; background: #edf4ee; color: #245440; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.image-url-field .image-url-field-controls > button:hover:not(:disabled) { background: #e0ece2; }
+.image-url-field .image-url-field-controls > button:disabled { opacity: .65; cursor: wait; }
+.image-url-field .image-url-file-input { display: none; }
+.image-url-field :is(input, button):focus-visible { outline: 2px solid #35765c; outline-offset: 3px; }
+.image-url-field > small { grid-column: 1; grid-row: 3; color: #6c7e73; font-size: 12px; font-weight: 400; }
+.image-url-field-preview { grid-column: 2; grid-row: 2 / 4; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; height: 144px; width: 100%; border: 1px solid #cbd8ce; border-radius: 8px; background: #f5f7f2; color: #738277; overflow: hidden; font-size: 13px; text-align: center; padding: 12px; box-sizing: border-box; }
+.image-url-field-preview:has(> img) { padding: 0; border-style: solid; }
+.image-url-field-preview > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.image-url-field-error { grid-column: 1 / -1; margin: 0; color: #ad3526; font-size: 13px; }
+@media (max-width: 480px) { .image-url-field { grid-template-columns: minmax(0, 1fr); } .image-url-field-preview { grid-column: 1; grid-row: 4; height: 180px; } }
