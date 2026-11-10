@@ -5,6 +5,7 @@ import { AdminAuditLogsView } from './AdminAuditLogsView';
 import { AdminBadgeRulesView } from './AdminBadgeRulesView';
 import { AdminDashboardView } from './AdminDashboardView';
 import { AdminNotificationsView } from './AdminNotificationsView';
+import { AdminPaymentsView } from './AdminPaymentsView';
 import { AdminOrganizationsView } from './AdminOrganizationsView';
 import { AdminProfileView } from './AdminProfileView';
 import { AdminRolesView } from './AdminRolesView';
@@ -214,6 +215,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           {activeTab === 'badges' && (
             <AdminBadgeRulesView />
           )}
+
+          {activeTab === 'payments' && <AdminPaymentsView />}
 
           {activeTab === 'audit' && <AdminAuditLogsView />}
 

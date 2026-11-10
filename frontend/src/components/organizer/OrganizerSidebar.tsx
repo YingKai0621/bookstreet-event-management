@@ -6,6 +6,7 @@ import {
   Landmark,
   LayoutDashboard,
   MessageSquare,
+  CreditCard,
   Store,
   User,
   Users
@@ -39,6 +40,7 @@ export const OrganizerSidebar: React.FC<OrganizerSidebarProps> = ({
     { id: 'overview' as OrganizerTab, icon: <LayoutDashboard size={18} />, labelVi: 'Dashboard', labelEn: 'Dashboard' },
     { id: 'events' as OrganizerTab, icon: <CalendarDays size={18} />, labelVi: 'Sự kiện', labelEn: 'Events' },
     { id: 'booth_requests' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Yêu cầu gian hàng', labelEn: 'Booth Requests' },
+    { id: 'payments' as OrganizerTab, icon: <CreditCard size={18} />, labelVi: 'Lịch sử thanh toán', labelEn: 'Payment History' },
     { id: 'booths' as OrganizerTab, icon: <Store size={18} />, labelVi: 'Gian hàng', labelEn: 'Booths' },
     { id: 'venues' as OrganizerTab, icon: <Building2 size={18} />, labelVi: 'Địa điểm tổ chức', labelEn: 'Venues' },
     { id: 'activities' as OrganizerTab, icon: <Layers size={18} />, labelVi: 'Hoạt động', labelEn: 'Activities' },

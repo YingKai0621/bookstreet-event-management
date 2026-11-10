@@ -5,6 +5,9 @@ Post-MVP references are listed separately
 
 System Admin amendment active 07/11/2026 for Sprint 11: UC-A04 and UC-A05 are active.
 
+Booth Payment history amendment active 10/11/2026 for Sprint 11: UC-O08 includes the Organizer Payment history
+under BR-121. The total stays 28.
+
 # 1. Quy tắc đặt tên Use Case
 
 - Tên bắt đầu bằng động từ: Explore, Manage, Apply, Review, Process, View, Submit.
@@ -73,7 +76,7 @@ Guest được gom thành một Use Case public chính: Explore Book Street. Par
 | UC-O05 | Review Activity Proposals   | Request changes, reject hoặc atomically approve Proposal thành một Activity DRAFT sau khi revalidate.                                                                                                                                                   |
 | UC-O06 | Manage Activities           | Tạo Activity BTC tại shared non-Booth Location; cấu hình Draft, publish, audited reschedule/move, cancel, lifecycle và review Partner requests; không đổi lịch/Location sau Attendance đầu tiên hoặc giảm capacity dưới seat-active count.               |
 | UC-O07 | Monitor Participation       | Theo dõi Event/Activity registrations, Attendance, No-show và BoothVisit trong Event mình quản lý; correction Attendance phải có lý do, xác nhận rõ và append-only audit, không dùng Attendance Operator.                                               |
-| UC-O08 | View Event Reports          | Xem thống kê Event cơ bản.                                                                                                                                                                                                                              |
+| UC-O08 | View Event Reports          | Xem thống kê Event cơ bản và lịch sử thanh toán gian hàng của Event mình sở hữu, gồm số tiền đã thu, theo BR-121; chỉ đọc. |
 | UC-O09 | Manage Public Content       | Quản lý nội dung public/supporting content.                                                                                                                                                                                                             |
 
 ## System Admin
@@ -149,6 +152,9 @@ không được đưa vào Sprint/API/migration nếu chưa có quyết định 
 - `UC-A01` và `UC-A02` được làm rõ theo BR-112 đến BR-115. Chặn tài khoản bị khóa trên toàn hệ thống là System
   behavior hỗ trợ `UC-A01`, không phải Use Case riêng.
 - Dashboard Admin theo BR-119 là một phần của Admin workspace, không phải Use Case riêng.
+- Lịch sử thanh toán gian hàng theo BR-121 (bổ sung 10/11/2026): phần của Admin là giám sát chỉ đọc trong Admin
+  workspace như dashboard, không phải Use Case riêng; phần của Organizer thuộc `UC-O08 View Event Reports`.
+  Tổng số active MVP Use Case vẫn là 28.
 - Ghi nhật ký là System behavior trong transaction của thao tác quản trị; chỉ việc đọc nhật ký thuộc `UC-A04`.
 - Tác động của tổ chức bị khóa theo BR-117 refine các Use Case Partner và Organizer đang có, không tạo Use Case
   mới.
