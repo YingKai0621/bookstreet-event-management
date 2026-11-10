@@ -127,8 +127,9 @@ export function adminUserErrorMessage(error: unknown, fallback = 'Thao tác chư
   if (error.status === 403) return 'Bạn không có quyền thực hiện thao tác này.';
   if (ERROR_MESSAGES[error.code]) return ERROR_MESSAGES[error.code];
   if (error.code === 'VALIDATION_FAILED') {
+    // Field names from the server are never shown; forms mark the affected fields instead.
     return error.fieldErrors.length > 0
-      ? `Thông tin chưa hợp lệ: ${error.fieldErrors.map(field => field.field).join(', ')}.`
+      ? 'Một số thông tin chưa hợp lệ. Vui lòng kiểm tra các ô được đánh dấu.'
       : 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.';
   }
   return fallback;

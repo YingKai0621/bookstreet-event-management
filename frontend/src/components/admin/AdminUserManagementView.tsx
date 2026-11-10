@@ -36,9 +36,21 @@ import { CompactPagination } from '../ui/CompactPagination';
 import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import { WorkspaceFieldLabel } from '../ui/WorkspaceFieldLabel';
 import './AdminAccounts.css';
+import {
+  confirmPasswordError,
+  emailError,
+  fullNameError,
+  normalizeFullName,
+  passwordError,
+  phoneError,
+  serverFieldErrors,
+  usernameError,
+  withoutEmpty,
+  type AccountField,
+  type AccountFieldErrors,
+} from './adminAccountValidation';
 
 const PAGE_SIZE = 20;
-const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9]{2,19}$/;
 const SORT_LABELS: Record<AdminUserSort, string> = {
   'createdAt,desc': 'Mới tạo trước',
   'createdAt,asc': 'Cũ nhất trước',
@@ -69,10 +81,6 @@ function loadErrorMessage(error: unknown): string {
   return 'Không tải được danh sách tài khoản. Vui lòng thử lại.';
 }
 
-function utf8Length(value: string): number {
-  return new TextEncoder().encode(value).length;
-}
-
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 }
@@ -88,19 +96,31 @@ interface CreateForm {
 
 const EMPTY_CREATE: CreateForm = { username: '', fullName: '', password: '', confirmPassword: '', email: '', phone: '' };
 
-function createFormError(form: CreateForm): string {
-  if (!USERNAME_PATTERN.test(form.username.trim())) {
-    return 'Tên đăng nhập dài 3–20 ký tự, bắt đầu bằng chữ cái và chỉ gồm chữ cái, chữ số.';
-  }
-  const fullName = form.fullName.trim().replace(/\s+/g, ' ');
-  if (fullName.length < 2 || fullName.length > 50) return 'Họ và tên dài 2–50 ký tự.';
-  if (form.password.length < 8 || form.password.length > 64 || utf8Length(form.password) > 72) {
-    return 'Mật khẩu dài 8–64 ký tự và không vượt quá 72 byte.';
-  }
-  if (form.password !== form.confirmPassword) return 'Mật khẩu xác nhận không khớp.';
-  if (form.phone.trim().length > 20) return 'Số điện thoại tối đa 20 ký tự.';
-  return '';
+function createFormErrors(form: CreateForm): AccountFieldErrors {
+  return withoutEmpty({
+    username: usernameError(form.username),
+    fullName: fullNameError(form.fullName),
+    password: passwordError(form.password),
+    confirmPassword: confirmPasswordError(form.password, form.confirmPassword),
+    email: emailError(form.email),
+    phone: phoneError(form.phone),
+  });
 }
+
+/** Shows a field's error under the input and links it for screen readers. */
+function FieldError({ id, message }: { id: string; message?: string }) {
+  return message ? <small id={id} className="adm-field-error">{message}</small> : null;
+}
+
+function fieldProps(errors: AccountFieldErrors, field: AccountField, id: string) {
+  return {
+    'aria-invalid': errors[field] ? true : undefined,
+    'aria-describedby': errors[field] ? `${id}-error` : undefined,
+  };
+}
+
+const REASON_MIN = 10;
+const REASON_MAX = 500;
 
 export const AdminUserManagementView: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -123,6 +143,8 @@ export const AdminUserManagementView: React.FC = () => {
   const [statusTarget, setStatusTarget] = useState<AdminUser | null>(null);
   const [reason, setReason] = useState('');
   const [actionError, setActionError] = useState('');
+  const [createErrors, setCreateErrors] = useState<AccountFieldErrors>({});
+  const [editErrors, setEditErrors] = useState<AccountFieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -132,6 +154,8 @@ export const AdminUserManagementView: React.FC = () => {
     setEditTarget(null);
     setStatusTarget(null);
     setActionError('');
+    setCreateErrors({});
+    setEditErrors({});
   };
   useModalDismiss(createOpen || editTarget !== null || statusTarget !== null, closeDialogs);
 
@@ -189,6 +213,7 @@ export const AdminUserManagementView: React.FC = () => {
 
   const openCreate = () => {
     setCreateForm(EMPTY_CREATE);
+    setCreateErrors({});
     setActionError('');
     setNotice('');
     setCreateOpen(true);
@@ -196,17 +221,15 @@ export const AdminUserManagementView: React.FC = () => {
 
   const submitCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    const invalid = createFormError(createForm);
-    if (invalid) {
-      setActionError(invalid);
-      return;
-    }
-    setSubmitting(true);
+    const invalid = createFormErrors(createForm);
+    setCreateErrors(invalid);
     setActionError('');
+    if (Object.keys(invalid).length > 0) return;
+    setSubmitting(true);
     try {
       const created = await adminUsersApi.create({
         username: createForm.username.trim(),
-        fullName: createForm.fullName,
+        fullName: normalizeFullName(createForm.fullName),
         password: createForm.password,
         confirmPassword: createForm.confirmPassword,
         email: createForm.email.trim() || undefined,
@@ -219,7 +242,11 @@ export const AdminUserManagementView: React.FC = () => {
         : `Đã tạo tài khoản ${created.username}. Hãy trao mật khẩu ban đầu cho người dùng qua kênh riêng.`);
       setRevision(value => value + 1);
     } catch (cause) {
-      setActionError(adminUserErrorMessage(cause, 'Không tạo được tài khoản. Vui lòng thử lại.'));
+      const fields = serverFieldErrors(cause);
+      setCreateErrors(fields);
+      if (Object.keys(fields).length === 0) {
+        setActionError(adminUserErrorMessage(cause, 'Không tạo được tài khoản. Vui lòng thử lại.'));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -228,6 +255,7 @@ export const AdminUserManagementView: React.FC = () => {
   const openEdit = (target: AdminUser) => {
     setEditTarget(target);
     setEditForm({ fullName: target.fullName, phone: target.phone ?? '', email: target.email ?? '' });
+    setEditErrors({});
     setActionError('');
     setNotice('');
   };
@@ -235,15 +263,16 @@ export const AdminUserManagementView: React.FC = () => {
   const submitEdit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!editTarget) return;
-    const fullName = editForm.fullName.trim().replace(/\s+/g, ' ');
-    if (fullName.length < 2 || fullName.length > 50) {
-      setActionError('Họ và tên dài 2–50 ký tự.');
-      return;
-    }
-    if (editForm.phone.trim().length > 20) {
-      setActionError('Số điện thoại tối đa 20 ký tự.');
-      return;
-    }
+    const fullName = normalizeFullName(editForm.fullName);
+    const invalid = withoutEmpty({
+      fullName: fullNameError(editForm.fullName),
+      phone: phoneError(editForm.phone),
+      // An existing email can be replaced but not removed: the API has no way to clear it.
+      email: editTarget.emailVerified ? '' : emailError(editForm.email, Boolean(editTarget.email)),
+    });
+    setEditErrors(invalid);
+    setActionError('');
+    if (Object.keys(invalid).length > 0) return;
     const changes: { fullName?: string; phone?: string; email?: string } = {};
     if (fullName !== editTarget.fullName) changes.fullName = fullName;
     if (editForm.phone.trim() !== (editTarget.phone ?? '')) changes.phone = editForm.phone.trim();
@@ -264,7 +293,11 @@ export const AdminUserManagementView: React.FC = () => {
         ? `Đã cập nhật tài khoản ${updated.username}. Email xác minh mới sẽ được gửi tới ${updated.email}.`
         : `Đã cập nhật tài khoản ${updated.username}.`);
     } catch (cause) {
-      setActionError(adminUserErrorMessage(cause, 'Không lưu được thay đổi. Vui lòng thử lại.'));
+      const fields = serverFieldErrors(cause);
+      setEditErrors(fields);
+      if (Object.keys(fields).length === 0) {
+        setActionError(adminUserErrorMessage(cause, 'Không lưu được thay đổi. Vui lòng thử lại.'));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -280,7 +313,7 @@ export const AdminUserManagementView: React.FC = () => {
   const submitStatus = async () => {
     if (!statusTarget) return;
     if (!isValidAdminReason(reason)) {
-      setActionError('Lý do cần dài từ 10 đến 500 ký tự.');
+      setActionError(`Lý do cần có từ ${REASON_MIN} đến ${REASON_MAX} ký tự.`);
       return;
     }
     const nextStatus: AdminAccountStatus = statusTarget.status === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
@@ -300,6 +333,9 @@ export const AdminUserManagementView: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  // Counted the way the server counts it: surrounding and repeated spaces do not count.
+  const reasonLength = Array.from(normalizeAdminReason(reason)).length;
 
   const lockBlockedReason = (target: AdminUser): string => {
     if (target.status === 'ACTIVE' && target.userId === currentUserId) return 'Bạn không thể tự khóa tài khoản của mình.';
@@ -564,8 +600,14 @@ export const AdminUserManagementView: React.FC = () => {
                       autoComplete="off"
                       maxLength={20}
                       value={createForm.username}
-                      onChange={event => setCreateForm({ ...createForm, username: event.target.value })}
+                      {...fieldProps(createErrors, 'username', 'admin-create-username')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, username: event.target.value });
+                        setCreateErrors(current => ({ ...current, username: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-username-error" message={createErrors.username} />
+                    {!createErrors.username && <small className="adm-form-hint">3–20 ký tự, bắt đầu bằng chữ cái, chỉ gồm chữ không dấu và số.</small>}
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-create-fullname">Họ và tên *</label>
@@ -574,8 +616,13 @@ export const AdminUserManagementView: React.FC = () => {
                       className="adm-form-input"
                       maxLength={50}
                       value={createForm.fullName}
-                      onChange={event => setCreateForm({ ...createForm, fullName: event.target.value })}
+                      {...fieldProps(createErrors, 'fullName', 'admin-create-fullname')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, fullName: event.target.value });
+                        setCreateErrors(current => ({ ...current, fullName: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-fullname-error" message={createErrors.fullName} />
                   </div>
                 </div>
                 <div className="adm-form-row">
@@ -588,8 +635,14 @@ export const AdminUserManagementView: React.FC = () => {
                       autoComplete="new-password"
                       maxLength={64}
                       value={createForm.password}
-                      onChange={event => setCreateForm({ ...createForm, password: event.target.value })}
+                      {...fieldProps(createErrors, 'password', 'admin-create-password')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, password: event.target.value });
+                        setCreateErrors(current => ({ ...current, password: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-password-error" message={createErrors.password} />
+                    {!createErrors.password && <small className="adm-form-hint">8–64 ký tự.</small>}
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-create-confirm">Xác nhận mật khẩu *</label>
@@ -600,8 +653,13 @@ export const AdminUserManagementView: React.FC = () => {
                       autoComplete="new-password"
                       maxLength={64}
                       value={createForm.confirmPassword}
-                      onChange={event => setCreateForm({ ...createForm, confirmPassword: event.target.value })}
+                      {...fieldProps(createErrors, 'confirmPassword', 'admin-create-confirm')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, confirmPassword: event.target.value });
+                        setCreateErrors(current => ({ ...current, confirmPassword: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-confirm-error" message={createErrors.confirmPassword} />
                   </div>
                 </div>
                 <div className="adm-form-row">
@@ -613,8 +671,13 @@ export const AdminUserManagementView: React.FC = () => {
                       className="adm-form-input"
                       maxLength={255}
                       value={createForm.email}
-                      onChange={event => setCreateForm({ ...createForm, email: event.target.value })}
+                      {...fieldProps(createErrors, 'email', 'admin-create-email')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, email: event.target.value });
+                        setCreateErrors(current => ({ ...current, email: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-email-error" message={createErrors.email} />
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-create-phone">Số điện thoại</label>
@@ -624,8 +687,13 @@ export const AdminUserManagementView: React.FC = () => {
                       className="adm-form-input"
                       maxLength={20}
                       value={createForm.phone}
-                      onChange={event => setCreateForm({ ...createForm, phone: event.target.value })}
+                      {...fieldProps(createErrors, 'phone', 'admin-create-phone')}
+                      onChange={event => {
+                        setCreateForm({ ...createForm, phone: event.target.value });
+                        setCreateErrors(current => ({ ...current, phone: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-create-phone-error" message={createErrors.phone} />
                   </div>
                 </div>
                 {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
@@ -663,8 +731,13 @@ export const AdminUserManagementView: React.FC = () => {
                     className="adm-form-input"
                     maxLength={50}
                     value={editForm.fullName}
-                    onChange={event => setEditForm({ ...editForm, fullName: event.target.value })}
+                    {...fieldProps(editErrors, 'fullName', 'admin-edit-fullname')}
+                    onChange={event => {
+                      setEditForm({ ...editForm, fullName: event.target.value });
+                      setEditErrors(current => ({ ...current, fullName: undefined }));
+                    }}
                   />
+                  <FieldError id="admin-edit-fullname-error" message={editErrors.fullName} />
                 </div>
                 <div className="adm-form-row">
                   <div className="adm-form-group">
@@ -676,8 +749,13 @@ export const AdminUserManagementView: React.FC = () => {
                       maxLength={20}
                       placeholder="Để trống để xóa số điện thoại"
                       value={editForm.phone}
-                      onChange={event => setEditForm({ ...editForm, phone: event.target.value })}
+                      {...fieldProps(editErrors, 'phone', 'admin-edit-phone')}
+                      onChange={event => {
+                        setEditForm({ ...editForm, phone: event.target.value });
+                        setEditErrors(current => ({ ...current, phone: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-edit-phone-error" message={editErrors.phone} />
                   </div>
                   <div className="adm-form-group">
                     <label className="adm-form-label" htmlFor="admin-edit-email">Email</label>
@@ -688,8 +766,13 @@ export const AdminUserManagementView: React.FC = () => {
                       maxLength={255}
                       disabled={editTarget.emailVerified}
                       value={editForm.email}
-                      onChange={event => setEditForm({ ...editForm, email: event.target.value })}
+                      {...fieldProps(editErrors, 'email', 'admin-edit-email')}
+                      onChange={event => {
+                        setEditForm({ ...editForm, email: event.target.value });
+                        setEditErrors(current => ({ ...current, email: undefined }));
+                      }}
                     />
+                    <FieldError id="admin-edit-email-error" message={editErrors.email} />
                     <small className="adm-form-hint">
                       {editTarget.emailVerified
                         ? 'Email đã xác minh nên không thể thay đổi.'
@@ -739,9 +822,14 @@ export const AdminUserManagementView: React.FC = () => {
                   rows={3}
                   maxLength={500}
                   value={reason}
-                  onChange={event => setReason(event.target.value)}
+                  aria-describedby="admin-status-reason-hint"
+                  onChange={event => { setReason(event.target.value); setActionError(''); }}
                 />
-                <small className="adm-form-hint">Lý do được ghi vào nhật ký hệ thống.</small>
+                <small id="admin-status-reason-hint" className="adm-form-hint">
+                  {reasonLength < REASON_MIN
+                    ? `Cần thêm ít nhất ${REASON_MIN - reasonLength} ký tự (${reasonLength}/${REASON_MAX}). Lý do được ghi vào nhật ký hệ thống.`
+                    : `${reasonLength}/${REASON_MAX} ký tự. Lý do được ghi vào nhật ký hệ thống.`}
+                </small>
               </div>
               {actionError && <p className="adm-form-error" role="alert">{actionError}</p>}
             </div>

@@ -112,3 +112,17 @@
 .adm-role-change-summary li > span { padding: 4px 10px; border-radius: 4px; font-size: 12px; }
 .adm-role-change-summary .is-assign { background: #e8f4ec; color: #216147; }
 .adm-role-change-summary .is-remove { background: #fff0ec; color: #ad452d; }
+
+/* Field-level validation for account and profile forms. */
+.adm-field-error {
+  display: block;
+  margin-top: 6px;
+  color: #b42318;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.admin-app-shell .adm-form-input[aria-invalid="true"] {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 3px #fee4e2;
+}

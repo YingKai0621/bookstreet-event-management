@@ -113,7 +113,7 @@ export const AdminOrganizationsView: React.FC = () => {
     event.preventDefault();
     if (!statusTarget) return;
     if (!isValidOrganizationReason(reason)) {
-      setActionError('Lý do phải có từ 10 đến 500 ký tự sau khi chuẩn hóa khoảng trắng.');
+      setActionError('Lý do cần có từ 10 đến 500 ký tự.');
       return;
     }
     const nextStatus: AdminOrganizationStatus = statusTarget.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
