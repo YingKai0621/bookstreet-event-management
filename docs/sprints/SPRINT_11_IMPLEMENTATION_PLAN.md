@@ -1,6 +1,6 @@
 # Sprint 11 System Admin Implementation Plan
 
-- Status: `ACTIVE - ACTIVATED 2026-11-07`
+- Status: `IMPLEMENTED - CLOSURE VALIDATION PENDING`
 - Prepared date: `2026-11-07`
 - Scope baseline: `docs/sprints/sprint-11.md`
 - API contract: `docs/api/sprint-11-api-contract.md`
@@ -17,7 +17,7 @@
 ## 2. Pre-implementation gates
 
 1. Done: the project owner approved this baseline and activated it on `2026-11-07`.
-2. Done: V18 was free on updated `main` and is reserved for Developer A, who rechecks it before creating the file.
+2. Done: V18 was reserved, implemented and merged through PR #143; V1 through V18 are immutable.
 3. Open: Developers B and C read the behavior changes in section 6 and claim their packages before starting.
 
 ## 3. Delivery sequence
@@ -80,7 +80,7 @@ Figures use aggregate queries, not loading all rows into memory. Today's impleme
 
 - One migration, in PR A1, from the overlay's reviewed DDL. The DDL was run once on the test database inside a rolled-back transaction.
 - Verify a clean migration, a V17 upgrade, the constraint rejections and Hibernate validation.
-- `V1` through `V17` stay unchanged.
+- `V1` through `V18` stay unchanged after merge.
 
 ## 6. Behavior changes to existing code and tests
 

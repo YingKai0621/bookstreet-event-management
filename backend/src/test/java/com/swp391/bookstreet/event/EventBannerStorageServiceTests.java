@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.swp391.bookstreet.event.exception.EventException;
 import com.swp391.bookstreet.event.service.EventBannerStorageService;
+import com.swp391.bookstreet.common.media.MediaStorageTestSupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ class EventBannerStorageServiceTests {
     @Test
     void storesAndLoadsAValidatedPngUsingAServerGeneratedName() throws Exception {
         EventBannerStorageService service = new EventBannerStorageService(
-                temporaryDirectory.toString());
+                MediaStorageTestSupport.local(temporaryDirectory));
         byte[] png = new byte[] {
                 (byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01
         };
@@ -40,7 +41,7 @@ class EventBannerStorageServiceTests {
     @Test
     void rejectsContentWhoseDeclaredTypeDoesNotMatchItsSignature() {
         EventBannerStorageService service = new EventBannerStorageService(
-                temporaryDirectory.toString());
+                MediaStorageTestSupport.local(temporaryDirectory));
 
         assertThatThrownBy(() -> service.store(new MockMultipartFile(
                 "file", "fake.png", "image/png", "not-an-image".getBytes())))
@@ -54,7 +55,7 @@ class EventBannerStorageServiceTests {
     @Test
     void rejectsUnsafeOrMissingPublicFileNames() {
         EventBannerStorageService service = new EventBannerStorageService(
-                temporaryDirectory.toString());
+                MediaStorageTestSupport.local(temporaryDirectory));
 
         assertThatThrownBy(() -> service.load("../secret.png"))
                 .isInstanceOfSatisfying(EventException.class,

@@ -1,39 +1,31 @@
 package com.swp391.bookstreet.heritage.service;
 
+import com.swp391.bookstreet.common.media.MediaAssetStorage;
+import com.swp391.bookstreet.common.media.MediaAssetType;
+import com.swp391.bookstreet.common.media.MediaFileNames;
+import com.swp391.bookstreet.common.media.MediaStorageException;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import com.swp391.bookstreet.heritage.dto.HeritageImageUploadResponse;
 import com.swp391.bookstreet.heritage.exception.HeritageApiException;
 import com.swp391.bookstreet.heritage.repository.HeritageContentRepository;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class HeritageImageStorageService {
     static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
-    private static final Pattern SAFE_FILE_NAME = Pattern.compile(
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$");
     private static final String PUBLIC_PATH = "/assets/heritage/uploads/";
 
-    private final Path storageDirectory;
+    private final MediaAssetStorage storage;
     private final HeritageContentRepository repository;
 
     public HeritageImageStorageService(
-            @Value("${bookstreet.media.heritage-image-directory:uploads/heritage-images}")
-            String storageDirectory,
+            MediaAssetStorage storage,
             HeritageContentRepository repository
     ) {
-        this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
+        this.storage = storage;
         this.repository = repository;
     }
 
@@ -44,16 +36,12 @@ public class HeritageImageStorageService {
         try {
             byte[] content = file.getBytes();
             ImageType imageType = ImageType.detect(file.getContentType(), content);
-            String fileName = UUID.randomUUID().toString().toLowerCase(Locale.ROOT)
-                    + imageType.extension;
-            Files.createDirectories(storageDirectory);
-            Path target = storageDirectory.resolve(fileName).normalize();
-            if (!target.getParent().equals(storageDirectory)) throw invalid("Tên tệp ảnh không hợp lệ.");
-            Files.write(target, content, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-            return new HeritageImageUploadResponse(PUBLIC_PATH + fileName);
+            String fileName = MediaFileNames.create(imageType.extension);
+            return new HeritageImageUploadResponse(
+                    storage.store(MediaAssetType.HERITAGE_IMAGE, fileName, content));
         } catch (HeritageApiException exception) {
             throw exception;
-        } catch (IOException exception) {
+        } catch (IOException | MediaStorageException exception) {
             throw new HeritageApiException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "HERITAGE_IMAGE_STORAGE_FAILED",
@@ -62,20 +50,17 @@ public class HeritageImageStorageService {
         }
     }
 
-    public StoredImage load(String fileName) {
-        Path target = resolve(fileName);
-        if (!Files.isRegularFile(target)) throw notFound();
+    public StoredMediaAsset load(String fileName) {
+        requireSafe(fileName);
         try {
-            Resource resource = new UrlResource(target.toUri());
-            if (!resource.isReadable()) throw notFound();
-            return new StoredImage(resource, mediaType(fileName));
-        } catch (IOException exception) {
+            return storage.load(MediaAssetType.HERITAGE_IMAGE, fileName);
+        } catch (MediaStorageException exception) {
             throw notFound();
         }
     }
 
     public void deleteIfUnreferenced(String fileName) {
-        Path target = resolve(fileName);
+        requireSafe(fileName);
         if (repository.existsByImageUrl(PUBLIC_PATH + fileName)) {
             throw new HeritageApiException(
                     HttpStatus.CONFLICT,
@@ -84,8 +69,8 @@ public class HeritageImageStorageService {
             );
         }
         try {
-            Files.deleteIfExists(target);
-        } catch (IOException exception) {
+            storage.delete(MediaAssetType.HERITAGE_IMAGE, fileName);
+        } catch (MediaStorageException exception) {
             throw new HeritageApiException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "HERITAGE_IMAGE_DELETE_FAILED",
@@ -94,17 +79,8 @@ public class HeritageImageStorageService {
         }
     }
 
-    private Path resolve(String fileName) {
-        if (fileName == null || !SAFE_FILE_NAME.matcher(fileName).matches()) throw notFound();
-        Path target = storageDirectory.resolve(fileName).normalize();
-        if (!target.getParent().equals(storageDirectory)) throw notFound();
-        return target;
-    }
-
-    private static MediaType mediaType(String fileName) {
-        if (fileName.endsWith(".png")) return MediaType.IMAGE_PNG;
-        if (fileName.endsWith(".webp")) return MediaType.parseMediaType("image/webp");
-        return MediaType.IMAGE_JPEG;
+    private static void requireSafe(String fileName) {
+        if (!MediaFileNames.isSafe(fileName)) throw notFound();
     }
 
     private static HeritageApiException invalid(String message) {
@@ -121,9 +97,6 @@ public class HeritageImageStorageService {
                 "HERITAGE_IMAGE_NOT_FOUND",
                 "Không tìm thấy ảnh di sản."
         );
-    }
-
-    public record StoredImage(Resource resource, MediaType mediaType) {
     }
 
     private enum ImageType {

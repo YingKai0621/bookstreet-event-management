@@ -1,7 +1,7 @@
 package com.swp391.bookstreet.activity.controller;
 
 import com.swp391.bookstreet.activity.service.ActivityImageService;
-import com.swp391.bookstreet.common.media.LocalImageStorage.ImageUploadResponse;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage.ImageUploadResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -38,6 +38,9 @@ public class ActivityImageController {
     @GetMapping("/api/v1/media/activity-images/{fileName:.+}")
     public ResponseEntity<Resource> read(@PathVariable String fileName) {
         var image = service.read(fileName);
+        if (image.redirects()) {
+            return ResponseEntity.status(307).location(image.redirectUri()).build();
+        }
         return ResponseEntity.ok().contentType(image.mediaType()).cacheControl(CacheControl.noStore())
                 .body(image.resource());
     }

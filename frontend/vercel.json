@@ -5,6 +5,10 @@
       "destination": "https://duongsach-backend.onrender.com/api/$1"
     },
     {
+      "source": "/assets/heritage/uploads/(.*)",
+      "destination": "https://duongsach-backend.onrender.com/assets/heritage/uploads/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -9,77 +9,55 @@ Thư mục này là nguồn context dùng chung cho team và AI coding assistant
 3. Tài liệu Sprint đang active trong `sprints/`
 4. Use Case Specification trong `use-cases/`
 5. API Contract trong `api/`
-6. Requirement và thiết kế liên quan đến task đang làm
+6. Business Rules, Physical ERD và coding guideline liên quan
 
 ## Cấu trúc
 
 | Thư mục | Nội dung |
 |---|---|
-| `requirements/` | Requirement baseline 01–09 ở Markdown |
-| `design/` | Báo cáo ERD 10–12, file Draw.io và ảnh sơ đồ |
-| `sprints/` | Phạm vi, mục tiêu và trạng thái Sprint |
-| `use-cases/` | Use Case Specification và Acceptance Criteria theo Sprint hoặc extension đã duyệt |
+| `requirements/` | Requirement và Business Rule baseline |
+| `design/` | Báo cáo ERD, overlay, file Draw.io và ảnh sơ đồ |
+| `sprints/` | Phạm vi, mục tiêu, kế hoạch, phân công và trạng thái Sprint |
+| `use-cases/` | Use Case Specification và Acceptance Criteria |
 | `api/` | API Contract theo Sprint và cross-cutting contract |
 | `development/` | Coding guideline, review, handoff và báo cáo hoàn thành kỹ thuật |
 
 ## Sprint đang hoạt động
 
-- Sprint 10 Role-Scoped In-App Notifications:
-  [`sprints/sprint-10.md`](sprints/sprint-10.md)
-- Use Case Specifications:
-  [`use-cases/sprint-10-use-case-specifications.md`](use-cases/sprint-10-use-case-specifications.md)
-- API Contract:
-  [`api/sprint-10-api-contract.md`](api/sprint-10-api-contract.md)
-- Physical ERD overlay:
-  [`design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`](design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md)
+Sprint 11 System Admin Management đã merge phần implementation và đang chờ closure/deployment validation:
+
+- Baseline: [`sprints/sprint-11.md`](sprints/sprint-11.md)
+- Use Case Specifications: [`use-cases/sprint-11-use-case-specifications.md`](use-cases/sprint-11-use-case-specifications.md)
+- API Contract: [`api/sprint-11-api-contract.md`](api/sprint-11-api-contract.md)
+- Editor image contract: [`api/content-image-upload-api-contract.md`](api/content-image-upload-api-contract.md)
+- Physical ERD: [`design/12_Physical_ERD_Report.md`](design/12_Physical_ERD_Report.md)
 - Implementation plan and ownership:
-  [`sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`](sprints/SPRINT_10_IMPLEMENTATION_PLAN.md),
-  [`sprints/SPRINT_10_TEAM_ASSIGNMENT.md`](sprints/SPRINT_10_TEAM_ASSIGNMENT.md)
+  [`sprints/SPRINT_11_IMPLEMENTATION_PLAN.md`](sprints/SPRINT_11_IMPLEMENTATION_PLAN.md),
+  [`sprints/SPRINT_11_TEAM_ASSIGNMENT.md`](sprints/SPRINT_11_TEAM_ASSIGNMENT.md)
+- Closure evidence: [`development/SPRINT_11_CLOSURE_REPORT.md`](development/SPRINT_11_CLOSURE_REPORT.md)
 
 ## Baseline hiện tại
 
-- Requirement: active MVP baseline through `BR-109`, including Sprint 10 role-scoped Notification rules
-- Use Case Diagram: V2, with Post-MVP use cases labelled in the diagram
+- Requirement: active MVP rules through `BR-121`
+- Use Case Diagram: V2, with Post-MVP use cases labelled
 - Conceptual ERD: Baseline 2.1
-- Logical ERD: v8 plus approved Sprint 6–10 interpretations
-- Physical implementation source: immutable Flyway V1–V15; Sprint 10 V16 is reserved but not implemented
-- Active Sprint: Sprint 10 Role-Scoped In-App Notifications, activated `2026-11-03`
-- Active foundation owner: Developer A `YingKai0621`; Developer B/C are documented Partner/Organizer
-  work-package labels that teammates may claim without recording personal names
-- Latest completed Sprint: Sprint 09 Heritage Public Content
-- Completed implementation baseline: Authentication/Event through V5, Booth/Payment/Event hardening
-  through V8, Activity through V9, Participant/Attendance through V11, Rewards through V12, Booth image
-  through V13, General Feedback through V14 and Heritage through V15
+- Logical ERD: v8 plus approved Sprint overlays
+- Physical implementation source: immutable Flyway V1–V18 and the current Physical ERD report
+- Latest formally completed Sprint: Sprint 10 Role-Scoped In-App Notifications
+- Active Sprint: Sprint 11, implementation merged and closure validation pending
+- Active MVP Use Case count: 28
 
-Các file Markdown là bản đọc nhanh trong repo. File `.drawio` là nguồn chỉnh sửa sơ đồ; ảnh trong
-`design/assets/` dùng để xem trực tiếp trên GitHub và trong report. Immutable Flyway V1–V15 và
-`design/12_Physical_ERD_Report.md` là nguồn schema đã áp dụng; Sprint 10 overlay mô tả V16 đã duyệt nhưng
-chưa được triển khai.
+PostgreSQL là durable source of truth; Redis chỉ lưu Spring Session. Authentication dùng HttpOnly Session cookie, không dùng
+JWT. Schema phải thay đổi bằng migration Flyway mới; không sửa migration đã áp dụng.
 
-## Trạng thái extension đã duyệt
+## Báo cáo và extension quan trọng
 
-- Email verification đã triển khai: [`use-cases/email-verification-use-case-specification.md`](use-cases/email-verification-use-case-specification.md) và [`api/email-verification-api-contract.md`](api/email-verification-api-contract.md)
-- Browser Session/CORS/CSRF đã triển khai; frontend phải tích hợp theo contract và cấu hình origin/cookie phù hợp từng môi trường: [`api/browser-security-contract.md`](api/browser-security-contract.md)
-- Báo cáo hoàn thành Sprint 1 Backend: [`development/SPRINT_01_BACKEND_COMPLETION_REPORT.md`](development/SPRINT_01_BACKEND_COMPLETION_REPORT.md)
-- Báo cáo hoàn thành Sprint 4: [`development/SPRINT_04_COMPLETION_REPORT.md`](development/SPRINT_04_COMPLETION_REPORT.md)
-- Báo cáo hoàn thành Sprint 5: [`development/SPRINT_05_COMPLETION_REPORT.md`](development/SPRINT_05_COMPLETION_REPORT.md)
-- Hướng dẫn bàn giao và tích hợp Sprint 1 cho frontend: [`development/SPRINT_01_FRONTEND_HANDOFF.md`](development/SPRINT_01_FRONTEND_HANDOFF.md)
-- Trạng thái Sprint hiện tại: [`sprints/CURRENT_SPRINT.md`](sprints/CURRENT_SPRINT.md)
-- Sprint 10 baseline: [`sprints/sprint-10.md`](sprints/sprint-10.md)
-- Sprint 10 Use Case Specifications: [`use-cases/sprint-10-use-case-specifications.md`](use-cases/sprint-10-use-case-specifications.md)
-- Sprint 10 API Contract: [`api/sprint-10-api-contract.md`](api/sprint-10-api-contract.md)
-- Sprint 10 Documentation Audit: [`development/SPRINT_10_DOCUMENTATION_AUDIT.md`](development/SPRINT_10_DOCUMENTATION_AUDIT.md)
+- Sprint 10 closure: [`development/SPRINT_10_CLOSURE_REPORT.md`](development/SPRINT_10_CLOSURE_REPORT.md)
 - Sprint 9 closure: [`development/SPRINT_09_CLOSURE_REPORT.md`](development/SPRINT_09_CLOSURE_REPORT.md)
-- Sprint 5 baseline: [`sprints/sprint-05.md`](sprints/sprint-05.md)
-- Sprint 5 Use Case Specifications: [`use-cases/sprint-05-use-case-specifications.md`](use-cases/sprint-05-use-case-specifications.md)
-- Sprint 5 API Contract: [`api/sprint-05-api-contract.md`](api/sprint-05-api-contract.md)
-- Sprint 5 Backend Work Assignment: [`sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md`](sprints/SPRINT_05_BACKEND_WORK_ASSIGNMENT.md)
-- Sprint 4 baseline: [`sprints/sprint-04.md`](sprints/sprint-04.md)
-- Sprint 4 Use Case Specifications: [`use-cases/sprint-04-use-case-specifications.md`](use-cases/sprint-04-use-case-specifications.md)
-- Sprint 4 API Contract: [`api/sprint-04-api-contract.md`](api/sprint-04-api-contract.md)
-- API Payment/Assignment Sprint 3: [`api/sprint-03-api-contract.md`](api/sprint-03-api-contract.md)
+- Sprint 6 completion: [`development/SPRINT_06_COMPLETION_REPORT.md`](development/SPRINT_06_COMPLETION_REPORT.md)
+- Email verification: [`api/email-verification-api-contract.md`](api/email-verification-api-contract.md)
+- Browser Session/CORS/CSRF: [`api/browser-security-contract.md`](api/browser-security-contract.md)
 
-Các tài liệu Sprint trước vẫn được giữ để tra cứu; Sprint đang active luôn được xác định bởi
-`CURRENT_SPRINT.md`.
-
-Nếu tài liệu có mâu thuẫn, dừng triển khai và kiểm tra thứ tự ưu tiên trong `AI_CONTEXT.md`.
+Các tài liệu Sprint cũ vẫn được giữ để tra cứu. Sprint đang active luôn được xác định bởi
+[`sprints/CURRENT_SPRINT.md`](sprints/CURRENT_SPRINT.md). Nếu tài liệu mâu thuẫn, áp dụng thứ tự nguồn sự thật trong
+`AGENTS.md` và báo cáo xung đột trước khi code.

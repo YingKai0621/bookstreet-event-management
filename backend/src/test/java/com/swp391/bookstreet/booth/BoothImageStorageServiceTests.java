@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRepository;
 import com.swp391.bookstreet.booth.service.BoothImageStorageService;
+import com.swp391.bookstreet.common.media.MediaStorageTestSupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class BoothImageStorageServiceTests {
     @Test
     void storesAndLoadsAValidatedWebpUsingAServerGeneratedName() throws Exception {
         BoothImageStorageService service = new BoothImageStorageService(
-                temporaryDirectory.toString(), boothRepository);
+                MediaStorageTestSupport.local(temporaryDirectory), boothRepository);
         byte[] webp = new byte[] {
                 'R', 'I', 'F', 'F', 0x04, 0x00, 0x00, 0x00,
                 'W', 'E', 'B', 'P', 0x01
@@ -46,7 +47,7 @@ class BoothImageStorageServiceTests {
     @Test
     void rejectsContentWhoseDeclaredTypeDoesNotMatchItsSignature() {
         BoothImageStorageService service = new BoothImageStorageService(
-                temporaryDirectory.toString(), boothRepository);
+                MediaStorageTestSupport.local(temporaryDirectory), boothRepository);
 
         assertThatThrownBy(() -> service.store(new MockMultipartFile(
                 "file", "fake.png", "image/png", "not-an-image".getBytes())))
@@ -60,7 +61,7 @@ class BoothImageStorageServiceTests {
     @Test
     void rejectsUnsafeOrMissingPublicFileNames() {
         BoothImageStorageService service = new BoothImageStorageService(
-                temporaryDirectory.toString(), boothRepository);
+                MediaStorageTestSupport.local(temporaryDirectory), boothRepository);
 
         assertThatThrownBy(() -> service.load("../secret.png"))
                 .isInstanceOfSatisfying(BoothApiException.class,
@@ -71,7 +72,7 @@ class BoothImageStorageServiceTests {
     @Test
     void deletesAnUnreferencedUploadedImageIdempotently() {
         BoothImageStorageService service = new BoothImageStorageService(
-                temporaryDirectory.toString(), boothRepository);
+                MediaStorageTestSupport.local(temporaryDirectory), boothRepository);
         byte[] png = new byte[] {
                 (byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
         };
@@ -88,7 +89,7 @@ class BoothImageStorageServiceTests {
     @Test
     void refusesToDeleteAnImageReferencedByABooth() {
         BoothImageStorageService service = new BoothImageStorageService(
-                temporaryDirectory.toString(), boothRepository);
+                MediaStorageTestSupport.local(temporaryDirectory), boothRepository);
         byte[] png = new byte[] {
                 (byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
         };

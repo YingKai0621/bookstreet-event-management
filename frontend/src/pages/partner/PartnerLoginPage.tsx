@@ -166,7 +166,7 @@ export const PartnerLoginPage: React.FC<PartnerLoginPageProps> = ({
                   id="partner-password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder={language === 'vi' ? 'Nhập mật khẩu (vd: doitac123)' : 'Enter password'}
+                  placeholder={language === 'vi' ? 'Nhập mật khẩu' : 'Enter password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"

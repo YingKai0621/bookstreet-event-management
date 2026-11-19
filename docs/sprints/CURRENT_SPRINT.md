@@ -2,19 +2,18 @@
 
 ## Sprint 11 System Admin Management
 
-- Status: `ACTIVE - FOUNDATION NEXT`
+- Status: `ACTIVE - IMPLEMENTATION MERGED, CLOSURE VALIDATION PENDING`
 - Activation date: `2026-11-07`
-- Activated by: project owner, Developer A (`YingKai0621`)
+- Last status review: `2026-11-19`
 - Previous completed Sprint: `Sprint 10 Role-Scoped In-App Notifications`, closed in
   `docs/development/SPRINT_10_CLOSURE_REPORT.md`
-- Approved documentation: PR #141, merge commit `7604f06`
-- Current implemented schema: Flyway migrations `V1` through `V17`
-- Reserved migration: `V18__create_admin_audit_log.sql`, Developer A only
+- Approved documentation baseline: PR #141, merge commit `7604f06`
+- Current implemented schema: immutable Flyway migrations `V1` through `V18`
 - Sprint baseline: `docs/sprints/sprint-11.md`
 - Use Case Specifications: `docs/use-cases/sprint-11-use-case-specifications.md`
 - API Contract: `docs/api/sprint-11-api-contract.md`
-- Physical ERD source: `docs/design/12_Physical_ERD_Report.md` plus
-  `docs/design/SPRINT_11_ADMIN_PHYSICAL_ERD_OVERLAY.md`
+- Editor image contract: `docs/api/content-image-upload-api-contract.md`
+- Physical ERD source: `docs/design/12_Physical_ERD_Report.md`
 - Implementation plan: `docs/sprints/SPRINT_11_IMPLEMENTATION_PLAN.md`
 - Three-developer assignment: `docs/sprints/SPRINT_11_TEAM_ASSIGNMENT.md`
 
@@ -31,8 +30,8 @@ Turn the Admin workspace into a real administration area:
 
 ## Scope and acceptance baseline
 
-The active baseline is `BR-112` through `BR-120`, `UC-A01` through `UC-A05`, the password-reset part of `UC-G03`, and
-**51 Acceptance Criteria**:
+The 51 required criteria use `BR-112` through `BR-120`, `UC-A01` through `UC-A05` and the password-reset part of
+`UC-G03`:
 
 - 9 account criteria: `AC-A01-S11-01` through `AC-A01-S11-09`
 - 6 role criteria: `AC-A02-S11-01` through `AC-A02-S11-06`
@@ -45,29 +44,33 @@ The active baseline is `BR-112` through `BR-120`, `UC-A01` through `UC-A05`, the
 - 6 password-reset criteria: `AC-G03-S11-01` through `AC-G03-S11-06`
 - 6 regression criteria: `AC-S11-REG-01` through `AC-S11-REG-06`
 
-Read-only Payment and Event views under `AC-OPT-S11` stay outside the baseline unless recorded as scheduled. On
-2026-11-10 the Booth Payment history (`AC-OPT-S11-01`) was scheduled, with an Organizer Payment history
-(`AC-ORG-PAY-S11-01` to `03`); the Event view (`AC-OPT-S11-02`) was not. See `docs/sprints/sprint-11.md` section 7.
+`BR-121` separately governs the scheduled read-only extensions: Admin Booth Payment history (`AC-OPT-S11-01`) and
+Organizer-owned Payment history (`AC-ORG-PAY-S11-01` through `03`). The Event oversight view (`AC-OPT-S11-02`) remains
+unscheduled.
 
-## Ownership
+## Implemented delivery
 
-- Developer A is `YingKai0621` and owns V18, the audit foundation, Session enforcement, security, removals, shared guards,
-  password reset and closure.
-- Developer B owns accounts, roles and the Admin profile, including their screens.
-- Developer C owns Partner organizations and their effects, the dashboard, Badge audit and the Sprint 10 debt items, including
-  their screens.
-- Developers B and C start after Developer A's foundation pull request merges.
+- PR #143: V18, append-only audit foundation, immediate Session/account enforcement and shared guards.
+- PR #144: staff workspace navigation and registration-list preservation.
+- PR #145: verified-email password reset and public reset pages.
+- PR #146: audited account and role management.
+- PR #147: Partner organization management/effects, real dashboard and Badge audit integration.
+- PR #149: read-only Admin and Organizer Booth Payment histories.
+- PR #150: plain-language Admin validation messages.
 
 ## Current implementation unit
 
-Developer A's foundation pull request, PR A1, covering delivery units `S11-1` and `S11-2`.
+Sprint closure and deployment validation. Implementation is merged, but Sprint 11 is not formally closed until:
+
+1. focused Sprint 11 browser checks are run or explicitly recorded as deferred;
+2. the deployed Render/Vercel environment passes a manual real-UI smoke for Admin, password reset and organization lock effects;
+3. `docs/development/SPRINT_11_CLOSURE_REPORT.md` records final evidence and the owner approves closure.
 
 ## Non-negotiable implementation rules
 
 - PostgreSQL remains durable truth; Redis remains Session-only.
 - Authentication remains Spring Security Session with an HttpOnly cookie. Do not introduce JWT.
-- Hibernate remains `ddl-auto: validate`; V1 through V17 are immutable.
-- Only Developer A creates or changes V18. Recheck the next free version immediately before creating it.
+- Hibernate remains `ddl-auto: validate`; V1 through V18 are immutable.
 - Every administrative change uses the shared audit writer, and every organization check uses the shared guard.
 - Admin never reads or sets another User's password, and no fixed password stays in application code.
 - Locking an account or organization never cancels records or creates a refund.
@@ -80,10 +83,13 @@ Developer A's foundation pull request, PR A1, covering delivery units `S11-1` an
 - Admin Notification types or producers
 - Admin emergency cancellation, refunds, manual Payment or Assignment changes
 - Admin editing a Partner profile or deleting an organization
-- a signed-in User changing their own password, which moves with password reset if that unit is deferred
+- signed-in self-service password change
+- Admin Event operation and the unscheduled read-only Event oversight view
 - mobile layout work for the Admin workspace
 
-## Activation result
+## Status result
 
-The project owner activated Sprint 11 on `2026-11-07` after the baseline merged through PR #141. V18 was free on updated `main`,
-which holds migrations V1 through V17. Sprint 11 adds two Use Cases, for 28 active MVP Use Cases.
+Sprint 11 code is present on `main` through merge commit `d536c53`, with V18 applied and the scheduled Payment history
+extension included. The latest main CI is green for backend and frontend checks; its Playwright job was skipped. Therefore
+the implementation is ready for focused deployment validation, but the Sprint remains active until the closure gates above
+are recorded.

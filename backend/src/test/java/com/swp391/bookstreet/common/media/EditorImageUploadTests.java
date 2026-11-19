@@ -134,7 +134,8 @@ class EditorImageUploadTests {
     }
 
     @Test void invalidContentAndUnsafeReadPathsAreRejected() throws Exception {
-        var store = new LocalImageStorage(directory.toString(), "/images/");
+        var store = new ValidatedImageStorage(
+                MediaStorageTestSupport.local(directory), MediaAssetType.BADGE_IMAGE);
         for (MockMultipartFile invalid : new MockMultipartFile[]{
                 new MockMultipartFile("file", "a.png", "image/png", new byte[]{1, 2, 3}),
                 new MockMultipartFile("file", "a.txt", "text/plain", png),
@@ -148,12 +149,13 @@ class EditorImageUploadTests {
     }
 
     private BadgeImageService badges() {
-        return new BadgeImageService(new RewardManagementCurrentUser(), directory.toString());
+        return new BadgeImageService(
+                new RewardManagementCurrentUser(), MediaStorageTestSupport.local(directory));
     }
 
     private ActivityImageService activityImages() {
         return new ActivityImageService(new ActivityCurrentUser(), events, activities, organizations,
-                new PartnerOrganizationGuard(), directory.toString());
+                new PartnerOrganizationGuard(), MediaStorageTestSupport.local(directory));
     }
 
     private void partnerOrganization(PartnerOrganization.OrganizationStatus status) {

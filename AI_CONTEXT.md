@@ -1,12 +1,12 @@
 # BookStreet AI Context
 
-Last updated: `2026-11-07`
+Last updated: `2026-11-19`
 
 ## Current implementation status
 
 - Sprint 1 backend and real frontend integration are complete on `main` through merge commit `34a256e`.
 - The foundation and Sprint 1 business-schema pull requests are merged into `main`.
-- The current implementation includes immutable Flyway migrations V1 through V17. V6 owns the
+- The current implementation includes immutable Flyway migrations V1 through V18. V6 owns the
   Sprint 2 Booth/Hold schema, V7 owns the Sprint 3 Payment/Assignment schema and V8 owns the
   Sprint 4 Event/BoothRequest cancellation metadata and constraints. V9 owns the Sprint 5
   Location/Activity schema and concurrency constraints. V10 owns the Sprint 6 participation
@@ -14,9 +14,10 @@ Last updated: `2026-11-07`
   BoothVisit, PointTransaction, Badge/UserBadge and `BADGE_UNLOCKED` Notification overlay. V13
   adds the Booth image URL used by the demo/public experience. V14 owns the Sprint 8 General
   Feedback schema. V15 owns the Sprint 9 Heritage schema. V16 owns the Sprint 10 role-scoped
-  Notification schema overlay and backfill. V17 adds the four `BR-110` Notification types.
+  Notification schema overlay and backfill. V17 adds the four `BR-110` Notification types. V18 adds
+  `users.sessions_valid_from` and the append-only `admin_audit_logs` table for Sprint 11.
 - The user manually verified successful PostgreSQL and Redis-backed Session runtime behavior through Spring Boot and Swagger UI.
-- Flyway migration tests cover the immutable migration chain through V17 and the relevant prior
+- Flyway migration tests cover the immutable migration chain through V18 and the relevant prior
   Sprint upgrade/backfill paths.
 - Spring Session uses Redis; authentication does not use JWT or bearer tokens.
 - Hibernate uses `ddl-auto: validate`.
@@ -130,6 +131,13 @@ Last updated: `2026-11-07`
   handling and focused migration/concurrency coverage. Partner PR #124/#125 and Organizer PR #126 are
   also merged. PR #133, #136 and #137 added the `BR-110` producers, acceptance evidence and the `BR-111` live
   signal. Sprint 10 closed on 2026-11-07.
+- Sprint 11 System Admin Management implementation is merged on `main` through PR #150 (merge commit
+  `d536c53`). PR #143 delivered V18, append-only Admin audit, shared guards and immediate Session/account
+  enforcement; PR #145 delivered verified-email password reset; PR #146 delivered audited account and
+  role management; PR #147 delivered Partner organization management/effects, the real dashboard and
+  Badge audit integration; PR #149 delivered the scheduled read-only Admin and Organizer Booth Payment
+  histories; PR #150 clarified Admin validation messages. Sprint 11 remains active only for focused browser
+  and deployed real-UI closure evidence; do not describe it as formally closed yet.
 - The Project Owner exclusively owns the Heritage Flyway migration SQL after reserving the next
   free version. One assigned Heritage Owner consumes that migration and owns the entity,
   repository, APIs, public and Organizer UI, focused tests and evidence for all 28 Acceptance
@@ -259,7 +267,7 @@ indexes. V1 through V15 are now immutable.
 `V16__role_scope_notifications.sql` extends the existing `notifications` table with exact recipient-role
 scope and approved Partner/Organizer references, backfills existing rows as `PARTICIPANT`, replaces the
 type/reference/deduplication constraints with role-aware equivalents and adds role-local inbox indexes.
-V1 through V17 are now immutable.
+V1 through V16 are immutable.
 
 `V17__extend_sprint10_notification_types.sql` replaces only the Notification type/role/reference check to add
 `ACTIVITY_STARTING_SOON`, `PARTNER_EVENT_PUBLISHED`, `PARTNER_BOOTH_HOLD_EXPIRING` and
@@ -267,9 +275,12 @@ V1 through V17 are now immutable.
 Events signal for the Participant, Partner and Organizer inboxes without schema change. The Sprint 10 baseline
 is now 58 Acceptance Criteria.
 
+`V18__create_admin_audit_log.sql` adds nullable `users.sessions_valid_from` for immediate invalidation of
+older Sessions and creates the append-only `admin_audit_logs` table with closed action/target constraints and
+query indexes. V1 through V18 are now immutable.
+
 ## Not yet implemented
 
-- Forgot/Reset Password
 - Automated browser-level Playwright payment/assignment E2E
 - Post-MVP refund execution, Booth change/cancellation and Partner Event withdrawal
 - Production VNPay credentials and deployment webhook configuration
@@ -280,8 +291,8 @@ is now 58 Acceptance Criteria.
 
 ## Next implementation task
 
-- Sprint 11 System Admin Management is active. Developer A's foundation pull request comes first, then Developers B
-  and C. See `docs/sprints/CURRENT_SPRINT.md` and `docs/sprints/SPRINT_11_TEAM_ASSIGNMENT.md`.
+- Complete Sprint 11 deployment validation: run the focused Sprint 11 browser checks when time permits, smoke the
+  Render/Vercel deployment with real Session/CSRF behavior, and record the result in the pending closure report.
 - BR-81 equality is resolved as inclusive: exact Booth request deadline is allowed; only a later backend
   time is rejected. Preserve the canonical predicate with focused boundary tests.
 - General Feedback targets remain permanently limited to `BOOK_STREET` and `EVENT`; Heritage remains
@@ -292,8 +303,10 @@ is now 58 Acceptance Criteria.
 Sprint 10 Role-Scoped In-App Notifications is the latest completed Sprint as of 2026-11-07, with 58 Acceptance
 Criteria. See `docs/development/SPRINT_10_CLOSURE_REPORT.md`.
 
-Sprint 11 System Admin Management is the active Sprint as of 2026-11-07, with 51 Acceptance Criteria under `BR-112`
-through `BR-120`. It adds `UC-A04` and `UC-A05`, for 28 active MVP Use Cases, and reserves V18 for Developer A.
+Sprint 11 System Admin Management is active in closure validation as of 2026-11-19, with 51 required Acceptance
+Criteria under `BR-112` through `BR-120`; `BR-121` governs the scheduled read-only Payment-history extensions.
+It adds `UC-A04` and `UC-A05`, for 28 active MVP Use Cases. V18 and the planned implementation are merged; final
+browser/deployment evidence is still pending.
 
 Sprint 8 includes these approved Use Case slices:
 
@@ -311,42 +324,43 @@ Sprint 9 includes these completed Use Case slices:
 
 ## Current approved baselines
 
-- Requirement baseline: active MVP rules plus completed Sprint 7 reward, completed Sprint 8 General
-  Feedback, completed Sprint 9 Heritage and completed Sprint 10 role-scoped Notification decisions
+- Requirement baseline: active MVP rules through `BR-121`, including completed Sprint 10 role-scoped
+  Notification decisions and the implemented Sprint 11 administration/payment-history decisions
 - Use Case Diagram: V2, with Post-MVP ovals explicitly labelled
 - Conceptual ERD: Baseline 2.1
 - Logical ERD: v8 plus approved Sprint 6 Participant, Sprint 7 reward and Sprint 8 General Feedback
   interpretations
-- Physical implementation source: immutable Flyway V1–V17. V10 implements the Sprint 6
+- Physical implementation source: immutable Flyway V1–V18. V10 implements the Sprint 6
   participation overlay, V11 adds the Activity early-scan configuration and V12 implements the
   approved Sprint 7 reward/Notification overlay. V13 adds the Booth image URL and V14 implements
-  the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay and V16 applies the
-  Sprint 10 role-scoped Notification overlay.
-- Active Sprint baseline: `docs/sprints/sprint-10.md`
-- Active Sprint Use Cases: `docs/use-cases/sprint-10-use-case-specifications.md`
-- Active Sprint API Contract: `docs/api/sprint-10-api-contract.md`
+  the Sprint 8 General Feedback overlay. V15 applies the Sprint 9 Heritage overlay, V16/V17 apply the
+  Sprint 10 Notification overlay and V18 applies the Sprint 11 Session/audit overlay.
+- Active Sprint baseline: `docs/sprints/sprint-11.md`
+- Active Sprint Use Cases: `docs/use-cases/sprint-11-use-case-specifications.md`
+- Active Sprint API Contract: `docs/api/sprint-11-api-contract.md`
 - Active Sprint Physical ERD overlay:
-  `docs/design/SPRINT_10_ROLE_NOTIFICATIONS_PHYSICAL_ERD_OVERLAY.md`
-- Active Sprint implementation plan: `docs/sprints/SPRINT_10_IMPLEMENTATION_PLAN.md`
-- Active Sprint assignment: `docs/sprints/SPRINT_10_TEAM_ASSIGNMENT.md`
-- Latest completed Sprint remains Sprint 9 with closure evidence in
-  `docs/development/SPRINT_09_CLOSURE_REPORT.md`
-- Active MVP Use Case count: 26
+  `docs/design/SPRINT_11_ADMIN_PHYSICAL_ERD_OVERLAY.md`
+- Active Sprint implementation plan: `docs/sprints/SPRINT_11_IMPLEMENTATION_PLAN.md`
+- Active Sprint assignment: `docs/sprints/SPRINT_11_TEAM_ASSIGNMENT.md`
+- Latest completed Sprint remains Sprint 10 with closure evidence in
+  `docs/development/SPRINT_10_CLOSURE_REPORT.md`
+- Active MVP Use Case count: 28
 
 Do not use the old Use Case Diagram V1, an earlier ERD or an old target PNG as an implementation source.
-Use immutable V1–V17 and the current Physical ERD report as current physical truth. For Sprint 10 behavior
-use the completed Sprint 10 baseline, Use Case Specifications, API Contract, V16, V17 and the approved overlay.
+Use immutable V1–V18 and the current Physical ERD report as current physical truth. For Sprint 11 behavior
+use its baseline, Use Case Specifications, API Contract, V18 and the reviewed overlay.
 
 ## Authentication baseline
 
 - Authentication uses a Spring Security server-side Session stored in Redis.
 - Authentication does not use JWT, bearer access tokens, refresh tokens or `/auth/refresh`.
-- The `user_tokens` table stores email-verification token hashes and remains reserved for the future password-reset flow.
+- The `user_tokens` table stores only hashed email-verification and password-reset tokens; password-reset tokens
+  are single-use, expire and are invalidated according to the Sprint 11 contract.
 - The approved email-verification extension uses the existing `users.email_verified_at` and `user_tokens` schema; it requires no new migration.
 - Verification does not grant roles. Existing Sessions are not silently elevated; eligible advanced authorities take effect after re-login.
 - Email-verification endpoints, token policy and acceptance criteria are defined in `docs/use-cases/email-verification-use-case-specification.md` and `docs/api/email-verification-api-contract.md`.
 - The frontend/backend cookie, CORS and CSRF contract is defined in `docs/api/browser-security-contract.md`.
-- Forgot/Reset Password remains unimplemented and is the last, deferrable unit of active Sprint 11.
+- Forgot/Reset Password is implemented for active accounts with verified email and invalidates older Sessions after success.
 
 ## Sprint 4 scope guard
 

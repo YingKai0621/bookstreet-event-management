@@ -3,36 +3,28 @@ package com.swp391.bookstreet.booth.service;
 import com.swp391.bookstreet.booth.dto.BoothImageUploadResponse;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.repository.BoothRepository;
+import com.swp391.bookstreet.common.media.MediaAssetStorage;
+import com.swp391.bookstreet.common.media.MediaAssetType;
+import com.swp391.bookstreet.common.media.MediaFileNames;
+import com.swp391.bookstreet.common.media.MediaStorageException;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class BoothImageStorageService {
     static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
-    private static final Pattern SAFE_FILE_NAME = Pattern.compile(
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$");
     private static final String PUBLIC_PATH = "/api/v1/media/booth-images/";
 
-    private final Path storageDirectory;
+    private final MediaAssetStorage storage;
     private final BoothRepository boothRepository;
 
     public BoothImageStorageService(
-            @Value("${bookstreet.media.booth-image-directory:uploads/booth-images}")
-            String storageDirectory,
+            MediaAssetStorage storage,
             BoothRepository boothRepository) {
-        this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
+        this.storage = storage;
         this.boothRepository = boothRepository;
     }
 
@@ -47,70 +39,48 @@ public class BoothImageStorageService {
         try {
             byte[] content = file.getBytes();
             ImageType imageType = ImageType.detect(file.getContentType(), content);
-            String fileName = UUID.randomUUID().toString().toLowerCase(Locale.ROOT)
-                    + imageType.extension;
-            Files.createDirectories(storageDirectory);
-            Path target = storageDirectory.resolve(fileName).normalize();
-            if (!target.getParent().equals(storageDirectory)) {
-                throw invalid("Tên tệp ảnh gian hàng không hợp lệ.");
-            }
-            Files.write(target, content, StandardOpenOption.CREATE_NEW,
-                    StandardOpenOption.WRITE);
-            return new BoothImageUploadResponse(PUBLIC_PATH + fileName);
+            String fileName = MediaFileNames.create(imageType.extension);
+            return new BoothImageUploadResponse(
+                    storage.store(MediaAssetType.BOOTH_IMAGE, fileName, content));
         } catch (BoothApiException error) {
             throw error;
-        } catch (IOException error) {
+        } catch (IOException | MediaStorageException error) {
             throw new BoothApiException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "BOOTH_IMAGE_STORAGE_FAILED",
                     "Không thể lưu ảnh gian hàng. Vui lòng thử lại.");
         }
     }
 
-    public StoredImage load(String fileName) {
-        if (fileName == null || !SAFE_FILE_NAME.matcher(fileName).matches()) {
-            throw notFound();
-        }
-        Path target = storageDirectory.resolve(fileName).normalize();
-        if (!target.getParent().equals(storageDirectory) || !Files.isRegularFile(target)) {
+    public StoredMediaAsset load(String fileName) {
+        if (!MediaFileNames.isSafe(fileName)) {
             throw notFound();
         }
         try {
-            Resource resource = new UrlResource(target.toUri());
-            if (!resource.isReadable()) throw notFound();
-            return new StoredImage(resource, mediaType(fileName));
-        } catch (IOException error) {
+            return storage.load(MediaAssetType.BOOTH_IMAGE, fileName);
+        } catch (MediaStorageException error) {
             throw notFound();
         }
     }
 
     public void deleteIfUnreferenced(String fileName) {
-        Path target = resolveStoredFile(fileName);
+        requireSafe(fileName);
         if (boothRepository.existsByImageUrl(PUBLIC_PATH + fileName)) {
             throw new BoothApiException(HttpStatus.CONFLICT, "BOOTH_IMAGE_IN_USE",
                     "Ảnh gian hàng đang được sử dụng và không thể xóa.");
         }
         try {
-            Files.deleteIfExists(target);
-        } catch (IOException error) {
+            storage.delete(MediaAssetType.BOOTH_IMAGE, fileName);
+        } catch (MediaStorageException error) {
             throw new BoothApiException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "BOOTH_IMAGE_DELETE_FAILED",
                     "Không thể xóa ảnh gian hàng. Vui lòng thử lại.");
         }
     }
 
-    private Path resolveStoredFile(String fileName) {
-        if (fileName == null || !SAFE_FILE_NAME.matcher(fileName).matches()) {
+    private static void requireSafe(String fileName) {
+        if (!MediaFileNames.isSafe(fileName)) {
             throw notFound();
         }
-        Path target = storageDirectory.resolve(fileName).normalize();
-        if (!target.getParent().equals(storageDirectory)) throw notFound();
-        return target;
-    }
-
-    private static MediaType mediaType(String fileName) {
-        if (fileName.endsWith(".png")) return MediaType.IMAGE_PNG;
-        if (fileName.endsWith(".webp")) return MediaType.parseMediaType("image/webp");
-        return MediaType.IMAGE_JPEG;
     }
 
     private static BoothApiException invalid(String message) {
@@ -121,9 +91,6 @@ public class BoothImageStorageService {
     private static BoothApiException notFound() {
         return new BoothApiException(HttpStatus.NOT_FOUND,
                 "BOOTH_IMAGE_NOT_FOUND", "Không tìm thấy ảnh gian hàng.");
-    }
-
-    public record StoredImage(Resource resource, MediaType mediaType) {
     }
 
     private enum ImageType {
