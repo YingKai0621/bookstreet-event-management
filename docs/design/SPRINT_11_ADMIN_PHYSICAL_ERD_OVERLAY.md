@@ -1,9 +1,9 @@
 # Sprint 11 System Admin Physical ERD Overlay
 
-- Status: `ACTIVE - ACTIVATED 2026-11-07`
+- Status: `IMPLEMENTED IN V18`
 - Prepared date: `2026-11-07`
-- Current applied baseline: Flyway `V1` through `V17`
-- Reserved migration: `V18__create_admin_audit_log.sql`, Developer A only
+- Current applied baseline: Flyway `V1` through `V18`
+- Implemented migration: `V18__create_admin_audit_log.sql`
 - Related Sprint baseline: `docs/sprints/sprint-11.md`
 - Reviewed API contract: `docs/api/sprint-11-api-contract.md`
 
@@ -139,7 +139,7 @@ give no real protection against someone who controls the database account.
 - `ddl-auto` stays `validate`. `User` maps `sessions_valid_from`, and a new `AdminAuditLog` entity in the `admin` feature maps the
   new table, with `details` mapped as JSON.
 - The entity exposes no setter for an existing row.
-- `V1` through `V17` stay unchanged.
+- `V1` through `V18` are immutable.
 
 ## 8. Required database verification
 
@@ -159,5 +159,6 @@ foreign key from `target_id`.
 
 ## 10. Report and diagram follow-up
 
-`docs/design/12_Physical_ERD_Report.md` and the drawio source move to the new version when the migration merges. Until then this
-overlay is the source for the two additions. The next free Flyway version must be rechecked immediately before reservation.
+`docs/design/12_Physical_ERD_Report.md` now records the implemented V18 shape. This overlay remains the focused design history
+for the two additions. The drawio/PNG has not been re-exported for V18, so the migration, current report and this overlay take
+priority for these fields. The next free Flyway version must be rechecked immediately before reservation.

@@ -4,13 +4,14 @@ import com.swp391.bookstreet.activity.entity.ActivityStatus;
 import com.swp391.bookstreet.activity.repository.ActivityRepository;
 import com.swp391.bookstreet.activity.security.ActivityCurrentUser;
 import com.swp391.bookstreet.common.exception.ApiException;
-import com.swp391.bookstreet.common.media.LocalImageStorage;
-import com.swp391.bookstreet.common.media.LocalImageStorage.ImageUploadResponse;
-import com.swp391.bookstreet.common.media.LocalImageStorage.StoredImage;
+import com.swp391.bookstreet.common.media.MediaAssetStorage;
+import com.swp391.bookstreet.common.media.MediaAssetType;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage.ImageUploadResponse;
 import com.swp391.bookstreet.event.service.EventService;
 import com.swp391.bookstreet.partner.repository.PartnerOrganizationRepository;
 import com.swp391.bookstreet.partner.service.PartnerOrganizationGuard;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +25,18 @@ public class ActivityImageService {
     private final ActivityRepository activities;
     private final PartnerOrganizationRepository organizations;
     private final PartnerOrganizationGuard organizationGuard;
-    private final LocalImageStorage storage;
+    private final ValidatedImageStorage storage;
 
     public ActivityImageService(ActivityCurrentUser currentUser, EventService events,
             ActivityRepository activities, PartnerOrganizationRepository organizations,
             PartnerOrganizationGuard organizationGuard,
-            @Value("${bookstreet.media.activity-image-directory:uploads/activity-images}") String directory) {
+            MediaAssetStorage mediaAssetStorage) {
         this.currentUser = currentUser;
         this.events = events;
         this.activities = activities;
         this.organizations = organizations;
         this.organizationGuard = organizationGuard;
-        this.storage = new LocalImageStorage(directory, "/api/v1/media/activity-images/");
+        this.storage = new ValidatedImageStorage(mediaAssetStorage, MediaAssetType.ACTIVITY_IMAGE);
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +63,7 @@ public class ActivityImageService {
         return storage.store(file);
     }
 
-    public StoredImage read(String fileName) {
+    public StoredMediaAsset read(String fileName) {
         return storage.load(fileName);
     }
 }

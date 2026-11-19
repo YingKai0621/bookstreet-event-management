@@ -8,8 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.swp391.bookstreet.activity.controller.ActivityImageController;
 import com.swp391.bookstreet.activity.service.ActivityImageService;
 import com.swp391.bookstreet.auth.repository.UserRepository;
-import com.swp391.bookstreet.common.media.LocalImageStorage.ImageUploadResponse;
-import com.swp391.bookstreet.common.media.LocalImageStorage.StoredImage;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage.ImageUploadResponse;
 import com.swp391.bookstreet.reward.controller.BadgeImageController;
 import com.swp391.bookstreet.reward.service.BadgeImageService;
 import com.swp391.bookstreet.security.config.BrowserSecurityProperties;
@@ -81,7 +80,8 @@ class EditorImageSecurityTests {
     }
 
     @Test void imageReadsArePublicAndGenericUploadIsGone() throws Exception {
-        var image = new StoredImage(new ByteArrayResource(new byte[]{1}), MediaType.IMAGE_PNG);
+        var image = StoredMediaAsset.local(
+                new ByteArrayResource(new byte[]{1}), MediaType.IMAGE_PNG);
         when(context.getBean(BadgeImageService.class).read("a.png")).thenReturn(image);
         when(context.getBean(ActivityImageService.class).read("a.png")).thenReturn(image);
         for (String domain : new String[]{"badge-images", "activity-images"}) {

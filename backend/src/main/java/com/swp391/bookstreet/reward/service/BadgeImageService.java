@@ -1,22 +1,23 @@
 package com.swp391.bookstreet.reward.service;
 
-import com.swp391.bookstreet.common.media.LocalImageStorage;
-import com.swp391.bookstreet.common.media.LocalImageStorage.ImageUploadResponse;
-import com.swp391.bookstreet.common.media.LocalImageStorage.StoredImage;
+import com.swp391.bookstreet.common.media.MediaAssetStorage;
+import com.swp391.bookstreet.common.media.MediaAssetType;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage.ImageUploadResponse;
 import com.swp391.bookstreet.reward.security.RewardManagementCurrentUser;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class BadgeImageService {
     private final RewardManagementCurrentUser currentUser;
-    private final LocalImageStorage storage;
+    private final ValidatedImageStorage storage;
 
     public BadgeImageService(RewardManagementCurrentUser currentUser,
-            @Value("${bookstreet.media.badge-image-directory:uploads/badge-images}") String directory) {
+            MediaAssetStorage mediaAssetStorage) {
         this.currentUser = currentUser;
-        this.storage = new LocalImageStorage(directory, "/api/v1/media/badge-images/");
+        this.storage = new ValidatedImageStorage(mediaAssetStorage, MediaAssetType.BADGE_IMAGE);
     }
 
     public ImageUploadResponse upload(MultipartFile file) {
@@ -24,7 +25,7 @@ public class BadgeImageService {
         return storage.store(file);
     }
 
-    public StoredImage read(String fileName) {
+    public StoredMediaAsset read(String fileName) {
         return storage.load(fileName);
     }
 }

@@ -73,9 +73,16 @@ springdoc:
 
 bookstreet:
   media:
+    provider: ${MEDIA_STORAGE_PROVIDER:local}
     event-banner-directory: ${EVENT_BANNER_UPLOAD_DIR:uploads/event-banners}
     booth-image-directory: ${BOOTH_IMAGE_UPLOAD_DIR:uploads/booth-images}
     heritage-image-directory: ${HERITAGE_IMAGE_UPLOAD_DIR:uploads/heritage-images}
+    activity-image-directory: ${ACTIVITY_IMAGE_UPLOAD_DIR:uploads/activity-images}
+    badge-image-directory: ${BADGE_IMAGE_UPLOAD_DIR:uploads/badge-images}
+    cloudinary:
+      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+      api-key: ${CLOUDINARY_API_KEY:}
+      api-secret: ${CLOUDINARY_API_SECRET:}
   chatbot:
     api-key: ${GEMINI_API_KEY:${CHATBOT_API_KEY:}}
     model: ${CHATBOT_MODEL:gemini-3.5-flash-lite}

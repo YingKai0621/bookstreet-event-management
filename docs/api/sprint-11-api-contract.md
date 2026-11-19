@@ -1,6 +1,6 @@
 # Sprint 11 System Admin API Contract
 
-> Status: `ACTIVE - ACTIVATED 2026-11-07`.
+> Status: `IMPLEMENTED - CLOSURE VALIDATION PENDING`.
 
 - Prepared date: `2026-11-07`
 - Scope baseline: `docs/sprints/sprint-11.md`

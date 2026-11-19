@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.swp391.bookstreet.heritage.exception.HeritageApiException;
 import com.swp391.bookstreet.heritage.repository.HeritageContentRepository;
 import com.swp391.bookstreet.heritage.service.HeritageImageStorageService;
+import com.swp391.bookstreet.common.media.MediaStorageTestSupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,7 @@ class HeritageImageStorageServiceTests {
     }
 
     private HeritageImageStorageService service() {
-        return new HeritageImageStorageService(temporaryDirectory.toString(), repository);
+        return new HeritageImageStorageService(
+                MediaStorageTestSupport.local(temporaryDirectory), repository);
     }
 }

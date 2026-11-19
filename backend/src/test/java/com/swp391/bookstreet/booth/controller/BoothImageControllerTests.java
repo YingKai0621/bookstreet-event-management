@@ -16,7 +16,8 @@ import com.swp391.bookstreet.booth.dto.BoothImageUploadResponse;
 import com.swp391.bookstreet.booth.exception.BoothApiException;
 import com.swp391.bookstreet.booth.exception.BoothApiExceptionHandler;
 import com.swp391.bookstreet.booth.service.BoothImageStorageService;
-import com.swp391.bookstreet.booth.service.BoothImageStorageService.StoredImage;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class BoothImageControllerTests {
     @Test
     void publicReadReturnsValidatedMediaTypeAndImmutableCacheHeader() throws Exception {
         byte[] content = pngBytes();
-        when(storageService.load(FILE_NAME)).thenReturn(new StoredImage(
+        when(storageService.load(FILE_NAME)).thenReturn(StoredMediaAsset.local(
                 new ByteArrayResource(content), MediaType.IMAGE_PNG));
 
         mvc.perform(get(PUBLIC_URL))
@@ -75,6 +76,20 @@ class BoothImageControllerTests {
                 .andExpect(content().bytes(content))
                 .andExpect(header().string("Content-Disposition",
                         "inline; filename=\"" + FILE_NAME + "\""))
+                .andExpect(header().string("Cache-Control",
+                        "max-age=31536000, public, immutable"));
+    }
+
+    @Test
+    void cloudBackedReadRedirectsToTheCdnWithoutProxyingBytes() throws Exception {
+        URI cdn = URI.create("https://res.cloudinary.com/demo/image/upload/bookstreet/booth-images/"
+                + FILE_NAME);
+        when(storageService.load(FILE_NAME)).thenReturn(
+                StoredMediaAsset.redirect(cdn, MediaType.IMAGE_PNG));
+
+        mvc.perform(get(PUBLIC_URL))
+                .andExpect(status().isTemporaryRedirect())
+                .andExpect(header().string("Location", cdn.toString()))
                 .andExpect(header().string("Cache-Control",
                         "max-age=31536000, public, immutable"));
     }

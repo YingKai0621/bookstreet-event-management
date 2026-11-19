@@ -20,8 +20,9 @@ final class ChatGuide {
                 + "8–64 ký tự. Tài khoản tự đăng ký là tài khoản người tham gia.",
                 new ChatSource("Đăng ký", "/register")));
         topics.put("LOGIN", new Topic("Mở trang Đăng nhập, nhập tên đăng nhập và mật khẩu đã đăng "
-                + "ký. Hiện website chưa có chức năng đặt lại mật khẩu. Không bao giờ gửi mật khẩu "
-                + "hoặc mã xác minh qua chat.", new ChatSource("Đăng nhập", "/login")));
+                + "ký. Nếu quên mật khẩu, chọn Quên mật khẩu và dùng email đã xác minh để nhận liên "
+                + "kết đặt lại. Không bao giờ gửi mật khẩu, mã xác minh hoặc liên kết đặt lại qua chat.",
+                new ChatSource("Quên mật khẩu", "/forgot-password")));
         topics.put("EMAIL_VERIFICATION", new Topic("Người tham gia có thể đăng ký không cần email. "
                 + "Khi có email, có thể xác minh bằng liên kết được gửi và yêu cầu gửi lại trong "
                 + "trang tài khoản. Không nhập liên kết hoặc mã xác minh vào chat.",

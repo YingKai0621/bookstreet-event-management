@@ -2,6 +2,7 @@ package com.swp391.bookstreet.heritage.controller;
 
 import com.swp391.bookstreet.heritage.dto.HeritageImageUploadResponse;
 import com.swp391.bookstreet.heritage.service.HeritageImageStorageService;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import java.time.Duration;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -36,7 +37,13 @@ public class HeritageImageController {
 
     @GetMapping("/assets/heritage/uploads/{fileName:.+}")
     public ResponseEntity<Resource> read(@PathVariable String fileName) {
-        HeritageImageStorageService.StoredImage image = storageService.load(fileName);
+        StoredMediaAsset image = storageService.load(fileName);
+        if (image.redirects()) {
+            return ResponseEntity.status(307)
+                    .location(image.redirectUri())
+                    .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                    .build();
+        }
         return ResponseEntity.ok()
                 .contentType(image.mediaType())
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())

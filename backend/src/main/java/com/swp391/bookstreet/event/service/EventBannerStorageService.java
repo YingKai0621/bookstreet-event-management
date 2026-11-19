@@ -2,34 +2,23 @@ package com.swp391.bookstreet.event.service;
 
 import com.swp391.bookstreet.event.dto.EventBannerUploadResponse;
 import com.swp391.bookstreet.event.exception.EventException;
+import com.swp391.bookstreet.common.media.MediaAssetStorage;
+import com.swp391.bookstreet.common.media.MediaAssetType;
+import com.swp391.bookstreet.common.media.MediaFileNames;
+import com.swp391.bookstreet.common.media.MediaStorageException;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class EventBannerStorageService {
     static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
-    private static final Pattern SAFE_FILE_NAME = Pattern.compile(
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$");
-    private static final String PUBLIC_PATH = "/api/v1/media/event-banners/";
+    private final MediaAssetStorage storage;
 
-    private final Path storageDirectory;
-
-    public EventBannerStorageService(
-            @Value("${bookstreet.media.event-banner-directory:uploads/event-banners}")
-            String storageDirectory) {
-        this.storageDirectory = Path.of(storageDirectory).toAbsolutePath().normalize();
+    public EventBannerStorageService(MediaAssetStorage storage) {
+        this.storage = storage;
     }
 
     public EventBannerUploadResponse store(MultipartFile file) {
@@ -43,46 +32,27 @@ public class EventBannerStorageService {
         try {
             byte[] content = file.getBytes();
             ImageType imageType = ImageType.detect(file.getContentType(), content);
-            String fileName = UUID.randomUUID().toString().toLowerCase(Locale.ROOT)
-                    + imageType.extension;
-            Files.createDirectories(storageDirectory);
-            Path target = storageDirectory.resolve(fileName).normalize();
-            if (!target.getParent().equals(storageDirectory)) {
-                throw invalid("Tên tệp ảnh banner không hợp lệ.");
-            }
-            Files.write(target, content, StandardOpenOption.CREATE_NEW,
-                    StandardOpenOption.WRITE);
-            return new EventBannerUploadResponse(PUBLIC_PATH + fileName);
+            String fileName = MediaFileNames.create(imageType.extension);
+            return new EventBannerUploadResponse(
+                    storage.store(MediaAssetType.EVENT_BANNER, fileName, content));
         } catch (EventException error) {
             throw error;
-        } catch (IOException error) {
+        } catch (IOException | MediaStorageException error) {
             throw new EventException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "EVENT_BANNER_STORAGE_FAILED",
                     "Không thể lưu ảnh banner. Vui lòng thử lại.");
         }
     }
 
-    public StoredBanner load(String fileName) {
-        if (fileName == null || !SAFE_FILE_NAME.matcher(fileName).matches()) {
-            throw notFound();
-        }
-        Path target = storageDirectory.resolve(fileName).normalize();
-        if (!target.getParent().equals(storageDirectory) || !Files.isRegularFile(target)) {
+    public StoredMediaAsset load(String fileName) {
+        if (!MediaFileNames.isSafe(fileName)) {
             throw notFound();
         }
         try {
-            Resource resource = new UrlResource(target.toUri());
-            if (!resource.isReadable()) throw notFound();
-            return new StoredBanner(resource, mediaType(fileName));
-        } catch (IOException error) {
+            return storage.load(MediaAssetType.EVENT_BANNER, fileName);
+        } catch (MediaStorageException error) {
             throw notFound();
         }
-    }
-
-    private static MediaType mediaType(String fileName) {
-        if (fileName.endsWith(".png")) return MediaType.IMAGE_PNG;
-        if (fileName.endsWith(".webp")) return MediaType.parseMediaType("image/webp");
-        return MediaType.IMAGE_JPEG;
     }
 
     private static EventException invalid(String message) {
@@ -93,9 +63,6 @@ public class EventBannerStorageService {
     private static EventException notFound() {
         return new EventException(HttpStatus.NOT_FOUND,
                 "EVENT_BANNER_NOT_FOUND", "Không tìm thấy ảnh banner.");
-    }
-
-    public record StoredBanner(Resource resource, MediaType mediaType) {
     }
 
     private enum ImageType {

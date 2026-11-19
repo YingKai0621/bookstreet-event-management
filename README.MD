@@ -1,6 +1,6 @@
 # Book Street Event Management System
 
-SWP391 project for managing Book Street events, partners, booths, activities and participants.
+SWP391 project for managing Book Street events, partners, booths, activities, participants and system administration.
 
 ## Technology
 
@@ -8,19 +8,17 @@ SWP391 project for managing Book Street events, partners, booths, activities and
 - Backend: Spring Boot
 - Database: PostgreSQL
 - Session storage: Redis
+- Schema migration: Flyway
 
-## Project Status
+## Project status
 
-Sprint 5 Activity Planning and Partner Proposal Workflow is complete through Flyway V9 and merge
-commit `759a25c`. The delivered scope includes shared Activity Locations, Partner Proposals,
-Organizer review, official Activity lifecycle, Partner Change/Cancellation Requests, public
-Activity discovery and integrated Partner/Organizer workspaces.
+Sprint 10 Role-Scoped In-App Notifications is the latest formally completed Sprint. Sprint 11 System Admin Management is
+implemented on `main` through Flyway V18 and is in closure/deployment validation. Its delivered scope includes audited account
+and role management, Partner organization locks and their system-wide guards, the real Admin dashboard and audit log, Badge
+audit integration, verified-email password reset, and read-only Admin/Organizer Booth Payment histories.
 
-The current backend test inventory contains 370 tests, and the focused Sprint 5 Activity
-Playwright suite passes 9 Partner/Organizer scenarios. Automated browser-level Payment/Assignment
-E2E, existing frontend lint warnings, bundle splitting and Participant Activity
-registration/attendance/rating/certificate flows remain future work.
+Backend and frontend CI checks on the latest reviewed `main` commit are green. Focused Sprint 11 browser checks and a manual
+Render/Vercel real-UI smoke are still required before Sprint 11 is formally marked complete.
 
-Start with the shared documentation in [`docs/README.MD`](docs/README.MD), then read the
-[`Current Sprint`](docs/sprints/CURRENT_SPRINT.md) and
-[`Sprint 5 Completion Report`](docs/development/SPRINT_05_COMPLETION_REPORT.md).
+Start with [`AI_CONTEXT.md`](AI_CONTEXT.md), then read the shared documentation in
+[`docs/README.MD`](docs/README.MD) and the [`Current Sprint`](docs/sprints/CURRENT_SPRINT.md).

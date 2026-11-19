@@ -2,6 +2,7 @@ package com.swp391.bookstreet.booth.controller;
 
 import com.swp391.bookstreet.booth.dto.BoothImageUploadResponse;
 import com.swp391.bookstreet.booth.service.BoothImageStorageService;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import java.time.Duration;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -35,7 +36,13 @@ public class BoothImageController {
 
     @GetMapping("/media/booth-images/{fileName:.+}")
     public ResponseEntity<Resource> read(@PathVariable String fileName) {
-        BoothImageStorageService.StoredImage image = storageService.load(fileName);
+        StoredMediaAsset image = storageService.load(fileName);
+        if (image.redirects()) {
+            return ResponseEntity.status(307)
+                    .location(image.redirectUri())
+                    .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                    .build();
+        }
         return ResponseEntity.ok()
                 .contentType(image.mediaType())
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())

@@ -2,6 +2,7 @@ package com.swp391.bookstreet.event.controller;
 
 import com.swp391.bookstreet.event.dto.EventBannerUploadResponse;
 import com.swp391.bookstreet.event.service.EventBannerStorageService;
+import com.swp391.bookstreet.common.media.StoredMediaAsset;
 import java.time.Duration;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -34,7 +35,13 @@ public class EventBannerController {
 
     @GetMapping("/media/event-banners/{fileName:.+}")
     public ResponseEntity<Resource> read(@PathVariable String fileName) {
-        EventBannerStorageService.StoredBanner banner = storageService.load(fileName);
+        StoredMediaAsset banner = storageService.load(fileName);
+        if (banner.redirects()) {
+            return ResponseEntity.status(307)
+                    .location(banner.redirectUri())
+                    .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                    .build();
+        }
         return ResponseEntity.ok()
                 .contentType(banner.mediaType())
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())

@@ -1,6 +1,6 @@
 package com.swp391.bookstreet.reward.controller;
 
-import com.swp391.bookstreet.common.media.LocalImageStorage.ImageUploadResponse;
+import com.swp391.bookstreet.common.media.ValidatedImageStorage.ImageUploadResponse;
 import com.swp391.bookstreet.reward.service.BadgeImageService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -29,6 +29,9 @@ public class BadgeImageController {
     @GetMapping("/api/v1/media/badge-images/{fileName:.+}")
     public ResponseEntity<Resource> read(@PathVariable String fileName) {
         var image = service.read(fileName);
+        if (image.redirects()) {
+            return ResponseEntity.status(307).location(image.redirectUri()).build();
+        }
         return ResponseEntity.ok().contentType(image.mediaType()).cacheControl(CacheControl.noStore())
                 .body(image.resource());
     }
