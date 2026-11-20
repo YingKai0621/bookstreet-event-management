@@ -8,7 +8,7 @@ import { SearchFieldLabel } from '../ui/SearchFieldLabel';
 import './BoothVisitMonitoringPanel.css';
 
 const PAGE_SIZE = 20;
-const dateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+const dateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 const statuses = { ACTIVE: 'Đang hoạt động', RELEASED: 'Đã giải phóng', CANCELLED: 'Đã hủy', ENDED: 'Đã kết thúc' };
 function failure(error: unknown): string {
   if (error instanceof ApiError && error.code === 'EVENT_NOT_FOUND') return 'Không tìm thấy sự kiện thuộc quyền quản lý của bạn.';

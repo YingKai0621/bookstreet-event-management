@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { ArrowRight, Award, Calendar, Download, Eye, RefreshCw, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -137,8 +138,8 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
                       {vi ? 'Người nhận: ' : 'Recipient: '}{certificate.recipientName || participantName}
                     </div>
                     <div className="certificate-meta-line">
-                      <span className="cert-meta-item">{vi ? 'Cấp ngày' : 'Issued'}: {certificate.issueDate}</span>
-                      {certificate.revokedDate && <span className="cert-meta-item">{vi ? 'Thu hồi ngày' : 'Revoked'}: {certificate.revokedDate}</span>}
+                      <span className="cert-meta-item">{vi ? 'Cấp ngày' : 'Issued'}: {displayDateText(certificate.issueDate)}</span>
+                      {certificate.revokedDate && <span className="cert-meta-item">{vi ? 'Thu hồi ngày' : 'Revoked'}: {displayDateText(certificate.revokedDate)}</span>}
                       <span className="cert-meta-code">{certificate.certificateCode}</span>
                     </div>
                   </div>
@@ -193,9 +194,9 @@ export const MyCertificatesPage: React.FC<MyCertificatesPageProps> = ({
               <div className="certificate-detail-fields">
                 <div><span>{vi ? 'Hoạt động' : 'Activity'}</span><strong>{selectedCertificate.activityTitle || '—'}</strong></div>
                 <div><span>{vi ? 'Sự kiện' : 'Event'}</span><strong>{selectedCertificate.eventTitle || '—'}</strong></div>
-                <div><span>{vi ? 'Ngày cấp' : 'Issued date'}</span><strong>{selectedCertificate.issueDate}</strong></div>
+                <div><span>{vi ? 'Ngày cấp' : 'Issued date'}</span><strong>{displayDateText(selectedCertificate.issueDate)}</strong></div>
                 <div><span>{vi ? 'Mã chứng nhận' : 'Certificate code'}</span><strong className="cert-meta-code">{selectedCertificate.certificateCode}</strong></div>
-                {selectedCertificate.revokedDate && <div><span>{vi ? 'Ngày thu hồi' : 'Revoked date'}</span><strong>{selectedCertificate.revokedDate}</strong></div>}
+                {selectedCertificate.revokedDate && <div><span>{vi ? 'Ngày thu hồi' : 'Revoked date'}</span><strong>{displayDateText(selectedCertificate.revokedDate)}</strong></div>}
               </div>
             )}
 

@@ -177,6 +177,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 390, height: 844 
     await expect(page.getByRole('dialog')).toBeVisible();
     const box = await page.getByRole('dialog').boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeLessThanOrEqual(viewport.width);
+    // Animated transforms can report fractional pixel rounding (e.g. 390.000004).
+    expect(box!.width).toBeLessThanOrEqual(viewport.width + 1);
   });
 }

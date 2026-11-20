@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { PaginatedList } from '../ui/PaginatedList';
 import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -79,8 +80,8 @@ export function PartnerEventCalendar({ language, events: suppliedEvents, onSelec
         const dayEvents = onDate(cell.key);
         const isPast = cell.key < today;
         return <div key={cell.key} className={`partner-calendar-cell ${!cell.inMonth ? 'is-outside' : ''} ${cell.key === today ? 'is-today' : ''} ${isPast ? 'is-past' : ''}`}>
-          <div className="partner-calendar-cell-top"><button className="partner-calendar-day" aria-label={`Xem lịch ngày ${cell.key}`} onClick={() => setSelectedDay(cell.key)}>{cell.day}</button>
-            {cell.inMonth && !isPast && <button className="partner-calendar-add" aria-label={`Thêm đề xuất ngày ${cell.key}`} onClick={() => onAddDate ? onAddDate(cell.key) : setSelectedDay(cell.key)}><Plus size={14} /></button>}</div>
+          <div className="partner-calendar-cell-top"><button className="partner-calendar-day" aria-label={`Xem lịch ngày ${displayDateText(cell.key)}`} onClick={() => setSelectedDay(cell.key)}>{cell.day}</button>
+            {cell.inMonth && !isPast && <button className="partner-calendar-add" aria-label={`Thêm đề xuất ngày ${displayDateText(cell.key)}`} onClick={() => onAddDate ? onAddDate(cell.key) : setSelectedDay(cell.key)}><Plus size={14} /></button>}</div>
           {dayEvents.slice(0, 2).map(event => <button key={event.id} className="partner-calendar-event" onClick={() => onSelectEvent ? onSelectEvent(event) : setSelectedDay(cell.key)}>
             <span>{new Date(event.startAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}</span><strong>{event.name}</strong></button>)}
           {dayEvents.length > 2 && <button className="partner-calendar-more" onClick={() => setSelectedDay(cell.key)}>+{dayEvents.length - 2} {language === 'vi' ? 'sự kiện' : 'events'}</button>}

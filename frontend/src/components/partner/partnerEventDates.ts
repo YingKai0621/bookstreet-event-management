@@ -10,6 +10,6 @@ export function vietnamDateKey(value: string | Date = new Date()): string {
 export function partnerDateTime(value: string | null | undefined, language: Language = 'vi') {
   if (!value) return '—';
   return new Date(value).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-GB', {
-    timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'medium', timeStyle: 'short',
+    timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }

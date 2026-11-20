@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { ArrowRight, Calendar, MapPin, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
@@ -86,7 +87,7 @@ export const MyEventsPage = ({
                     </span>
                   </div>
                   <div className="event-card-meta">
-                    <div className="event-meta-item"><Calendar size={15} /><span>{event.dateRange}</span></div>
+                    <div className="event-meta-item"><Calendar size={15} /><span>{displayDateText(event.dateRange)}</span></div>
                     <div className="event-meta-item"><MapPin size={15} /><span>{event.location}</span></div>
                   </div>
                   <p className="event-card-activity-count">

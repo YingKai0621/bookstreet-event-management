@@ -171,6 +171,8 @@ test('Partner Sprint 5 workspace loads the real event location and submits the e
   await dialog.getByLabel('Địa điểm *').selectOption('41');
   await dialog.getByLabel('Bắt đầu *').fill('2027-03-20T14:00');
   await dialog.getByLabel('Kết thúc *').fill('2027-03-20T15:30');
+  await expect(dialog.locator('.day-first-date-label').filter({ hasText: '20/03/2027 14:00' })).toBeVisible();
+  await expect(dialog.locator('.day-first-date-label').filter({ hasText: '20/03/2027 15:30' })).toBeVisible();
   await dialog.getByLabel('Sức chứa *').fill('80');
   await dialog.getByLabel('Mô tả').fill('Giao lưu về thói quen đọc sách trong gia đình.');
   await dialog.getByRole('button', { name: 'Gửi đề xuất' }).click();

@@ -147,6 +147,8 @@ test('an impossible date range is explained before any request is sent', async (
   expect(afterInvalid - before).toBeLessThanOrEqual(1);
 
   await page.getByLabel('Lọc đến ngày').fill('2026-11-10');
+  await expect(page.locator('.day-first-date-label').filter({ hasText: '09/11/2026' })).toBeVisible();
+  await expect(page.locator('.day-first-date-label').filter({ hasText: '10/11/2026' })).toBeVisible();
   await expect(page.locator('.adm-payments-table tbody tr')).toHaveCount(3);
   expect(queries.at(-1)?.get('from')).toBe('2026-11-09');
   expect(queries.at(-1)?.get('to')).toBe('2026-11-10');

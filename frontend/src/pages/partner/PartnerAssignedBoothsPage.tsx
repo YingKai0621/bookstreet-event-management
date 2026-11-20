@@ -71,8 +71,8 @@ function dateTime(value: string | null | undefined): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return 'Đang cập nhật';
   return parsed.toLocaleString('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
 }

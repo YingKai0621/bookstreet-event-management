@@ -55,7 +55,7 @@ function formatDateTime(value: string | null | undefined, language: Language): s
   if (!value) return language === 'vi' ? 'Chưa thiết lập' : 'Not configured';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return language === 'vi' ? 'Không hợp lệ' : 'Invalid date';
-  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+  const locale = language === 'vi' ? 'vi-VN' : 'en-GB';
   const datePart = date.toLocaleDateString(locale, {
     timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit',

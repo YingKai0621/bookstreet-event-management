@@ -156,11 +156,13 @@ test('certificate API is route-scoped and renders issued and revoked history', a
   const issuedCard = page.locator('article').filter({ hasText: 'BKS-2027-8F3KQ2M9' });
   await issuedCard.getByRole('button', { name: 'Chi tiết' }).click();
   const detailDialog = page.getByRole('dialog', { name: 'Chứng nhận tham gia' });
+  await expect(detailDialog.getByText('11/01/2027', { exact: true })).toBeVisible();
   await expect(detailDialog.getByText('Giao lưu tác giả trẻ')).toBeVisible();
   await expect(detailDialog.getByText('Ngày hội Văn hóa Đọc 2027')).toBeVisible();
   await detailDialog.getByRole('button', { name: 'Đóng', exact: true }).click();
 
   const revokedCard = page.locator('article').filter({ hasText: 'BKS-2027-REVOKED' });
+  await expect(revokedCard).toContainText('Thu hồi ngày: 12/01/2027');
   await expect(revokedCard.getByRole('button', { name: 'Tải PDF' })).toBeDisabled();
   expect(requests.certificateDownloadRequests).toBe(0);
 });
