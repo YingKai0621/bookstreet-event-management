@@ -3,13 +3,15 @@
 ## Production topology
 
 - Frontend: Vercel project `bookstreet-event-management`
-- Backend: Render web service `duongsach-backend`
-- Database: Render PostgreSQL `duongsach-db`
-- Session storage: Render Key Value `duongsach-redis`
+- Backend: Render web service `duongsach-backend-01nm`
+- Database: Render PostgreSQL `duongsach-db-01nm`
+- Session storage: Render Key Value `duongsach-redis-01nm`
 - Uploaded media: Cloudinary
 
-The frontend uses same-origin rewrites from `/api/*` to the Render backend. Keep
-the backend service name aligned with `frontend/vercel.json`.
+The frontend uses same-origin rewrites from `/api/*` to the Render backend.
+Render assigned the production service the URL
+`https://duongsach-backend-01nm.onrender.com`; keep it aligned with
+`frontend/vercel.json`.
 
 ## First Render deployment
 
