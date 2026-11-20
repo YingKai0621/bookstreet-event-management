@@ -87,6 +87,24 @@ test('the payment history lists every status across Events and offers no change 
   expect(mutations).toEqual([]);
 });
 
+test('all seven payment columns fit without horizontal scrolling', async ({ page }) => {
+  await setup(page);
+  await page.goto('/admin/payments');
+  await expect(page.locator('.adm-payments-table tbody tr')).toHaveCount(3);
+
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    const wrapper = page.locator('.adm-payments-view .adm-table-responsive');
+    await expect.poll(() => wrapper.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    const lastCell = page.locator('.adm-payments-table tbody tr').first().locator('td').last();
+    const bounds = await wrapper.boundingBox();
+    const actionBounds = await lastCell.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(actionBounds).not.toBeNull();
+    expect(actionBounds!.x + actionBounds!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
+  }
+});
+
 test('filters reach the server and an Event name narrows the list to that Event', async ({ page }) => {
   const { queries } = await setup(page);
   await page.goto('/admin/payments');

@@ -399,9 +399,14 @@
 .participant-event-overview-card p { margin: 0; color: #5b7068; line-height: 1.6; }
 
 .participant-section-heading--actions { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
-.participant-activity-search { flex: 0 1 340px; }
+.participant-activity-search { flex: 0 0 320px; width: 320px; max-width: 100%; }
 .participant-activity-search .part-search-input { position: relative; display: flex; align-items: center; }
-.participant-activity-search .part-search-input input { width: 100%; min-height: 42px; padding-left: 2.2rem; border: 1px solid #cbd9d2; border-radius: 8px; }
+.participant-activity-search .part-search-input .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6b7f77; pointer-events: none; }
+.participant-activity-search .part-search-input input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 46px; padding: 10px 14px 10px 40px; border: 1px solid #cbd9d2; border-radius: 8px; background: #fff; color: #203c32; font: inherit; font-size: 0.85rem; text-align: left; }
+.participant-activity-search .part-search-input input::placeholder { color: #74867f; }
+.participant-activity-search .part-search-input input:focus-visible { outline: 2px solid #28765b; outline-offset: 2px; }
+.event-activities-tab-content .participant-section-heading--actions { align-items: center; flex-wrap: wrap; gap: 20px 32px; padding-bottom: 20px; border-bottom: 1px solid #e0e8e3; }
+.event-activities-tab-content .participant-section-heading--actions > div:first-child { flex: 1 1 360px; min-width: 0; }
 .participant-section-heading--actions p { margin: 0.3rem 0 0; color: #6b7f77; font-size: 0.82rem; }
 .participant-tabs-bar--wrap { flex-wrap: wrap; }
 
@@ -448,6 +453,8 @@
   .participant-event-summary-counts div { min-height: 58px; border-right: 0; border-bottom: 1px solid #e4ebe8; }
   .participant-event-summary-counts div:last-child { border-bottom: 0; }
   .participant-section-heading--actions { align-items: stretch; flex-direction: column; }
+  .participant-section-heading--actions .participant-activity-search { flex: none; width: 100%; }
+  .event-activities-tab-content .participant-section-heading--actions > div:first-child { flex: none; }
   .participant-section-heading--actions .part-search-input input { width: 100%; }
   .participant-registration-row { align-items: flex-start; flex-wrap: wrap; }
   .participant-registration-row .activity-row-actions { width: 100%; }
@@ -3186,7 +3193,7 @@
 }
 
 .rewards-page .reward-filter-row {
-  align-items: center;
+  align-items: flex-end;
   gap: 0.6rem;
   flex-wrap: nowrap;
 }

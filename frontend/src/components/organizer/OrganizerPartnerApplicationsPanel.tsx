@@ -396,7 +396,7 @@ export const OrganizerPartnerApplicationsPanel: React.FC<OrganizerPartnerApplica
           </label>
           <label className="org-partner-status-filter">
             <span>{language === 'vi' ? 'Trạng thái' : 'Status'}</span>
-            <select value={statusFilter} onChange={(event) => applyStatusFilter(event.target.value as StatusFilter)}>
+            <select aria-label={language === 'vi' ? 'Lọc trạng thái hồ sơ' : 'Filter application status'} value={statusFilter} onChange={(event) => applyStatusFilter(event.target.value as StatusFilter)}>
               <option value="all">{language === 'vi' ? 'Tất cả trạng thái' : 'All statuses'}</option>
               <option value="pending">{statusLabel('pending', language)}</option>
               <option value="approved">{statusLabel('approved', language)}</option>

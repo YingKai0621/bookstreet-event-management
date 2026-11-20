@@ -4654,7 +4654,7 @@
 
 .org-partner-toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(190px, 230px);
+  grid-template-columns: minmax(260px, 1fr) minmax(240px, 280px);
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -4673,6 +4673,52 @@
 .org-partner-search {
   gap: 0.6rem;
   padding: 0 0.8rem;
+}
+
+.org-partner-applications .org-partner-search > svg {
+  flex-shrink: 0;
+}
+
+.org-partner-applications .org-partner-search input[type="search"] {
+  min-width: 0;
+  height: 46px;
+  min-height: 46px;
+  margin: 0;
+  padding: 0;
+  /* Override the global standalone search treatment inside this icon wrapper. */
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+  outline: none;
+}
+
+.org-partner-applications .org-partner-status-filter > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 12px;
+  font-size: 0.8rem;
+  color: #63736d;
+}
+
+.org-partner-applications .org-partner-status-filter select {
+  min-width: 0;
+  padding: 0 6px;
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.org-partner-applications .org-partner-table td:first-child strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.org-partner-applications .org-partner-view-action {
+  padding: 8px 12px;
+  border: 1px solid #d4e2da;
+  border-radius: 6px;
+  background: #f5f9f7;
 }
 
 .org-partner-search input,
