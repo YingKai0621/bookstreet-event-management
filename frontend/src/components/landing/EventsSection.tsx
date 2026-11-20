@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import '../participant/EventFeedback.css';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
@@ -227,7 +228,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
               {language === 'vi' ? activeEventDetail.title : activeEventDetail.titleEn}
             </h3>
             <div className="modal-meta-box">
-              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${activeEventDetail.dateStr} (${activeEventDetail.timeStr})`}</p>
+              <p><strong>{language === 'vi' ? 'Thời gian:' : 'Time:'}</strong> {activeEventDetail.scheduleStr || `${displayDateText(activeEventDetail.dateStr)} (${activeEventDetail.timeStr})`}</p>
               {activeEventDetail.registrationDeadlineAt && (
                 <p><strong>{language === 'vi' ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatRegistrationDeadline(activeEventDetail.registrationDeadlineAt)}</p>
               )}
@@ -363,7 +364,7 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                     <div className="reg-event-meta-list">
                       <span className="reg-meta-item">
                         <Clock size={14} />
-                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${showRegisterModal.dateStr} • ${showRegisterModal.timeStr}`}
+                        {showRegisterModal.dayOfWeek ? `${showRegisterModal.dayOfWeek}, ` : ''}{showRegisterModal.scheduleStr || `${displayDateText(showRegisterModal.dateStr)} • ${showRegisterModal.timeStr}`}
                       </span>
                       {(language === 'vi' ? showRegisterModal.location : showRegisterModal.locationEn) && (
                         <span className="reg-meta-item">

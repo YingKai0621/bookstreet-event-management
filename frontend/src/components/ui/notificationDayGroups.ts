@@ -23,7 +23,7 @@ export function groupNotificationsByDay<T extends { createdAt: string }>(
   const vi = language === 'vi';
   const today = dayKey(now);
   const yesterday = dayKey(now - ONE_DAY_MS);
-  const dateFormat = new Intl.DateTimeFormat(vi ? 'vi-VN' : 'en-US', { dateStyle: 'long', timeZone: TIME_ZONE });
+  const dateFormat = new Intl.DateTimeFormat(vi ? 'vi-VN' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TIME_ZONE });
   const groups: NotificationDayGroup<T>[] = [];
   for (const item of items) {
     const key = dayKey(item.createdAt);

@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
@@ -503,7 +504,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                     className={`participant-calendar-day ${hasEvents ? 'has-events' : ''} ${cell.events.some(item => item.isRegistered) ? 'has-registrations' : ''}`}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${cell.dateStr}, ${cell.events.length} ${language === 'vi' ? 'sự kiện' : 'events'}`}
+                    aria-label={`${displayDateText(cell.dateStr)}, ${cell.events.length} ${language === 'vi' ? 'sự kiện' : 'events'}`}
                     aria-pressed={isSelected}
                     onKeyDown={event => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -517,7 +518,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                         if (cell.events.length > 1) {
                           setSelectedDayEvents({
                             day: cell.day,
-                            dateStr: `${cell.day} ${currentMonthName}, ${currentYear}`,
+                            dateStr: displayDateText(cell.dateStr),
                             events: cell.events
                           });
                         }
@@ -713,7 +714,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
                               setSelectedDateStr(cell.dateStr);
                               setSelectedDayEvents({
                                 day: cell.day,
-                                dateStr: `${cell.day} ${currentMonthName}, ${currentYear}`,
+                                dateStr: displayDateText(cell.dateStr),
                                 events: cell.events
                               });
                             }}
@@ -747,7 +748,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
         <section className="participant-mobile-agenda" aria-live="polite" aria-label={language === 'vi' ? 'Lịch trong ngày' : 'Daily schedule'}>
           <div className="participant-agenda-heading">
             <div className="agenda-heading-date">
-              <h3>{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${selectedDateStr}T12:00:00`))}</h3>
+              <h3>{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${selectedDateStr}T12:00:00`))}</h3>
               <span className="agenda-event-count">
                 {(calendarCells.find(cell => cell.dateStr === selectedDateStr)?.events || []).length} {language === 'vi' ? 'hoạt động' : 'activities'}
               </span>
@@ -878,7 +879,7 @@ export const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({
               <div className="calendar-modal-title-group">
                 <div className="calendar-modal-date-tag">
                   <CalendarIcon size={14} color="#E9BC63" />
-                  <span>{selectedDayEvents.dateStr}</span>
+                  <span>{displayDateText(selectedDayEvents.dateStr)}</span>
                 </div>
                 <h3>{language === 'vi' ? 'Danh sách Sự kiện & Hoạt động' : 'Day Events & Activities'}</h3>
               </div>

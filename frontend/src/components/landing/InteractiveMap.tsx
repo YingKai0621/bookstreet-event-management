@@ -62,7 +62,7 @@ function publicBoothStatusLabelEn(status: BoothMapMarkerStatus): string {
 }
 
 function formatActivityTime(activity: PublicActivity, language: Language): string {
-  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+  const locale = language === 'vi' ? 'vi-VN' : 'en-GB';
   const start = new Date(activity.startAt);
   const end = new Date(activity.endAt);
   const date = new Intl.DateTimeFormat(locale, {

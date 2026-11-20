@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import '../../components/participant/EventFeedback.css';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
@@ -238,7 +239,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 <div>
                   <span>{vi ? 'Sự kiện tâm điểm' : 'Spotlight Event'}</span>
                   <h2>{vi ? featuredEvent.title : featuredEvent.titleEn}</h2>
-                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.scheduleStr || `${featuredEvent.dateStr} (${featuredEvent.timeStr})`}</span>
+                  <span>{featuredEvent.dayOfWeek}, {featuredEvent.scheduleStr || `${displayDateText(featuredEvent.dateStr)} (${featuredEvent.timeStr})`}</span>
                 </div>
                 <ArrowRight className="heritage-featured-arrow" size={24} />
               </div>
@@ -319,7 +320,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 >
                   <div className="event-card-image">
                     {evt.image.url && <img src={evt.image.url} alt={evt.title} />}
-                    <span className="event-datetime-badge">{evt.dateStr}</span>
+                    <span className="event-datetime-badge">{displayDateText(evt.dateStr)}</span>
                   </div>
                   <div className="event-card-body">
                     <div className="event-badge-row">
@@ -370,7 +371,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                 {vi ? activeModalEvent.title : activeModalEvent.titleEn}
               </h3>
               <div className="modal-meta-box">
-                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${activeModalEvent.dateStr} (${activeModalEvent.timeStr})`}</p>
+                <p>⏰ <strong>{vi ? 'Thời gian:' : 'Time:'}</strong> {activeModalEvent.dayOfWeek}, {activeModalEvent.scheduleStr || `${displayDateText(activeModalEvent.dateStr)} (${activeModalEvent.timeStr})`}</p>
                 {activeModalEvent.registrationDeadlineAt && (
                   <p><Clock size={15} style={{ verticalAlign: 'middle' }} /> <strong>{vi ? 'Hạn đăng ký:' : 'Registration deadline:'}</strong> {formatVietnameseDateTime(activeModalEvent.registrationDeadlineAt)}</p>
                 )}
@@ -526,7 +527,7 @@ export const EventsExperience: React.FC<EventsExperienceProps> = ({
                       <div className="reg-event-meta-list">
                         <span className="reg-meta-item">
                           <Clock size={14} />
-                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${registeredEvent.dateStr} • ${registeredEvent.timeStr}`}
+                          {registeredEvent.dayOfWeek ? `${registeredEvent.dayOfWeek}, ` : ''}{registeredEvent.scheduleStr || `${displayDateText(registeredEvent.dateStr)} • ${registeredEvent.timeStr}`}
                         </span>
                         {registeredEvent.registrationDeadlineAt && (
                           <span className="reg-meta-item">

@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { EventItem, Language } from '../../types';
@@ -232,7 +233,7 @@ export function EventCoverflow({
               <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{current.scheduleStr}</span>
             ) : (
               <>
-                <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{current.dateStr}</span>
+                <span><CalendarDays size={16} />{current.dayOfWeek ? `${current.dayOfWeek}, ` : ''}{displayDateText(current.dateStr)}</span>
                 <span><Clock3 size={16} />{current.timeStr}</span>
               </>
             )}

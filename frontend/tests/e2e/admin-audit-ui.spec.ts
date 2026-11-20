@@ -89,6 +89,8 @@ test('filters are sent to the server and reset to the first page', async ({ page
   await browser.getByLabel('Lọc theo mã người thực hiện').fill('1');
   await browser.getByLabel('Lọc từ ngày').fill('2026-11-01');
   await browser.getByLabel('Lọc đến ngày').fill('2026-11-07');
+  await expect(browser.locator('.day-first-date-label').filter({ hasText: '01/11/2026' })).toBeVisible();
+  await expect(browser.locator('.day-first-date-label').filter({ hasText: '07/11/2026' })).toBeVisible();
 
   await expect.poll(() => {
     const last = auditQueries.at(-1)!;

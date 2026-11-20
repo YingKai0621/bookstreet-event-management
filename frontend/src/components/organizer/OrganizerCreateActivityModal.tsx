@@ -1,3 +1,4 @@
+import { DayFirstDateInput } from '../ui/DayFirstDateInput';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { useBackdropClick } from '../../hooks/useBackdropClick';
 import { ImageUrlField } from '../ui/ImageUrlField';
@@ -330,7 +331,7 @@ export const OrganizerCreateActivityModal: React.FC<OrganizerCreateActivityModal
                   <label style={{ display: 'block', fontSize: '0.76rem', color: '#556B65', fontWeight: 600, marginBottom: '0.25rem' }}>
                     {language === 'vi' ? 'Ngày diễn ra *' : 'Date *'}
                   </label>
-                  <input 
+                  <DayFirstDateInput
                     type="date"
                     value={dateStr}
                     onChange={e => setDateStr(e.target.value)}

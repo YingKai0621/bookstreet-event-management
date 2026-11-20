@@ -89,7 +89,7 @@ function targetLabel(feedback: OrganizerFeedbackListItem | OrganizerFeedbackDeta
 
 function formatDate(value: string | null, language: Language): string {
   if (!value) return '—';
-  return new Date(value).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date(value).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
 }
 
 function queueErrorMessage(error: unknown, language: Language): string {

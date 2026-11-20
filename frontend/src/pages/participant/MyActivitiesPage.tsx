@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { ArrowRight, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, XCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -94,7 +95,7 @@ export const MyActivitiesPage = ({
                 <div className="activity-row-info">
                   <div className="activity-badge-group"><Link className="activity-tag" to={`/participant/events/${encodeURIComponent(activity.eventId)}?section=activities`}>{activity.eventName}</Link><span className="activity-tag">{activity.category}</span></div>
                   <h2 className="activity-row-title"><Link to={`/participant/activities/detail/${encodeURIComponent(activity.id)}`}>{activity.title}</Link></h2>
-                  <div className="activity-row-meta"><span><Calendar size={14} />{activity.date}</span><span><Clock size={14} />{activity.time}</span><span><MapPin size={14} />{activity.venue}</span></div>
+                  <div className="activity-row-meta"><span><Calendar size={14} />{displayDateText(activity.date)}</span><span><Clock size={14} />{activity.time}</span><span><MapPin size={14} />{activity.venue}</span></div>
                 </div>
                 <div className="activity-row-actions">
                   <Link to={`/participant/activities/detail/${encodeURIComponent(activity.id)}`} className="btn-part-secondary">{vi ? 'Chi tiết' : 'Details'}</Link>

@@ -1,3 +1,4 @@
+import { DayFirstDateInput } from '../ui/DayFirstDateInput';
 import { getPageCount, toPageIndex, LIST_PAGE_SIZE } from '../../constants/pagination';
 import { ListPagination } from '../ui/ListPagination';
 import { SearchFieldLabel } from '../ui/SearchFieldLabel';
@@ -95,8 +96,8 @@ const REQUEST_STATUS_OPTIONS: Array<ActivityRequestStatus | ''> = [
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return '—';
   return new Date(value).toLocaleString('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   });
 }
@@ -859,7 +860,7 @@ function DateTimePartsField({
       <div>
         <label>
           <span>Ngày</span>
-          <input
+          <DayFirstDateInput
             aria-label={`${label} - ngày`}
             type="date"
             value={date}

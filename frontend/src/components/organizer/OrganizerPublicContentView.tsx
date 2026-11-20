@@ -424,7 +424,7 @@ export const OrganizerPublicContentView: React.FC<OrganizerPublicContentViewProp
                   <div className="heritage-management-card-title"><h3>{item.title}</h3></div>
                   {item.locationText && <p className="heritage-management-location">{item.locationText}</p>}
                   <p className="heritage-management-summary">{item.summary || 'Chưa có phần tóm tắt.'}</p>
-                  <small>Cập nhật {new Date(item.updatedAt).toLocaleString('vi-VN')}</small>
+                  <small>Cập nhật {new Date(item.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</small>
                   <div className="heritage-management-actions">
                     <button type="button" className="org-dashboard-text-action" disabled={mutatingId !== null} onClick={() => void openEdit(item)}><FilePenLine size={15} />Xem và chỉnh sửa</button>
                     {item.status === 'DRAFT' && <button type="button" className="org-dashboard-text-action is-positive" disabled={mutatingId !== null} onClick={() => setConfirming({ item, action: 'publish' })}><Send size={15} />Công bố</button>}

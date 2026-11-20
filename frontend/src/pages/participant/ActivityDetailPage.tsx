@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { ArrowLeft, Award, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -28,9 +29,9 @@ function activityStatusLabel(status: string | undefined, language: Language): st
 
 function formatRegisteredAt(value: string | undefined, language: Language): string {
   if (!value) return '—';
-  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(value));
 }
@@ -118,7 +119,7 @@ export const ActivityDetailPage = ({
         </header>
 
         <dl className="participant-registration-facts">
-          <div><dt><Calendar size={17} />{vi ? 'Ngày' : 'Date'}</dt><dd>{activity.date}</dd></div>
+          <div><dt><Calendar size={17} />{vi ? 'Ngày' : 'Date'}</dt><dd>{displayDateText(activity.date)}</dd></div>
           <div><dt><Clock size={17} />{vi ? 'Thời gian' : 'Time'}</dt><dd>{activity.time}</dd></div>
           <div><dt><MapPin size={17} />{vi ? 'Địa điểm' : 'Venue'}</dt><dd>{activity.venue || '—'}</dd></div>
           <div><dt>{vi ? 'Đăng ký lúc' : 'Registered at'}</dt><dd>{formatRegisteredAt(activity.registeredAt, language)}</dd></div>

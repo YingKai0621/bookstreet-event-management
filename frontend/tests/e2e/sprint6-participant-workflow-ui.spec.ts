@@ -242,6 +242,7 @@ test('event detail survives a direct refresh and shows only registrations from t
   const requestedPaths = await mockParticipantWorkflow(page);
 
   await page.goto('/participant/events/746');
+  await expect(page.getByText('11/01/2027 09:00 – 12/01/2027 17:00', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ngày hội sách mùa xuân' })).toBeVisible();
   await page.getByRole('button', { name: 'Hoạt động sự kiện (2)' }).click();
   await expect(page.getByRole('heading', { name: 'Đọc sách cùng cộng đồng' })).toBeVisible();

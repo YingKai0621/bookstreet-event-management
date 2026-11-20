@@ -1,3 +1,4 @@
+import { DayFirstDateInput } from '../ui/DayFirstDateInput';
 import { AlertCircle, CheckCircle2, ChevronRight, ClipboardCheck, History, RefreshCw, Search, UserRound, X } from 'lucide-react';
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -353,7 +354,7 @@ export const ParticipantManagementView: React.FC<ParticipantManagementViewProps>
                         <option value='VALID'>Ghi nhận đã tham gia</option><option value='VOIDED'>Vô hiệu điểm danh</option>
                       </select>
                     </label>
-                    {targetStatus === 'VALID' && <label>Thời điểm tham gia<input type='datetime-local' value={effectiveAttendedAt} onChange={event => setEffectiveAttendedAt(event.target.value)} required /></label>}
+                    {targetStatus === 'VALID' && <label>Thời điểm tham gia<DayFirstDateInput type='datetime-local' value={effectiveAttendedAt} onChange={event => setEffectiveAttendedAt(event.target.value)} required /></label>}
                     <label>Lý do điều chỉnh
                       <textarea value={reason} onChange={event => setReason(event.target.value)} minLength={10} maxLength={500} rows={4} placeholder='Nhập lý do cụ thể để phục vụ kiểm toán...' required />
                       <small>{reason.trim().length}/500 ký tự · tối thiểu 10 ký tự</small>

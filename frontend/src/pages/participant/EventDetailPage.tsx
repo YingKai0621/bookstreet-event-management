@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { PaginatedList } from '../../components/ui/PaginatedList';
 import { SearchFieldLabel } from '../../components/ui/SearchFieldLabel';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, RefreshCw, Search, Users, XCircle } from 'lucide-react';
@@ -24,9 +25,9 @@ interface EventDetailPageProps {
 type EventSection = 'overview' | 'discover' | 'activities';
 
 function formatActivitySchedule(activity: PublicActivity, language: Language) {
-  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+  const locale = language === 'vi' ? 'vi-VN' : 'en-GB';
   const date = new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
+    day: '2-digit', month: '2-digit', year: 'numeric',
     timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(activity.startAt));
   const time = new Intl.DateTimeFormat(locale, {
@@ -190,7 +191,7 @@ export const EventDetailPage = ({
           <span className={`participant-registration-pill ${currentEvent.status}`}>{currentEvent.status === 'ended' ? (vi ? 'Đã kết thúc' : 'Ended') : (vi ? 'Đang tham gia' : 'Joined')}</span>
           <h1 id="participant-event-title">{currentEvent.title}</h1>
           <div className="participant-event-summary-meta">
-            <span><Calendar size={17} />{currentEvent.dateRange}</span>
+            <span><Calendar size={17} />{displayDateText(currentEvent.dateRange)}</span>
             <span><MapPin size={17} />{currentEvent.location}</span>
           </div>
         </div>
@@ -329,7 +330,7 @@ export const EventDetailPage = ({
                       <div className="activity-row-info">
                         <div className="activity-badge-group"><span className="activity-tag">{activity.category}</span><span className={`participant-activity-status is-${state.tone}`}><StatusIcon size={13} />{state.label}</span></div>
                         <h3 className="activity-row-title"><Link to={`/participant/activities/detail/${encodeURIComponent(activity.id)}`}>{activity.title}</Link></h3>
-                        <div className="activity-row-meta"><span><Calendar size={14} />{activity.date}</span><span><Clock size={14} />{activity.time}</span><span><MapPin size={14} />{activity.venue}</span></div>
+                        <div className="activity-row-meta"><span><Calendar size={14} />{displayDateText(activity.date)}</span><span><Clock size={14} />{activity.time}</span><span><MapPin size={14} />{activity.venue}</span></div>
                       </div>
                       <div className="activity-row-actions">
                         <Link className="btn-part-secondary" to={`/participant/activities/detail/${encodeURIComponent(activity.id)}`}>{vi ? 'Chi tiết' : 'Details'}</Link>

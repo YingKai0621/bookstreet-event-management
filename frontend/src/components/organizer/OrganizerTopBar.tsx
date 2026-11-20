@@ -78,8 +78,8 @@ export const OrganizerTopBar: React.FC<OrganizerTopBarProps> = ({
   };
 
   const formatCreatedAt = (createdAt: string) => new Intl.DateTimeFormat(
-    language === 'vi' ? 'vi-VN' : 'en-US',
-    { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },
+    language === 'vi' ? 'vi-VN' : 'en-GB',
+    { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' },
   ).format(new Date(createdAt));
 
   const recentList = notifications.slice(0, 5);

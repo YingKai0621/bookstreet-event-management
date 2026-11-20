@@ -75,9 +75,9 @@ function NotificationIcon({ type }: { type: ParticipantNotificationType }) {
 }
 
 function formatNotificationTime(value: string, language: Language): string {
-  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(value));
 }

@@ -69,5 +69,5 @@ export const adminAuditApi = {
 };
 
 export function formatAuditTime(createdAt: string): string {
-  return new Date(createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date(createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
 }

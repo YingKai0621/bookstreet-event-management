@@ -82,7 +82,7 @@ function loadErrorMessage(error: unknown): string {
 }
 
 function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  return new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
 }
 
 interface CreateForm {

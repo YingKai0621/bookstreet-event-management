@@ -1,3 +1,4 @@
+import { DayFirstDateInput } from '../ui/DayFirstDateInput';
 import { Clock, Filter, RefreshCw, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useModalDismiss } from '../../hooks/useModalDismiss';
@@ -174,7 +175,7 @@ export const AdminAuditLogsView: React.FC = () => {
             />
           </WorkspaceFieldLabel>
           <WorkspaceFieldLabel className="adm-status-field" label="Từ ngày">
-            <input
+            <DayFirstDateInput
               aria-label="Lọc từ ngày"
               className="adm-filter-select"
               type="date"
@@ -183,7 +184,7 @@ export const AdminAuditLogsView: React.FC = () => {
             />
           </WorkspaceFieldLabel>
           <WorkspaceFieldLabel className="adm-status-field" label="Đến ngày">
-            <input
+            <DayFirstDateInput
               aria-label="Lọc đến ngày"
               className="adm-filter-select"
               type="date"

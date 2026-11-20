@@ -371,8 +371,8 @@ function getEventStatusLabel(status: OrganizerEventStatus): string {
 
 function formatEventDateRange(startAt: string, endAt: string): string {
   const options: Intl.DateTimeFormatOptions = {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   };
 
@@ -628,7 +628,7 @@ export const organizerApi = {
         eventId: String(activity.eventId),
         title: activity.title || '',
         type: activity.activityType || 'Hoạt động',
-        dateStr: activity.startAt ? new Date(activity.startAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
+        dateStr: activity.startAt ? new Date(activity.startAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' }) : '',
         timeStr: activity.startAt && activity.endAt
           ? `${new Date(activity.startAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} – ${new Date(activity.endAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`
           : '',

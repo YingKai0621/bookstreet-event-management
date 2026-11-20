@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import {
   AlertTriangle,
   Calendar,
@@ -48,9 +49,9 @@ function isRatingHistory(activity: ParticipantActivity): boolean {
 }
 
 function formatUpdatedAt(value: string, language: Language): string {
-  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-GB', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Ho_Chi_Minh',
   }).format(new Date(value));
 }
@@ -236,7 +237,7 @@ export const ActivityRatingsPage = ({
                       )}
                     </div>
                     <div className="participant-rating-meta">
-                      <span><Calendar size={15} />{activity.date}</span>
+                      <span><Calendar size={15} />{displayDateText(activity.date)}</span>
                       <span><Clock size={15} />{activity.time}</span>
                       <span><MapPin size={15} />{activity.venue}</span>
                     </div>

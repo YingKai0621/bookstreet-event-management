@@ -285,7 +285,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                         </div>
                         <div className="notif-item-content">
                           <h4 className="notif-item-title">{notif.title}</h4>
-                          <span className="notif-item-time">{new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(notif.createdAt))}</span>
+                          <span className="notif-item-time">{new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(notif.createdAt))}</span>
                         </div>
                       </button>
                     ))

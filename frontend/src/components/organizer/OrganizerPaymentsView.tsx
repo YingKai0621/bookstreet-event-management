@@ -1,3 +1,4 @@
+import { DayFirstDateInput } from '../ui/DayFirstDateInput';
 import { CreditCard, LoaderCircle, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { ApiError } from '../../services/apiClient';
@@ -179,7 +180,7 @@ export const OrganizerPaymentsView: React.FC = () => {
         </label>
         <label className="organizer-payments-field">
           <span>Từ ngày</span>
-          <input
+          <DayFirstDateInput
             type="date"
             aria-label="Lọc từ ngày"
             value={filters.from}
@@ -189,7 +190,7 @@ export const OrganizerPaymentsView: React.FC = () => {
         </label>
         <label className="organizer-payments-field">
           <span>Đến ngày</span>
-          <input
+          <DayFirstDateInput
             type="date"
             aria-label="Lọc đến ngày"
             value={filters.to}

@@ -83,10 +83,10 @@ export function RewardsPage({ language }: RewardsPageProps) {
     };
   }, [loadRewards]);
 
-  const dateTime = (value: string) => new Intl.DateTimeFormat(vi ? 'vi-VN' : 'en-US', {
+  const dateTime = (value: string) => new Intl.DateTimeFormat(vi ? 'vi-VN' : 'en-GB', {
     timeZone: 'Asia/Ho_Chi_Minh',
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   }).format(new Date(value));
 
   return (

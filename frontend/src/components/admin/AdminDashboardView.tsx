@@ -1,3 +1,4 @@
+import { displayDateText } from '../../utils/dateDisplay';
 import { Activity, ArrowRight, Calendar, Clock, FileText, Store, UserPlus, Users, Wallet } from 'lucide-react';
 import React from 'react';
 import { ADMIN_AUDIT_ACTION_LABELS, formatAuditTime, type AdminAuditLog } from '../../services/adminAuditApi';
@@ -117,7 +118,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   const dateParts = Number.isNaN(date.getTime()) ? [] : new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' }).formatToParts(date);
                   const dateLabel = dateParts.length ? `${dateParts.find((part) => part.type === 'day')?.value}/${dateParts.find((part) => part.type === 'month')?.value}` : '';
                   const height = Math.max(6, Math.round((item.count / maxAudit) * 130));
-                  return <div key={item.date} className="adm-chart-col" title={`${item.count} thao tác ngày ${item.date}`}>
+                  return <div key={item.date} className="adm-chart-col" title={`${item.count} thao tác ngày ${displayDateText(item.date)}`}>
                     <span className="adm-chart-bar-pill">{item.count}</span><div className="adm-chart-bar" style={{ height: `${height}px` }} />
                     <div className="adm-chart-col-label"><span>{dayLabel}</span><span className="adm-chart-col-date">{dateLabel}</span></div>
                   </div>;
