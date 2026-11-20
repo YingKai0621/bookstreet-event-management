@@ -235,9 +235,8 @@ export const EventDetailPage = ({
             </div>
             {eventCatalog.length > 0 && (
               <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
-                <Search size={15} className="icon" />
-                <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
-                <input value={searchParams.get('search') || ''} onChange={event => {
+                <Search size={17} className="icon" aria-hidden="true" />
+                <input aria-label={vi ? 'Tìm hoạt động' : 'Search activities'} type="search" value={searchParams.get('search') || ''} onChange={event => {
                   const next = new URLSearchParams(searchParams);
                   if (event.target.value) next.set('search', event.target.value);
                   else next.delete('search');
@@ -298,9 +297,8 @@ export const EventDetailPage = ({
             <div><h2 id="registered-activities-title" className="section-heading-title">{vi ? 'Hoạt động thuộc sự kiện này' : 'Activities in this event'}</h2><p>{vi ? 'Chỉ hiển thị những đăng ký thuộc tài khoản hiện tại.' : 'Only registrations belonging to the current account are shown.'}</p></div>
             {eventActivities.length > 0 && (
               <SearchFieldLabel className="participant-activity-search"><label className="part-search-input">
-                <Search size={15} className="icon" />
-                <span className="sr-only">{vi ? 'Tìm hoạt động' : 'Search activities'}</span>
-                <input value={searchParams.get('search') || ''} onChange={event => {
+                <Search size={17} className="icon" aria-hidden="true" />
+                <input aria-label={vi ? 'Tìm hoạt động' : 'Search activities'} type="search" value={searchParams.get('search') || ''} onChange={event => {
                   const next = new URLSearchParams(searchParams);
                   if (event.target.value) next.set('search', event.target.value);
                   else next.delete('search');

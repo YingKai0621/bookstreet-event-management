@@ -1,5 +1,70 @@
 /* Admin payment history (AC-OPT-S11-01). Builds on AdminPortal.css. */
 
+/* This seven-column history must not inherit the six-column account layout. */
+.admin-app-shell .adm-payments-view .adm-payments-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(1) { width: 15%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(2) { width: 21%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(3) { width: 18%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(4) { width: 16%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(5) { width: 13%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(6) { width: 11%; }
+.admin-app-shell .adm-payments-view .adm-payments-table th:nth-child(7) { width: 6%; }
+
+.admin-app-shell .adm-payments-view .adm-payments-table :is(th, td) {
+  padding: 16px 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-app-shell .adm-payments-view .adm-payments-table th {
+  white-space: normal;
+}
+
+.admin-app-shell .adm-payments-view .adm-payments-table :is(th, td):last-child {
+  text-align: center;
+}
+
+.admin-app-shell .adm-payments-view .adm-time-cell {
+  align-items: flex-start;
+  white-space: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-payments-view .adm-time-cell svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.admin-app-shell .adm-payments-view .adm-badge-status {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.adm-payments-view .adm-status-dot {
+  flex-shrink: 0;
+}
+
+.adm-payments-view .adm-payment-link {
+  overflow-wrap: anywhere;
+}
+
+.adm-payments-view .adm-payment-subtle {
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.admin-app-shell .adm-payments-view .adm-payments-table .adm-payment-amount {
+  white-space: normal;
+}
+
+.adm-payments-view .adm-payment-reconcile {
+  max-width: 100%;
+}
+
 .adm-payments-table td {
   vertical-align: middle;
 }
